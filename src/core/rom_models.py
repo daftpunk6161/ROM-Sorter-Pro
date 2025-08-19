@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*-coding: utf-8-*-
 """
-ROM Sorter Pro - ROM-Modelle
+ROM Sorter Pro - ROM Models
 
-Dieses Modul enthält die zentralen Datenmodelle für ROM-Dateien.
+This module contains the central data models for ROM files.
 """
 
 from dataclasses import dataclass, field
@@ -14,7 +14,7 @@ from pathlib import Path
 
 @dataclass
 class ROMMetadata:
-    """Detaillierte Metadaten für ROM-Dateien."""
+    """Detailed metadata for ROM files."""
 
 # Basic fields
     filename: str
@@ -56,24 +56,24 @@ class ROMMetadata:
     processing_history: List[str] = field(default_factory=list)
 
     def add_processing_entry(self, entry: str) -> None:
-        """Fügt einen Eintrag zur Verarbeitungshistorie hinzu."""
+        """Adds an entry to the processing history."""
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.processing_history.append(f"[{timestamp}] {entry}")
 
     @property
     def is_processed(self) -> bool:
-        """Gibt an, ob die ROM bereits verarbeitet wurde."""
+        """Indicates whether the ROM has already been processed."""
         return len(self.processing_history) > 0
 
     @property
     def file_exists(self) -> bool:
-        """Überprüft, ob die Datei existiert."""
+        """Checks if the file exists."""
         return Path(self.path).exists() if self.path else False
 
 
 @dataclass
 class EnhancedROM(ROMMetadata):
-    """Erweiterte ROM-Klasse mit zusätzlichen Funktionen."""
+    """Enhanced ROM class with additional features."""
 
 # More metadata
     box_art_url: str = ""
@@ -134,20 +134,20 @@ class ROMCollection:
     last_updated: datetime = field(default_factory=datetime.now)
 
     def add_rom(self, rom: EnhancedROM) -> None:
-        """Fügt eine ROM zur Sammlung hinzu."""
+        """Adds a ROM to the collection."""
         self.roms.append(rom)
         self.last_updated = datetime.now()
 
     def find_by_console(self, console: str) -> List[EnhancedROM]:
-        """Findet alle ROMs für eine bestimmte Konsole."""
+        """Finds all ROMs for a specific console."""
         return [rom for rom in self.roms if rom.console.lower() == console.lower()]
 
     def find_by_title(self, title_fragment: str) -> List[EnhancedROM]:
-        """Findet alle ROMs mit einem bestimmten Titel-Fragment."""
+        """Finds all ROMs with a specific title fragment."""
         return [rom for rom in self.roms if title_fragment.lower() in rom.title.lower()]
 
     def find_duplicates(self) -> Dict[str, List[EnhancedROM]]:
-        """Findet Duplikate basierend auf MD5 Hash."""
+        """Finds duplicates based on MD5 hash."""
         hash_map: Dict[str, List[EnhancedROM]] = {}
 
         for rom in self.roms:
@@ -160,7 +160,7 @@ class ROMCollection:
         return {hash_val: rom_list for hash_val, rom_list in hash_map.items() if len(rom_list) > 1}
 
     def get_statistics(self) -> Dict[str, Any]:
-        """Gibt Statistiken über die Sammlung zurück."""
+        """Returns statistics about the collection."""
         console_counts: Dict[str, int] = {}
         total_size = 0
         regions: Set[str] = set()

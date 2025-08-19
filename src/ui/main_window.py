@@ -1,12 +1,15 @@
+# Gruppe 1: Standard-Bibliotheken
+import logging
+import queue
+import threading
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Callable, Union, Tuple
+
+# Gruppe 2: Drittanbieterbibliotheken
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
-import threading
-import queue
-import logging
-import os
 
+# Gruppe 4: Relative Imports
 from .base import STYLE, BaseApp, center_window
 
 class ROMSorterWindow(tk.Tk):
@@ -15,7 +18,7 @@ class ROMSorterWindow(tk.Tk):
     def __init__(self):
         """Initialize the main window."""
         super().__init__()
-        self.title("ROM Sorter Pro 🎮 - Optimized v2.1.4")
+        self.title("ROM Sorter Pro 🎮 - Optimized v2.1.6")
         self.geometry("1000x700")
         self.minsize(800, 600)
 
@@ -40,11 +43,8 @@ class ROMSorterWindow(tk.Tk):
         # Record the creation of the window
         logging.info("ROM Sorter main window created")
 
-        # Close to the end of the end of the end of the end
+        # Handle window close event
         self.protocol("WM_DELETE_WINDOW", self._on_close)
-
-        # Check and run setup script if not already done
-        self.after(100, self._check_first_run)
 
     def _initialize_variables(self):
         """Initialize variables for the application."""
@@ -52,7 +52,7 @@ class ROMSorterWindow(tk.Tk):
         self.source_path = tk.StringVar()
         self.dest_path = tk.StringVar()
 
-        # Statusvariablen
+        # Status variables
         self.status_text = tk.StringVar(value="Bereit")
         self.progress_value = tk.DoubleVar(value=0.0)
         self.is_processing = threading.Event()
@@ -69,9 +69,6 @@ class ROMSorterWindow(tk.Tk):
 
         # Queue for thread communication
         self.message_queue = queue.Queue()
-
-        # First run flag
-        self.is_first_run = not os.path.exists("config.ini")
 
     def _create_menu(self):
         """Create the menu bar."""
@@ -262,7 +259,7 @@ class ROMSorterWindow(tk.Tk):
         self.status_text.set("Sortiere ROMs...")
         self.progress_value.set(0.0)
 
-        # In a complete implementation, the sorting process would be started here
+        # In A Complete implementation, The Sorting Process would be Started here
 
     def _on_cancel_sorting(self):
         """Breche den Sortiervorgang ab."""
@@ -297,35 +294,6 @@ class ROMSorterWindow(tk.Tk):
 
         # Close the window
         self.destroy()
-
-    def _check_first_run(self):
-        """Check if this is the first run of the application."""
-        if self.is_first_run:
-            # Run the setup script
-            self._run_setup_script()
-
-    def _run_setup_script(self):
-        """Run the setup script for the first time configuration."""
-        try:
-            # Execute the setup script
-            import subprocess
-            subprocess.run([".\\setup_new_git.bat"], check=True)
-
-            # After successful setup, update the flag and show a message
-            self.is_first_run = False
-            messagebox.showinfo(
-                "Erste Schritte",
-                "Die Ersteinrichtung wurde erfolgreich abgeschlossen.\n"
-                "Sie können jetzt die Anwendung verwenden."
-            )
-        except Exception as e:
-            # Handle any error that occurs during the setup script execution
-            logging.error(f"Error running setup script: {e}")
-            messagebox.showerror(
-                "Fehler",
-                "Bei der Ausführung des Einrichtungs-Skripts ist ein Fehler aufgetreten.\n"
-                "Bitte überprüfen Sie die Protokolle für weitere Informationen."
-            )
 
 
 if __name__ == "__main__":

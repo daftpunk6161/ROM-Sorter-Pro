@@ -3,8 +3,8 @@
 """
 ROM Sorter Pro - Core Module
 
-Dieses Modul enthält die grundlegenden Datei-Operationen und Utilities
-für die ROM-Sortierungs-Anwendung.
+This module contains the basic file operations and utilities
+for the ROM sorting application.
 """
 
 import os
@@ -285,7 +285,7 @@ def safe_move_file(source: Union[str, Path], destination: Union[str, Path],
 # Check whether copying was successful
                 if dest_path.exists() and dest_path.stat().st_size == source_path.stat().st_size:
                     try:
-# Delete original after a successful copy
+# Delete Original after a successful copy
                         source_path.unlink()
                         logger.debug(f"Datei kopiert und Original gelöscht: {source} -> {destination}")
                         return True
