@@ -22,11 +22,11 @@ logger = logging.getLogger(__name__)
 def _calculate_small_file_hash(file_path: Path, algorithm: str) -> str:
     """
     Effizientere Hashberechnung für kleine Dateien mit Memory-Mapping.
-    
+
     Args:
         file_path: Path-Objekt der Datei
         algorithm: Hashalgorithmus ('md5', 'sha1', 'sha256')
-        
+
     Returns:
         Hashwert als Hex-String
     """
@@ -39,12 +39,12 @@ def _calculate_small_file_hash(file_path: Path, algorithm: str) -> str:
         hash_obj = hashlib.sha256()
     else:
         raise ValueError(f"Nicht unterstützter Hash-Algorithmus: {algorithm}")
-        
+
     with open(file_path, 'rb') as f:
 # Memory map for small files (very efficient)
         with mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ) as mm:
             hash_obj.update(mm)
-            
+
     return hash_obj.hexdigest()
 
 def create_directory_if_not_exists(path: Union[str, Path]) -> bool:
@@ -126,11 +126,11 @@ def calculate_file_hash(file_path: Union[str, Path], algorithm='md5', block_size
     try:
         file_path_obj = Path(file_path)
         file_size = file_path_obj.stat().st_size
-        
+
 # Processing optimized for small files
         if file_size < 1024 * 1024 and os.name != 'nt':  # 1MB, not for Windows (because of MMAP restrictions)
             return _calculate_small_file_hash(file_path_obj, algorithm)
-            
+
 # Choose Hashalgorithm
         if algorithm == 'md5':
             hash_obj = hashlib.md5()
