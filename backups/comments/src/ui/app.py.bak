@@ -1,0 +1,200 @@
+from pathlib import Path
+from typing import Dict, List, Optional, Any, Callable
+import tkinter as tk
+from tkinter import ttk, messagebox, filedialog
+import threading
+import queue
+import logging
+import os
+import sys
+
+# Importiere UI-Komponenten
+from .base import STYLE, BaseApp, center_window, create_tooltip
+from .main_window import ROMSorterWindow
+from .widgets import ProgressDialog, FolderSelector, ToggleSwitch, FileListBox
+from .panels import StatisticsPanel, LogPanel, OptionsPanel
+from .custom_widgets import CustomTreeview, DragDropSupport
+
+# Scanner-Optionen Klasse für Kompatibilität
+class ScannerOptions:
+    """Konfigurationsoptionen für den Scanner."""
+
+    def __init__(self, recursive: bool = True, hash_method: str = "crc32",
+                 parallel: bool = True, max_workers: int = None):
+        """
+        Initialisiere die Scanner-Optionen.
+
+        Args:
+            recursive: Durchsuche Ordner rekursiv
+            hash_method: Zu verwendende Hash-Methode (crc32, md5, sha1)
+            parallel: Verwende parallele Verarbeitung
+            max_workers: Maximale Anzahl an Worker-Threads
+        """
+        self.recursive = recursive
+        self.hash_method = hash_method
+        self.parallel = parallel
+        self.max_workers = max_workers
+
+    def __str__(self) -> str:
+        """String-Repräsentation der Optionen."""
+        return (f"ScannerOptions(recursive={self.recursive}, hash_method={self.hash_method}, "
+                f"parallel={self.parallel}, max_workers={self.max_workers})")
+
+# Versuche, die Modul-Imports zu importieren
+try:
+    # Korrekte Imports für die neue Modulstruktur
+    from ..scanning.scanner import OptimizedScanner as Scanner
+    from ..scanning.adaptive_scanner import AdaptiveScanner
+    from ..config import ConfigManager
+except ImportError:
+    # Fallback, wenn das Modul nicht direkt importiert werden kann
+    # Dies kann in einigen Testszenarien oder bei direkter Ausführung passieren
+    import sys
+    from os.path import dirname, abspath, join
+    sys.path.insert(0, dirname(dirname(abspath(__file__))))
+    from scanning.scanner import OptimizedScanner as Scanner
+    from scanning.adaptive_scanner import AdaptiveScanner
+    from config import ConfigManager
+
+
+class ROMSorterApp:
+    """Hauptanwendungsklasse, die das GUI und die Logik verbindet."""
+
+    def __init__(self):
+        """Initialisiere die Anwendung."""
+        # Grundlegende Konfiguration
+        self.app_dir = Path(__file__).parent.parent.parent
+        self.config_manager = ConfigManager(self.app_dir / "config.json")
+        self.config = self.config_manager.load_config()
+
+        # Logging einrichten
+        self._setup_logging()
+
+        # Erstelle das Hauptfenster
+        self.window = ROMSorterWindow()
+
+        # Erweitere das Hauptfenster mit der App-Logik
+        self._setup_window()
+
+        # Verarbeite Befehlszeilenargumente
+        self._process_command_line_args()
+
+        logging.info("ROM Sorter Anwendung gestartet")
+
+    def _setup_logging(self):
+        """Richte das Logging ein."""
+        log_dir = self.app_dir / "logs"
+        log_dir.mkdir(exist_ok=True)
+
+        log_file = log_dir / f"rom_sorter_{self._get_date_string()}.log"
+
+        # Konfiguriere den Logger
+        logging.basicConfig(
+            level=logging.DEBUG if self.config.get("debug_mode", False) else logging.INFO,
+            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+            handlers=[
+                logging.FileHandler(log_file),
+                logging.StreamHandler()
+            ]
+        )
+
+    def _get_date_string(self):
+        """Gib einen Datums-String für Logdateien zurück."""
+        import datetime
+        return datetime.datetime.now().strftime("%Y%m%d")
+
+    def _setup_window(self):
+        """Erweitere das Hauptfenster mit der App-Logik."""
+        # Verbinde Konfiguration mit UI-Elementen
+        self._connect_config_to_ui()
+
+        # Registriere Event-Handler
+        self._register_event_handlers()
+
+        # Initialisiere den Scanner
+        self._init_scanner()
+
+    def _connect_config_to_ui(self):
+        """Verbinde die Konfiguration mit den UI-Elementen."""
+        # Hier würden die UI-Elemente mit den Konfigurationswerten verknüpft werden
+        # Platzhalter für die tatsächliche Implementierung
+        pass
+
+    def _register_event_handlers(self):
+        """Registriere Event-Handler für UI-Interaktionen."""
+        # Hier würden Event-Handler für Buttons, Menüs etc. registriert werden
+        # Platzhalter für die tatsächliche Implementierung
+        pass
+
+    def _init_scanner(self):
+        """Initialisiere den Scanner mit den aktuellen Einstellungen."""
+        # Scanner-Optionen erstellen
+        options = ScannerOptions(
+            recursive=self.config.get("recursive_scan", True),
+            hash_method=self.config.get("hash_method", "crc32"),
+            parallel=self.config.get("parallel_processing", True),
+            max_workers=self.config.get("max_workers", 4)
+        )
+
+        # Scanner erstellen
+        if self.config.get("use_adaptive_scanner", False):
+            self.scanner = AdaptiveScanner(max_workers=options.max_workers)
+        else:
+            # Der OptimizedScanner nimmt nur filter_extensions und max_workers als Parameter
+            self.scanner = Scanner(None, options.max_workers)
+
+        logging.debug("Scanner initialisiert mit Optionen: %s", options)
+
+    def _process_command_line_args(self):
+        """Verarbeite Befehlszeilenargumente."""
+        args = sys.argv[1:]
+
+        if not args:
+            return
+
+        # Einfache Argumentverarbeitung
+        # In einer vollständigen Implementierung würde hier ein Argument-Parser verwendet werden
+        for i, arg in enumerate(args):
+            if arg == "--source" and i + 1 < len(args):
+                self.window.source_path.set(args[i + 1])
+            elif arg == "--dest" and i + 1 < len(args):
+                self.window.dest_path.set(args[i + 1])
+            elif arg == "--auto-start":
+                # Automatischer Start, wenn sowohl Quell- als auch Zielordner gesetzt sind
+                if self.window.source_path.get() and self.window.dest_path.get():
+                    self.window.after(1000, self.window._on_start_sorting)
+
+    def run(self):
+        """Starte die Anwendung."""
+        self.window.mainloop()
+
+    def cleanup(self):
+        """Bereinige Ressourcen bei Beendigung."""
+        # Speichere Konfiguration
+        self.config_manager.save_config(self.config)
+
+        # Schließe den Logger
+        logging.shutdown()
+
+        # Gib andere Ressourcen frei
+        if hasattr(self, 'scanner'):
+            self.scanner.cleanup()
+
+
+def main():
+    """Hauptfunktion zum Starten der Anwendung."""
+    app = ROMSorterApp()
+    try:
+        app.run()
+    except Exception as e:
+        logging.exception("Unbehandelte Ausnahme: %s", e)
+        messagebox.showerror(
+            "Fehler",
+            f"Ein unerwarteter Fehler ist aufgetreten:\n{e}"
+        )
+    finally:
+        app.cleanup()
+
+
+if __name__ == "__main__":
+    main()

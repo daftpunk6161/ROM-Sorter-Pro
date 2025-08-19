@@ -1,0 +1,371 @@
+#!/usr/bin/env python3
+# -*-coding: utf-8-*-
+"""
+ROM Sorter Pro - ROM-Scanner
+
+Dieses Modul enthält Klassen und Funktionen zum effizienten Scannen und Erkennen von ROM-Dateien.
+"""
+
+# Standard libraries
+import os
+import time
+import logging
+import threading
+import concurrent.futures
+from pathlib import Path
+from typing import Dict, Any, Optional, List, Union, Iterator
+
+# Project -specific imports
+from src.core.rom_utils import get_all_rom_extensions, is_valid_rom_file
+from src.core.file_utils import create_directory_if_not_exists
+from src.core.rom_models import ROMMetadata
+from src.detectors import detect_console_fast, is_archive_file, is_chd_file
+from src.utils.performance_enhanced import measure_time
+
+logger = logging.getLogger(__name__)
+
+
+class ROMScanner:
+    """
+    Grundlegende ROM-Scanner-Klasse, die Verzeichnisse nach ROM-Dateien durchsucht.
+    """
+
+    def __init__(self, filter_extensions: Optional[List[str]] = None):
+        """
+        Initialisiert einen neuen ROM-Scanner.
+
+        Args:
+            filter_extensions: Optionale Liste von Dateierweiterungen zum Filtern (ohne Punkt)
+        """
+        self.filter_extensions = filter_extensions or get_all_rom_extensions(include_dot=False)
+        self._normalize_extensions()
+        self.stats = {
+            "total_files_scanned": 0,
+            "roms_found": 0,
+            "scan_time": 0.0,
+            "detection_time": 0.0
+        }
+
+    def _normalize_extensions(self) -> None:
+        """Normalisiert alle Erweiterungen, um ohne Punkt konsistent zu sein."""
+        self.filter_extensions = [ext.lstrip('.').lower() for ext in self.filter_extensions]
+
+    def scan_directory(self, directory_path: Union[str, Path], recursive: bool = False) -> List[ROMMetadata]:
+        """
+        Durchsucht ein Verzeichnis nach ROM-Dateien und gibt eine Liste von ROM-Metadaten zurück.
+
+        Args:
+            directory_path: Zu durchsuchendes Verzeichnis
+            recursive: Ob Unterverzeichnisse rekursiv durchsucht werden sollen
+
+        Returns:
+            Liste von ROMMetadata-Objekten
+        """
+        path_obj = Path(directory_path)
+        if not path_obj.exists() or not path_obj.is_dir():
+            logger.error(f"Verzeichnis existiert nicht oder ist kein Verzeichnis: {directory_path}")
+            return []
+
+        start_time = time.time()
+        roms_list = []
+
+# Determine the scan method based on recursive parameters
+        glob_pattern = "**/*" if recursive else "*"
+
+# Scanne by files
+        for file_path in path_obj.glob(glob_pattern):
+            if file_path.is_file():
+                self.stats["total_files_scanned"] += 1
+
+# Check on valid expansion
+                extension = file_path.suffix.lstrip('.').lower()
+                if extension in self.filter_extensions:
+                    try:
+# Create Rome metadata
+                        rom_metadata = self._create_rom_metadata(file_path)
+                        if rom_metadata:
+                            roms_list.append(rom_metadata)
+                            self.stats["roms_found"] += 1
+                    except Exception as e:
+                        logger.warning(f"Fehler beim Verarbeiten von {file_path}: {e}")
+
+# Update statistics
+        self.stats["scan_time"] = time.time() - start_time
+
+        return roms_list
+
+    def _create_rom_metadata(self, file_path: Path) -> Optional[ROMMetadata]:
+        """
+        Erstellt ROM-Metadaten für eine Datei.
+
+        Args:
+            file_path: Pfad zur ROM-Datei
+
+        Returns:
+            ROMMetadata-Objekt oder None, falls die Datei keine gültige ROM ist
+        """
+        detection_start = time.time()
+
+# Recognize console
+        console, confidence = detect_console_fast(file_path.name, str(file_path))
+
+# Create Rome metadata
+        rom_metadata = ROMMetadata(
+            filename=file_path.name,
+            path=file_path,
+            size=file_path.stat().st_size,
+            console=console,
+            console_folder=console,  # This could be replaced by a mapping later
+            extension=file_path.suffix.lower()
+        )
+
+# Update identification time in statistics
+        self.stats["detection_time"] += time.time() - detection_start
+
+        return rom_metadata
+
+    def get_stats(self) -> Dict[str, Any]:
+        """
+        Gibt die aktuellen Scanner-Statistiken zurück.
+
+        Returns:
+            Dict mit Scanner-Statistiken
+        """
+        return self.stats
+
+
+class OptimizedScanner(ROMScanner):
+    """
+    Optimierter ROM-Scanner mit paralleler Verarbeitung und fortgeschrittenen Funktionen.
+    """
+
+    def __init__(self, filter_extensions: Optional[List[str]] = None, max_workers: int = None):
+        """
+        Initialisiert einen neuen optimierten ROM-Scanner.
+
+        Args:
+            filter_extensions: Optionale Liste von Dateierweiterungen zum Filtern (ohne Punkt)
+            max_workers: Maximale Anzahl an Worker-Threads (None für automatische Bestimmung)
+        """
+        super().__init__(filter_extensions)
+        self.max_workers = max_workers or min(32, (os.cpu_count() or 4) + 4)
+        self._processed_files = set()
+        self._lock = threading.RLock()
+
+# Extended statistics
+        self.stats.update({
+            "archives_found": 0,
+            "chd_files_found": 0,
+            "parallel_scan_time": 0.0,
+            "processing_rate": 0.0  # Dateien pro Sekunde
+        })
+
+    def scan_directory_parallel(self, directory_path: Union[str, Path], recursive: bool = False) -> List[ROMMetadata]:
+        """
+        Durchsucht ein Verzeichnis parallel nach ROM-Dateien.
+
+        Args:
+            directory_path: Zu durchsuchendes Verzeichnis
+            recursive: Ob Unterverzeichnisse rekursiv durchsucht werden sollen
+
+        Returns:
+            Liste von ROMMetadata-Objekten
+        """
+        path_obj = Path(directory_path)
+        if not path_obj.exists() or not path_obj.is_dir():
+            logger.error(f"Verzeichnis existiert nicht oder ist kein Verzeichnis: {directory_path}")
+            return []
+
+        start_time = time.time()
+        roms_list = []
+        self._processed_files.clear()
+
+# Collect all file paths
+        glob_pattern = "**/*" if recursive else "*"
+        file_paths = [f for f in path_obj.glob(glob_pattern) if f.is_file()]
+
+# Processed files in parallel
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            future_to_path = {executor.submit(self._process_file, fp): fp for fp in file_paths}
+
+            for future in concurrent.futures.as_completed(future_to_path):
+                file_path = future_to_path[future]
+                try:
+                    rom_metadata = future.result()
+                    if rom_metadata:
+                        with self._lock:
+                            roms_list.append(rom_metadata)
+                except Exception as e:
+                    logger.warning(f"Fehler beim parallelen Verarbeiten von {file_path}: {e}")
+
+# Update statistics
+        scan_time = time.time() - start_time
+        self.stats["parallel_scan_time"] = scan_time
+        total_files = len(file_paths)
+        self.stats["total_files_scanned"] += total_files
+
+        if scan_time > 0:
+            self.stats["processing_rate"] = total_files / scan_time
+
+        return roms_list
+
+    def _process_file(self, file_path: Path) -> Optional[ROMMetadata]:
+        """
+        Verarbeitet eine einzelne Datei und erstellt ROM-Metadaten.
+
+        Args:
+            file_path: Pfad zur Datei
+
+        Returns:
+            ROMMetadata-Objekt oder None
+        """
+# Check on duplicates with thread security
+        with self._lock:
+            if file_path in self._processed_files:
+                return None
+            self._processed_files.add(file_path)
+
+# Check on valid expansion
+        extension = file_path.suffix.lstrip('.').lower()
+        if extension in self.filter_extensions:
+            try:
+# Check special cases
+                if is_archive_file(str(file_path)):
+                    with self._lock:
+                        self.stats["archives_found"] += 1
+
+                if is_chd_file(str(file_path)):
+                    with self._lock:
+                        self.stats["chd_files_found"] += 1
+
+# Create Rome metadata
+                rom_metadata = self._create_rom_metadata(file_path)
+
+# Update statistics with thread security
+                if rom_metadata:
+                    with self._lock:
+                        self.stats["roms_found"] += 1
+
+                return rom_metadata
+
+            except Exception as e:
+                logger.warning(f"Fehler beim Verarbeiten von {file_path}: {e}")
+
+        return None
+
+    def scan_with_progress_callback(self, directory_path: Union[str, Path],
+                                   progress_callback: Callable[[int, int, float], None],
+                                   recursive: bool = False) -> List[ROMMetadata]:
+        """
+        Durchsucht ein Verzeichnis mit Fortschrittsrückmeldung.
+
+        Args:
+            directory_path: Zu durchsuchendes Verzeichnis
+            progress_callback: Callback-Funktion für Fortschrittsbenachrichtigungen
+                              (abgeschlossen, gesamt, prozentsatz)
+            recursive: Ob Unterverzeichnisse rekursiv durchsucht werden sollen
+
+        Returns:
+            Liste von ROMMetadata-Objekten
+        """
+        path_obj = Path(directory_path)
+        if not path_obj.exists() or not path_obj.is_dir():
+            logger.error(f"Verzeichnis existiert nicht oder ist kein Verzeichnis: {directory_path}")
+            return []
+
+# Collect all file paths
+        glob_pattern = "**/*" if recursive else "*"
+        file_paths = list(path_obj.glob(glob_pattern))
+        total_files = len([f for f in file_paths if f.is_file()])
+
+        if total_files == 0:
+            logger.warning(f"Keine Dateien im Verzeichnis gefunden: {directory_path}")
+            return []
+
+# Initialize progress
+        processed_files = 0
+        results = []
+        progress_callback(processed_files, total_files, 0.0)
+
+# Processed files in parallel with progress monitoring
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            future_to_path = {}
+
+# Send only files to the executor
+            for file_path in file_paths:
+                if file_path.is_file():
+                    future_to_path[executor.submit(self._process_file, file_path)] = file_path
+
+# Processed results and updates progress
+            for future in concurrent.futures.as_completed(future_to_path):
+                processed_files += 1
+                percentage = (processed_files / total_files) * 100
+
+                try:
+                    rom_metadata = future.result()
+                    if rom_metadata:
+                        results.append(rom_metadata)
+
+# Update progress every 1% or all 20 files
+                    if processed_files % max(1, total_files // 100) == 0 or processed_files % 20 == 0:
+                        progress_callback(processed_files, total_files, percentage)
+
+                except Exception as e:
+                    file_path = future_to_path[future]
+                    logger.warning(f"Fehler beim Verarbeiten von {file_path}: {e}")
+
+# Final progress (100%)
+        progress_callback(total_files, total_files, 100.0)
+
+        return results
+
+
+def scan_directory(directory_path: Union[str, Path], recursive: bool = False,
+                  filter_extensions: Optional[List[str]] = None) -> List[ROMMetadata]:
+    """
+    Durchsucht ein Verzeichnis nach ROM-Dateien (Komfortfunktion).
+
+    Args:
+        directory_path: Zu durchsuchendes Verzeichnis
+        recursive: Ob Unterverzeichnisse rekursiv durchsucht werden sollen
+        filter_extensions: Optionale Liste von Dateierweiterungen zum Filtern
+
+    Returns:
+        Liste von ROMMetadata-Objekten
+    """
+    scanner = ROMScanner(filter_extensions)
+    return scanner.scan_directory(directory_path, recursive)
+
+
+def scan_directory_parallel(directory_path: Union[str, Path], recursive: bool = False,
+                           filter_extensions: Optional[List[str]] = None,
+                           max_workers: int = None) -> List[ROMMetadata]:
+    """
+    Durchsucht ein Verzeichnis parallel nach ROM-Dateien (Komfortfunktion).
+
+    Args:
+        directory_path: Zu durchsuchendes Verzeichnis
+        recursive: Ob Unterverzeichnisse rekursiv durchsucht werden sollen
+        filter_extensions: Optionale Liste von Dateierweiterungen zum Filtern
+        max_workers: Maximale Anzahl an Worker-Threads
+
+    Returns:
+        Liste von ROMMetadata-Objekten
+    """
+    scanner = OptimizedScanner(filter_extensions, max_workers)
+    return scanner.scan_directory_parallel(directory_path, recursive)
+
+
+def scan_directory_recursive(directory_path: Union[str, Path],
+                            filter_extensions: Optional[List[str]] = None) -> List[ROMMetadata]:
+    """
+    Durchsucht ein Verzeichnis rekursiv nach ROM-Dateien (Komfortfunktion).
+
+    Args:
+        directory_path: Zu durchsuchendes Verzeichnis
+        filter_extensions: Optionale Liste von Dateierweiterungen zum Filtern
+
+    Returns:
+        Liste von ROMMetadata-Objekten
+    """
+    return scan_directory(directory_path, recursive=True, filter_extensions=filter_extensions)

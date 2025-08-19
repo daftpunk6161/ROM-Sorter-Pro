@@ -1,0 +1,132 @@
+﻿"""
+Wrapper-Funktionen für die veralteten Aufrufe aus optimized_scanner.py
+"""
+
+import warnings
+from pathlib import Path
+from typing import List, Union, Optional
+
+from src.scanning import scan_directory_adaptive, OptimizedScanner, AdaptiveScanner
+
+
+def scan_directory(directory: str, progress_callback=None, stop_event=None, use_cache=True) -> List[Path]:
+    """
+    Wrapper für den veralteten scan_directory-Aufruf aus optimized_scanner.py.
+
+    Args:
+        directory: Zu durchsuchendes Verzeichnis
+        progress_callback: Callback-Funktion für Fortschrittsbenachrichtigungen
+        stop_event: Event zum Stoppen des Scans
+        use_cache: Ob der Cache verwendet werden soll
+
+    Returns:
+        Liste von ROM-Dateipfaden
+    """
+    warnings.warn(
+        "Die Verwendung von optimized_scanner.py ist veraltet. "
+        "Bitte verwenden Sie stattdessen src.scanning.scan_directory_adaptive.",
+        DeprecationWarning, stacklevel=2
+    )
+
+    scanner = AdaptiveScanner()
+
+    # Wenn progress_callback vorhanden ist, passen wir es für die neue API an
+    if progress_callback:
+        def adapted_callback(completed, total, percentage):
+            progress_callback(percentage, f"{completed}/{total} Dateien")
+
+        # Verwenden Sie scan_with_progress_callback
+        results = scanner.scan_with_progress_callback(
+            directory_path=directory,
+            progress_callback=adapted_callback,
+            recursive=True
+        )
+    else:
+        # Ohne Callback verwenden wir scan_directory_adaptive
+        results = scanner.scan_directory_adaptive(directory, recursive=True, use_cache=use_cache)
+
+    # Konvertiere ROMMetadata zu Path für Abwärtskompatibilität
+    return [item.path for item in results]
+
+
+def clear_cache():
+    """
+    Wrapper für den veralteten clear_cache-Aufruf aus optimized_scanner.py.
+    """
+    warnings.warn(
+        "Die Verwendung von optimized_scanner.py ist veraltet. "
+        "Bitte verwenden Sie stattdessen src.scanning.AdaptiveScanner.clear_cache.",
+        DeprecationWarning, stacklevel=2
+    )
+
+    AdaptiveScanner.clear_cache()
+
+
+def get_cache_stats():
+    """
+    Wrapper für den veralteten cache_stats-Aufruf aus optimized_scanner.py.
+
+    Returns:
+        Dict mit Cache-Statistiken
+    """
+    warnings.warn(
+        "Die Verwendung von optimized_scanner.py ist veraltet. "
+        "Bitte verwenden Sie stattdessen src.scanning.get_scanner_performance_stats.",
+        DeprecationWarning, stacklevel=2
+    )
+
+    from src.scanning import get_scanner_performance_stats
+    return get_scanner_performance_stats()
+
+
+class OptimizedFileScanner:
+    """
+    Veraltete OptimizedFileScanner-Klasse aus optimized_scanner.py.
+    Diese Klasse dient nur als Wrapper und sollte nicht mehr verwendet werden.
+    """
+
+    def __init__(self, extensions=None):
+        """
+        Initialisiert einen neuen OptimizedFileScanner (Wrapper).
+
+        Args:
+            extensions: Optionale Liste von Dateierweiterungen zum Filtern
+        """
+        warnings.warn(
+            "Die OptimizedFileScanner-Klasse ist veraltet. "
+            "Bitte verwenden Sie stattdessen src.scanning.AdaptiveScanner.",
+            DeprecationWarning, stacklevel=2
+        )
+
+        self._real_scanner = AdaptiveScanner(filter_extensions=extensions)
+
+    def scan_directory(self, directory: str, progress_callback=None, stop_event=None, use_cache=True) -> List[Path]:
+        """
+        Scannt ein Verzeichnis (Wrapper-Methode).
+
+        Args:
+            directory: Zu durchsuchendes Verzeichnis
+            progress_callback: Callback-Funktion für Fortschrittsbenachrichtigungen
+            stop_event: Event zum Stoppen des Scans
+            use_cache: Ob der Cache verwendet werden soll
+
+        Returns:
+            Liste von ROM-Dateipfaden
+        """
+        # Delegiere an die globale Wrapper-Funktion
+        return scan_directory(directory, progress_callback, stop_event, use_cache)
+
+    @classmethod
+    def clear_cache(cls):
+        """Löscht den Scanner-Cache (Wrapper-Methode)."""
+        clear_cache()
+
+    @property
+    def cache_stats(self):
+        """
+        Gibt Cache-Statistiken zurück (Wrapper-Methode).
+
+        Returns:
+            Dict mit Cache-Statistiken
+        """
+        return get_cache_stats()

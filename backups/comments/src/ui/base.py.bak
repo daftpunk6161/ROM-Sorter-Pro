@@ -1,0 +1,276 @@
+from pathlib import Path
+from typing import Dict, Any, Optional
+
+import tkinter as tk
+from tkinter import ttk
+
+class ThemeColors:
+    """Farbschema für die Anwendung."""
+
+    def __init__(self):
+# Main colors
+        self.bg_primary = "#f0f0f0"
+        self.bg_secondary = "#e6e6e6"
+        self.bg_accent = "#d9d9d9"
+
+# Text -colored
+        self.text_primary = "#333333"
+        self.text_secondary = "#555555"
+        self.text_accent = "#777777"
+
+# Accent colors
+        self.accent_primary = "#4a86e8"
+        self.accent_secondary = "#3d72c3"
+        self.accent_success = "#43a047"
+        self.accent_warning = "#ff9800"
+        self.accent_error = "#e53935"
+
+# Special colors
+        self.separator = "#cccccc"
+        self.hover = "#e0e0e0"
+        self.selected = "#d0d0d0"
+
+class ThemeFonts:
+    """Schriftarten für die Anwendung."""
+
+    def __init__(self):
+# Standard fonts
+        self.default = ("Segoe UI", 9)
+        self.header = ("Segoe UI", 12, "bold")
+        self.title = ("Segoe UI", 16, "bold")
+        self.small = ("Segoe UI", 8)
+        self.monospace = ("Consolas", 9)
+        self.button = ("Segoe UI", 9)
+
+class UIStyle:
+    """Zentraler Style-Manager für die Anwendung."""
+
+    def __init__(self):
+        """Initialisiere den Style-Manager mit Standardwerten."""
+        self.colors = ThemeColors()
+        self.fonts = ThemeFonts()
+        self._style = ttk.Style()
+        self._initialize_styles()
+
+    def _initialize_styles(self) -> None:
+        """Initialisiere die TTK-Stile."""
+        self._style.configure('TButton',
+                             font=self.fonts.button,
+                             background=self.colors.bg_primary,
+                             foreground=self.colors.text_primary)
+
+        self._style.configure('TLabel',
+                             font=self.fonts.default,
+                             background=self.colors.bg_primary,
+                             foreground=self.colors.text_primary)
+
+        self._style.configure('TFrame',
+                             background=self.colors.bg_primary)
+
+        self._style.configure('TNotebook',
+                             background=self.colors.bg_primary,
+                             tabmargins=[2, 5, 2, 0])
+
+        self._style.configure('TNotebook.Tab',
+                             font=self.fonts.default,
+                             padding=[10, 2],
+                             background=self.colors.bg_secondary,
+                             foreground=self.colors.text_primary)
+
+# Highlighted tabs
+        self._style.map('TNotebook.Tab',
+                       background=[('selected', self.colors.accent_primary)],
+                       foreground=[('selected', '#ffffff')])
+
+# Beam
+        self._style.configure('TProgressbar',
+                             thickness=10,
+                             background=self.colors.accent_primary)
+
+    def apply_to_widget(self, widget: tk.Widget, widget_type: str = 'frame') -> None:
+        """
+        Wendet den Stil auf ein bestimmtes Widget an.
+
+        Args:
+            widget: Das Widget, auf das der Stil angewendet werden soll
+            widget_type: Der Typ des Widgets (frame, button, label, etc.)
+        """
+        if widget_type == 'frame':
+            widget.configure(background=self.colors.bg_primary)
+        elif widget_type == 'button':
+            widget.configure(
+                background=self.colors.bg_primary,
+                foreground=self.colors.text_primary,
+                font=self.fonts.button,
+                activebackground=self.colors.hover
+            )
+        elif widget_type == 'label':
+            widget.configure(
+                background=self.colors.bg_primary,
+                foreground=self.colors.text_primary,
+                font=self.fonts.default
+            )
+        elif widget_type == 'entry':
+            widget.configure(
+                background="#ffffff",
+                foreground=self.colors.text_primary,
+                font=self.fonts.default,
+                insertbackground=self.colors.text_primary  # Cursorfarbe
+            )
+        elif widget_type == 'text':
+            widget.configure(
+                background="#ffffff",
+                foreground=self.colors.text_primary,
+                font=self.fonts.monospace,
+                insertbackground=self.colors.text_primary,
+                selectbackground=self.colors.accent_primary,
+                selectforeground="#ffffff"
+            )
+
+    def get_themed_frame(self, parent: tk.Widget) -> tk.Frame:
+        """Erstellt einen vorformattierten Frame."""
+        frame = tk.Frame(parent, background=self.colors.bg_primary)
+        return frame
+
+    def get_themed_button(self, parent: tk.Widget, text: str) -> tk.Button:
+        """Erstellt einen vorformattierten Button."""
+        button = tk.Button(
+            parent,
+            text=text,
+            background=self.colors.bg_primary,
+            foreground=self.colors.text_primary,
+            font=self.fonts.button,
+            activebackground=self.colors.hover,
+            relief=tk.RAISED,
+            borderwidth=1
+        )
+        return button
+
+
+# Global instance for the entire application
+STYLE = UIStyle()
+
+
+class BaseApp:
+    """Basisklasse für die Anwendung mit grundlegenden Funktionen."""
+
+    def __init__(self):
+        """Initialisiere die Basisanwendung."""
+        self.app_dir = Path(__file__).parent.parent.parent
+        self.assets_dir = self.app_dir / "assets"
+        self.style = STYLE
+
+    def get_asset_path(self, asset_name: str) -> Path:
+        """
+        Gibt den absoluten Pfad zu einer Asset-Datei zurück.
+
+        Args:
+            asset_name: Name der Asset-Datei
+
+        Returns:
+            Path: Der absolute Pfad zur Asset-Datei
+        """
+        return self.assets_dir / asset_name
+
+    def create_basic_window(self, title: str, geometry: str = "800x600") -> tk.Tk:
+        """
+        Erstellt ein grundlegendes Tkinter-Fenster.
+
+        Args:
+            title: Titel des Fensters
+            geometry: Größe des Fensters im Format "BreitexHöhe"
+
+        Returns:
+            tk.Tk: Das erstellte Tkinter-Fenster
+        """
+        root = tk.Tk()
+        root.title(title)
+        root.geometry(geometry)
+
+# Set a minimum size for the window
+        root.minsize(640, 480)
+
+# Improve the rendering performance
+# Deactivate unnecessary extensions that can cause flickers
+        root.tk.call('package', 'forget', 'Tk_syncLed')
+
+# Increase the synchronization delay for more smooth updates
+        root.tk.call('tk', 'useinputmethods', '1')
+        root.tk.call('tk', 'scaling', '1.0')  # Konsistente Skalierung
+
+        try:
+# Windows-specific optimizations
+            if hasattr(root, 'iconbitmap'):
+                icon_path = self.get_asset_path("icon.ico")
+                if icon_path.exists():
+                    root.iconbitmap(default=str(icon_path))
+
+# Use hardware acceleration if available
+            root.tk.call('tk', 'scaling', root.winfo_fpixels('1i')/72.0)
+        except Exception:
+            pass
+
+        return root
+
+
+def center_window(window: tk.Tk, width: int = 800, height: int = 600) -> None:
+    """
+    Zentriert ein Tkinter-Fenster auf dem Bildschirm.
+
+    Args:
+        window: Das zu zentrierende Fenster
+        width: Breite des Fensters
+        height: Höhe des Fensters
+    """
+# Call up screen dimensions
+    screen_width = window.winfo_screenwidth()
+    screen_height = window.winfo_screenheight()
+
+# Calculate the position
+    x = (screen_width - width) // 2
+    y = (screen_height - height) // 2
+
+# Set the window position and size
+    window.geometry(f"{width}x{height}+{x}+{y}")
+
+
+def create_tooltip(widget: tk.Widget, text: str) -> None:
+    """
+    Erstellt einen Tooltip für ein Widget.
+
+    Args:
+        widget: Das Widget, für das der Tooltip erstellt werden soll
+        text: Der anzuzeigende Text
+    """
+    tooltip = tk.Toplevel(widget)
+    tooltip.wm_overrideredirect(True)  # Entfernt die Fensterdekorationen
+    tooltip.wm_geometry("+0+0")  # Platziert das Fenster anfänglich in der oberen linken Ecke
+    tooltip.withdraw()  # Versteckt das Fenster zunächst
+
+    label = tk.Label(
+        tooltip,
+        text=text,
+        background="#ffffcc",
+        foreground="#000000",
+        relief=tk.SOLID,
+        borderwidth=1,
+        padx=5,
+        pady=2,
+        wraplength=250
+    )
+    label.pack()
+
+    def show_tooltip(event=None):
+        """Zeigt den Tooltip an der Mausposition an."""
+        x = widget.winfo_pointerx() + 15
+        y = widget.winfo_pointery() + 10
+        tooltip.wm_geometry(f"+{x}+{y}")
+        tooltip.deiconify()
+
+    def hide_tooltip(event=None):
+        """Versteckt den Tooltip."""
+        tooltip.withdraw()
+
+# Bind the events to the functions
+    widget.bind("<Enter>", show_tooltip)
+    widget.bind("<Leave>", hide_tooltip)

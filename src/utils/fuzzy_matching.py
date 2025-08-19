@@ -1,0 +1,248 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+ROM Sorter Pro - Fuzzy-Matching-Funktionen
+
+Dieses Modul stellt Funktionen für Fuzzy-String-Matching bereit, die für
+die ROM-Erkennung und Ähnlichkeitsvergleiche verwendet werden.
+"""
+
+import re
+import logging
+from typing import List, Tuple, TypeVar, Callable, Generic, Optional, Set, Dict, Any, Union
+from functools import lru_cache
+
+# Type variable for generic functions
+T = TypeVar('T')
+
+# Logger
+logger = logging.getLogger(__name__)
+
+# Attempts to import the external fuzzywuzzy module
+try:
+    from fuzzywuzzy import fuzz, process
+    _USE_EXTERNAL_FUZZ = True
+    logger.debug("Externe fuzzywuzzy-Bibliothek geladen")
+except ImportError:
+    # Fallback auf unsere eigene Implementierung
+    _USE_EXTERNAL_FUZZ = False
+    logger.debug("Fallback auf interne Fuzzy-Matching-Implementierung")
+
+
+def _process_strings(s1: str, s2: str) -> Tuple[str, str]:
+    """
+    Bereitet Strings für den Ähnlichkeitsvergleich vor.
+
+    Args:
+        s1: Erster String
+        s2: Zweiter String
+
+    Returns:
+        Tuple mit den normalisierten Strings
+    """
+    # Convert to small letters
+    s1 = s1.lower()
+    s2 = s2.lower()
+
+    # Sonderzeichen entfernen
+    s1 = re.sub(r'[^\w\s]', '', s1)
+    s2 = re.sub(r'[^\w\s]', '', s2)
+
+    # Mehrfache Leerzeichen entfernen
+    s1 = re.sub(r'\s+', ' ', s1).strip()
+    s2 = re.sub(r'\s+', ' ', s2).strip()
+
+    return s1, s2
+
+
+def fuzz_ratio(s1: str, s2: str) -> int:
+    """
+    Berechnet die Ähnlichkeit zwischen zwei Strings (Levenshtein-Distanz).
+
+    Args:
+        s1: Erster String
+        s2: Zweiter String
+
+    Returns:
+        Ähnlichkeitswert zwischen 0 und 100
+    """
+    if _USE_EXTERNAL_FUZZ:
+        return fuzz.ratio(s1, s2)
+
+    # Simple implementation with a lack of external library
+    s1, s2 = _process_strings(s1, s2)
+    if not s1 or not s2:
+        return 0
+
+    # Einfacher Jaccard-Index als Fallback
+    set1 = set(s1)
+    set2 = set(s2)
+
+    intersection = len(set1.intersection(set2))
+    union = len(set1.union(set2))
+
+    return round((intersection / max(1, union)) * 100)
+
+
+def fuzz_partial_ratio(s1: str, s2: str) -> int:
+    """
+    Berechnet die beste partielle Ähnlichkeit zwischen zwei Strings.
+
+    Args:
+        s1: Erster String
+        s2: Zweiter String
+
+    Returns:
+        Ähnlichkeitswert zwischen 0 und 100
+    """
+    if _USE_EXTERNAL_FUZZ:
+        return fuzz.partial_ratio(s1, s2)
+
+    # Simple implementation for partial comparison
+    s1, s2 = _process_strings(s1, s2)
+
+    if not s1 or not s2:
+        return 0
+
+    # Use the shorter string as a reference
+    if len(s1) > len(s2):
+        s1, s2 = s2, s1
+
+    # Search for the best agreement area
+    best_score = 0
+    for i in range(len(s2) - len(s1) + 1):
+        substring = s2[i:i+len(s1)]
+        score = fuzz_ratio(s1, substring)
+        best_score = max(best_score, score)
+
+    return best_score
+
+
+def fuzz_token_sort_ratio(s1: str, s2: str) -> int:
+    """
+    Sortiert die Wörter in beiden Strings und vergleicht dann die sortierten Strings.
+
+    Args:
+        s1: Erster String
+        s2: Zweiter String
+
+    Returns:
+        Ähnlichkeitswert zwischen 0 und 100
+    """
+    if _USE_EXTERNAL_FUZZ:
+        return fuzz.token_sort_ratio(s1, s2)
+
+    # Eigene Implementierung
+    s1, s2 = _process_strings(s1, s2)
+
+    # Sortiere Tokens
+    sorted_s1 = ' '.join(sorted(s1.split()))
+    sorted_s2 = ' '.join(sorted(s2.split()))
+
+    return fuzz_ratio(sorted_s1, sorted_s2)
+
+
+def fuzz_token_set_ratio(s1: str, s2: str) -> int:
+    """
+    Betrachtet die Strings als Mengen von Tokens und vergleicht diese.
+
+    Args:
+        s1: Erster String
+        s2: Zweiter String
+
+    Returns:
+        Ähnlichkeitswert zwischen 0 und 100
+    """
+    if _USE_EXTERNAL_FUZZ:
+        return fuzz.token_set_ratio(s1, s2)
+
+    # Eigene Implementierung
+    s1, s2 = _process_strings(s1, s2)
+
+    # Token-Mengen erstellen
+    tokens1 = set(s1.split())
+    tokens2 = set(s2.split())
+
+    # Gemeinsame Tokens
+    intersection = tokens1.intersection(tokens2)
+
+    # Union of the tokens
+    union = tokens1.union(tokens2)
+
+    if not union:
+        return 0
+
+    # Jaccard coefficient for quantities
+    return round((len(intersection) / len(union)) * 100)
+
+
+class ProcessMatch:
+    """Klasse für erweiterte String-Ähnlichkeitssuche."""
+
+    @staticmethod
+    def extract(query: str, choices: List[T], limit: int = 5,
+               processor: Callable[[T], str] = str,
+               scorer: Callable[[str, str], int] = fuzz_ratio,
+               score_cutoff: int = 0) -> List[Tuple[T, int]]:
+        """
+        Extrahiert die besten Übereinstimmungen aus einer Liste von Optionen.
+
+        Args:
+            query: Der Suchstring
+            choices: Liste der zu durchsuchenden Elemente
+            limit: Maximale Anzahl an Ergebnissen
+            processor: Funktion zur Umwandlung der Elemente in Strings
+            scorer: Ähnlichkeitsfunktion
+            score_cutoff: Minimaler Ähnlichkeitswert
+
+        Returns:
+            Liste von (Element, Ähnlichkeitswert)-Tupeln
+        """
+        if _USE_EXTERNAL_FUZZ:
+            return process.extract(query, choices, limit=limit,
+                                  processor=processor, scorer=scorer,
+                                  score_cutoff=score_cutoff)
+
+        # Eigene Implementierung
+        results = []
+
+        for choice in choices:
+            choice_str = processor(choice)
+            score = scorer(query, choice_str)
+
+            if score >= score_cutoff:
+                results.append((choice, score))
+
+        # Sort according to similarity value (descending)
+        results.sort(key=lambda x: x[1], reverse=True)
+
+        return results[:limit]
+
+    @staticmethod
+    def extractOne(query: str, choices: List[T],
+                  processor: Callable[[T], str] = str,
+                  scorer: Callable[[str, str], int] = fuzz_ratio,
+                  score_cutoff: int = 0) -> Optional[Tuple[T, int]]:
+        """
+        Extrahiert die beste Übereinstimmung aus einer Liste von Optionen.
+
+        Args:
+            query: Der Suchstring
+            choices: Liste der zu durchsuchenden Elemente
+            processor: Funktion zur Umwandlung der Elemente in Strings
+            scorer: Ähnlichkeitsfunktion
+            score_cutoff: Minimaler Ähnlichkeitswert
+
+        Returns:
+            (Element, Ähnlichkeitswert)-Tupel oder None
+        """
+        if _USE_EXTERNAL_FUZZ:
+            return process.extractOne(query, choices,
+                                     processor=processor, scorer=scorer,
+                                     score_cutoff=score_cutoff)
+
+        results = ProcessMatch.extract(query, choices, limit=1,
+                                     processor=processor, scorer=scorer,
+                                     score_cutoff=score_cutoff)
+
+        return results[0] if results else None

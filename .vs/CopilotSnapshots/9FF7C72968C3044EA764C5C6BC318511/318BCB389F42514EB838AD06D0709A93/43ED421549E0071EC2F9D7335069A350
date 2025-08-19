@@ -1,0 +1,140 @@
+﻿# ROM Sorter Pro - Benutzerhandbuch
+
+## Überblick
+
+ROM Sorter Pro ist ein leistungsstarkes Tool zur Organisation und Verwaltung Ihrer ROM-Sammlungen. Es bietet eine intuitive Benutzeroberfläche, fortschrittliche Erkennungsfunktionen und hilft Ihnen, Ihre Spiele nach Konsolen zu sortieren und zu katalogisieren.
+
+## Funktionen
+
+- **Automatische Konsolenerkennung**: Erkennt automatisch den Konsolentyp von ROMs
+- **Intelligente Sortierung**: Sortiert ROMs nach Konsole, Jahr und Genre
+- **Duplikat-Erkennung**: Findet und entfernt doppelte ROMs
+- **Archiv-Unterstützung**: Unterstützung für ZIP, 7z und andere Archivformate
+- **Metadaten-Management**: Anreicherung mit Spielinformationen und Cover-Art
+- **Benutzerfreundliche Oberfläche**: Intuitive GUI mit Drag-and-Drop-Unterstützung
+
+## Installation
+
+### Systemanforderungen
+
+- **Betriebssystem**: Windows 10/11, macOS 10.14+, oder Linux
+- **Python**: Version 3.8 oder höher
+- **Arbeitsspeicher**: Mindestens 4GB RAM empfohlen
+- **Festplattenspeicher**: Mindestens 500MB für die Anwendung, zusätzlicher Speicher für ROM-Datenbanken
+
+### Installationsschritte
+
+1. Stellen Sie sicher, dass Python 3.8 oder höher installiert ist
+2. Entpacken Sie das ROM Sorter Pro-Archiv in einen Ordner Ihrer Wahl
+3. Führen Sie das Installationsskript aus:
+   - Windows: Doppelklick auf `install_dependencies.py` oder `python install_dependencies.py` in der Kommandozeile
+   - macOS/Linux: `python3 install_dependencies.py` im Terminal
+
+### Optional: Virtuelle Umgebung
+
+Für eine sauberere Installation können Sie eine virtuelle Python-Umgebung verwenden:
+
+```bash
+# Virtuelle Umgebung erstellen
+python -m venv .venv
+
+# Aktivieren (Windows)
+.venv\Scripts\activate
+
+# Aktivieren (macOS/Linux)
+source .venv/bin/activate
+
+# Abhängigkeiten installieren
+python install_dependencies.py
+```
+
+## Erste Schritte
+
+1. Starten Sie ROM Sorter Pro:
+   - Windows: Doppelklick auf `start_rom_sorter.bat` oder `python start_rom_sorter.py`
+   - macOS/Linux: `./start_rom_sorter.sh` oder `python3 start_rom_sorter.py`
+
+2. Wählen Sie im Hauptmenü "Scan-Verzeichnis" aus und navigieren Sie zu Ihrem ROM-Ordner
+
+3. Konfigurieren Sie die Scan-Optionen nach Ihren Wünschen:
+   - Tiefe des Verzeichnis-Scans
+   - Archiv-Behandlung
+   - Erkennungs-Methode
+
+4. Starten Sie den Scan und warten Sie, bis der Prozess abgeschlossen ist
+
+5. Überprüfen Sie die erkannten ROMs und passen Sie die Ergebnisse bei Bedarf an
+
+6. Wählen Sie "Sortieren", um die ROMs nach Konsole zu organisieren
+
+## Häufige Funktionen
+
+### ROMs scannen und sortieren
+
+1. Klicken Sie auf "Scan-Verzeichnis" in der Hauptmenüleiste
+2. Wählen Sie den Ordner mit Ihren ROMs aus
+3. Konfigurieren Sie die Scan-Optionen
+4. Klicken Sie auf "Scan starten"
+5. Nach Abschluss des Scans können Sie die Ergebnisse überprüfen
+6. Wählen Sie "Sortieren", um die ROMs nach Konsole zu organisieren
+
+### Duplikate finden
+
+1. Wählen Sie "Werkzeuge" > "Duplikate finden" im Hauptmenü
+2. Wählen Sie die zu prüfenden Verzeichnisse aus
+3. Stellen Sie die Erkennungsgenauigkeit ein
+4. Klicken Sie auf "Suchen"
+5. Überprüfen und verwalten Sie die gefundenen Duplikate
+
+### Metadaten aktualisieren
+
+1. Wählen Sie eine ROM oder einen Ordner aus
+2. Rechtsklick > "Metadaten aktualisieren"
+3. Wählen Sie die gewünschten Metadaten-Quellen
+4. Klicken Sie auf "Aktualisieren"
+
+## Befehlszeilenschnittstelle
+
+ROM Sorter Pro bietet auch eine Befehlszeilenschnittstelle für fortgeschrittene Benutzer:
+
+```bash
+# Hilfe anzeigen
+python start_rom_sorter.py --help
+
+# Im CLI-Modus starten
+python start_rom_sorter.py --cli
+
+# Verzeichnis direkt scannen
+python start_rom_sorter.py --scan /pfad/zum/rom/ordner
+
+# Debug-Informationen anzeigen
+python start_rom_sorter.py --debug
+```
+
+## Fehlerbehebung
+
+### Die Anwendung startet nicht
+
+1. Stellen Sie sicher, dass Python 3.8 oder höher installiert ist
+2. Führen Sie `python install_dependencies.py` aus, um fehlende Abhängigkeiten zu installieren
+3. Überprüfen Sie die Log-Datei unter `logs/rom_sorter_startup.log`
+
+### ROMs werden nicht korrekt erkannt
+
+1. Stellen Sie sicher, dass die ROMs in einem unterstützten Format vorliegen
+2. Erhöhen Sie die Erkennungsgenauigkeit in den Einstellungen
+3. Aktualisieren Sie die ROM-Datenbank über "Werkzeuge" > "Datenbank aktualisieren"
+
+### Leistungsprobleme
+
+1. Reduzieren Sie die Anzahl der gleichzeitigen Threads in den Einstellungen
+2. Deaktivieren Sie nicht benötigte Erkennungsfunktionen
+3. Verwenden Sie den optimierten Scanner für große Sammlungen
+
+## Weiterführende Hilfe
+
+Weitere Informationen finden Sie in der ausführlichen Dokumentation im `docs`-Ordner.
+
+---
+
+© 2025 ROM Sorter Pro. Alle Rechte vorbehalten.

@@ -1,0 +1,11 @@
+#!/usr/bin/env python3
+# -*-coding: utf-8-*-
+"""
+ROM Sorter Pro - Hauptpaket
+===========================
+
+Dieses Paket enthält die Module und Komponenten für den ROM Sorter Pro.
+"""
+
+__version__ = "3.0.0"
+__author__ = "ROM Sorter Team"

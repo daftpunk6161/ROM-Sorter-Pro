@@ -1,0 +1,27 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+ROM Sorter Pro - Konfigurationspaket
+Phase 1 Implementation: Desktop-Optimierung und Integration
+
+Dieses Modul initialisiert das Konfigurationspaket und stellt Hilfsfunktionen bereit.
+"""
+
+from pathlib import Path
+import sys
+import os
+
+# Importiere die globale Konfiguration
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from config import Config, config_instance
+
+# Exportiere die enhanced_config für die Verwendung
+try:
+    from .enhanced_config import EnhancedConfig, get_enhanced_config
+except ImportError:
+    # Fallback, falls enhanced_config noch nicht existiert
+    EnhancedConfig = Config
+    get_enhanced_config = lambda: config_instance
+
+# Liste der öffentlich verfügbaren Namen für den Import
+__all__ = ['Config', 'EnhancedConfig', 'config_instance', 'get_enhanced_config']

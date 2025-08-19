@@ -1,0 +1,163 @@
+#!/usr/bin/env python3
+# -*-coding: utf-8-*-
+"""
+ROM Sorter Pro - Sicherheitsvalidierung
+
+Dieses Modul enthält Funktionen zur sicheren Validierung von Pfaden
+und Benutzereingaben, um Directory-Traversal und andere Angriffe zu verhindern.
+"""
+
+import os
+import re
+import logging
+import sys
+from pathlib import Path
+from typing import Optional, List, Dict, Any, Union, Tuple
+
+logger = logging.getLogger(__name__)
+
+
+class SecurityError(Exception):
+    """Basisklasse für sicherheitsrelevante Fehler."""
+    pass
+
+
+class InvalidPathError(SecurityError):
+    """Fehler bei ungültigen oder unsicheren Pfaden."""
+    pass
+
+
+def sanitize_filename(filename: str, max_length: int = 255) -> str:
+    """
+    Bereinigt Dateinamen für die sichere Verwendung in verschiedenen Dateisystemen.
+
+    Args:
+        filename: Originaler Dateiname
+        max_length: Maximal erlaubte Länge
+
+    Returns:
+        Bereinigter Dateiname
+
+    Raises:
+        ValueError: Wenn der Dateiname leer ist
+    """
+    if not filename:
+        raise ValueError("Dateiname darf nicht leer sein")
+
+# Remove dangerous signs
+    sanitized = re.sub(r'[<>:"/\\|?*\x00-\x1f\x7f-\x9f]', '_', filename)
+
+# Remove leading/subsequent points and spaces
+    sanitized = sanitized.strip(' .')
+
+# Make sure that the file name is not empty after cleaning up
+    if not sanitized:
+        sanitized = "unknown_file"
+
+# Rest, if too long, and if possible get the expansion
+    if len(sanitized) > max_length:
+        if '.' in sanitized:
+            name, ext = sanitized.rsplit('.', 1)
+            max_name_length = max_length - len(ext) - 1
+            if max_name_length > 0:
+                sanitized = name[:max_name_length] + '.' + ext
+            else:
+                sanitized = sanitized[:max_length]
+        else:
+            sanitized = sanitized[:max_length]
+
+    return sanitized
+
+
+def validate_file_operation(source: Union[str, Path], destination: Union[str, Path],
+                          allowed_base_dirs: Optional[List[Union[str, Path]]] = None) -> Tuple[Path, Path]:
+    """
+    Validiert Dateioperation-Pfade für Sicherheit.
+
+    Args:
+        source: Quelldateipfad
+        destination: Zieldateipfad
+        allowed_base_dirs: Optionale Liste erlaubter Basisverzeichnisse
+
+    Returns:
+        Tuple aus validierten (source_path, destination_path)
+
+    Raises:
+        SecurityError: Wenn die Validierung fehlschlägt
+    """
+    try:
+        from .security_utils import sanitize_path
+
+        source_path = sanitize_path(source, allowed_base_dirs)
+        dest_path = sanitize_path(destination, allowed_base_dirs)
+
+# Additional exams
+        if not source_path.exists():
+            raise InvalidPathError(f"Quelldatei existiert nicht: {source_path}")
+
+        if not source_path.is_file():
+            raise InvalidPathError(f"Quelle ist keine Datei: {source_path}")
+
+# Check whether the target directory exists and can be described
+        dest_dir = dest_path.parent
+        if dest_dir.exists() and not os.access(dest_dir, os.W_OK):
+            raise InvalidPathError(f"Zielverzeichnis ist nicht beschreibbar: {dest_dir}")
+
+        return source_path, dest_path
+
+    except Exception as e:
+        logger.error(f"Validierungsfehler bei Dateioperation: {str(e)}")
+        raise SecurityError(f"Fehler bei Validierung der Dateioperation: {str(e)}")
+
+
+def is_path_traversal_attack(path: str) -> bool:
+    """
+    Erkennt Versuche von Path-Traversal-Angriffen.
+
+    Args:
+        path: Zu prüfender Pfad
+
+    Returns:
+        True, wenn ein Path-Traversal-Muster erkannt wurde
+    """
+# Search for typical path-traversal patterns
+    suspicious_patterns = [
+        r'\.\./', r'\.\.\\',  # Unix and Windows Relative Parent Path
+        r'/\.\.', r'\\\.\.',
+        r'^\.\.$', r'^\.\./',  # Starts with..
+        r'%2e%2e', r'%2E%2E',  # URL-codiertes ..
+        r'\\\\', r'//',  # Doppelte Trennzeichen
+    ]
+
+    for pattern in suspicious_patterns:
+        if re.search(pattern, path):
+            logger.warning(f"Möglicher Path-Traversal-Angriff erkannt: {path}")
+            return True
+
+# Check for suspicious Unicode characters that can be used for traversal attacks
+    unicode_normalization_check = Path(os.path.normpath(path)).as_posix()
+    if unicode_normalization_check != Path(path).as_posix():
+        logger.warning(f"Verdächtige Unicode-Normalisierung erkannt: {path}")
+        return True
+
+    return False
+
+
+def validate_extension(filename: str, allowed_extensions: List[str]) -> bool:
+    """
+    Überprüft, ob eine Datei eine zulässige Dateierweiterung hat.
+
+    Args:
+        filename: Dateiname oder Pfad
+        allowed_extensions: Liste der erlaubten Dateierweiterungen (mit oder ohne Punkt)
+
+    Returns:
+        True, wenn die Datei eine zulässige Erweiterung hat
+    """
+# Normalize extensions (make sure you start with dot)
+    normalized_extensions = [ext if ext.startswith('.') else f'.{ext}' for ext in allowed_extensions]
+
+# Extraction extension from the file name
+    _, ext = os.path.splitext(filename.lower())
+
+    return ext in normalized_extensions

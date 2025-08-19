@@ -1,0 +1,161 @@
+#!/usr/bin/env python3
+# -*-coding: utf-8-*-
+"""
+ROM Sorter Pro - Datenbank-Verbindungspool
+
+Dieses Modul bietet einen sicheren Verbindungspool für Datenbankoperationen.
+Es stellt sicher, dass alle Verbindungen ordnungsgemäß geschlossen werden.
+"""
+
+import os
+import sqlite3
+import threading
+import time
+import logging
+from collections import deque
+from pathlib import Path
+from typing import Optional
+from contextlib import contextmanager
+
+from src.security.security_utils import sanitize_path
+
+logger = logging.getLogger(__name__)
+
+# Standard path to the Rome database
+ROM_DATABASE_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                               'rom_databases', 'rom_database.sqlite')
+
+class DatabaseConnectionPool:
+    """Sicherer und effizienter Datenbankverbindungs-Pool."""
+
+    _instance = None
+    _lock = threading.RLock()
+
+    @classmethod
+    def get_instance(cls, db_path: str = ROM_DATABASE_PATH, max_connections: int = 10):
+        """Gibt die Singleton-Instanz des Verbindungspools zurück."""
+        with cls._lock:
+            if cls._instance is None:
+                cls._instance = DatabaseConnectionPool(db_path, max_connections)
+            return cls._instance
+
+    def __init__(self, db_path: str, max_connections: int = 10):
+        """Initialisiert den Verbindungspool mit Sicherheitsvalidierung."""
+# Validate the database path
+        self.db_path = str(sanitize_path(db_path))
+
+        if max_connections <= 0 or max_connections > 50:
+            raise ValueError("max_connections muss zwischen 1 und 50 liegen")
+
+        self.max_connections = max_connections
+        self._pool = deque()
+        self._active_connections = 0
+
+    def get_connection(self) -> sqlite3.Connection:
+        """Holt eine Datenbankverbindung aus dem Pool mit Sicherheitschecks."""
+        with self._lock:
+            if self._pool:
+                return self._pool.popleft()
+
+            if self._active_connections < self.max_connections:
+                conn = self._create_connection()
+                self._active_connections += 1
+                return conn
+
+# Wait a short time and try again
+            time.sleep(0.01)
+            if self._pool:
+                return self._pool.popleft()
+
+# Create a new connection in an emergency
+            return self._create_connection()
+
+    def return_connection(self, conn: sqlite3.Connection):
+        """Gibt eine Verbindung zum Pool zurück."""
+        with self._lock:
+            try:
+# Check whether the connection is still valid
+                cursor = conn.cursor()
+                cursor.execute("SELECT 1")
+                cursor.close()
+
+# If valid, add it to the pool or close it
+                if len(self._pool) < self.max_connections:
+                    self._pool.append(conn)
+                else:
+                    conn.close()
+                    self._active_connections -= 1
+            except (sqlite3.Error, sqlite3.ProgrammingError):
+# In the event of errors: close the connection and reduce counter
+                try:
+                    conn.close()
+                except:
+                    pass  # Ignoriere Fehler beim Schließen
+                self._active_connections -= 1
+
+    def _create_connection(self) -> sqlite3.Connection:
+        """Erstellt eine sichere und optimierte Datenbankverbindung."""
+        try:
+            conn = sqlite3.connect(
+                self.db_path,
+                isolation_level=None,  # Autocommit-Modus für bessere Performance
+                check_same_thread=False,  # Erlaubt Thread-übergreifende Nutzung
+                timeout=30.0
+            )
+
+# Set safe SQlite pragmas
+            cursor = conn.cursor()
+            secure_pragmas = [
+                "PRAGMA journal_mode=WAL",
+                "PRAGMA synchronous=NORMAL",
+                "PRAGMA cache_size=10000",
+                "PRAGMA temp_store=MEMORY",
+                "PRAGMA mmap_size=268435456",  # 256MB
+                "PRAGMA foreign_keys=ON",
+                "PRAGMA secure_delete=ON",
+                "PRAGMA trusted_schema=OFF"
+            ]
+
+            for pragma in secure_pragmas:
+                cursor.execute(pragma)
+
+            cursor.close()
+            return conn
+
+        except Exception as e:
+            logger.error(f"Fehler beim Erstellen einer sicheren Datenbankverbindung: {e}")
+            raise
+
+    def close_all(self):
+        """Schließt alle Verbindungen im Pool."""
+        with self._lock:
+            while self._pool:
+                conn = self._pool.popleft()
+                try:
+                    conn.close()
+                except:
+                    pass  # Ignoriere Fehler beim Schließen
+            self._active_connections = 0
+
+
+@contextmanager
+def database_connection(db_path: str = ROM_DATABASE_PATH):
+    """
+    Context-Manager für sichere Datenbankverbindungen.
+
+    Verwendung:
+        with database_connection() as conn:
+            cursor = conn.cursor()
+# Carry out SQL operations
+            cursor.execute("SELECT * FROM table")
+
+    Die Verbindung wird automatisch zum Pool zurückgegeben, wenn der Block verlassen wird.
+    """
+    pool = DatabaseConnectionPool.get_instance(db_path)
+    conn = None
+    try:
+        conn = pool.get_connection()
+        yield conn
+    finally:
+        if conn is not None:
+            pool.return_connection(conn)

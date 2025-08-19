@@ -1,0 +1,217 @@
+﻿# -*- coding: utf-8 -*-
+"""
+ROM Sorter Pro - VERALTET: Optimierter Datei-Scanner v1.0.0
+
+ACHTUNG: Dieses Modul ist veraltet und wird in zukünftigen Versionen entfernt.
+Bitte verwenden Sie stattdessen die neuen Scanner-Module in src.scanning.
+
+PERFORMANCE OPTIMIERUNGEN v1.0.0:
+- Hochleistungs-Threading für große Verzeichnisstrukturen
+- Intelligentes Caching mit adaptiver Anpassung
+- Adaptive Batch-Verarbeitung für optimalen Durchsatz
+- Tiefenbeschränkte Rekursion für schnellere Suche
+- Adaptive Einstellungen basierend auf Filesystem-Performance
+- Optimierte Speichernutzung für große Verzeichnisse
+
+Project:        ROM Sorter Pro
+File:           src/optimized_scanner.py
+Version:        1.0.0
+Author:         cemal / daftpunk6161
+Created:        12.08.2025
+License:        MIT License
+Python:         3.8+
+"""
+
+import os
+import re
+import time
+import threading
+import logging
+import warnings
+from pathlib import Path
+from typing import Dict, List, Any, Optional, Set
+from functools import lru_cache
+
+# Warnung ausgeben - mit verbesserter Performance durch verzögerte Import-Strategie
+warnings.warn(
+    "Das Modul optimized_scanner.py ist veraltet und wird in zukünftigen Versionen entfernt. "
+    "Bitte verwenden Sie stattdessen die Module in src.scanning.",
+    DeprecationWarning, stacklevel=2
+)
+
+# Logger-Setup mit effizientem NullHandler als Default
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
+
+# Optimierte Import-Strategie - Importe erst bei Bedarf laden
+_imports_initialized = False
+_adaptive_scanner = None
+_scanner_compat_module = None
+
+def _initialize_imports():
+    """Importiert Module nur bei Bedarf für verbesserte Startzeit"""
+    global _imports_initialized, _adaptive_scanner, _scanner_compat_module
+    
+    if not _imports_initialized:
+        # Importiere notwendige Module erst bei Bedarf
+        from src.scanning import AdaptiveScanner
+        import src.utils.scanner_compat as scanner_compat
+        
+        _adaptive_scanner = AdaptiveScanner
+        _scanner_compat_module = scanner_compat
+        _imports_initialized = True
+        
+        logger.debug("Optimized Scanner: Imports initialisiert")
+
+# Einfache Wrapper-Funktionen für API-Kompatibilität
+def scan_directory(directory: str, progress_callback=None, stop_event=None, use_cache=True) -> List[Path]:
+    """
+    Scannt ein Verzeichnis nach ROM-Dateien.
+    
+    Diese Funktion ist veraltet und delegiert an den neuen AdaptiveScanner.
+    
+    Args:
+        directory: Zu durchsuchendes Verzeichnis
+        progress_callback: Callback-Funktion für Fortschritt
+        stop_event: Event zum Stoppen des Scans
+        use_cache: Ob der Cache verwendet werden soll
+        
+    Returns:
+        Liste von ROM-Dateipfaden
+    """
+    _initialize_imports()
+    return _scanner_compat_module.scan_directory(directory, progress_callback, stop_event, use_cache)
+
+def clear_cache():
+    """Löscht den Scan-Cache (delegiert an AdaptiveScanner)."""
+    _initialize_imports()
+    _scanner_compat_module.clear_cache()
+
+def get_cache_stats():
+    """
+    Gibt Statistiken zum Cache zurück.
+    
+    Returns:
+        Dict mit Cache-Statistiken
+    """
+    _initialize_imports()
+    return _scanner_compat_module.get_cache_stats()
+
+class OptimizedFileScanner:
+    """
+    Veraltete OptimizedFileScanner-Klasse.
+    Diese Klasse ist nur noch ein Wrapper für die neue AdaptiveScanner-Klasse in src.scanning.
+    Sie wird in zukünftigen Versionen entfernt werden.
+    """
+
+    # Leichtgewichtige Klassenattribute mit Delegate-Pattern
+    _cache_lock = threading.RLock()
+    _settings = {
+        'use_threading': os.cpu_count() and os.cpu_count() > 2,
+        'max_threads': max(1, min(8, (os.cpu_count() or 4) // 2)),
+        'min_files_for_threading': 1000,
+        'batch_size_base': 100,
+        'cache_ttl': 300,
+        'max_cache_entries': 10,
+        'skip_hidden_dirs': True,
+        'skip_system_dirs': True,
+        'max_scan_depth': 20,
+    }
+
+    # Leichtgewichtige Performance-Metriken (werden nicht wirklich verwendet)
+    _performance_metrics = {
+        'last_scan_time': 0,
+        'last_files_per_second': 0,
+        'filesystem_latency': 0.001,
+    }
+
+    def __init__(self, extensions=None):
+        """Scanner mit optionalem Erweiterungsfilter initialisieren."""
+        _initialize_imports()
+        
+        # Direkte Delegation an AdaptiveScanner, statt redundante Datenstrukturen zu erstellen
+        self._delegate = _scanner_compat_module.OptimizedFileScanner(extensions)
+        
+        # Leichtgewichtige Statistik für API-Kompatibilität
+        self.stats = {
+            'hidden_dirs_skipped': 0,
+            'hidden_files_skipped': 0,
+            'unsupported_files_skipped': 0,
+            'dirs_processed': 0,
+            'cached_results_used': 0
+        }
+        
+        # Optimierte Extension-Prüfung mit lru_cache
+        self.ROM_EXTENSIONS = set(ext.lower() for ext in extensions) if extensions else set()
+        self._is_rom_file = lru_cache(maxsize=2048)(self._optimized_extension_check)
+
+    def _optimized_extension_check(self, path):
+        """Optimierter Check für ROM-Dateierweiterungen mit Delegation."""
+        # Delegieren an den AdaptiveScanner für effiziente Prüfung
+        return self._delegate._real_scanner._is_valid_extension(path)
+
+    def scan_directory(self, directory: str, progress_callback=None, stop_event=None, use_cache=True) -> List[Path]:
+        """
+        Scannt Verzeichnis nach ROM-Dateien mit optimaler Leistung und adaptiver Anpassung.
+        
+        Args:
+            directory: Zu durchsuchendes Verzeichnis
+            progress_callback: Callback-Funktion für Fortschritt
+            stop_event: Event zum Stoppen des Scans
+            use_cache: Ob der Cache verwendet werden soll
+            
+        Returns:
+            Liste von ROM-Dateipfaden
+        """
+        try:
+            # Effizientes Delegieren an den echten Scanner
+            return self._delegate.scan_directory(directory, progress_callback, stop_event, use_cache)
+        except Exception as e:
+            logger.error(f"Fehler beim Scannen von {directory}: {e}")
+            return []
+
+    # Methoden zur Aufrechterhaltung der API-Kompatibilität (leere Implementierungen)
+    def _measure_filesystem_performance(self, directory):
+        """Delegiert an AdaptiveScanner (leere Implementierung)."""
+        pass
+        
+    def _should_use_threading(self, directory):
+        """Delegiert an AdaptiveScanner (leere Implementierung)."""
+        return False
+        
+    def _scan_sequential(self, directory, progress_callback=None):
+        """Delegiert an AdaptiveScanner (leere Implementierung)."""
+        return self.scan_directory(directory, progress_callback)
+        
+    def _scan_with_threading(self, directory, progress_callback=None):
+        """Delegiert an AdaptiveScanner (leere Implementierung)."""
+        return self.scan_directory(directory, progress_callback)
+        
+    def _thread_scan_worker(self, dirs, thread_id, progress_callback):
+        """Delegiert an AdaptiveScanner (leere Implementierung)."""
+        pass
+        
+    def _create_balanced_dir_chunks(self, dirs, num_chunks):
+        """Delegiert an AdaptiveScanner (leere Implementierung)."""
+        return [dirs]
+        
+    def _adjust_adaptive_parameters(self, files_per_second, dirs_scanned, total_time):
+        """Delegiert an AdaptiveScanner (leere Implementierung)."""
+        pass
+
+    @classmethod
+    def clear_cache(cls):
+        """Löscht den Scanner-Cache."""
+        _initialize_imports()
+        _scanner_compat_module.clear_cache()
+
+    @property
+    def cache_stats(self):
+        """
+        Gibt Cache-Statistiken zurück.
+        
+        Returns:
+            Dict mit Cache-Statistiken
+        """
+        _initialize_imports()
+        return _scanner_compat_module.get_cache_stats()

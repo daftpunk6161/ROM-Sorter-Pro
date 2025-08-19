@@ -1,0 +1,1749 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+ROM Sorter Pro - Konsolidiertes Konfigurationsmodul v2.3.0
+
+KONSOLIDIERUNG v2.3.0:
+- HINZUGEFÜGT: Validierungsfunktionen für Listen und Dictionaries
+- VERBESSERT: Erweiterte Validierungsfunktionen für komplexere Datentypen
+- OPTIMIERT: Verbesserte Typprüfungen und Fehlerbehandlung
+
+KONSOLIDIERUNG v2.2.0:
+- VEREINIGT: config.py und config_utils.py in einer Datei
+- VERBESSERT: Zentrale Fehlerbehandlung mit exceptions.py
+- OPTIMIERT: Reduzierung von Codeduplication und Abhängigkeiten
+- VERSTÄRKT: Konsistente Validierungsmethoden
+
+SECURITY FIXES v2.1.3:
+- FIXED: Input validation with proper type checking and bounds
+- ENHANCED: Property-based configuration validation
+- IMPROVED: Error handling with detailed validation messages
+- ADDED: Configuration schema validation with secure defaults
+- STRENGTHENED: Thread-safe configuration with proper bounds checking
+
+OPTIMIERTE FEATURES v2.1.1:
+- High-performance JSON processing with streaming
+- Advanced schema validation with caching
+- Intelligent configuration repair and migration
+- Enhanced backup and restore functionality
+- Optimized validation with minimal overhead
+- Comprehensive error handling and recovery
+
+Project:        ROM Sorter Pro
+File:           src/config.py (konsolidiert mit config_utils.py)
+Version:        2.2.0 - Konsolidierte Version
+Author:         cemal / daftpunk6161
+Created:        2024
+Updated:        10.08.2025
+License:        MIT License
+Python:         3.8+
+"""
+
+# ============================================================================
+# OPTIMIZED IMPORTS
+# ============================================================================
+
+import json
+import os
+import sys
+import time
+import threading
+import gzip
+import shutil
+import hashlib
+import re
+from typing import Dict, List, Any, Optional, Union, Tuple, Callable
+from dataclasses import dataclass, field, asdict
+from pathlib import Path
+from functools import lru_cache, wraps
+from datetime import datetime, timedelta
+from collections import defaultdict
+import logging
+
+# Importiere konsolidierte Fehlerklassen
+try:
+    from exceptions import ConfigurationError, ValidationError
+except ImportError:
+    from src.exceptions import ConfigurationError, ValidationError
+
+# Optional imports with graceful fallbacks
+try:
+    import jsonschema
+    from jsonschema import validate as jsonschema_validate
+    from jsonschema import ValidationError as JsonSchemaValidationError
+    from jsonschema import Draft7Validator
+    JSONSCHEMA_AVAILABLE = True
+except ImportError:
+    jsonschema = None
+    jsonschema_validate = None
+    JsonSchemaValidationError = Exception
+    Draft7Validator = None
+    JSONSCHEMA_AVAILABLE = False
+
+try:
+    import yaml
+    YAML_AVAILABLE = True
+except ImportError:
+    yaml = None
+    YAML_AVAILABLE = False
+
+# ============================================================================
+# Logging and basic utilities
+# ============================================================================
+
+logger = logging.getLogger(__name__)
+
+# ============================================================================
+# KONFIGURATIONSVALIDIERUNG
+# ============================================================================
+
+class EnhancedConfigValidator:
+    """High-performance JSON Schema-based configuration validation with caching."""
+
+    def __init__(self):
+        self._validator_cache = {}
+        self._schema_cache = {}
+        self._validation_cache = {}
+        self._cache_lock = threading.RLock()
+        self._cache_stats = defaultdict(int)
+
+    def validate_json_syntax(self, config_path: str) -> Tuple[bool, Optional[str], Optional[Dict]]:
+        """Enhanced JSON syntax validation with detailed error reporting."""
+        if not os.path.exists(config_path):
+            return False, f"Configuration file not found: {config_path}", None
+
+        try:
+            with open(config_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+
+            # Check for common issues before JSON parsing
+            issues = self._pre_validate_json_content(content)
+            if issues:
+                return False, f"JSON syntax issues found: {'; '.join(issues)}", {'issues': issues}
+
+            # Parse JSON
+            config_data = json.loads(content)
+
+            # Additional validation
+            validation_warnings = self._post_validate_json_structure(config_data)
+
+            result_details = {
+                'file_size': len(content),
+                'object_count': self._count_json_objects(config_data),
+                'warnings': validation_warnings
+            }
+
+            return True, None, result_details
+
+        except json.JSONDecodeError as e:
+            return False, f"Invalid JSON syntax: {str(e)}", {'line': e.lineno, 'column': e.colno}
+        except Exception as e:
+            return False, f"Unexpected error during JSON validation: {str(e)}", None
+
+    def _pre_validate_json_content(self, content: str) -> List[str]:
+        """Check for common JSON issues before parsing."""
+        issues = []
+
+        # Check for missing or unbalanced braces
+        open_braces = content.count('{')
+        close_braces = content.count('}')
+        if open_braces != close_braces:
+            issues.append(f"Unbalanced braces: {open_braces} opening vs {close_braces} closing")
+
+        # Check for missing or unbalanced brackets
+        open_brackets = content.count('[')
+        close_brackets = content.count(']')
+        if open_brackets != close_brackets:
+            issues.append(f"Unbalanced brackets: {open_brackets} opening vs {close_brackets} closing")
+
+        # Check for trailing commas (common mistake)
+        if re.search(r',\s*[}\]]', content):
+            issues.append("Trailing commas before closing bracket/brace")
+
+        # Check for missing quotes around keys
+        if re.search(r'{\s*(\w+)\s*:', content):
+            issues.append("Possible missing quotes around object keys")
+
+        return issues
+
+    def _post_validate_json_structure(self, data: Dict) -> List[str]:
+        """Validate overall JSON structure after parsing."""
+        warnings = []
+
+        # Check for empty objects
+        if not data:
+            warnings.append("Configuration is empty")
+
+        # Check for excessive nesting (potential performance issue)
+        max_depth = self._get_json_max_depth(data)
+        if max_depth > 5:
+            warnings.append(f"Excessive nesting depth ({max_depth} levels)")
+
+        # Check for very large arrays (potential performance issue)
+        max_array_size = self._get_max_array_size(data)
+        if max_array_size > 1000:
+            warnings.append(f"Very large array found ({max_array_size} elements)")
+
+        return warnings
+
+    def _count_json_objects(self, data: Any) -> int:
+        """Count objects in JSON structure recursively."""
+        if isinstance(data, dict):
+            count = 1
+            for value in data.values():
+                if isinstance(value, (dict, list)):
+                    count += self._count_json_objects(value)
+            return count
+        elif isinstance(data, list):
+            count = 0
+            for item in data:
+                if isinstance(item, (dict, list)):
+                    count += self._count_json_objects(item)
+            return count
+        else:
+            return 0
+
+    def _get_json_max_depth(self, data: Any, current_depth: int = 0) -> int:
+        """Get maximum nesting depth of JSON structure."""
+        if isinstance(data, dict):
+            if not data:
+                return current_depth + 1
+            return max(self._get_json_max_depth(v, current_depth + 1) for v in data.values())
+        elif isinstance(data, list):
+            if not data:
+                return current_depth + 1
+            return max((self._get_json_max_depth(item, current_depth + 1) for item in data), default=current_depth + 1)
+        else:
+            return current_depth
+
+    def _get_max_array_size(self, data: Any) -> int:
+        """Get maximum array size in JSON structure."""
+        if isinstance(data, dict):
+            sizes = [self._get_max_array_size(v) for v in data.values()]
+            return max(sizes) if sizes else 0
+        elif isinstance(data, list):
+            own_size = len(data)
+            child_sizes = [self._get_max_array_size(item) for item in data]
+            return max([own_size] + child_sizes)
+        else:
+            return 0
+
+    def load_schema(self, schema_path: str) -> Optional[Dict[str, Any]]:
+        """Load and cache JSON schema."""
+        if not JSONSCHEMA_AVAILABLE:
+            logger.warning("JSON schema validation not available - jsonschema package missing")
+            return None
+
+        try:
+            # Check cache first
+            mtime = os.path.getmtime(schema_path)
+            cache_key = f"{schema_path}:{mtime}"
+
+            with self._cache_lock:
+                if cache_key in self._schema_cache:
+                    self._cache_stats['schema_cache_hits'] += 1
+                    return self._schema_cache[cache_key]
+
+            # Load schema
+            with open(schema_path, 'r', encoding='utf-8') as f:
+                schema = json.load(f)
+
+            # Cache the schema
+            with self._cache_lock:
+                self._schema_cache[cache_key] = schema
+                self._cache_stats['schema_cache_misses'] += 1
+
+                # Limit cache size
+                if len(self._schema_cache) > 20:
+                    oldest_key = min(self._schema_cache.keys())
+                    del self._schema_cache[oldest_key]
+
+            return schema
+
+        except FileNotFoundError:
+            logger.warning(f"Schema file not found: {schema_path}")
+            return None
+        except json.JSONDecodeError as e:
+            logger.error(f"Invalid JSON schema: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"Error loading schema: {e}")
+            return None
+
+    def validate_config(self, config_data: Dict[str, Any], schema: Dict[str, Any]) -> Tuple[bool, Optional[str], Dict[str, Any]]:
+        """Enhanced configuration validation with comprehensive error reporting."""
+        if not JSONSCHEMA_AVAILABLE:
+            return True, "Validation skipped - jsonschema not available", {}
+
+        try:
+            # Create cache key for validator
+            schema_hash = hashlib.md5(json.dumps(schema, sort_keys=True).encode()).hexdigest()
+
+            with self._cache_lock:
+                if schema_hash not in self._validator_cache:
+                    if JSONSCHEMA_AVAILABLE and Draft7Validator:
+                        self._validator_cache[schema_hash] = Draft7Validator(schema)
+                        self._cache_stats['validator_cache_misses'] += 1
+                    else:
+                        return True, "Validation skipped - jsonschema not available", {}
+                else:
+                    self._cache_stats['validator_cache_hits'] += 1
+
+                validator = self._validator_cache[schema_hash]
+
+            # Perform validation
+            errors = list(validator.iter_errors(config_data))
+
+            if not errors:
+                return True, None, {'validation_time': time.time()}
+
+            # Process errors for better reporting
+            error_details = {
+                'error_count': len(errors),
+                'errors': [],
+                'validation_time': time.time()
+            }
+
+            for error in errors[:10]:  # Limit to first 10 errors
+                error_info = {
+                    'message': error.message,
+                    'path': list(error.absolute_path),
+                    'schema_path': list(error.schema_path),
+                    'validator': error.validator,
+                    'validator_value': error.validator_value
+                }
+                error_details['errors'].append(error_info)
+
+            if len(errors) > 10:
+                error_details['additional_errors'] = len(errors) - 10
+
+            primary_error = f"Schema validation failed: {errors[0].message}"
+            if len(errors) > 1:
+                primary_error += f" (and {len(errors) - 1} more errors)"
+
+            return False, primary_error, error_details
+
+        except Exception as e:
+            return False, f"Validation error: {e}", {'error_type': type(e).__name__}
+
+    def get_cache_stats(self) -> Dict[str, Any]:
+        """Get validation cache statistics."""
+        with self._cache_lock:
+            return {
+                'cache_stats': dict(self._cache_stats),
+                'schema_cache_size': len(self._schema_cache),
+                'validator_cache_size': len(self._validator_cache),
+                'validation_cache_size': len(self._validation_cache)
+            }
+
+def validate_integer(value: Any, min_value: Optional[int] = None, max_value: Optional[int] = None,
+                    field_name: str = "value") -> int:
+    """
+    Validate integer with bounds checking.
+
+    Args:
+        value: Value to validate
+        min_value: Minimum allowed value
+        max_value: Maximum allowed value
+        field_name: Name of field for error messages
+
+    Returns:
+        Validated integer value
+
+    Raises:
+        ValidationError: If validation fails
+    """
+    if not isinstance(value, (int, float)):
+        try:
+            value = int(value)
+        except (ValueError, TypeError):
+            raise ValidationError(f"{field_name} must be an integer, got {type(value).__name__}")
+
+    value = int(value)
+
+    if min_value is not None and value < min_value:
+        raise ValidationError(f"{field_name} must be >= {min_value}, got {value}")
+
+    if max_value is not None and value > max_value:
+        raise ValidationError(f"{field_name} must be <= {max_value}, got {value}")
+
+    return value
+
+def validate_float(value: Any, min_value: Optional[float] = None, max_value: Optional[float] = None,
+                  field_name: str = "value") -> float:
+    """
+    Validate float with bounds checking.
+
+    Args:
+        value: Value to validate
+        min_value: Minimum allowed value
+        max_value: Maximum allowed value
+        field_name: Name of field for error messages
+
+    Returns:
+        Validated float value
+
+    Raises:
+        ValidationError: If validation fails
+    """
+    if not isinstance(value, (int, float)):
+        try:
+            value = float(value)
+        except (ValueError, TypeError):
+            raise ValidationError(f"{field_name} must be a number, got {type(value).__name__}")
+
+    value = float(value)
+
+    if min_value is not None and value < min_value:
+        raise ValidationError(f"{field_name} must be >= {min_value}, got {value}")
+
+    if max_value is not None and value > max_value:
+        raise ValidationError(f"{field_name} must be <= {max_value}, got {value}")
+
+    return value
+
+def validate_string(value: Any, max_length: Optional[int] = None, min_length: int = 0,
+                   allowed_chars: Optional[str] = None, field_name: str = "value") -> str:
+    """
+    Validate string with length and character checking.
+
+    Args:
+        value: Value to validate
+        max_length: Maximum allowed length
+        min_length: Minimum allowed length
+        allowed_chars: Regex pattern for allowed characters
+        field_name: Name of field for error messages
+
+    Returns:
+        Validated string value
+
+    Raises:
+        ValidationError: If validation fails
+    """
+    if not isinstance(value, str):
+        try:
+            value = str(value)
+        except Exception:
+            raise ValidationError(f"{field_name} must be a string, got {type(value).__name__}")
+
+    if len(value) < min_length:
+        raise ValidationError(f"{field_name} must be at least {min_length} characters, got {len(value)}")
+
+    if max_length is not None and len(value) > max_length:
+        raise ValidationError(f"{field_name} must be at most {max_length} characters, got {len(value)}")
+
+    if allowed_chars is not None:
+        import re
+        if not re.match(allowed_chars, value):
+            raise ValidationError(f"{field_name} contains invalid characters")
+
+    return value
+
+def validate_choice(value: Any, choices: List[Any], field_name: str = "value") -> Any:
+    """
+    Validate value is in allowed choices.
+
+    Args:
+        value: Value to validate
+        choices: List of allowed values
+        field_name: Name of field for error messages
+
+    Returns:
+        Validated value
+
+    Raises:
+        ValidationError: If validation fails
+    """
+    if value not in choices:
+        raise ValidationError(f"{field_name} must be one of {choices}, got {value}")
+
+    return value
+
+def validate_boolean(value: Any, field_name: str = "value") -> bool:
+    """
+    Validate boolean value.
+
+    Args:
+        value: Value to validate
+        field_name: Name of field for error messages
+
+    Returns:
+        Validated boolean value
+
+    Raises:
+        ValidationError: If validation fails
+    """
+    if isinstance(value, bool):
+        return value
+
+    if isinstance(value, str):
+        value_lower = value.lower()
+        if value_lower in ('true', '1', 'yes', 'on'):
+            return True
+        elif value_lower in ('false', '0', 'no', 'off'):
+            return False
+
+    if isinstance(value, (int, float)):
+        return bool(value)
+
+    raise ValidationError(f"{field_name} must be a boolean value, got {type(value).__name__}")
+
+def validate_list(value: Any, item_validator: Optional[Callable] = None,
+                 min_length: int = 0, max_length: Optional[int] = None,
+                 field_name: str = "value") -> List:
+    """
+    Validate list value with optional item validation.
+
+    Args:
+        value: Value to validate
+        item_validator: Optional function to validate each item
+        min_length: Minimum length of list
+        max_length: Maximum length of list
+        field_name: Name of field for error messages
+
+    Returns:
+        Validated list
+
+    Raises:
+        ValidationError: If validation fails
+    """
+    if not isinstance(value, list):
+        raise ValidationError(f"{field_name} must be a list, got {type(value).__name__}")
+
+    if len(value) < min_length:
+        raise ValidationError(f"{field_name} must have at least {min_length} items")
+
+    if max_length is not None and len(value) > max_length:
+        raise ValidationError(f"{field_name} must have at most {max_length} items")
+
+    if item_validator:
+        validated_items = []
+        for i, item in enumerate(value):
+            try:
+                validated_items.append(item_validator(item, f"{field_name}[{i}]"))
+            except ValidationError as e:
+                raise ValidationError(f"Error validating {field_name}[{i}]: {e}")
+        return validated_items
+
+    return value
+
+def validate_dict(value: Any, key_validator: Optional[Callable] = None,
+                 value_validator: Optional[Callable] = None,
+                 required_keys: Optional[List[str]] = None,
+                 optional_keys: Optional[List[str]] = None,
+                 field_name: str = "value") -> Dict:
+    """
+    Validate dictionary with optional key and value validation.
+
+    Args:
+        value: Value to validate
+        key_validator: Optional function to validate keys
+        value_validator: Optional function to validate values
+        required_keys: List of required keys
+        optional_keys: List of optional keys
+        field_name: Name of field for error messages
+
+    Returns:
+        Validated dictionary
+
+    Raises:
+        ValidationError: If validation fails
+    """
+    if not isinstance(value, dict):
+        raise ValidationError(f"{field_name} must be a dictionary, got {type(value).__name__}")
+
+    if required_keys:
+        missing_keys = [key for key in required_keys if key not in value]
+        if missing_keys:
+            raise ValidationError(f"Missing required keys in {field_name}: {', '.join(missing_keys)}")
+
+    if required_keys and optional_keys:
+        allowed_keys = set(required_keys + optional_keys)
+        extra_keys = [key for key in value.keys() if key not in allowed_keys]
+        if extra_keys:
+            raise ValidationError(f"Unknown keys in {field_name}: {', '.join(extra_keys)}")
+
+    if key_validator or value_validator:
+        validated_dict = {}
+        for key, val in value.items():
+            validated_key = key
+            if key_validator:
+                try:
+                    validated_key = key_validator(key, f"key of {field_name}")
+                except ValidationError as e:
+                    raise ValidationError(f"Invalid key in {field_name}: {e}")
+
+            validated_value = val
+            if value_validator:
+                try:
+                    validated_value = value_validator(val, f"{field_name}[{key}]")
+                except ValidationError as e:
+                    raise ValidationError(f"Invalid value for {key} in {field_name}: {e}")
+
+            validated_dict[validated_key] = validated_value
+        return validated_dict
+
+    return value
+
+# ============================================================================
+# OPTIMIZED CONSTANTS
+# ============================================================================
+
+ROM_EXTENSIONS = frozenset([
+    ".zip", ".7z", ".rar", ".chd", ".iso", ".bin", ".cue",
+    ".gb", ".gbc", ".gba", ".nes", ".snes", ".smc", ".sfc",
+    ".n64", ".z64", ".v64", ".md", ".gen", ".smd", ".32x",
+    ".gcm", ".wbfs", ".nds", ".3ds", ".cia", ".psp", ".cso"
+])
+
+UNWANTED_PATTERNS = [
+    r"\b(japan|jp|jap)\b",
+    r"\b(france|fr)\b",
+    r"\b(italy|it)\b",
+    r"\b(korea|kr)\b",
+    r"\b(demo|beta|alpha|prototype)\b",
+    r"\b(hack|mod|trainer|cheat)\b",
+    r"\b(pirate|cracked|broken)\b"
+]
+
+REGION_PRIORITIES = {
+    "World": 10, "WOR": 10, "Europe": 9, "EU": 9, "EUR": 9,
+    "USA": 7, "US": 7, "Germany": 8, "DE": 8,
+    "Japan": 2, "JP": 2, "Other": 1
+}
+
+# ============================================================================
+# UNIFIED CACHE MANAGER
+# ============================================================================
+
+class UnifiedCacheManager:
+    """Simplified, high-performance cache manager with validation."""
+
+    def __init__(self, max_size: int = 1000, ttl: int = 300):
+        if max_size <= 0 or max_size > 10000:
+            raise ValidationError("max_size must be between 1 and 10000")
+        if ttl <= 0 or ttl > 86400:  # Max 24 hours
+            raise ValidationError("ttl must be between 1 and 86400 seconds")
+
+        self.max_size = max_size
+        self.ttl = ttl
+        self._cache = {}
+        self._timestamps = {}
+        self._lock = threading.RLock()
+        self._stats = {'hits': 0, 'misses': 0}
+
+    def get(self, key: str, default=None):
+        """Get cached value with TTL check."""
+        current_time = time.time()
+
+        with self._lock:
+            if key in self._cache:
+                timestamp = self._timestamps.get(key, 0)
+                if current_time - timestamp < self.ttl:
+                    self._stats['hits'] += 1
+                    return self._cache[key]
+                else:
+                    del self._cache[key]
+                    del self._timestamps[key]
+
+        self._stats['misses'] += 1
+        return default
+
+    def set(self, key: str, value: Any):
+        """Set cached value with size management."""
+        current_time = time.time()
+
+        with self._lock:
+            # Clean expired entries if at capacity
+            if len(self._cache) >= self.max_size:
+                expired = [
+                    k for k, ts in self._timestamps.items()
+                    if current_time - ts >= self.ttl
+                ]
+                for k in expired:
+                    self._cache.pop(k, None)
+                    self._timestamps.pop(k, None)
+
+                # Remove oldest if still full
+                if len(self._cache) >= self.max_size:
+                    oldest = min(self._timestamps.items(), key=lambda x: x[1])
+                    self._cache.pop(oldest[0], None)
+                    self._timestamps.pop(oldest[0], None)
+
+            self._cache[key] = value
+            self._timestamps[key] = current_time
+
+    def clear(self):
+        """Clear all cached data."""
+        with self._lock:
+            self._cache.clear()
+            self._timestamps.clear()
+            self._stats = {'hits': 0, 'misses': 0}
+
+    def stats(self) -> Dict[str, Any]:
+        """Get cache statistics."""
+        with self._lock:
+            total = self._stats['hits'] + self._stats['misses']
+            hit_rate = (self._stats['hits'] / total * 100) if total > 0 else 0
+            return {
+                'size': len(self._cache),
+                'max_size': self.max_size,
+                'hit_rate': f"{hit_rate:.1f}%",
+                **self._stats
+            }
+
+# Global cache instance
+_global_cache = UnifiedCacheManager()
+
+# ============================================================================
+# ENHANCED CONFIGURATION CLASSES WITH VALIDATION
+# ============================================================================
+
+@dataclass
+class PerformanceConfig:
+    """Security-enhanced performance configuration with validation."""
+    enable_caching: bool = True
+    cache_size: int = 5000
+    parallel_workers: Optional[int] = None
+    batch_size: int = 300
+    max_memory_usage: str = "1GB"
+    use_fast_hash: bool = True
+    lazy_loading: bool = True
+
+    def __init__(self, **kwargs):
+        """Custom init with comprehensive validation."""
+        # Handle nested configuration from old format
+        if 'caching' in kwargs:
+            caching = kwargs.pop('caching', {})
+            kwargs.update(caching)
+        if 'processing' in kwargs:
+            processing = kwargs.pop('processing', {})
+            kwargs.update(processing)
+        if 'optimization' in kwargs:
+            optimization = kwargs.pop('optimization', {})
+            kwargs.update(optimization)
+
+        # Set defaults and validate
+        self.enable_caching = validate_boolean(kwargs.get('enable_caching', True), 'enable_caching')
+        self.cache_size = validate_integer(kwargs.get('cache_size', 5000), 100, 50000, 'cache_size')
+
+        parallel_workers = kwargs.get('parallel_workers')
+        if parallel_workers is not None:
+            self.parallel_workers = validate_integer(parallel_workers, 1, 32, 'parallel_workers')
+        else:
+            self.parallel_workers = None
+
+        self.batch_size = validate_integer(kwargs.get('batch_size', 300), 10, 10000, 'batch_size')
+
+        max_memory = kwargs.get('max_memory_usage', "1GB")
+        self.max_memory_usage = validate_string(max_memory, 10, 1, r'^[0-9]+[KMGT]?B$', 'max_memory_usage')
+
+        self.use_fast_hash = validate_boolean(kwargs.get('use_fast_hash', True), 'use_fast_hash')
+        self.lazy_loading = validate_boolean(kwargs.get('lazy_loading', True), 'lazy_loading')
+
+        self.__post_init__()
+
+    def __post_init__(self):
+        """Post-initialization validation."""
+        if self.parallel_workers is None:
+            # Auto-detect but limit to reasonable range
+            import os
+            self.parallel_workers = max(1, min(os.cpu_count() or 4, 8))
+
+        # Validate batch size is reasonable for the cache size
+        if self.batch_size > self.cache_size:
+            logger.warning(f"batch_size ({self.batch_size}) > cache_size ({self.cache_size}), adjusting")
+            self.batch_size = min(self.batch_size, self.cache_size // 2)
+
+    @property
+    def max_workers(self) -> Optional[int]:
+        """Compatibility property."""
+        return self.parallel_workers
+
+    @max_workers.setter
+    def max_workers(self, value: Optional[int]):
+        if value is not None:
+            self.parallel_workers = validate_integer(value, 1, 32, 'max_workers')
+        else:
+            self.parallel_workers = None
+
+@dataclass
+class SortingConfig:
+    """Security-enhanced sorting configuration with validation."""
+    console_sorting_enabled: bool = True
+    create_console_folders: bool = True
+    region_based_sorting: bool = True
+    folder_structure: str = "console_first"
+    create_unknown_folder: bool = True
+
+    def __init__(self, **kwargs):
+        """Custom init with validation."""
+        # Handle nested features.sorting structure
+        if 'features' in kwargs:
+            features = kwargs.pop('features', {})
+            if 'sorting' in features:
+                kwargs.update(features['sorting'])
+
+        # Validate all fields
+        self.console_sorting_enabled = validate_boolean(
+            kwargs.get('console_sorting_enabled', True), 'console_sorting_enabled'
+        )
+        self.create_console_folders = validate_boolean(
+            kwargs.get('create_console_folders', True), 'create_console_folders'
+        )
+        self.region_based_sorting = validate_boolean(
+            kwargs.get('region_based_sorting', True), 'region_based_sorting'
+        )
+
+        valid_structures = ["console_first", "manufacturer_first", "alphabetical"]
+        self.folder_structure = validate_choice(
+            kwargs.get('folder_structure', "console_first"), valid_structures, 'folder_structure'
+        )
+
+        self.create_unknown_folder = validate_boolean(
+            kwargs.get('create_unknown_folder', True), 'create_unknown_folder'
+        )
+
+@dataclass
+class AIConfig:
+    """Security-enhanced AI configuration with validation."""
+    enable_ai_detection: bool = False
+    confidence_threshold: float = 0.85
+    online_metadata: bool = False
+    download_covers: bool = False
+    enable_fuzzy_matching: bool = True
+
+    def __init__(self, **kwargs):
+        """Custom init with validation."""
+        # Handle nested features.ai_features structure
+        if 'features' in kwargs:
+            features = kwargs.pop('features', {})
+            if 'ai_features' in features:
+                kwargs.update(features['ai_features'])
+
+        # Validate all fields
+        self.enable_ai_detection = validate_boolean(
+            kwargs.get('enable_ai_detection', False), 'enable_ai_detection'
+        )
+        self.confidence_threshold = validate_float(
+            kwargs.get('confidence_threshold', 0.85), 0.0, 1.0, 'confidence_threshold'
+        )
+        self.online_metadata = validate_boolean(
+            kwargs.get('online_metadata', False), 'online_metadata'
+        )
+        self.download_covers = validate_boolean(
+            kwargs.get('download_covers', False), 'download_covers'
+        )
+        self.enable_fuzzy_matching = validate_boolean(
+            kwargs.get('enable_fuzzy_matching', True), 'enable_fuzzy_matching'
+        )
+
+@dataclass
+class OptimizedConfigManager:
+    """Security-enhanced configuration manager with comprehensive validation."""
+
+    def __init__(self, config_path: str = "config.json"):
+        self.config_path = validate_string(config_path, 260, 1, field_name='config_path')
+        self._config_data = {}
+        self._lock = threading.RLock()
+
+        # Initialize configuration sections with validation
+        self.performance = PerformanceConfig()
+        self.sorting = SortingConfig()
+        self.ai = AIConfig()
+
+        # Load from file if exists
+        self._load_config()
+
+    def _load_config(self):
+        """Load configuration from file with validation."""
+        try:
+            config_path = Path(self.config_path)
+            if config_path.exists():
+                with open(config_path, 'r', encoding='utf-8') as f:
+                    config_data = json.load(f)
+
+                # Validate configuration structure
+                if not isinstance(config_data, dict):
+                    raise ValidationError("Configuration file must contain a JSON object")
+
+                self._update_from_dict(config_data)
+                logger.info(f"Configuration loaded from {self.config_path}")
+            else:
+                logger.info(f"Configuration file not found, using defaults: {self.config_path}")
+
+        except json.JSONDecodeError as e:
+            logger.error(f"Invalid JSON in configuration file {self.config_path}: {e}")
+            raise ValidationError(f"Invalid JSON in configuration file: {e}")
+        except Exception as e:
+            logger.error(f"Error loading configuration: {e}")
+            raise ConfigurationError(f"Failed to load configuration: {e}")
+
+    def _update_from_dict(self, config_data: dict):
+        """Update configuration from dictionary with validation."""
+        with self._lock:
+            # Update performance config
+            if 'performance' in config_data:
+                try:
+                    self.performance = PerformanceConfig(**config_data['performance'])
+                except Exception as e:
+                    logger.error(f"Error in performance configuration: {e}")
+                    raise ValidationError(f"Invalid performance configuration: {e}")
+
+            # Update sorting config
+            if 'sorting' in config_data:
+                try:
+                    self.sorting = SortingConfig(**config_data['sorting'])
+                except Exception as e:
+                    logger.error(f"Error in sorting configuration: {e}")
+                    raise ValidationError(f"Invalid sorting configuration: {e}")
+
+            # Update AI config
+            if 'ai' in config_data:
+                try:
+                    self.ai = AIConfig(**config_data['ai'])
+                except Exception as e:
+                    logger.error(f"Error in AI configuration: {e}")
+                    raise ValidationError(f"Invalid AI configuration: {e}")
+
+            # Handle legacy flat structure
+            if any(key in config_data for key in ['enable_caching', 'console_sorting_enabled', 'enable_ai_detection']):
+                logger.info("Converting legacy configuration format")
+
+                # Extract performance settings
+                perf_keys = ['enable_caching', 'cache_size', 'parallel_workers', 'batch_size',
+                           'max_memory_usage', 'use_fast_hash', 'lazy_loading']
+                perf_data = {k: v for k, v in config_data.items() if k in perf_keys}
+                if perf_data:
+                    self.performance = PerformanceConfig(**perf_data)
+
+                # Extract sorting settings
+                sort_keys = ['console_sorting_enabled', 'create_console_folders', 'region_based_sorting',
+                           'folder_structure', 'create_unknown_folder']
+                sort_data = {k: v for k, v in config_data.items() if k in sort_keys}
+                if sort_data:
+                    self.sorting = SortingConfig(**sort_data)
+
+                # Extract AI settings
+                ai_keys = ['enable_ai_detection', 'confidence_threshold', 'online_metadata',
+                          'download_covers', 'enable_fuzzy_matching']
+                ai_data = {k: v for k, v in config_data.items() if k in ai_keys}
+                if ai_data:
+                    self.ai = AIConfig(**ai_data)
+
+    def save_config(self):
+        """Save configuration to file with validation."""
+        try:
+            with self._lock:
+                config_data = {
+                    'performance': asdict(self.performance),
+                    'sorting': asdict(self.sorting),
+                    'ai': asdict(self.ai),
+                    'metadata': {
+                        'version': '2.1.3',
+                        'saved_at': datetime.now().isoformat(),
+                        'schema_version': 1
+                    }
+                }
+
+                # Ensure directory exists
+                config_path = Path(self.config_path)
+                config_path.parent.mkdir(parents=True, exist_ok=True)
+
+                # Write with atomic operation (write to temp file, then rename)
+                temp_path = config_path.with_suffix('.tmp')
+                with open(temp_path, 'w', encoding='utf-8') as f:
+                    json.dump(config_data, f, indent=2, ensure_ascii=False)
+
+                # Atomic rename
+                temp_path.replace(config_path)
+                logger.info(f"Configuration saved to {self.config_path}")
+
+        except Exception as e:
+            logger.error(f"Error saving configuration: {e}")
+            raise ConfigurationError(f"Failed to save configuration: {e}")
+
+    def get_section_dict(self, section: str) -> dict:
+        """Get configuration section as dictionary."""
+        with self._lock:
+            if section == 'performance':
+                return asdict(self.performance)
+            elif section == 'sorting':
+                return asdict(self.sorting)
+            elif section == 'ai':
+                return asdict(self.ai)
+            else:
+                raise ValueError(f"Unknown configuration section: {section}")
+
+    def update_section(self, section: str, updates: dict):
+        """Update configuration section with validation."""
+        if not isinstance(updates, dict):
+            raise ValidationError("Updates must be a dictionary")
+
+        with self._lock:
+            try:
+                if section == 'performance':
+                    current = asdict(self.performance)
+                    current.update(updates)
+                    self.performance = PerformanceConfig(**current)
+                elif section == 'sorting':
+                    current = asdict(self.sorting)
+                    current.update(updates)
+                    self.sorting = SortingConfig(**current)
+                elif section == 'ai':
+                    current = asdict(self.ai)
+                    current.update(updates)
+                    self.ai = AIConfig(**current)
+                else:
+                    raise ValueError(f"Unknown configuration section: {section}")
+
+                logger.info(f"Updated {section} configuration")
+
+            except Exception as e:
+                logger.error(f"Error updating {section} configuration: {e}")
+                raise ValidationError(f"Failed to update {section} configuration: {e}")
+
+    def validate_configuration(self) -> List[str]:
+        """Validate entire configuration and return list of issues."""
+        issues = []
+
+        try:
+            # Validate performance config
+            if self.performance.cache_size < 100:
+                issues.append("Performance: cache_size should be at least 100")
+
+            if self.performance.batch_size > self.performance.cache_size:
+                issues.append("Performance: batch_size should not exceed cache_size")
+
+            # Validate AI config
+            if self.ai.enable_ai_detection and self.ai.confidence_threshold < 0.5:
+                issues.append("AI: confidence_threshold below 0.5 may produce unreliable results")
+
+            if self.ai.download_covers and not self.ai.online_metadata:
+                issues.append("AI: download_covers requires online_metadata to be enabled")
+
+            # Validate sorting config
+            if not self.sorting.console_sorting_enabled and not self.sorting.create_unknown_folder:
+                issues.append("Sorting: At least one organization method should be enabled")
+
+        except Exception as e:
+            issues.append(f"Configuration validation error: {e}")
+
+        return issues
+
+    def get_summary(self) -> Dict[str, Any]:
+        """Get configuration summary for logging/debugging."""
+        return {
+            'performance': {
+                'caching_enabled': self.performance.enable_caching,
+                'cache_size': self.performance.cache_size,
+                'workers': self.performance.parallel_workers,
+                'batch_size': self.performance.batch_size
+            },
+            'sorting': {
+                'console_sorting': self.sorting.console_sorting_enabled,
+                'folder_structure': self.sorting.folder_structure,
+                'region_sorting': self.sorting.region_based_sorting
+            },
+            'ai': {
+                'ai_detection': self.ai.enable_ai_detection,
+                'online_metadata': self.ai.online_metadata,
+                'confidence_threshold': self.ai.confidence_threshold
+            },
+            'validation_issues': self.validate_configuration()
+        }
+
+# ============================================================================
+# LEGACY COMPATIBILITY CLASSES
+# ============================================================================
+
+# For backward compatibility with existing code
+ConfigManager = OptimizedConfigManager
+
+# Configuration factory function
+def create_config(config_path: str = "config.json", **overrides) -> OptimizedConfigManager:
+    """
+    Create configuration manager with optional overrides.
+
+    Args:
+        config_path: Path to configuration file
+        **overrides: Configuration overrides
+
+    Returns:
+        Configured OptimizedConfigManager instance
+    """
+    config = OptimizedConfigManager(config_path)
+
+    # Apply overrides with validation
+    for section, values in overrides.items():
+        if isinstance(values, dict):
+            config.update_section(section, values)
+        else:
+            logger.warning(f"Ignoring non-dict override for section {section}")
+
+    return config
+
+# ============================================================================
+# Configuration repair and migration
+# ============================================================================
+
+class AdvancedConfigRepairer:
+    """Advanced configuration repair with intelligent issue detection and fixing."""
+
+    def __init__(self):
+        self.repair_stats = defaultdict(int)
+
+    def repair_config_file(self, config_path: str, backup: bool = True) -> Tuple[bool, List[str], Dict[str, Any]]:
+        """
+        Repair damaged configuration file with comprehensive issue detection.
+
+        Returns:
+            Tuple of (success, list of repairs made, repair statistics)
+        """
+        if not os.path.exists(config_path):
+            raise ConfigurationError(f"Configuration file not found: {config_path}", "FILE_NOT_FOUND")
+
+        repairs_made = []
+
+        try:
+            # Create backup if requested
+            if backup:
+                backup_path = self._create_backup(config_path)
+                repairs_made.append(f"Backup created: {backup_path}")
+
+            # Read original content
+            with open(config_path, 'r', encoding='utf-8') as f:
+                original_content = f.read()
+
+            # Apply repair strategies
+            repaired_content = original_content
+
+            # Strategy 1: Remove comments
+            repaired_content, comment_repairs = self._remove_comments(repaired_content)
+            repairs_made.extend(comment_repairs)
+
+            # Strategy 2: Fix trailing commas
+            repaired_content, comma_repairs = self._fix_trailing_commas(repaired_content)
+            repairs_made.extend(comma_repairs)
+
+            # Strategy 3: Fix quote issues
+            repaired_content, quote_repairs = self._fix_quote_issues(repaired_content)
+            repairs_made.extend(quote_repairs)
+
+            # Strategy 4: Fix bracket mismatches
+            repaired_content, bracket_repairs = self._fix_bracket_issues(repaired_content)
+            repairs_made.extend(bracket_repairs)
+
+            # Strategy 5: Format and normalize
+            repaired_content, format_repairs = self._normalize_formatting(repaired_content)
+            repairs_made.extend(format_repairs)
+
+            # Validate repaired content
+            try:
+                parsed_config = json.loads(repaired_content)
+
+                # Write repaired content
+                with open(config_path, 'w', encoding='utf-8') as f:
+                    json.dump(parsed_config, f, indent=2, ensure_ascii=False, sort_keys=True)
+
+                repairs_made.append("Configuration formatted and saved")
+
+                repair_stats = {
+                    'original_size': len(original_content),
+                    'repaired_size': len(repaired_content),
+                    'repairs_count': len(repairs_made),
+                    'backup_created': backup
+                }
+
+                logger.info(f"Configuration successfully repaired: {config_path}")
+                return True, repairs_made, repair_stats
+
+            except json.JSONDecodeError as e:
+                error_msg = f"Could not repair JSON: {e}"
+                logger.error(error_msg)
+                return False, [error_msg], {'error': str(e)}
+
+        except Exception as e:
+            error_msg = f"Error repairing configuration: {e}"
+            logger.error(error_msg)
+            return False, [error_msg], {'error': str(e)}
+
+    def _create_backup(self, config_path: str) -> str:
+        """Create timestamped backup of configuration file."""
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_path = f"{config_path}.backup_{timestamp}"
+        shutil.copy2(config_path, backup_path)
+        return backup_path
+
+    def _remove_comments(self, content: str) -> Tuple[str, List[str]]:
+        """Remove various types of comments from JSON content."""
+        repairs = []
+        original_lines = content.split('\n')
+        cleaned_lines = []
+        in_multiline_comment = False
+
+        for line_num, line in enumerate(original_lines, 1):
+            original_line = line
+
+            # Handle multiline comments (Python style)
+            if '"""' in line or "'''" in line:
+                if not in_multiline_comment:
+                    in_multiline_comment = True
+                    repairs.append(f"Removed multiline comment start at line {line_num}")
+                    continue
+                else:
+                    in_multiline_comment = False
+                    repairs.append(f"Removed multiline comment end at line {line_num}")
+                    continue
+
+            if in_multiline_comment:
+                repairs.append(f"Removed multiline comment content at line {line_num}")
+                continue
+
+            # Remove single-line comments
+            for comment_prefix in ['#', '//']:
+                if comment_prefix in line:
+                    # Check if it's inside a string
+                    if not self._is_inside_string(line, line.find(comment_prefix)):
+                        line = line[:line.find(comment_prefix)].rstrip()
+                        if line != original_line:
+                            repairs.append(f"Removed {comment_prefix} comment at line {line_num}")
+                        break
+
+            cleaned_lines.append(line)
+
+        return '\n'.join(cleaned_lines), repairs
+
+    def _fix_trailing_commas(self, content: str) -> Tuple[str, List[str]]:
+        """Fix trailing commas in JSON."""
+        repairs = []
+
+        # Pattern to match trailing commas
+        patterns = [
+            (r',(\s*[}\]])', r'\1', "object/array"),
+            (r',(\s*\n\s*[}\]])', r'\1', "multiline object/array")
+        ]
+
+        for pattern, replacement, description in patterns:
+            matches = list(re.finditer(pattern, content))
+            if matches:
+                content = re.sub(pattern, replacement, content)
+                repairs.append(f"Fixed {len(matches)} trailing commas in {description}")
+
+        return content, repairs
+
+    def _fix_quote_issues(self, content: str) -> Tuple[str, List[str]]:
+        """Fix common quote-related issues."""
+        repairs = []
+
+        # Fix single quotes to double quotes (outside of string values)
+        original_content = content
+        lines = content.split('\n')
+        fixed_lines = []
+
+        for line_num, line in enumerate(lines, 1):
+            original_line = line
+
+            # Simple heuristic: replace single quotes with double quotes for keys
+            # This is a simplified approach and may need refinement
+            if ':' in line and "'" in line:
+                # Look for patterns like 'key': value
+                line = re.sub(r"'([^']*)'(\s*:)", r'"\1"\2', line)
+                if line != original_line:
+                    repairs.append(f"Fixed single quotes to double quotes at line {line_num}")
+
+            fixed_lines.append(line)
+
+        return '\n'.join(fixed_lines), repairs
+
+    def _fix_bracket_issues(self, content: str) -> Tuple[str, List[str]]:
+        """Attempt to fix bracket mismatches."""
+        repairs = []
+
+        # Count brackets
+        open_curly = content.count('{')
+        close_curly = content.count('}')
+        open_square = content.count('[')
+        close_square = content.count(']')
+
+        # Simple fixes for obvious mismatches
+        if open_curly > close_curly:
+            content += '\n' + '}' * (open_curly - close_curly)
+            repairs.append(f"Added {open_curly - close_curly} missing closing curly braces")
+        elif close_curly > open_curly:
+            repairs.append(f"Warning: {close_curly - open_curly} extra closing curly braces detected")
+
+        if open_square > close_square:
+            content += '\n' + ']' * (open_square - close_square)
+            repairs.append(f"Added {open_square - close_square} missing closing square brackets")
+        elif close_square > open_square:
+            repairs.append(f"Warning: {close_square - open_square} extra closing square brackets detected")
+
+        return content, repairs
+
+    def _normalize_formatting(self, content: str) -> Tuple[str, List[str]]:
+        """Normalize JSON formatting."""
+        repairs = []
+
+        try:
+            # Parse and reformat
+            parsed = json.loads(content)
+            formatted = json.dumps(parsed, indent=2, ensure_ascii=False, sort_keys=True)
+
+            if formatted != content:
+                repairs.append("Normalized JSON formatting and indentation")
+
+            return formatted, repairs
+
+        except json.JSONDecodeError:
+            # If parsing fails, return original content
+            return content, repairs
+
+    def _is_inside_string(self, line: str, position: int) -> bool:
+        """Check if a position in a line is inside a string literal."""
+        quote_count = 0
+        for i in range(position):
+            if line[i] == '"' and (i == 0 or line[i-1] != '\\'):
+                quote_count += 1
+        return quote_count % 2 == 1
+
+
+class ConfigMigrationManager:
+    """Configuration migration and versioning manager."""
+
+    def __init__(self):
+        self.migration_history = []
+
+    def migrate_config(self, config_path: str, target_version: str = "2.2.0") -> Tuple[bool, List[str]]:
+        """Migrate configuration to target version."""
+        migrations_applied = []
+
+        try:
+            with open(config_path, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+
+            current_version = config.get("_metadata", {}).get("version", "1.0.0")
+
+            if current_version == target_version:
+                return True, ["Configuration already at target version"]
+
+            # Apply version-specific migrations
+            if self._version_compare(current_version, "2.0.0") < 0:
+                config, migration_msgs = self._migrate_to_2_0_0(config)
+                migrations_applied.extend(migration_msgs)
+
+            if self._version_compare(current_version, "2.1.0") < 0:
+                config, migration_msgs = self._migrate_to_2_1_0(config)
+                migrations_applied.extend(migration_msgs)
+
+            if self._version_compare(current_version, "2.1.1") < 0:
+                config, migration_msgs = self._migrate_to_2_1_1(config)
+                migrations_applied.extend(migration_msgs)
+
+            if self._version_compare(current_version, "2.2.0") < 0:
+                config, migration_msgs = self._migrate_to_2_2_0(config)
+                migrations_applied.extend(migration_msgs)
+
+            # Update metadata
+            if "_metadata" not in config:
+                config["_metadata"] = {}
+
+            config["_metadata"].update({
+                "version": target_version,
+                "migrated_at": datetime.now().isoformat(),
+                "migration_history": migrations_applied
+            })
+
+            # Save migrated configuration
+            with open(config_path, 'w', encoding='utf-8') as f:
+                json.dump(config, f, indent=2, ensure_ascii=False, sort_keys=True)
+
+            migrations_applied.append(f"Configuration migrated to version {target_version}")
+            return True, migrations_applied
+
+        except Exception as e:
+            return False, [f"Migration failed: {e}"]
+
+    def _version_compare(self, version1: str, version2: str) -> int:
+        """Compare two version strings. Returns -1, 0, or 1."""
+        def version_tuple(v):
+            return tuple(map(int, v.split('.')))
+
+        v1_tuple = version_tuple(version1)
+        v2_tuple = version_tuple(version2)
+
+        if v1_tuple < v2_tuple:
+            return -1
+        elif v1_tuple > v2_tuple:
+            return 1
+        else:
+            return 0
+
+    def _migrate_to_2_0_0(self, config: Dict[str, Any]) -> Tuple[Dict[str, Any], List[str]]:
+        """Migrate configuration from 1.x to 2.0.0."""
+        migrations = []
+
+        # Restructure old flat config to nested structure
+        if "performance" not in config and any(key in config for key in ["batch_size", "max_workers", "enable_caching"]):
+            config["performance"] = {
+                "processing": {
+                    "batch_size": config.pop("batch_size", 200),
+                    "max_workers": config.pop("max_workers", 4)
+                },
+                "caching": {
+                    "enable_caching": config.pop("enable_caching", True),
+                    "cache_size": config.pop("cache_size", 1000)
+                }
+            }
+            migrations.append("Restructured performance settings to nested format")
+
+        return config, migrations
+
+    def _migrate_to_2_1_0(self, config: Dict[str, Any]) -> Tuple[Dict[str, Any], List[str]]:
+        """Migrate configuration from 2.0.x to 2.1.0."""
+        migrations = []
+
+        # Add new AI features section
+        if "features" not in config:
+            config["features"] = {}
+
+        if "ai_features" not in config["features"]:
+            config["features"]["ai_features"] = {
+                "enable_ai_detection": False,
+                "confidence_threshold": 0.85,
+                "online_metadata": False
+            }
+            migrations.append("Added AI features configuration")
+
+        return config, migrations
+
+    def _migrate_to_2_1_1(self, config: Dict[str, Any]) -> Tuple[Dict[str, Any], List[str]]:
+        """Migrate configuration from 2.1.0 to 2.1.1."""
+        migrations = []
+
+        # Add enhanced performance settings
+        if "performance" in config:
+            perf_config = config["performance"]
+
+            if "optimization" not in perf_config:
+                perf_config["optimization"] = {
+                    "use_fast_hash": True,
+                    "enable_progress_batching": True,
+                    "lazy_loading": True,
+                    "memory_pool_size": "256MB"
+                }
+                migrations.append("Added optimization settings")
+
+        return config, migrations
+
+    def _migrate_to_2_2_0(self, config: Dict[str, Any]) -> Tuple[Dict[str, Any], List[str]]:
+        """Migrate configuration from 2.1.1 to 2.2.0."""
+        migrations = []
+
+        # Add security settings
+        if "security" not in config:
+            config["security"] = {
+                "validate_paths": True,
+                "allowed_base_dirs": [],
+                "safe_mode": True
+            }
+            migrations.append("Added security settings for v2.2.0")
+
+        # Update metadata for consolidated version
+        if "_metadata" in config:
+            config["_metadata"]["consolidated"] = True
+            migrations.append("Updated metadata for consolidated configuration")
+
+        return config, migrations
+
+
+def create_default_config(config_path: str, template: str = "optimized") -> bool:
+    """Create enhanced default configuration file."""
+    templates = {
+        "basic": _get_basic_template,
+        "optimized": _get_optimized_template,
+        "development": _get_development_template
+    }
+
+    if template not in templates:
+        raise ValueError(f"Unknown template: {template}. Available: {list(templates.keys())}")
+
+    try:
+        default_config = templates[template]()
+
+        # Ensure directory exists
+        Path(config_path).parent.mkdir(parents=True, exist_ok=True)
+
+        with open(config_path, 'w', encoding='utf-8') as f:
+            json.dump(default_config, f, indent=2, ensure_ascii=False, sort_keys=True)
+
+        logger.info(f"Default configuration created: {config_path} (template: {template})")
+        return True
+
+    except Exception as e:
+        logger.error(f"Error creating default configuration: {e}")
+        return False
+
+
+def _get_optimized_template() -> Dict[str, Any]:
+    """Get optimized configuration template."""
+    return {
+        "$schema": "./config.schema.json",
+        "_metadata": {
+            "version": "2.2.0",
+            "description": "ROM Sorter Pro v2.2.0 - Optimized Configuration",
+            "last_updated": datetime.now().isoformat(),
+            "encoding": "utf-8",
+            "config_version": 2,
+            "template": "optimized",
+            "consolidated": True
+        },
+        "file_detection": {
+            "rom_extensions": [
+                ".zip", ".7z", ".rar", ".chd", ".iso", ".bin", ".cue",
+                ".gb", ".gbc", ".gba", ".nes", ".snes", ".smc", ".n64"
+            ],
+            "unwanted_patterns": [
+                "\\b(japan|jp|jap)\\b",
+                "\\b(demo|beta|alpha|sample)\\b",
+                "\\b(hack|hacked|pirate)\\b"
+            ],
+            "priority_extensions": {
+                ".zip": 10, ".7z": 9, ".iso": 8, ".bin": 7, ".rom": 6
+            }
+        },
+        "prioritization": {
+            "region_priorities": {
+                "World": 10, "Europe": 9, "EU": 9, "USA": 7, "US": 7,
+                "Japan": 3, "JP": 3, "Other": 1
+            },
+            "language_priorities": {
+                "EN": 10, "DE": 9, "Multi": 8, "FR": 7, "Other": 1
+            }
+        },
+        "performance": {
+            "caching": {
+                "enable_caching": True,
+                "cache_size": 5000,
+                "lru_cache_size": 3000
+            },
+            "processing": {
+                "parallel_workers": None,
+                "batch_size": 300,
+                "max_memory_usage": "1GB"
+            },
+            "optimization": {
+                "use_fast_hash": True,
+                "enable_progress_batching": True,
+                "lazy_loading": True
+            }
+        },
+        "features": {
+            "sorting": {
+                "console_sorting_enabled": True,
+                "create_console_folders": True
+            },
+            "duplicate_detection": {
+                "enabled": True,
+                "smart_detection": True
+            },
+            "ai_features": {
+                "enable_ai_detection": False,
+                "confidence_threshold": 0.85
+            }
+        },
+        "security": {
+            "validate_paths": True,
+            "allowed_base_dirs": [],
+            "safe_mode": True
+        }
+    }
+
+
+def _get_basic_template() -> Dict[str, Any]:
+    """Get basic configuration template."""
+    return {
+        "_metadata": {
+            "version": "2.2.0",
+            "description": "ROM Sorter Pro - Basic Configuration",
+            "template": "basic",
+            "consolidated": True
+        },
+        "file_detection": {
+            "rom_extensions": [".zip", ".iso", ".bin", ".nes", ".snes", ".gb", ".gba"],
+            "unwanted_patterns": ["\\b(demo|beta)\\b"]
+        },
+        "features": {
+            "sorting": {
+                "console_sorting_enabled": True
+            }
+        },
+        "security": {
+            "validate_paths": True,
+            "allowed_base_dirs": [],
+            "safe_mode": True
+        }
+    }
+
+
+def _get_development_template() -> Dict[str, Any]:
+    """Get development configuration template."""
+    config = _get_optimized_template()
+    config["_metadata"]["template"] = "development"
+    config["_metadata"]["description"] = "ROM Sorter Pro - Development Configuration"
+
+    # Enable debugging features
+    config["performance"]["processing"]["batch_size"] = 50  # Smaller batches for testing
+    config["features"]["ai_features"]["enable_ai_detection"] = True
+
+    return config
+
+
+# Global default configuration instance
+default_config = OptimizedConfigManager()
+
+logger.info("Enhanced configuration module v2.2.0 initialized with comprehensive security validation and consolidated features")
+
+
+# ============================================================================
+# COMMAND LINE INTERFACE
+# ============================================================================
+
+def main():
+    """Enhanced CLI interface for configuration utilities."""
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="ROM Sorter Pro v2.2.0 - Enhanced Configuration Utilities",
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+
+    subparsers = parser.add_subparsers(dest='command', help='Available commands')
+
+    # Validate command
+    validate_parser = subparsers.add_parser('validate', help='Validate configuration file')
+    validate_parser.add_argument('config_file', help='Path to configuration file')
+    validate_parser.add_argument('--schema', help='Path to schema file')
+    validate_parser.add_argument('--detailed', action='store_true', help='Show detailed validation report')
+
+    # Repair command
+    repair_parser = subparsers.add_parser('repair', help='Repair damaged configuration file')
+    repair_parser.add_argument('config_file', help='Path to configuration file')
+    repair_parser.add_argument('--no-backup', action='store_true', help='Skip backup creation')
+
+    # Migrate command
+    migrate_parser = subparsers.add_parser('migrate', help='Migrate configuration to newer version')
+    migrate_parser.add_argument('config_file', help='Path to configuration file')
+    migrate_parser.add_argument('--target-version', default='2.2.0', help='Target version')
+
+    # Create command
+    create_parser = subparsers.add_parser('create', help='Create default configuration file')
+    create_parser.add_argument('config_file', help='Path for new configuration file')
+    create_parser.add_argument('--template', choices=['basic', 'optimized', 'development'],
+                              default='optimized', help='Configuration template')
+
+    args = parser.parse_args()
+
+    if not args.command:
+        parser.print_help()
+        return
+
+    try:
+        if args.command == 'validate':
+            validator = EnhancedConfigValidator()
+
+            # Validate JSON syntax
+            is_valid, error_msg, details = validator.validate_json_syntax(args.config_file)
+
+            if not is_valid:
+                print(f"? JSON Syntax Error: {error_msg}")
+                if args.detailed and details:
+                    print(f"Details: {json.dumps(details, indent=2)}")
+                sys.exit(1)
+
+            print("? JSON syntax is valid")
+
+            # Schema validation if provided
+            if args.schema:
+                schema = validator.load_schema(args.schema)
+                if schema:
+                    with open(args.config_file, 'r', encoding='utf-8') as f:
+                        config_data = json.load(f)
+
+                    is_valid, error_msg, details = validator.validate_config(config_data, schema)
+
+                    if not is_valid:
+                        print(f"? Schema Validation Error: {error_msg}")
+                        if args.detailed and details:
+                            print(f"Details: {json.dumps(details, indent=2)}")
+                        sys.exit(1)
+
+                    print("? Schema validation passed")
+                else:
+                    print("?? Schema validation skipped - could not load schema")
+
+            if args.detailed and details:
+                print(f"Validation Details: {json.dumps(details, indent=2)}")
+
+        elif args.command == 'repair':
+            repairer = AdvancedConfigRepairer()
+            success, repairs, stats = repairer.repair_config_file(
+                args.config_file,
+                backup=not args.no_backup
+            )
+
+            if success:
+                print("? Configuration repaired successfully!")
+                print("Repairs made:")
+                for repair in repairs:
+                    print(f"  • {repair}")
+                print(f"Statistics: {json.dumps(stats, indent=2)}")
+            else:
+                print("? Repair failed:")
+                for repair in repairs:
+                    print(f"  • {repair}")
+                sys.exit(1)
+
+        elif args.command == 'migrate':
+            migrator = ConfigMigrationManager()
+            success, migrations = migrator.migrate_config(args.config_file, args.target_version)
+
+            if success:
+                print(f"? Configuration migrated to version {args.target_version}")
+                print("Migrations applied:")
+                for migration in migrations:
+                    print(f"  • {migration}")
+            else:
+                print("? Migration failed:")
+                for migration in migrations:
+                    print(f"  • {migration}")
+                sys.exit(1)
+
+        elif args.command == 'create':
+            if create_default_config(args.config_file, args.template):
+                print(f"? Configuration created: {args.config_file} (template: {args.template})")
+            else:
+                print(f"? Error creating configuration: {args.config_file}")
+                sys.exit(1)
+
+    except Exception as e:
+        print(f"? Error: {e}")
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
+
+
+# ============================================================================
+# COMPATIBILITY ALIASES FOR TESTS
+# ============================================================================
+
+# Create compatibility aliases for test files
+ConfigValidator = EnhancedConfigValidator
+
+def repair_config_file(config_path: str, backup: bool = True) -> Tuple[bool, List[str], Dict[str, Any]]:
+    """Standalone function wrapper for AdvancedConfigRepairer.repair_config_file()."""
+    repairer = AdvancedConfigRepairer()
+    return repairer.repair_config_file(config_path, backup)

@@ -1,0 +1,143 @@
+"""
+Debug-Funktionen für die ROM-Datenbank.
+"""
+
+import os
+import sqlite3
+import logging
+
+logger = logging.getLogger(__name__)
+
+def debug_database_initialization(db_path):
+    """Prüft die Datenbank und meldet ihren Status."""
+
+    logger.info(f"Überprüfe Datenbank: {db_path}")
+
+    # Prüfen, ob die Datei existiert
+    if not os.path.exists(db_path):
+        logger.error(f"Datenbank-Datei existiert nicht: {db_path}")
+        return False
+
+    # Überprüfen der Berechtigungen
+    try:
+        if not os.access(os.path.dirname(db_path), os.W_OK):
+            logger.error(f"Keine Schreibberechtigung im Verzeichnis: {os.path.dirname(db_path)}")
+            return False
+    except Exception as e:
+        logger.error(f"Fehler bei der Berechtigungsprüfung: {e}")
+
+    # Versuchen, die Datenbank zu öffnen und Tabellen zu überprüfen
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        # Tabellen auflisten
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+        tables = cursor.fetchall()
+        logger.info(f"Vorhandene Tabellen: {tables}")
+
+        # Prüfen, ob roms existiert
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='roms';")
+        if cursor.fetchone():
+            logger.info("Tabelle 'roms' existiert.")
+
+            # Überprüfen der Spalten
+            cursor.execute("PRAGMA table_info(roms);")
+            columns = cursor.fetchall()
+            logger.info(f"Spalten in der Tabelle 'roms': {columns}")
+
+            # Anzahl der Einträge prüfen
+            cursor.execute("SELECT COUNT(*) FROM roms;")
+            count = cursor.fetchone()[0]
+            logger.info(f"Anzahl der Einträge in 'roms': {count}")
+        else:
+            logger.error("Tabelle 'roms' existiert nicht!")
+
+            # Versuche die Tabelle zu erstellen
+            try:
+                cursor.execute('''
+                CREATE TABLE roms (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    console TEXT NOT NULL,
+                    filename TEXT,
+                    crc TEXT,
+                    md5 TEXT,
+                    sha1 TEXT,
+                    size INTEGER,
+                    metadata TEXT,
+                    source TEXT,
+                    confidence REAL DEFAULT 1.0,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+                ''')
+
+                # Indizes erstellen
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_roms_md5 ON roms(md5);")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_roms_crc ON roms(crc);")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_roms_sha1 ON roms(sha1);")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_roms_name ON roms(name);")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_roms_console ON roms(console);")
+
+                conn.commit()
+                logger.info("Tabelle 'roms' wurde erstellt.")
+            except Exception as e:
+                logger.error(f"Fehler beim Erstellen der Tabelle 'roms': {e}")
+
+        conn.close()
+        return True
+    except Exception as e:
+        logger.error(f"Datenbankfehler: {e}")
+        return False
+
+def get_db_connection(db_path=None):
+    """Stellt eine Verbindung zur Datenbank her und erstellt die Tabellen bei Bedarf."""
+
+    if db_path is None:
+        # Standardpfad verwenden
+        db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                           'rom_databases', 'rom_database.sqlite')
+
+    # Sicherstellen, dass das Verzeichnis existiert
+    os.makedirs(os.path.dirname(db_path), exist_ok=True)
+
+    logger.info(f"Verbinde zur Datenbank: {db_path}")
+
+    try:
+        # SQLite-Verbindung herstellen
+        conn = sqlite3.connect(db_path)
+
+        # Tabellen erstellen
+        cursor = conn.cursor()
+
+        # roms-Tabelle erstellen, falls nicht vorhanden
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS roms (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            console TEXT NOT NULL,
+            filename TEXT,
+            crc TEXT,
+            md5 TEXT,
+            sha1 TEXT,
+            size INTEGER,
+            metadata TEXT,
+            source TEXT,
+            confidence REAL DEFAULT 1.0,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+        ''')
+
+        # Indizes erstellen
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_roms_md5 ON roms(md5);")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_roms_crc ON roms(crc);")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_roms_sha1 ON roms(sha1);")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_roms_name ON roms(name);")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_roms_console ON roms(console);")
+
+        conn.commit()
+        logger.info("Datenbankverbindung erfolgreich hergestellt und Tabellen überprüft.")
+        return conn
+    except Exception as e:
+        logger.error(f"Fehler bei der Datenbankverbindung: {e}", exc_info=True)
+        raise

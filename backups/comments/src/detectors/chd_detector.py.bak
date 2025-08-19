@@ -1,0 +1,323 @@
+"""
+Verbessertes CHD-Erkennungsmodul für ROM Sorter
+------------------------------------------------
+
+Dieses Modul fügt spezialisierte Erkennung für CHD-Dateien hinzu, die über
+mehrere Konsolentypen hinweg verwendet werden können, einschließlich:
+- MAME Arcade
+- PlayStation (1, 2)
+- Dreamcast
+- Sega CD
+- Und andere Disc-basierte Systeme
+
+Die Erkennung basiert auf:
+1. Dateinamensmustern
+2. Header-Analyse
+3. Metadaten aus der CHD-Datei
+4. Externe Datenbanken (wenn verfügbar)
+5. Kontextbasierte Hinweise (Ordnerstruktur)
+"""
+
+import os
+import sqlite3
+import logging
+from pathlib import Path
+from typing import Optional
+
+logger = logging.getLogger(__name__)
+
+import os
+import re
+import sys
+import logging
+import hashlib
+import sqlite3
+from pathlib import Path
+from typing import Tuple, Dict, List, Optional, Set, Any
+
+logger = logging.getLogger(__name__)
+
+# CHD-Header Signatur für Typ-Erkennung
+CHD_SIGNATURE = b'MComprHD'
+CHD_V5_SIGNATURE = b'MComprHD\x05'
+
+# Bekannte CHD-Format Version und entsprechende Konsolen
+CHD_CONSOLE_MAPPING = {
+    # MAME CHD-Formate haben oft spezifische Merkmale
+    'MAME': [
+        r'chd[0-9]+', r'harddisk', r'cdrom\d*', r'chd[\\/]',
+        r'arcade', r'mame', r'final\s*burn', r'neogeo'
+    ],
+
+    # Sony PlayStation
+    'Sony - PlayStation': [
+        r'ps[x1]', r'playstation(?!\s*[234])', r'psx', r'psone'
+    ],
+
+    # Sony PlayStation 2
+    'Sony - PlayStation 2': [
+        r'ps2', r'playstation\s*2', r'ps\s*2'
+    ],
+
+    # Sega Dreamcast
+    'Sega - Dreamcast': [
+        r'dreamcast', r'dc\s*', r'dc[\\/]', r'sega\s*dreamcast'
+    ],
+
+    # Sega CD/Mega-CD
+    'Sega - CD': [
+        r'sega\s*cd', r'mega\s*cd', r'scd', r'mega\-cd'
+    ],
+
+    # Nintendo GameCube
+    'Nintendo - GameCube': [
+        r'gamecube', r'gc', r'nintendo\s*gc'
+    ],
+
+    # Nintendo Wii
+    'Nintendo - Wii': [
+        r'wii(?!\s*u)', r'nintendo\s*wii(?!\s*u)'
+    ],
+}
+
+# Typische Spiel-ID Muster für verschiedene Konsolen
+CONSOLE_ID_PATTERNS = {
+    'Sony - PlayStation': [
+        r'S[A-Z]{2,3}\-\d{4,5}',  # SCUS-12345, SCES-12345
+        r'SL[A-Z]{2}\d{5}'        # SLUS12345, SLES12345
+    ],
+    'Sony - PlayStation 2': [
+        r'S[A-Z]{3}_\d{3}\.\d{2}',  # SCES_123.45
+        r'S[A-Z]{3}\-\d{5}'         # SLUS-12345
+    ],
+    'Sega - Dreamcast': [
+        r'T\d{5}[A-Z]',          # T12345N
+        r'MK\-\d{7}[A-Z]'        # MK-1234567E
+    ],
+    'Nintendo - GameCube': [
+        r'G[A-Z]{2}[A-Z0-9]',    # GALE01
+        r'DOL\-[A-Z0-9]{4}'      # DOL-GALE
+    ],
+    'Nintendo - Wii': [
+        r'RVL\-[A-Z]\w{2}[A-Z]'  # RVL-RMCE
+    ],
+}
+
+# Liste der typischen Dateigröße nach Konsole (ungefährer Bereich in MB)
+CONSOLE_SIZE_RANGES = {
+    'MAME - Arcade': (5, 5000),           # Sehr variabel
+    'Sony - PlayStation': (300, 750),      # Typisch 650MB
+    'Sony - PlayStation 2': (1000, 4700),  # Typisch 4.7GB (DVD)
+    'Sega - Dreamcast': (500, 1200),       # Typisch 1GB GD-ROM
+    'Sega - CD': (200, 750),               # Typisch 650MB
+    'Nintendo - GameCube': (500, 1500),    # Typisch 1.35GB mini-DVD
+    'Nintendo - Wii': (1000, 4700),        # Typisch 4.7GB DVD
+}
+
+def get_chd_console(chd_path: str) -> Tuple[str, float]:
+    """
+    Erkennt die Konsole für eine CHD-Datei durch mehrere Methoden.
+
+    Args:
+        chd_path: Pfad zur CHD-Datei
+
+    Returns:
+        Tuple mit (console_name, confidence)
+    """
+    # Standardwerte
+    console = "MAME - Arcade"  # Standard-Fallback
+    confidence = 0.5
+
+    # Existiert die Datei überhaupt?
+    if not os.path.exists(chd_path):
+        logger.warning(f"CHD-Datei existiert nicht: {chd_path}")
+        return console, confidence
+
+    # 1. Dateinamenmuster-Überprüfung
+    filename = os.path.basename(chd_path).lower()
+    parent_dir = os.path.basename(os.path.dirname(chd_path)).lower()
+
+    # Prüfen auf Konsolen-spezifische Muster im Dateinamen und Ordnernamen
+    console_scores = {}
+
+    # Analysiere Dateinamen und Verzeichnis
+    for console_name, patterns in CHD_CONSOLE_MAPPING.items():
+        score = 0
+        for pattern in patterns:
+            # Prüfe im Dateinamen
+            if re.search(pattern, filename, re.IGNORECASE):
+                score += 0.3
+
+            # Prüfe im übergeordneten Verzeichnis (höheres Gewicht)
+            if re.search(pattern, parent_dir, re.IGNORECASE):
+                score += 0.4
+
+        console_scores[console_name] = score
+
+    # 2. Dateigröße-basierte Analyse
+    try:
+        file_size_mb = os.path.getsize(chd_path) / (1024 * 1024)
+
+        for console_name, (min_size, max_size) in CONSOLE_SIZE_RANGES.items():
+            if min_size <= file_size_mb <= max_size:
+                console_scores[console_name] = console_scores.get(console_name, 0) + 0.1
+
+                # Typische Größen für bestimmte Konsolen bekommen einen zusätzlichen Bonus
+                if console_name == 'Sony - PlayStation' and 600 <= file_size_mb <= 700:
+                    console_scores[console_name] += 0.1
+                elif console_name == 'Sony - PlayStation 2' and 4300 <= file_size_mb <= 4700:
+                    console_scores[console_name] += 0.1
+    except Exception as e:
+        logger.warning(f"Fehler bei der Größenberechnung von {chd_path}: {e}")
+
+    # 3. Versuche Metadaten aus der CHD-Datei zu extrahieren (vereinfacht)
+    try:
+        # Öffne die ersten 100 Bytes, um Header zu lesen
+        with open(chd_path, 'rb') as f:
+            header = f.read(100)
+
+            # Prüfen auf MAME CHD-Signatur
+            if CHD_SIGNATURE in header:
+                console_scores['MAME - Arcade'] = console_scores.get('MAME - Arcade', 0) + 0.2
+
+                # CHD v5-Format wird oft für neuere MAME-Versionen verwendet
+                if CHD_V5_SIGNATURE in header:
+                    console_scores['MAME - Arcade'] += 0.1
+
+            # Suche nach Konsolenspezifischen IDs im gesamten Header
+            header_str = header.decode('utf-8', errors='ignore')
+            for console_name, patterns in CONSOLE_ID_PATTERNS.items():
+                for pattern in patterns:
+                    if re.search(pattern, header_str):
+                        console_scores[console_name] = console_scores.get(console_name, 0) + 0.3
+    except Exception as e:
+        logger.warning(f"Fehler beim Lesen des CHD-Headers von {chd_path}: {e}")
+
+    # 4. Datenbank-Überprüfung, falls vorhanden
+    try:
+        # Berechne MD5 nur für die ersten 4MB (schneller)
+        md5_hash = calculate_partial_md5(chd_path, 4*1024*1024)
+        if md5_hash:
+            db_console = check_chd_database(md5_hash)
+            if db_console:
+                console_scores[db_console] = console_scores.get(db_console, 0) + 0.5
+    except Exception as e:
+        logger.debug(f"Fehler bei der Datenbankabfrage für {chd_path}: {e}")
+
+    # Finde die Konsole mit der höchsten Punktzahl
+    if console_scores:
+        best_console = max(console_scores.items(), key=lambda x: x[1])
+
+        if best_console[1] > 0.3:  # Minimaler Schwellenwert
+            console = best_console[0]
+            confidence = min(best_console[1], 0.95)  # Begrenzen auf 0.95
+
+    logger.debug(f"CHD-Datei {os.path.basename(chd_path)} erkannt als {console} mit Konfidenz {confidence:.2f}")
+    logger.debug(f"Score-Details: {console_scores}")
+
+    return console, confidence
+
+def calculate_partial_md5(file_path: str, read_size: int = 4*1024*1024) -> Optional[str]:
+    """
+    Berechnet einen MD5-Hash nur der ersten n Bytes einer Datei.
+    Dies ist schneller für große Dateien und für die meisten Erkennungszwecke ausreichend.
+
+    Args:
+        file_path: Pfad zur Datei
+        read_size: Anzahl der zu lesenden Bytes
+
+    Returns:
+        MD5-Hash als Hex-String oder None bei Fehler
+    """
+    try:
+        md5 = hashlib.md5()
+        with open(file_path, 'rb') as f:
+            data = f.read(read_size)
+            md5.update(data)
+        return md5.hexdigest()
+    except Exception as e:
+        logger.warning(f"Fehler bei MD5-Berechnung für {file_path}: {e}")
+        return None
+
+def check_chd_database(md5_hash: str) -> Optional[str]:
+    """
+    Überprüft die ROM-Datenbank auf ein Spiel mit dem angegebenen Hash.
+
+    Args:
+        md5_hash: MD5-Hash der CHD-Datei
+
+    Returns:
+        Konsolenname oder None wenn nicht gefunden
+    """
+    from src.database.connection_pool import ROM_DATABASE_PATH, database_connection
+
+    # Wenn Datenbank nicht existiert, nicht versuchen
+    if not Path(ROM_DATABASE_PATH).exists():
+        return None
+
+    try:
+        # Verwende den Context-Manager für sichere Datenbankverbindungen
+        with database_connection(ROM_DATABASE_PATH) as conn:
+            cursor = conn.cursor()
+
+            # Prüfe nach dem Hash in der Datenbank
+            cursor.execute("SELECT console FROM roms WHERE md5=? OR crc=? OR sha1=? LIMIT 1",
+                         (md5_hash, md5_hash[:8], md5_hash))
+            result = cursor.fetchone()
+
+        if result:
+            return result[0]
+    except Exception as e:
+        logger.warning(f"Datenbankfehler beim Suchen nach MD5 {md5_hash}: {e}")
+
+    return None
+
+def detect_chd_console(file_path: str) -> Tuple[str, float]:
+    """
+    Öffentliche API-Funktion zur Erkennung von CHD-Konsolen.
+
+    Args:
+        file_path: Pfad zur CHD-Datei
+
+    Returns:
+        Tuple aus (console_name, confidence)
+    """
+    # Prüfen, ob es tatsächlich eine CHD-Datei ist
+    if not file_path.lower().endswith('.chd'):
+        return "Unknown", 0.0
+
+    return get_chd_console(file_path)
+
+def is_chd_file(file_path: str) -> bool:
+    """
+    Überprüft, ob eine Datei im CHD-Format vorliegt.
+
+    Args:
+        file_path: Pfad zur zu prüfenden Datei
+
+    Returns:
+        True wenn es sich um eine CHD-Datei handelt, sonst False
+    """
+    if not file_path.lower().endswith('.chd'):
+        return False
+
+    try:
+        # Prüfe auf CHD-Header-Signatur
+        with open(file_path, 'rb') as f:
+            header = f.read(8)
+            return header == CHD_SIGNATURE or header == CHD_V5_SIGNATURE[:8]
+    except Exception:
+        return False
+
+def detect_console_from_chd(file_path: str) -> Tuple[str, float]:
+    """
+    Erkennt die Konsole aus einer CHD-Datei.
+    Diese Funktion ist ein Alias für detect_chd_console für API-Konsistenz.
+
+    Args:
+        file_path: Pfad zur CHD-Datei
+
+    Returns:
+        Tuple aus (console_name, confidence)
+    """
+    return detect_chd_console(file_path)

@@ -1,0 +1,628 @@
+﻿#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+ROM Sorter Pro - VERALTET: Optimierter Datei-Scanner v1.0.0
+
+ACHTUNG: Dieses Modul ist veraltet und wird in zukünftigen Versionen entfernt.
+Bitte verwenden Sie stattdessen die neuen Scanner-Module in src.scanning.
+
+PERFORMANCE OPTIMIERUNGEN v1.0.0:
+- Hochleistungs-Threading für große Verzeichnisstrukturen
+- Intelligentes Caching mit adaptiver Anpassung
+- Adaptive Batch-Verarbeitung für optimalen Durchsatz
+- Tiefenbeschränkte Rekursion für schnellere Suche
+- Adaptive Einstellungen basierend auf Filesystem-Performance
+- Optimierte Speichernutzung für große Verzeichnisse
+
+Project:        ROM Sorter Pro
+File:           src/optimized_scanner.py
+Version:        1.0.0
+Author:         cemal / daftpunk6161
+Created:        12.08.2025
+License:        MIT License
+Python:         3.8+
+"""
+
+import os
+import re
+import time
+import threading
+import gc
+import logging
+import warnings
+from pathlib import Path
+from typing import Dict, List, Any, Optional, Callable, Set, Tuple
+from collections import defaultdict, deque
+from functools import lru_cache
+
+# Warnung ausgeben
+warnings.warn(
+    "Das Modul optimized_scanner.py ist veraltet und wird in zukünftigen Versionen entfernt. "
+    "Bitte verwenden Sie stattdessen die Module in src.scanning.",
+    DeprecationWarning, stacklevel=2
+)
+
+# Logger-Setup
+logger = logging.getLogger(__name__)
+
+# Aufrufe an die neuen Module weiterleiten
+from src.utils.scanner_compat import (
+    OptimizedFileScanner as _OptimizedFileScanner,
+    scan_directory as _scan_directory,
+    clear_cache as _clear_cache,
+    get_cache_stats as _get_cache_stats
+)
+
+# Für einfachen Zugriff auf die ursprünglichen Funktionen
+scan_directory = _scan_directory
+clear_cache = _clear_cache
+get_cache_stats = _get_cache_stats
+
+# Ursprüngliche Klasse durch die Wrapper-Klasse ersetzen
+class OptimizedFileScanner(_OptimizedFileScanner):
+    """
+    Veraltete OptimizedFileScanner-Klasse.
+    Diese Klasse ist nur noch ein Wrapper für die neue AdaptiveScanner-Klasse in src.scanning.
+    Sie wird in zukünftigen Versionen entfernt werden.
+    """
+    """Hochleistungs-Dateiscanner mit optimierter Speichernutzung und adaptiver Leistungsanpassung."""
+
+    # Class-level cache for better memory efficiency
+    _scan_cache = {}
+    _cache_lock = threading.RLock()
+    _cache_hit_count = 0
+    _cache_miss_count = 0
+
+    # Klassen-Einstellungen für adaptive Leistung
+    _settings = {
+        'use_threading': os.cpu_count() and os.cpu_count() > 2,
+        'max_threads': max(1, min(8, (os.cpu_count() or 4) // 2)),
+        'min_files_for_threading': 1000,
+        'batch_size_base': 100,
+        'cache_ttl': 300,  # Sekunden, wie lange Cache gültig ist
+        'max_cache_entries': 10,
+        'skip_hidden_dirs': True,
+        'skip_system_dirs': True,
+        'max_scan_depth': 20,  # Verhindert übermäßig tiefe Rekursion
+    }
+
+    # Ignoriere bestimmte System- und Versteckte Verzeichnisse
+    _ignored_dirs = {
+        '.git', '.svn', '.hg', '__pycache__', 'node_modules', '.vscode',
+        '.idea', 'System Volume Information', '$RECYCLE.BIN', 'Recovery',
+        '$Windows.~BT', '$Windows.~WS', 'Windows', 'Program Files', 'Program Files (x86)'
+    }
+
+    # Leistungsmetriken für adaptive Anpassung
+    _performance_metrics = {
+        'last_scan_time': 0,
+        'last_files_per_second': 0,
+        'filesystem_latency': 0.001,  # Standardwert in Sekunden
+    }
+
+    def __init__(self, extensions=None):
+        """Scanner mit optionalem Erweiterungsfilter initialisieren."""
+        # Tracking für aktuelle Scan-Operation
+        self._file_count = 0
+        self._progress_callback = None
+        self._stop_event = None
+        self._progress_interval = 100
+        self._batch_size = self.__class__._settings['batch_size_base']
+
+        # Statistiken für Berichterstattung
+        self.stats = {
+            'hidden_dirs_skipped': 0,
+            'hidden_files_skipped': 0,
+            'unsupported_files_skipped': 0,
+            'dirs_processed': 0,
+            'cached_results_used': 0
+        }
+
+        # Adaptive Parameter basierend auf Systemleistung
+        self._adaptive_params = {
+            'threading_enabled': self.__class__._settings['use_threading'],
+            'batch_size_adjusted': self.__class__._settings['batch_size_base'],
+            'is_slow_filesystem': False,
+        }
+
+        # Extensions als Set für O(1) Lookup speichern
+        self.ROM_EXTENSIONS = set(ext.lower() for ext in extensions) if extensions else {
+            # Archive und Disk-Images
+            '.zip', '.7z', '.rar', '.iso', '.bin', '.cue', '.chd', '.cso', '.gdi', '.cdi',
+            # Nintendo
+            '.nes', '.smc', '.sfc', '.n64', '.z64', '.v64', '.ndd', '.gba', '.nds', '.3ds',
+            '.gb', '.gbc', '.gcm', '.wbfs', '.dol', '.wad', '.wux', '.xci', '.nsp',
+            # Sony
+            '.psv', '.psp', '.pbp', '.ps2', '.ps3',
+            # Sega
+            '.md', '.sms', '.gg', '.32x',
+            # Microsoft
+            '.xbx', '.xbe', '.xex',
+            # Atari
+            '.a26', '.a52', '.a78',
+            # Andere
+            '.rom', '.adf', '.hdf', '.mdf'
+        }
+
+        # Reguläre Ausdrücke für häufige Muster kompilieren
+        self._regex_cache = {
+            'rom_number': re.compile(r'[\(\[]?\s*[rR]om\s*\d+\s*[\)\]]?'),
+            'disk_number': re.compile(r'[\(\[]?\s*[dD]is[ck]\s*\d+\s*[\)\]]?'),
+            'version_pattern': re.compile(r'[\(\[]?\s*[vV](\d+(\.\d+)*)\s*[\)\]]?'),
+            'region_pattern': re.compile(r'[\(\[]?\s*(US|USA|EUR|Europe|JP|Japan|PAL|NTSC)\s*[\)\]]?')
+        }
+
+        # Vorkompilierte Erweiterungsprüfung für Leistung
+        # Verwende einen speichereffizienten und schnellen Ansatz mit __contains__
+        self._is_rom_file = lru_cache(maxsize=2048)(self._optimized_extension_check)
+
+    def _optimized_extension_check(self, path):
+        """Optimierter Check für ROM-Dateierweiterungen."""
+        # Schnellster Ansatz für die Erweiterungsprüfung
+        ext = path.suffix.lower()
+        return ext in self.ROM_EXTENSIONS
+
+    def scan_directory(self, directory: str, progress_callback=None, stop_event=None, use_cache=True) -> List[Path]:
+        """Scannt Verzeichnis nach ROM-Dateien mit optimaler Leistung und adaptiver Anpassung."""
+        self._file_count = 0
+        self._progress_callback = progress_callback
+        self._stop_event = stop_event or threading.Event()
+
+        # Cache-Check für schnelle Ergebnisse
+        if use_cache:
+            with self.__class__._cache_lock:
+                cache_key = str(directory)
+                current_time = time.time()
+
+                if cache_key in self.__class__._scan_cache:
+                    cache_entry = self.__class__._scan_cache[cache_key]
+                    cache_age = current_time - cache_entry['timestamp']
+
+                    if cache_age < self.__class__._settings['cache_ttl']:
+                        self.__class__._cache_hit_count += 1
+                        self.stats['cached_results_used'] += 1
+                        logger.debug(f"Cache-Treffer für {directory} (Alter: {cache_age:.1f}s)")
+                        return cache_entry['results']
+                    else:
+                        # Cache-Eintrag abgelaufen
+                        self.__class__._cache_miss_count += 1
+                else:
+                    self.__class__._cache_miss_count += 1
+
+        # Dateisystem-Performance für adaptive Optimierung messen
+        self._measure_filesystem_performance(directory)
+
+        # Basierend auf Verzeichnisgröße und Leistung entscheiden, ob Threading verwendet wird
+        if self._should_use_threading(directory):
+            results = self._scan_with_threading(directory, progress_callback)
+            logger.debug(f"Threading-Scan abgeschlossen: {len(results)} Dateien gefunden")
+        else:
+            results = self._scan_sequential(directory, progress_callback)
+            logger.debug(f"Sequentieller Scan abgeschlossen: {len(results)} Dateien gefunden")
+
+        # Parameter für zukünftige Scans optimieren
+        scan_duration = time.time() - self._start_time
+        files_per_second = self._file_count / max(0.001, scan_duration)
+
+        self._adjust_adaptive_parameters(files_per_second, self.stats['dirs_processed'], scan_duration)
+
+        # Speichere Ergebnisse im Cache für zukünftige Anfragen
+        if use_cache and results:
+            with self.__class__._cache_lock:
+                self.__class__._scan_cache[str(directory)] = {
+                    'results': results,
+                    'timestamp': time.time(),
+                    'file_count': len(results)
+                }
+
+                # Cache-Größe begrenzen
+                if len(self.__class__._scan_cache) > self.__class__._settings['max_cache_entries']:
+                    # Entferne ältesten Cache-Eintrag
+                    oldest_key = min(self.__class__._scan_cache.keys(),
+                                    key=lambda k: self.__class__._scan_cache[k]['timestamp'])
+                    del self.__class__._scan_cache[oldest_key]
+
+        # Finalen Fortschritt melden
+        if self._progress_callback:
+            self._progress_callback(100, f"{len(results)} ROM-Dateien gefunden")
+
+        return results
+
+    def _measure_filesystem_performance(self, directory):
+        """Misst die Dateisystemleistung für adaptive Optimierung."""
+        self._start_time = time.time()
+        try:
+            # Kurze I/O-Zeitmessung durchführen
+            start = time.time()
+            sample_size = 3
+            count = 0
+
+            # Prüfe nur, wenn wir keine aktuellen Leistungsmetriken haben
+            if time.time() - self.__class__._performance_metrics['last_scan_time'] > 300:
+                # Versuche, ein paar Verzeichnisse zu scannen für eine Stichprobe
+                with os.scandir(directory) as it:
+                    for entry in it:
+                        if count >= sample_size or (time.time() - start) > 0.5:
+                            break
+                        if entry.is_dir():
+                            try:
+                                list(os.scandir(entry.path))
+                                count += 1
+                            except (PermissionError, OSError):
+                                continue
+
+                # Wenn wir genügend Samples haben, berechne durchschnittliche Latenz
+                elapsed = time.time() - start
+                if count > 0:
+                    avg_latency = elapsed / count
+                    self.__class__._performance_metrics['filesystem_latency'] = avg_latency
+                    self._adaptive_params['is_slow_filesystem'] = avg_latency > 0.01  # 10ms
+
+                    # Batch-Größe anpassen basierend auf Dateisystemlatenz
+                    if self._adaptive_params['is_slow_filesystem']:
+                        self._adaptive_params['batch_size_adjusted'] = max(20, self._batch_size // 5)
+                    else:
+                        self._adaptive_params['batch_size_adjusted'] = self._batch_size
+        except Exception:
+            # Bei Fehler Standardwerte beibehalten
+            pass
+
+    def _should_use_threading(self, directory):
+        """Bestimmt, ob Threading für dieses Verzeichnis verwendet werden soll."""
+        # Überprüfe, ob Threading aktiviert und sinnvoll ist
+        if not self._adaptive_params['threading_enabled'] or self._adaptive_params['is_slow_filesystem']:
+            return False
+
+        try:
+            # Schnelle Zählung der obersten Verzeichnisebene
+            dir_count = 0
+            file_count = 0
+
+            with os.scandir(directory) as it:
+                for entry in it:
+                    try:
+                        if entry.is_dir():
+                            dir_count += 1
+                        elif entry.is_file() and self._is_rom_file(Path(entry.path)):
+                            file_count += 1
+
+                        # Früh abbrechen, wenn wir genügend Informationen haben
+                        if dir_count >= 10 and file_count >= 100:
+                            break
+                    except (PermissionError, OSError):
+                        continue
+
+            # Benutze Threading, wenn:
+            # 1. Genügend Unterverzeichnisse für Parallelisierung (min. 3)
+            # 2. Genügend Dateien für bessere Leistung als sequentiell
+            min_dirs_for_threading = 3
+            return (dir_count >= min_dirs_for_threading or
+                    file_count >= self.__class__._settings['min_files_for_threading'])
+
+        except Exception:
+            # Bei Fehler kein Threading verwenden
+            return False
+
+    def _scan_sequential(self, directory, progress_callback=None):
+        """Sequentieller optimierter Scan des Verzeichnisses."""
+        if self._stop_event and self._stop_event.is_set():
+            return []
+
+        found_files = []
+        file_batch = []
+
+        # Anpassbare Scan-Parameter
+        self._batch_size = self._adaptive_params['batch_size_adjusted']
+
+        # Verzeichnisstruktur mit angepasster Suche verarbeiten
+        dirs_queue = deque([directory])
+        scan_depth = 0
+
+        # Tiefenbeschränkte adaptive Suche für optimale Leistung
+        while dirs_queue and scan_depth < self.__class__._settings['max_scan_depth']:
+            if self._stop_event and self._stop_event.is_set():
+                break
+
+            try:
+                current_dir = dirs_queue.popleft()
+
+                try:
+                    # Aktuelles Verzeichnis verarbeiten
+                    subdirs = []
+                    self.stats['dirs_processed'] += 1
+
+                    with os.scandir(current_dir) as entries:
+                        for entry in entries:
+                            if self._stop_event and self._stop_event.is_set():
+                                break
+
+                            try:
+                                if entry.is_dir():
+                                    dir_name = os.path.basename(entry.path)
+
+                                    # Versteckte/System-Verzeichnisse überspringen
+                                    if ((self.__class__._settings['skip_system_dirs'] and
+                                         dir_name in self.__class__._ignored_dirs) or
+                                        (self.__class__._settings['skip_hidden_dirs'] and
+                                         dir_name.startswith('.') and dir_name != '.')):
+                                        self.stats['hidden_dirs_skipped'] += 1
+                                        continue
+
+                                    # Unterverzeichnis für spätere Verarbeitung vormerken
+                                    subdirs.append(entry.path)
+
+                                elif entry.is_file():
+                                    file_name = os.path.basename(entry.path)
+
+                                    # Versteckte Dateien überspringen
+                                    if self.__class__._settings['skip_hidden_dirs'] and file_name.startswith('.'):
+                                        self.stats['hidden_files_skipped'] += 1
+                                        continue
+
+                                    # ROM-Datei prüfen mit optimierter Funktion
+                                    file_path = Path(entry.path)
+                                    if self._is_rom_file(file_path):
+                                        self._file_count += 1
+                                        file_batch.append(file_path)
+
+                                        # Verarbeite Dateien in Batches für bessere Leistung
+                                        if len(file_batch) >= self._batch_size:
+                                            found_files.extend(file_batch)
+                                            file_batch = []
+
+                                            # Gelegentlich Fortschritt melden
+                                            if self._progress_callback and self._file_count % self._progress_interval == 0:
+                                                # Adaptive Fortschrittsberichterstattung
+                                                self._progress_callback(
+                                                    min(99, int(self._file_count / max(1, self._file_count + len(dirs_queue) * 10) * 100)),
+                                                    f"{self._file_count} ROM-Dateien gefunden, {len(dirs_queue)} Verzeichnisse verbleibend"
+                                                )
+
+                                                # Intervall anpassen basierend auf Dateianzahl
+                                                if self._file_count > 5000:
+                                                    self._progress_interval = 1000
+                                                elif self._file_count > 1000:
+                                                    self._progress_interval = 500
+                                                elif self._file_count > 100:
+                                                    self._progress_interval = 100
+                                    else:
+                                        self.stats['unsupported_files_skipped'] += 1
+
+                            except (PermissionError, OSError):
+                                # Dateien/Verzeichnisse überspringen, auf die wir nicht zugreifen können
+                                continue
+
+                        # Unterverzeichnisse hinzufügen, nachdem die aktuelle Verzeichnisebene gescannt wurde
+                        dirs_queue.extend(subdirs)
+
+                except (PermissionError, OSError):
+                    # Verzeichnisse überspringen, auf die wir nicht zugreifen können
+                    continue
+
+            except IndexError:
+                # Queue ist leer, erhöhe die Tiefenstufe
+                scan_depth += 1
+
+        # Verbleibende Dateien im Batch hinzufügen
+        if file_batch:
+            found_files.extend(file_batch)
+
+        return found_files
+
+    def _scan_with_threading(self, directory, progress_callback=None):
+        """Parallelisiertes Scannen des Verzeichnisses mit Threading."""
+        found_files = []
+        all_dirs = []
+
+        # Zuerst erste Verzeichnisebene scannen, um Arbeit zu verteilen
+        try:
+            with os.scandir(directory) as it:
+                for entry in it:
+                    if entry.is_dir():
+                        dir_name = os.path.basename(entry.path)
+
+                        # Systemverzeichnisse und versteckte Verzeichnisse überspringen
+                        if ((self.__class__._settings['skip_system_dirs'] and
+                             dir_name in self.__class__._ignored_dirs) or
+                            (self.__class__._settings['skip_hidden_dirs'] and
+                             dir_name.startswith('.') and dir_name != '.')):
+                            self.stats['hidden_dirs_skipped'] += 1
+                            continue
+
+                        all_dirs.append(entry.path)
+
+                    elif entry.is_file():
+                        # Dateien in der Wurzel direkt überprüfen
+                        file_path = Path(entry.path)
+                        if self._is_rom_file(file_path):
+                            found_files.append(file_path)
+                            self._file_count += 1
+        except (PermissionError, OSError):
+            # Bei Problemen mit dem Wurzelverzeichnis zum sequentiellen Scannen zurückkehren
+            return self._scan_sequential(directory, progress_callback)
+
+        if not all_dirs:
+            # Wenn keine Unterverzeichnisse vorhanden sind, verwende sequentielles Scannen
+            return self._scan_sequential(directory, progress_callback)
+
+        # Bereite Thread-Pool vor
+        max_threads = min(len(all_dirs), self.__class__._settings['max_threads'])
+
+        if max_threads <= 1:
+            # Nicht genügend Verzeichnisse für effektives Threading
+            return self._scan_sequential(directory, progress_callback)
+
+        # Verteile Verzeichnisse an Worker-Threads
+        chunks = self._create_balanced_dir_chunks(all_dirs, max_threads)
+
+        # Erstelle und starte Threads
+        threads = []
+        for i, chunk in enumerate(chunks):
+            thread = threading.Thread(
+                target=self._thread_scan_worker,
+                args=(chunk, i, progress_callback),
+                name=f"Scanner-{i}"
+            )
+            thread.daemon = True
+            threads.append(thread)
+            thread.start()
+
+        # Warte auf alle Threads
+        for thread in threads:
+            thread.join()
+
+        # Sammle Ergebnisse ein
+        thread_results = getattr(self, '_thread_results', [])
+        found_files.extend(thread_results)
+
+        # Aktualisiere Zähler
+        self._file_count = len(found_files)
+
+        return found_files
+
+    def _thread_scan_worker(self, dirs, thread_id, progress_callback):
+        """Worker-Thread zum Scannen einer Liste von Verzeichnissen."""
+        thread_files = []
+        thread_file_count = 0
+
+        # Lokale Kopie der Parameter für bessere Thread-Isolation
+        batch_size = self._adaptive_params['batch_size_adjusted']
+        progress_interval = self._progress_interval
+
+        # Jedes Verzeichnis in diesem Chunk scannen
+        for dir_path in dirs:
+            if self._stop_event and self._stop_event.is_set():
+                break
+
+            try:
+                # Rekursiv scannen mit angepasster Tiefe
+                for root, subdirs, files in os.walk(dir_path, topdown=True):
+                    if self._stop_event and self._stop_event.is_set():
+                        break
+
+                    # Verzeichnis überspringen wenn nötig
+                    dir_name = os.path.basename(root)
+                    if ((self.__class__._settings['skip_system_dirs'] and
+                         dir_name in self.__class__._ignored_dirs) or
+                        (self.__class__._settings['skip_hidden_dirs'] and
+                         dir_name.startswith('.') and dir_name != '.')):
+                        subdirs.clear()  # Keine weitere Rekursion in diesem Zweig
+                        self.stats['hidden_dirs_skipped'] += 1
+                        continue
+
+                    # Versteckte Verzeichnisse aus der Verarbeitung entfernen
+                    if self.__class__._settings['skip_hidden_dirs']:
+                        subdirs[:] = [d for d in subdirs if not d.startswith('.')]
+
+                    # Dateien in diesem Verzeichnis verarbeiten
+                    for file_name in files:
+                        if self._stop_event and self._stop_event.is_set():
+                            break
+
+                        if file_name.startswith('.') and self.__class__._settings['skip_hidden_dirs']:
+                            self.stats['hidden_files_skipped'] += 1
+                            continue
+
+                        file_path = Path(os.path.join(root, file_name))
+                        if self._is_rom_file(file_path):
+                            thread_files.append(file_path)
+                            thread_file_count += 1
+
+                            # Thread-lokaler Batch für bessere Speichereffizienz
+                            if thread_file_count % batch_size == 0:
+                                # Alle Thread-Fortschritte werden über eine gemeinsame Variabel aktualisiert
+                                with self._cache_lock:  # RLock kann mehrfach gesperrt werden
+                                    self._file_count += batch_size
+
+                        else:
+                            with self._cache_lock:
+                                self.stats['unsupported_files_skipped'] += 1
+
+                    # Zähle verarbeitete Verzeichnisse
+                    with self._cache_lock:
+                        self.stats['dirs_processed'] += 1
+
+            except (PermissionError, OSError):
+                continue
+
+        # Speichere Ergebnisse in Thread-sichere Variable
+        with self._cache_lock:
+            if not hasattr(self, '_thread_results'):
+                self._thread_results = []
+            self._thread_results.extend(thread_files)
+
+    def _create_balanced_dir_chunks(self, dirs, num_chunks):
+        """Erstellt ausgeglichene Verzeichnis-Chunks für Multi-Threading."""
+        # Wenn nur wenige Verzeichnisse, einfach gleichmäßig aufteilen
+        if len(dirs) <= num_chunks * 2:
+            return [dirs[i::num_chunks] for i in range(num_chunks)]
+
+        # Für eine ausgewogenere Verteilung, versuche Verzeichnisgrößen zu schätzen
+        dir_sizes = []
+        for d in dirs:
+            try:
+                # Schätze Verzeichnisgröße durch Zählen der Einträge auf oberster Ebene
+                size = sum(1 for _ in os.scandir(d))
+                dir_sizes.append((d, size))
+            except (PermissionError, OSError):
+                dir_sizes.append((d, 1))  # Minimalgröße für unzugängliche Verzeichnisse
+
+        # Sortiere Verzeichnisse nach geschätzter Größe (absteigend)
+        dir_sizes.sort(key=lambda x: x[1], reverse=True)
+
+        # Verteile nach Greedy-Algorithmus (größte zuerst)
+        chunks = [[] for _ in range(num_chunks)]
+        chunk_sizes = [0] * num_chunks
+
+        for dir_path, size in dir_sizes:
+            # Finde Chunk mit geringster aktueller Größe
+            min_idx = chunk_sizes.index(min(chunk_sizes))
+            chunks[min_idx].append(dir_path)
+            chunk_sizes[min_idx] += size
+
+        return chunks
+
+    def _adjust_adaptive_parameters(self, files_per_second, dirs_scanned, total_time):
+        """Passt adaptive Parameter für künftige Scans basierend auf Leistungsmetriken an."""
+        try:
+            # Batch-Größe anpassen
+            if files_per_second > 1000:
+                # Sehr schnelles Dateisystem
+                self._batch_size = min(500, self._batch_size * 1.5)
+            elif files_per_second < 100:
+                # Langsames Dateisystem
+                self._batch_size = max(20, self._batch_size * 0.8)
+
+            # Threading-Entscheidung anpassen
+            if dirs_scanned < 10 or total_time < 1.0:
+                # Kleine Verzeichnisstruktur - Threading deaktivieren
+                self._adaptive_params['threading_enabled'] = False
+            elif dirs_scanned > 100 and total_time > 5.0 and files_per_second > 200:
+                # Große Verzeichnisstruktur mit guter Leistung - Threading aktivieren
+                self._adaptive_params['threading_enabled'] = True
+
+        except Exception:
+            # Bei Fehlern Parameter nicht ändern
+            pass
+
+    @classmethod
+    def clear_cache(cls):
+        """Clear the scan cache."""
+        with cls._cache_lock:
+            cls._scan_cache.clear()
+
+    @property
+    def cache_stats(self):
+        """Return cache statistics."""
+        with self.__class__._cache_lock:
+            hits = self.__class__._cache_hit_count
+            misses = self.__class__._cache_miss_count
+            total = hits + misses
+            hit_rate = (hits / total) * 100 if total > 0 else 0
+            return {
+                'hits': hits,
+                'misses': misses,
+                'hit_rate': hit_rate,
+                'cache_size': len(self.__class__._scan_cache),
+                'max_cache_size': self.__class__._settings['max_cache_entries']
+            }

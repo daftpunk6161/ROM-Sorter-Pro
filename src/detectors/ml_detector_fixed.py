@@ -1,0 +1,418 @@
+#!/usr/bin/env python3
+# -*-coding: utf-8-*-
+
+"""
+ROM Sorter Pro - Regelbasierte ROM-Erkennung (ML-Ersatz)
+
+WICHTIG: Diese Datei ersetzt die ML-basierte Erkennung mit einer
+regelbasierten Version, die ohne externe Abhängigkeiten funktioniert.
+Die API bleibt kompatibel, damit bestehender Code nicht angepasst werden muss.
+"""
+
+import os
+import re
+import logging
+from functools import lru_cache
+from typing import Dict, List, Optional, Tuple, Any
+
+# Local imports
+try:
+    from .base_detector import BaseDetector
+except ImportError:
+# Fallback for standalone operation
+    from abc import ABC, abstractmethod
+    class BaseDetector(ABC):
+        """Base class for detectors when module is used standalone."""
+        def __init__(self, confidence_threshold: float = 0.5):
+            self.confidence_threshold = confidence_threshold
+            self.last_result = None
+            self.last_confidence = 0.0
+
+        @abstractmethod
+        def detect(self, file_path):
+            pass
+
+# Basic logging configuration
+logger = logging.getLogger(__name__)
+
+# configuration
+DEFAULT_MODEL_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                                 "models")
+
+
+# Regular-based recognition constants
+CONSOLE_EXTENSIONS = {
+    "nes": "Nintendo Entertainment System",
+    "smc": "Super Nintendo",
+    "sfc": "Super Nintendo",
+    "n64": "Nintendo 64",
+    "z64": "Nintendo 64",
+    "v64": "Nintendo 64",
+    "gb": "Game Boy",
+    "gbc": "Game Boy Color",
+    "gba": "Game Boy Advance",
+    "nds": "Nintendo DS",
+    "3ds": "Nintendo 3DS",
+    "iso": "Multi-Plattform Disc",  # Kann verschiedene Konsolen sein
+    "cue": "Multi-Plattform Disc",
+    "bin": "Multi-Plattform Binary",
+    "md": "Sega Mega Drive/Genesis",
+    "smd": "Sega Mega Drive/Genesis",
+    "gen": "Sega Mega Drive/Genesis",
+    "sms": "Sega Master System",
+    "gg": "Sega Game Gear",
+    "ss": "Sega Saturn",
+    "cdi": "Philips CD-i",
+    "jag": "Atari Jaguar",
+    "lnx": "Atari Lynx",
+    "ngc": "Neo Geo Pocket Color",
+    "pce": "PC Engine/TurboGrafx-16",
+    "wsc": "WonderSwan Color",
+    "ws": "WonderSwan",
+    "vb": "Virtual Boy",
+    "vec": "Vectrex",
+    "col": "ColecoVision",
+    "int": "Intellivision",
+    "a78": "Atari 7800",
+    "a26": "Atari 2600",
+    "a52": "Atari 5200",
+    "tzx": "ZX Spectrum",
+    "tap": "ZX Spectrum",
+    "z80": "ZX Spectrum",
+    "d64": "Commodore 64",
+    "t64": "Commodore 64",
+    "crt": "Commodore 64",
+    "prg": "Commodore 64",
+    "tap": "Commodore 64",
+    "nib": "Commodore 64",
+    "st": "Atari ST",
+    "adf": "Amiga",
+    "dms": "Amiga",
+    "wad": "Doom/Quake Engine Game",
+    "gcz": "GameCube",
+    "gcm": "GameCube",
+    "wbfs": "Wii",
+    "rvz": "Wii/GameCube",
+    "nsp": "Nintendo Switch",
+    "xci": "Nintendo Switch",
+    "chd": "MAME/Arcade",
+}
+
+# Pattern for console detection in file names
+CONSOLE_PATTERNS = {
+    r"\(snes\)|\[snes\]|\.snes\.": "Super Nintendo",
+    r"\(nes\)|\[nes\]|\.nes\.": "Nintendo Entertainment System",
+    r"\(n64\)|\[n64\]|\.n64\.": "Nintendo 64",
+    r"\(gb\)|\[gb\]|\.gb\.": "Game Boy",
+    r"\(gbc\)|\[gbc\]|\.gbc\.": "Game Boy Color",
+    r"\(gba\)|\[gba\]|\.gba\.": "Game Boy Advance",
+    r"\(nds\)|\[nds\]|\.nds\.": "Nintendo DS",
+    r"\(3ds\)|\[3ds\]|\.3ds\.": "Nintendo 3DS",
+    r"\(ps1\)|\[ps1\]|\.ps1\.|\(psx\)|\[psx\]|\.psx\.": "PlayStation",
+    r"\(ps2\)|\[ps2\]|\.ps2\.": "PlayStation 2",
+    r"\(ps3\)|\[ps3\]|\.ps3\.": "PlayStation 3",
+    r"\(psp\)|\[psp\]|\.psp\.": "PlayStation Portable",
+    r"\(xbox\)|\[xbox\]|\.xbox\.": "Xbox",
+    r"\(x360\)|\[x360\]|\.x360\.|\(xbox360\)|\[xbox360\]|\.xbox360\.": "Xbox 360",
+    r"\(xone\)|\[xone\]|\.xone\.|\(xboxone\)|\[xboxone\]|\.xboxone\.": "Xbox One",
+    r"\(dc\)|\[dc\]|\.dc\.|\(dreamcast\)|\[dreamcast\]|\.dreamcast\.": "Dreamcast",
+    r"\(gc\)|\[gc\]|\.gc\.|\(gamecube\)|\[gamecube\]|\.gamecube\.": "GameCube",
+    r"\(wii\)|\[wii\]|\.wii\.": "Wii",
+    r"\(wiiu\)|\[wiiu\]|\.wiiu\.": "Wii U",
+    r"\(switch\)|\[switch\]|\.switch\.|\(ns\)|\[ns\]|\.ns\.": "Nintendo Switch",
+    r"\(gen\)|\[gen\]|\.gen\.|\(genesis\)|\[genesis\]|\.genesis\.|\(md\)|\[md\]|\.md\.": "Sega Mega Drive/Genesis",
+    r"\(sms\)|\[sms\]|\.sms\.": "Sega Master System",
+    r"\(gg\)|\[gg\]|\.gg\.": "Sega Game Gear",
+    r"\(sat\)|\[sat\]|\.sat\.|\(saturn\)|\[saturn\]|\.saturn\.": "Sega Saturn",
+    r"\(32x\)|\[32x\]|\.32x\.": "Sega 32X",
+    r"\(arcade\)|\[arcade\]|\.arcade\.|\(mame\)|\[mame\]|\.mame\.": "Arcade",
+    r"\(gw\)|\[gw\]|\.gw\.|\(gamewatch\)|\[gamewatch\]|\.gamewatch\.": "Game & Watch",
+    r"\(ngp\)|\[ngp\]|\.ngp\.": "Neo Geo Pocket",
+    r"\(ngpc\)|\[ngpc\]|\.ngpc\.": "Neo Geo Pocket Color",
+    r"\(wswan\)|\[wswan\]|\.wswan\.": "WonderSwan",
+    r"\(wsc\)|\[wsc\]|\.wsc\.": "WonderSwan Color",
+    r"\(pc98\)|\[pc98\]|\.pc98\.": "PC-98",
+    r"\(dos\)|\[dos\]|\.dos\.": "DOS",
+    r"\(vic20\)|\[vic20\]|\.vic20\.": "VIC-20",
+    r"\(tg16\)|\[tg16\]|\.tg16\.|\(pce\)|\[pce\]|\.pce\.": "PC Engine/TurboGrafx-16",
+}
+
+# Header signatures for console detection from file content
+HEADER_SIGNATURES = {
+    b"NES\x1a": "Nintendo Entertainment System",
+    b"SNES-SPC700": "Super Nintendo",
+    b"\x80\x37\x12\x40": "Nintendo 64 (Big Endian)",
+    b"\x40\x12\x37\x80": "Nintendo 64 (Little Endian)",
+    b"\x37\x80\x40\x12": "Nintendo 64 (Middle Endian)",
+    b"\x01\x00\x00\x01": "Game Boy Advance",
+    b"\x02\x00\x00\x01": "Game Boy Advance",
+    b"NINTENDO": "Nintendo (Various)",
+    b"SEGA": "Sega (Various)",
+    b"SEGADISCSYSTEM": "Sega CD",
+    b"SEGAGENESIS": "Sega Genesis",
+    b"SEGASATURN": "Sega Saturn",
+    b"ATARI": "Atari (Various)",
+    b"BANDAI": "Bandai (Various)",
+    b"SONY": "Sony PlayStation (Various)",
+    b"PSP GAME": "PlayStation Portable",
+    b"PLAYSTATION": "PlayStation",
+    b"PS2DISC": "PlayStation 2",
+    b"MICROSOFT": "Microsoft Xbox (Various)",
+    b"XBOX": "Xbox",
+    b"SEGA DREAMCAST": "Dreamcast",
+}
+
+
+class MLEnhancedConsoleDetector(BaseDetector):
+    """
+    Eine regelbasierte Konsolen-Erkennungs-Klasse, die das ML-Interface beibehält.
+    """
+
+    def __init__(self, model_path: str = DEFAULT_MODEL_PATH, confidence_threshold: float = 0.5):
+        """
+        Initialisiert den Konsolen-Detektor.
+
+        Args:
+            model_path: Pfad für Modelldaten (wird in dieser Version nicht verwendet)
+            confidence_threshold: Minimaler Konfidenzschwellenwert für eine positive Erkennung
+        """
+        super().__init__(confidence_threshold=confidence_threshold)
+        self.model_path = model_path
+        self.vectorizer = None
+        self.classifier = None
+        self.ml_enabled = False
+
+# Make sure the model path exists
+        if not os.path.exists(model_path):
+            try:
+                os.makedirs(model_path)
+                logger.info(f"Modellverzeichnis erstellt: {model_path}")
+            except Exception as e:
+                logger.error(f"Fehler beim Erstellen des Modellverzeichnisses: {e}")
+
+    def detect_console(self, filename: str, content: Optional[bytes] = None) -> Tuple[str, float]:
+        """
+        Erkennt die Konsole basierend auf Dateiname und optional dem Inhalt.
+
+        Args:
+            filename: Der Dateiname oder Pfad des ROMs
+            content: Optional, die Bytes des Dateiinhalts für tiefere Analyse
+
+        Returns:
+            Tuple mit (Konsolenname, Konfidenz)
+        """
+# Perform rule -based detection
+        console, confidence = self._rule_based_detection(filename, content)
+        return console, confidence
+
+    def _rule_based_detection(self, filename: str, content: Optional[bytes] = None) -> Tuple[str, float]:
+        """
+        Regelbasierte Konsolen-Erkennung basierend auf Dateiname und Inhalt.
+
+        Args:
+            filename: Der Dateiname oder Pfad
+            content: Optional, die Bytes des Dateiinhalts für tiefere Analyse
+
+        Returns:
+            Tuple mit (Konsolenname, Konfidenz)
+        """
+        filename = os.path.basename(filename).lower()
+
+# 1. Check known file extensions
+        extension = filename.split(".")[-1].lower() if "." in filename else ""
+        if extension in CONSOLE_EXTENSIONS:
+# Special treatment for ambiguous extensions
+            if extension in ["iso", "bin", "cue"]:
+                return CONSOLE_EXTENSIONS[extension], 0.5  # Low confidence for ambiguous extensions
+            else:
+                return CONSOLE_EXTENSIONS[extension], 0.8
+
+# 2. Search for console-specific patterns in the file name
+        for pattern, console in CONSOLE_PATTERNS.items():
+            if re.search(pattern, filename, re.IGNORECASE):
+                return console, 0.85
+
+# 3. Check header signatures when content is available
+        if content and len(content) > 16:
+            for signature, console in HEADER_SIGNATURES.items():
+                if content.startswith(signature) or signature in content[:256]:
+                    return console, 0.95
+
+# 4. Heuristics based on parts of the name
+        filename_parts = re.sub(r"[.\[\]\(\)_-]", " ", filename).lower().split()
+
+        console_keywords = {
+            "nintendo": "Nintendo",
+            "snes": "Super Nintendo",
+            "nes": "Nintendo Entertainment System",
+            "n64": "Nintendo 64",
+            "gcn": "GameCube",
+            "gamecube": "GameCube",
+            "wii": "Wii",
+            "wiiu": "Wii U",
+            "switch": "Nintendo Switch",
+            "gameboy": "Game Boy",
+            "gb": "Game Boy",
+            "gbc": "Game Boy Color",
+            "gba": "Game Boy Advance",
+            "nds": "Nintendo DS",
+            "ds": "Nintendo DS",
+            "3ds": "Nintendo 3DS",
+            "playstation": "PlayStation",
+            "ps1": "PlayStation",
+            "psx": "PlayStation",
+            "ps2": "PlayStation 2",
+            "ps3": "PlayStation 3",
+            "ps4": "PlayStation 4",
+            "ps5": "PlayStation 5",
+            "psp": "PlayStation Portable",
+            "xbox": "Xbox",
+            "x360": "Xbox 360",
+            "xone": "Xbox One",
+            "sega": "Sega",
+            "genesis": "Sega Mega Drive/Genesis",
+            "megadrive": "Sega Mega Drive/Genesis",
+            "md": "Sega Mega Drive/Genesis",
+            "saturn": "Sega Saturn",
+            "dreamcast": "Dreamcast",
+            "dc": "Dreamcast",
+            "mastersystem": "Sega Master System",
+            "sms": "Sega Master System",
+            "gamegear": "Sega Game Gear",
+            "gg": "Sega Game Gear",
+            "arcade": "Arcade",
+            "mame": "Arcade",
+            "neogeo": "Neo Geo",
+            "neo-geo": "Neo Geo",
+            "ngp": "Neo Geo Pocket",
+            "ngpc": "Neo Geo Pocket Color",
+            "pce": "PC Engine/TurboGrafx-16",
+            "pcengine": "PC Engine/TurboGrafx-16",
+            "turbografx": "PC Engine/TurboGrafx-16",
+            "tg16": "PC Engine/TurboGrafx-16",
+            "wonderswan": "WonderSwan",
+            "ws": "WonderSwan",
+            "wsc": "WonderSwan Color",
+            "lynx": "Atari Lynx",
+            "jaguar": "Atari Jaguar",
+            "2600": "Atari 2600",
+            "5200": "Atari 5200",
+            "7800": "Atari 7800",
+        }
+
+        for part in filename_parts:
+            if part in console_keywords:
+                return console_keywords[part], 0.7
+
+# 5. Fallback: unknown with low confidence
+        return "Unbekannte Konsole", 0.1
+
+    def load_model(self) -> bool:
+        """
+        Dummy-Methode für API-Kompatibilität. Lädt keine Modelle.
+
+        Returns:
+            Immer True (Erfolgssimulation)
+        """
+        return True
+
+    def _preprocess_filename(self, filename: str) -> str:
+        """
+        Bereitet einen Dateinamen für die Feature-Extraktion vor.
+
+        Args:
+            filename: Der zu verarbeitende Dateiname
+
+        Returns:
+            Vorverarbeiteter Dateiname als String
+        """
+# Remove extension
+        name = os.path.splitext(filename)[0]
+
+# normalization
+        name = name.lower()
+
+# Replace special characters with spaces
+        name = re.sub(r"[.\[\]\(\)_-]", " ", name)
+
+# Remove double spaces
+        name = re.sub(r"\s+", " ", name).strip()
+
+        return name
+
+    def detect(self, file_path) -> Optional[Dict[str, Any]]:
+        """
+        Erkennt den Konsolentyp für eine Datei.
+
+        Args:
+            file_path: Pfad zur zu untersuchenden Datei
+
+        Returns:
+            Dict mit Konsoleninformationen oder None, wenn keine Erkennung möglich ist
+        """
+        try:
+# Convert path to string, if necessary
+            if hasattr(file_path, "as_posix"):
+                file_path = file_path.as_posix()
+
+# Use the Detect_Console method for the actual detection
+            console_name, confidence = self.detect_console(file_path)
+
+# Save the last result
+            self.last_result = console_name
+            self.last_confidence = confidence
+
+# If the confidence is above the threshold, give the result back
+            if confidence >= self.confidence_threshold:
+                return {
+                    "console": console_name,
+                    "confidence": confidence,
+                    "method": "rule-based-detection"
+                }
+
+# If the confidence is too low, give None back
+            return None
+
+        except Exception as e:
+            logger.error(f"Fehler bei der Konsolenerkennung: {e}")
+            return None
+
+
+# Dummy function for API compatibility
+def train_ml_model(*args, **kwargs):
+    """Dummy-Funktion, die ein Training simuliert."""
+    logger.warning("ML-Training nicht verfügbar: Regelbasierte Version wird verwendet")
+    return {"info": "Regelbasierte Version verwendet keine ML-Modelle"}
+
+
+@lru_cache(maxsize=1024)
+def detect_console_with_ml(filename: str, content: Optional[bytes] = None) -> Tuple[str, float]:
+    """
+    Erkennt die Konsole eines ROMs mit regelbasierter Erkennung.
+
+    Args:
+        filename: Dateiname oder -pfad
+        content: Optionaler Dateiinhalt für tiefere Analyse
+
+    Returns:
+        Tuple mit (Konsolenname, Konfidenz)
+    """
+    detector = MLEnhancedConsoleDetector()
+    return detector.detect_console(filename, content)
+
+
+# Initialize global detector instance for faster repeated calls
+_global_detector = None
+
+def get_detector() -> MLEnhancedConsoleDetector:
+    """
+    Gibt eine globale Detector-Instanz zurück.
+
+    Returns:
+        Eine Instanz von MLEnhancedConsoleDetector
+    """
+    global _global_detector
+    if _global_detector is None:
+        _global_detector = MLEnhancedConsoleDetector()
+        _global_detector.load_model()
+    return _global_detector

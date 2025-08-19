@@ -1,0 +1,73 @@
+#!/usr/bin/env python3
+"""
+Ein Hilfsskript zum Aufteilen langer Kommentarzeilen im Quellcode.
+Das Skript liest eine Quelldatei, sucht nach langen Zeilen in Kommentaren und
+teilt diese in mehrere Zeilen auf.
+"""
+
+import sys
+import re
+
+def split_long_comment_lines(file_path, max_line_length=79):
+    """
+    Teilt lange Kommentarzeilen in einer Datei auf.
+    
+    Args:
+        file_path: Pfad zur zu bearbeitenden Datei
+        max_line_length: Maximale Zeilenlänge
+    """
+    try:
+        with open(file_path, 'r', encoding='utf-8') as file:
+            lines = file.readlines()
+        
+        modified = False
+        for i in range(len(lines)):
+            line = lines[i]
+            
+            # Überprüfe, ob es sich um eine Kommentarzeile handelt und ob sie zu lang ist
+            if line.strip().startswith('#') and len(line.rstrip()) > max_line_length:
+                # Finde Einrückung
+                indent = re.match(r'^(\s*)', line).group(1)
+                
+                # Teile den Kommentartext
+                comment_text = line.strip()[1:].strip()  # Entferne # und führende Leerzeichen
+                
+                # Einfache Strategie: Bei ca. 70 Zeichen nach einem Leerzeichen suchen und aufteilen
+                words = comment_text.split()
+                new_comment_lines = []
+                current_line = "#"
+                
+                for word in words:
+                    if len(current_line + " " + word) > max_line_length - len(indent):
+                        new_comment_lines.append(indent + current_line)
+                        current_line = "# " + word
+                    else:
+                        current_line += " " + word if current_line != "#" else " " + word
+                
+                if current_line != "#":
+                    new_comment_lines.append(indent + current_line)
+                
+                # Ersetze die ursprüngliche Zeile durch die neuen Kommentarzeilen
+                lines[i] = '\n'.join(new_comment_lines) + '\n'
+                modified = True
+        
+        if modified:
+            with open(file_path, 'w', encoding='utf-8') as file:
+                file.writelines(lines)
+            print(f"Datei {file_path} wurde erfolgreich aktualisiert.")
+        else:
+            print(f"Keine langen Kommentarzeilen in {file_path} gefunden.")
+    
+    except Exception as e:
+        print(f"Fehler bei der Verarbeitung von {file_path}: {e}")
+        return False
+    
+    return True
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print("Verwendung: python split_comments.py <datei_pfad>")
+        sys.exit(1)
+    
+    file_path = sys.argv[1]
+    split_long_comment_lines(file_path)

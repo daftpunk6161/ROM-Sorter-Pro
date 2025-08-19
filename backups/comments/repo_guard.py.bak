@@ -1,0 +1,399 @@
+import argparse, hashlib, json, os, re, sys, shutil, time, tokenize
+from pathlib import Path
+from difflib import SequenceMatcher
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from fnmatch import fnmatch
+
+ROOT = Path(__file__).resolve().parent
+CONFIG_FILE = ROOT / "repo_guard.config.json"
+INDEX_FILE  = ROOT / ".dupindex.json"
+
+GERMAN_CHARS = set("äöüÄÖÜß")
+GERMAN_STOP = {
+    "und","oder","nicht","mit","fuer","ist","die","der","das","ein","eine",
+    "den","im","in","auf","als","auch","wir","ihr","euer","sein","sind"
+}
+
+# ----------------- Config / Utils -----------------
+def load_config() -> dict:
+    if CONFIG_FILE.exists():
+        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    # Fallback (sollte nicht noetig sein, da wir config mitliefern)
+    return {
+        "include_globs": ["**/*"],
+        "exclude_globs": [
+            "**/.git/**","**/.venv/**","**/venv/**","**/__pycache__/**",
+            "**/*.pyc","**/node_modules/**","**/build/**","**/dist/**",
+            "**/.vscode/**","**/.idea/**","**/.DS_Store"
+        ],
+        "naming": {
+            ".py":   r"^[a-z0-9_]+\.py$",
+            ".ps1":  r"^[A-Z][a-zA-Z0-9]+(-[A-Z][a-zA-Z0-9]+)*\.ps1$",
+            ".md":   r"^[a-z0-9]+(-[a-z0-9]+)*\.md$",
+            ".json": r"^[a-z0-9-]+\.json$",
+            ".yml":  r"^[a-z0-9-]+\.yml$",
+            ".yaml": r"^[a-z0-9-]+\.ya?ml$"
+        },
+        "docs": {
+            "docs_root": "docs",
+            "topics_dir": "docs/topics",
+            "mode": "master",  # "master" | "topics"
+            "require_language_frontmatter": False,
+            "enforcement": {
+                "allow_german": True
+            }
+        },
+        "near_duplicate": {
+            "name_similarity_threshold": 0.86,
+            "max_candidates": 50,
+            "check_content_snippet": True,
+            "snippet_size": 4096
+        }
+    }
+
+def should_skip(p: Path, cfg: dict) -> bool:
+    rel = str(p.as_posix())
+    if not any(fnmatch(rel, g) for g in cfg["include_globs"]):
+        return True
+    if any(fnmatch(rel, g) for g in cfg["exclude_globs"]):
+        return True
+    return False
+
+def hash_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+def snippet(path: Path, size: int) -> bytes:
+    with open(path, "rb") as f:
+        return f.read(size)
+
+def normalize_name(name: str) -> str:
+    base = name.lower()
+    base = re.sub(r"\.(?=[^.]+$)", "", base)
+    base = re.sub(r"[\s._]+", "-", base)
+    base = re.sub(r"\[[^\]]*\]|\([^\)]*\)|\{[^\}]*\}", "", base)
+    base = re.sub(r"-+", "-", base).strip("-")
+    return base
+
+# ----------------- Index -----------------
+def build_index(cfg: dict) -> dict:
+    files = [p for p in ROOT.rglob("*") if p.is_file() and not should_skip(p, cfg)]
+    index = {"generated_at": time.time(), "files": []}
+
+    def process(p: Path):
+        try:
+            return {
+                "path": str(p.relative_to(ROOT).as_posix()),
+                "name": p.name,
+                "ext": p.suffix.lower(),
+                "norm_name": normalize_name(p.name),
+                "size": p.stat().st_size,
+                "sha256": hash_file(p)
+            }
+        except Exception as e:
+            return {"error": f"{p}: {e}"}
+
+    with ThreadPoolExecutor(max_workers=os.cpu_count() or 4) as ex:
+        futures = [ex.submit(process, p) for p in files]
+        for fut in as_completed(futures):
+            rec = fut.result()
+            if "error" not in rec:
+                index["files"].append(rec)
+
+    with open(INDEX_FILE, "w", encoding="utf-8") as f:
+        json.dump(index, f, indent=2)
+    return index
+
+def load_index() -> dict:
+    if INDEX_FILE.exists():
+        with open(INDEX_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {"files": []}
+
+# ----------------- Rules -----------------
+def match_naming(filename: str, cfg: dict) -> list:
+    ext = Path(filename).suffix.lower()
+    if ext in cfg["naming"]:
+        rgx = re.compile(cfg["naming"][ext])
+        if not rgx.match(Path(filename).name):
+            return [f"Naming rule failed for '{filename}' (expected: /{rgx.pattern}/)"]
+    return []
+
+def check_python_comments_english(path: Path) -> list:
+    """
+    Enforce English/ASCII comments in Python.
+    - No umlauts/ß
+    - Avoid typical German stopwords
+    """
+    errs = []
+    try:
+        with tokenize.open(str(path)) as f:
+            tokens = tokenize.generate_tokens(f.readline)
+            for tok in tokens:
+                tok_type = tok.type
+                tok_val = tok.string
+                if tok_type == tokenize.COMMENT:
+                    text = tok_val.lstrip("#").strip()
+                    if not text:
+                        continue
+                    if any(ord(ch) > 127 for ch in text):
+                        errs.append("Python comment contains non-ASCII characters; use English ASCII comments.")
+                        continue
+                    # quick german stopword hit
+                    words = re.findall(r"[A-Za-z]{3,}", text.lower())
+                    hits = sum(1 for w in words if w in GERMAN_STOP)
+                    if hits >= 2:
+                        errs.append("Python comment appears to be German; please use English.")
+    except Exception as e:
+        errs.append(f"Could not parse file for comment checks: {e}")
+    return errs
+
+def check_against_repo(source: Path, target: Path, cfg: dict, idx: dict) -> list:
+    problems = []
+    problems += match_naming(target.name, cfg)
+
+    if source.exists():
+        s_hash = hash_file(source)
+        dup = [r for r in idx["files"] if r["sha256"] == s_hash]
+        if dup:
+            problems.append(f"Duplicate (identical content) already exists: {dup[0]['path']}")
+
+        if cfg["near_duplicate"]["check_content_snippet"]:
+            s_snip = snippet(source, cfg["near_duplicate"]["snippet_size"])
+            for r in idx["files"][: cfg["near_duplicate"]["max_candidates"]]:
+                try:
+                    other_snip = snippet(ROOT / r["path"], cfg["near_duplicate"]["snippet_size"])
+                    if len(s_snip) >= 64 and len(other_snip) >= 64:
+                        sim = SequenceMatcher(None, s_snip, other_snip).ratio()
+                        if sim > 0.97:
+                            problems.append(f"Content highly similar to: {r['path']} (heur.)")
+                            break
+                except Exception:
+                    pass
+
+    nn = normalize_name(target.name)
+    for r in idx["files"]:
+        score = SequenceMatcher(None, nn, r["norm_name"]).ratio()
+        if score >= cfg["near_duplicate"]["name_similarity_threshold"]:
+            problems.append(f"Name very similar to: {r['path']} (score {round(score,3)})")
+            break
+    return list(dict.fromkeys(problems))
+
+# ----------------- Commands -----------------
+def cmd_index(_args):
+    cfg = load_config()
+    idx = build_index(cfg)
+    print(f"Indexed {len(idx['files'])} files -> {INDEX_FILE.name}")
+
+def cmd_check_staging(args):
+    cfg = load_config()
+    idx = load_index()
+    staging = Path(args.dir).resolve()
+    if not staging.exists():
+        print(f"Staging folder not found: {staging}", file=sys.stderr); sys.exit(2)
+
+    problems_total = 0
+    for p in staging.rglob("*"):
+        if p.is_file():
+            target = ROOT / p.name if not args.keep_tree else ROOT / p.relative_to(staging)
+            issues = check_against_repo(p, target, cfg, idx)
+            if issues:
+                problems_total += 1
+                print(f"\n[WARN] {p} -> {target}:")
+                for i in issues: print(f"  - {i}")
+
+    if problems_total == 0:
+        print("Staging clean – no conflicts.")
+    else:
+        print(f"\nProblem files: {problems_total}"); sys.exit(1)
+
+def cmd_safe_create(args):
+    cfg = load_config(); idx = load_index()
+    target = Path(args.path).resolve()
+    src = Path(args.from_path).resolve() if args.from_path else None
+    if not src or not src.exists():
+        print("Source (--from) missing or not found.", file=sys.stderr); sys.exit(2)
+
+    issues = check_against_repo(src, target, cfg, idx)
+    if issues and not args.force:
+        print(f"[ABORT] Conflicts for {target.name}:")
+        for i in issues: print(f"  - {i}")
+        print("\nSuggestion: consolidate instead of creating a new file. Use --force to override.")
+        sys.exit(1)
+
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if target.exists() and not args.overwrite:
+        print(f"Target already exists: {target}", file=sys.stderr); sys.exit(3)
+
+    shutil.copy2(src, target)
+    print(f"Created: {target}")
+    # Update index (incremental)
+    rec = {
+        "path": str(target.relative_to(ROOT).as_posix()),
+        "name": target.name,
+        "ext": target.suffix.lower(),
+        "norm_name": normalize_name(target.name),
+        "size": target.stat().st_size,
+        "sha256": hash_file(target)
+    }
+    idx = load_index(); idx.setdefault("files", []).append(rec)
+    with open(INDEX_FILE, "w", encoding="utf-8") as f:
+        json.dump(idx, f, indent=2)
+    print("Index updated.")
+
+def cmd_install_hook(_args):
+    hook_dir = ROOT / ".git" / "hooks"; hook_dir.mkdir(parents=True, exist_ok=True)
+    hook_path = hook_dir / "pre-commit"
+    hook = f"""#!/usr/bin/env bash
+# Repo Guard pre-commit
+python "{(ROOT/'repo_guard.py').as_posix()}" index >/dev/null 2>&1 || exit 1
+# Stage snapshot
+STAGING=$(mktemp -d)
+git diff --cached --name-only --diff-filter=ACM | while read -r f; do
+  [ -f "$f" ] && mkdir -p "$STAGING/$(dirname "$f")" && cp "$f" "$STAGING/$f"
+done
+python "{(ROOT/'repo_guard.py').as_posix()}" check-staging --dir "$STAGING"
+RC=$?
+rm -rf "$STAGING"
+exit $RC
+"""
+    hook_path.write_text(hook, encoding="utf-8")
+    os.chmod(hook_path, 0o775)
+    print(f"Pre-commit hook installed: {hook_path}")
+
+def cmd_check_all(_args):
+    cfg = load_config()
+    idx = load_index()
+    if not idx.get("files"):
+        idx = build_index(cfg)
+
+    errors = 0
+    docs_cfg = cfg.get("docs", {})
+    docs_root = ROOT / docs_cfg.get("docs_root","docs")
+    topics_dir = ROOT / docs_cfg.get("topics_dir","docs/topics")
+    docs_root.mkdir(parents=True, exist_ok=True)
+
+    for rec in idx["files"]:
+        p = ROOT / rec["path"]
+        if should_skip(p, cfg):
+            continue
+
+        # Naming rules
+        for e in match_naming(p.name, cfg):
+            print(f"[NAMING] {rec['path']}: {e}"); errors += 1
+
+        # Python comment rules (English-only for comments)
+        if p.suffix.lower() == ".py":
+            c_errs = check_python_comments_english(p)
+            for e in c_errs:
+                print(f"[PY-COMMENT] {rec['path']}: {e}")
+                errors += 1
+
+        # Docs rules: only storage location; content may be German
+        if p.suffix.lower() == ".md":
+            if not (docs_root in p.parents or p.parent == docs_root or p == docs_root / p.name):
+                print(f"[DOCS] {rec['path']}: Markdown must live under '{docs_root.as_posix()}/'")
+                errors += 1
+
+    if errors:
+        print(f"\nViolations: {errors}"); sys.exit(1)
+    print("All checks passed.")
+
+def extract_title(md_text: str) -> str:
+    m = re.search(r"^#\s+(.+)$", md_text, re.MULTILINE)
+    if m:
+        return m.group(1).strip()
+    for line in md_text.splitlines():
+        if line.strip():
+            return line.strip()
+    return "untitled"
+
+def docs_destination_for_title(title: str, mode: str, docs_root: Path, topics_dir: Path) -> Path:
+    slug = normalize_name(title)
+    if mode == "master":
+        return docs_root / "MASTER.md"
+    else:
+        topics_dir.mkdir(parents=True, exist_ok=True)
+        return topics_dir / f"{slug}.md"
+
+def cmd_docs(args):
+    cfg = load_config()
+    mode = args.mode or cfg.get("docs",{}).get("mode","master")
+    docs_root = ROOT / cfg["docs"]["docs_root"]
+    topics_dir = ROOT / cfg["docs"]["topics_dir"]
+    docs_root.mkdir(parents=True, exist_ok=True)
+
+    # Collect md outside docs_root and ingest
+    md_files = [p for p in ROOT.rglob("*.md") if p.is_file() and not str(p).startswith(str(docs_root))]
+    moved = 0
+    for p in md_files:
+        text = p.read_text("utf-8", errors="ignore")
+        title = extract_title(text)
+        dest = docs_destination_for_title(title, mode, docs_root, topics_dir)
+        if mode == "master":
+            master = dest
+            master.touch()
+            content = master.read_text("utf-8", errors="ignore")
+            marker = f"<!-- section:{normalize_name(title)} -->"
+            if marker not in content:
+                block = f"\n\n{marker}\n# {title}\n\n" + text + "\n"
+                master.write_text(content + block, encoding="utf-8")
+            p.unlink()
+            moved += 1
+        else:
+            if dest.exists():
+                existing = dest.read_text("utf-8", errors="ignore")
+                sm = SequenceMatcher(None, existing, text).ratio()
+                if sm < 0.9:
+                    dest.write_text(existing.rstrip()+"\n\n---\n\n"+text+"\n", encoding="utf-8")
+            else:
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                dest.write_text(text, encoding="utf-8")
+            p.unlink()
+            moved += 1
+
+    print(f"Docs consolidated ({mode}). Moved/merged: {moved}")
+
+# ----------------- Main -----------------
+def ensure_config():
+    if not CONFIG_FILE.exists():
+        with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+            json.dump(load_config(), f, indent=2)
+        print(f"Default config written: {CONFIG_FILE.name}")
+
+def main():
+    ensure_config()
+    ap = argparse.ArgumentParser(description="Repo Guard – Enforces naming, prevents duplicates, manages docs, keeps project tidy.")
+    sub = ap.add_subparsers(dest="cmd", required=True)
+
+    sub.add_parser("index", help="Hash and index repository.")
+    p1 = sub.add_parser("check-staging", help="Validate staging dir against repository.")
+    p1.add_argument("--dir", required=True, help="Staging directory")
+    p1.add_argument("--keep-tree", action="store_true", help="Preserve subfolder hint for target")
+
+    p2 = sub.add_parser("safe-create", help="Create file only if no conflicts; otherwise abort.")
+    p2.add_argument("--path", required=True, help="Target path in repository")
+    p2.add_argument("--from", dest="from_path", required=True, help="Source file")
+    p2.add_argument("--overwrite", action="store_true", help="Overwrite existing target")
+    p2.add_argument("--force", action="store_true", help="Proceed despite conflicts (not recommended)")
+
+    sub.add_parser("install-hook", help="Install pre-commit hook.")
+    sub.add_parser("check-all", help="Run all checks (naming, duplicates, docs).")
+
+    p3 = sub.add_parser("docs", help="Consolidate documentation.")
+    p3.add_argument("--mode", choices=["master","topics"], help="master = one MASTER.md; topics = per-topic files")
+
+    args = ap.parse_args()
+    if args.cmd == "index": cmd_index(args)
+    elif args.cmd == "check-staging": cmd_check_staging(args)
+    elif args.cmd == "safe-create": cmd_safe_create(args)
+    elif args.cmd == "install-hook": cmd_install_hook(args)
+    elif args.cmd == "check-all": cmd_check_all(args)
+    elif args.cmd == "docs": cmd_docs(args)
+
+if __name__ == "__main__":
+    main()

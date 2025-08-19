@@ -1,0 +1,304 @@
+from pathlib import Path
+from typing import Dict, List, Optional, Any, Callable, Union, Tuple
+import tkinter as tk
+from tkinter import ttk, messagebox, filedialog
+import threading
+import queue
+import logging
+
+from .base import STYLE, BaseApp, center_window
+
+class ROMSorterWindow(tk.Tk):
+    """Hauptfenster der ROM Sorter Anwendung."""
+
+    def __init__(self):
+        """Initialisiere das Hauptfenster."""
+        super().__init__()
+        self.title("ROM Sorter Pro 🎮 - Optimized v2.1.4")
+        self.geometry("1000x700")
+        self.minsize(800, 600)
+
+        # Verbessere die Renderleistung
+        self.tk.call('package', 'forget', 'Tk_syncLed')
+        self.tk.call('tk', 'useinputmethods', '1')
+        self.tk.call('tk', 'scaling', '1.0')  # Konsistente Skalierung
+
+        # Zentriere das Fenster
+        center_window(self, 1000, 700)
+
+        # Initialisiere Variablen
+        self._initialize_variables()
+
+        # Erstelle UI-Komponenten
+        self._create_menu()
+        self._create_layout()
+
+        # Initialisiere Worker-Threads
+        self._initialize_workers()
+
+        # Protokolliere die Erstellung des Fensters
+        logging.info("ROM Sorter Hauptfenster erstellt")
+
+        # Schließe automatisch Ressourcen bei Beendigung
+        self.protocol("WM_DELETE_WINDOW", self._on_close)
+
+    def _initialize_variables(self):
+        """Initialisiere Variablen für die Anwendung."""
+        # Pfadvariablen
+        self.source_path = tk.StringVar()
+        self.dest_path = tk.StringVar()
+
+        # Statusvariablen
+        self.status_text = tk.StringVar(value="Bereit")
+        self.progress_value = tk.DoubleVar(value=0.0)
+        self.is_processing = threading.Event()
+
+        # Optionsvariablen
+        self.copy_mode = tk.BooleanVar(value=True)  # True = Copy, False = Move
+        self.recursive_scan = tk.BooleanVar(value=True)
+        self.create_subfolders = tk.BooleanVar(value=True)
+        self.overwrite_existing = tk.BooleanVar(value=False)
+
+        # Fortschrittswerte
+        self.total_files = 0
+        self.processed_files = 0
+
+        # Warteschlange für die Thread-Kommunikation
+        self.message_queue = queue.Queue()
+
+    def _create_menu(self):
+        """Erstelle die Menüleiste."""
+        menubar = tk.Menu(self)
+
+        # Datei-Menü
+        file_menu = tk.Menu(menubar, tearoff=0)
+        file_menu.add_command(label="Quellordner auswählen...", command=lambda: self._select_folder("source"))
+        file_menu.add_command(label="Zielordner auswählen...", command=lambda: self._select_folder("dest"))
+        file_menu.add_separator()
+        file_menu.add_command(label="Beenden", command=self._on_close)
+        menubar.add_cascade(label="Datei", menu=file_menu)
+
+        # Aktionen-Menü
+        action_menu = tk.Menu(menubar, tearoff=0)
+        action_menu.add_command(label="ROMs sortieren", command=self._on_start_sorting)
+        action_menu.add_command(label="Abbrechen", command=self._on_cancel_sorting)
+        menubar.add_cascade(label="Aktionen", menu=action_menu)
+
+        # Hilfe-Menü
+        help_menu = tk.Menu(menubar, tearoff=0)
+        help_menu.add_command(label="Dokumentation", command=self._show_documentation)
+        help_menu.add_command(label="Über ROM Sorter", command=self._show_about)
+        menubar.add_cascade(label="Hilfe", menu=help_menu)
+
+        # Menüleiste anwenden
+        self.config(menu=menubar)
+
+    def _create_layout(self):
+        """Erstelle das Hauptlayout der Anwendung."""
+        # Hauptframe mit Padding
+        main_frame = tk.Frame(self, bg=STYLE.colors.bg_primary)
+        main_frame.pack(fill='both', expand=True, padx=10, pady=10)
+
+        # Oberer Bereich (Header)
+        self._create_header(main_frame)
+
+        # Mittlerer Bereich (Zweispaltig)
+        content_frame = tk.Frame(main_frame, bg=STYLE.colors.bg_primary)
+        content_frame.pack(fill='both', expand=True, padx=5, pady=5)
+
+        # Linke Spalte
+        left_frame = tk.Frame(content_frame, bg=STYLE.colors.bg_primary, width=300)
+        left_frame.pack(side='left', fill='y', padx=5, pady=5)
+        left_frame.pack_propagate(False)  # Verhindert das Schrumpfen des Frames
+
+        # Rechte Spalte
+        right_frame = tk.Frame(content_frame, bg=STYLE.colors.bg_primary)
+        right_frame.pack(side='left', fill='both', expand=True, padx=5, pady=5)
+
+        # Erstelle die Panel-Inhalte
+        self._create_left_panel(left_frame)
+        self._create_right_panel(right_frame)
+
+        # Unterer Bereich (Footer)
+        self._create_footer(main_frame)
+
+    def _create_header(self, parent):
+        """Erstelle den Header-Bereich."""
+        header_frame = tk.Frame(parent, bg=STYLE.colors.accent_primary, height=60)
+        header_frame.pack(fill='x', pady=(0, 10))
+        header_frame.pack_propagate(False)  # Verhindert das Schrumpfen des Frames
+
+        # Logo und Titel
+        title_label = tk.Label(
+            header_frame,
+            text="ROM Sorter Pro",
+            font=STYLE.fonts.title,
+            bg=STYLE.colors.accent_primary,
+            fg="#ffffff"
+        )
+        title_label.pack(side='left', padx=20, pady=10)
+
+        # Version und Info
+        version_label = tk.Label(
+            header_frame,
+            text="v2.1.4 Optimized",
+            font=STYLE.fonts.small,
+            bg=STYLE.colors.accent_primary,
+            fg="#ffffff"
+        )
+        version_label.pack(side='right', padx=20, pady=10)
+
+    def _create_left_panel(self, parent):
+        """Erstelle das linke Panel mit Ordnerauswahl und Optionen."""
+        # Diese Methode wird in einer tatsächlichen Implementierung erweitert,
+        # um die Ordnerauswahl und Optionen zu erstellen
+        pass
+
+    def _create_right_panel(self, parent):
+        """Erstelle das rechte Panel mit Tabs für Statistiken und Logs."""
+        # Diese Methode wird in einer tatsächlichen Implementierung erweitert,
+        # um die Tabs und ihre Inhalte zu erstellen
+        pass
+
+    def _create_footer(self, parent):
+        """Erstelle den Footer-Bereich mit Statusanzeige und Fortschrittsbalken."""
+        footer_frame = tk.Frame(parent, bg=STYLE.colors.bg_secondary, height=40)
+        footer_frame.pack(fill='x', pady=(10, 0))
+        footer_frame.pack_propagate(False)  # Verhindert das Schrumpfen des Frames
+
+        # Statusanzeige
+        status_label = tk.Label(
+            footer_frame,
+            textvariable=self.status_text,
+            font=STYLE.fonts.default,
+            bg=STYLE.colors.bg_secondary,
+            anchor='w'
+        )
+        status_label.pack(side='left', padx=10, pady=5, fill='x', expand=True)
+
+        # Fortschrittsbalken
+        progress_bar = ttk.Progressbar(
+            footer_frame,
+            variable=self.progress_value,
+            orient='horizontal',
+            mode='determinate',
+            length=200
+        )
+        progress_bar.pack(side='right', padx=10, pady=5)
+
+    def _initialize_workers(self):
+        """Initialisiere Worker-Threads für Hintergrundaufgaben."""
+        # Thread zur Verarbeitung von UI-Updates
+        self.update_thread = threading.Thread(
+            target=self._process_message_queue,
+            daemon=True,
+            name="UI-Update-Thread"
+        )
+        self.update_thread.start()
+
+    def _process_message_queue(self):
+        """Verarbeite Nachrichten aus der Queue für UI-Updates."""
+        while True:
+            try:
+                # Hole die nächste Nachricht aus der Queue
+                message = self.message_queue.get(timeout=0.1)
+
+                # Verarbeite die Nachricht basierend auf ihrem Typ
+                if message['type'] == 'status':
+                    self.status_text.set(message['text'])
+                elif message['type'] == 'progress':
+                    self.progress_value.set(message['value'])
+                elif message['type'] == 'log':
+                    # In einer vollständigen Implementierung würde hier der Log aktualisiert
+                    pass
+
+                # Markiere die Nachricht als verarbeitet
+                self.message_queue.task_done()
+            except queue.Empty:
+                # Keine Nachrichten in der Queue
+                pass
+
+            # Kurze Pause zur Vermeidung von CPU-Last
+            import time
+            time.sleep(0.01)
+
+    def _select_folder(self, folder_type):
+        """
+        Öffne einen Ordnerauswahldialog.
+
+        Args:
+            folder_type: 'source' oder 'dest' für den Quell- oder Zielordner
+        """
+        folder = filedialog.askdirectory(
+            title=f"Wähle {'Quell' if folder_type == 'source' else 'Ziel'}-Ordner",
+            mustexist=True
+        )
+
+        if folder:
+            if folder_type == "source":
+                self.source_path.set(folder)
+            else:
+                self.dest_path.set(folder)
+
+    def _on_start_sorting(self):
+        """Starte den Sortiervorgang."""
+        # Überprüfe, ob Quell- und Zielordner ausgewählt wurden
+        if not self.source_path.get() or not self.dest_path.get():
+            messagebox.showwarning(
+                "Fehlende Ordner",
+                "Bitte wähle einen Quell- und Zielordner aus."
+            )
+            return
+
+        # Setze den Status auf "verarbeitend"
+        self.is_processing.set()
+        self.status_text.set("Sortiere ROMs...")
+        self.progress_value.set(0.0)
+
+        # In einer vollständigen Implementierung würde hier der Sortiervorgang gestartet
+
+    def _on_cancel_sorting(self):
+        """Breche den Sortiervorgang ab."""
+        if self.is_processing.is_set():
+            self.is_processing.clear()
+            self.status_text.set("Abgebrochen")
+
+    def _show_documentation(self):
+        """Zeige die Dokumentation an."""
+        messagebox.showinfo(
+            "Dokumentation",
+            "Die Dokumentation kann auf der Projektwebseite gefunden werden."
+        )
+
+    def _show_about(self):
+        """Zeige Informationen über die Anwendung."""
+        messagebox.showinfo(
+            "Über ROM Sorter Pro",
+            "ROM Sorter Pro v2.1.4\n\n"
+            "Ein Werkzeug zum Sortieren und Organisieren von ROM-Dateien.\n\n"
+            "© 2025 ROM Sorter Team"
+        )
+
+    def _on_close(self):
+        """Handle das Schließen des Fensters."""
+        # Stoppe alle laufenden Threads
+        self.is_processing.clear()
+
+        # Gib Ressourcen frei
+        import gc
+        gc.collect()
+
+        # Schließe das Fenster
+        self.destroy()
+
+
+if __name__ == "__main__":
+    # Logging einrichten
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+
+    # Anwendung starten
+    app = ROMSorterWindow()
+    app.mainloop()

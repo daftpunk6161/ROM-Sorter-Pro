@@ -1,0 +1,48 @@
+"""
+ROM-Sorter UI-Package
+
+Dieses Paket enthält die Benutzeroberflächenkomponenten für die ROM-Sorter-Anwendung.
+Die UI wurde modular aufgebaut, um Wartbarkeit und Erweiterbarkeit zu verbessern.
+
+Module:
+- app.py: Hauptanwendungsklasse, die GUI und Logik verbindet
+- base.py: Grundlegende UI-Komponenten und Stile
+- custom_widgets.py: Erweiterte Widgets mit zusätzlichen Funktionen
+- main_window.py: Hauptfensterdefinition
+- panels.py: Tab-Panels und andere Panel-Komponenten
+- widgets.py: Wiederverwendbare UI-Widgets
+- dialogs.py: Spezialisierte Dialogfenster
+- compat.py: Kompatibilitätsschicht für die Migration
+- theme_manager.py: Theme-Verwaltung mit Unterstützung für helle/dunkle Themes
+- theme_integration.py: Integration der Theme-Verwaltung in die GUI
+"""
+
+from .base import STYLE, BaseApp, center_window, create_tooltip
+from .widgets import FolderSelector, ToggleSwitch, FileListBox, ProgressDialog
+from .panels import TabPanel, OptionsPanel, StatisticsPanel, LogPanel
+from .custom_widgets import DragDropSupport, CustomTreeview
+from .main_window import ROMSorterWindow
+from .app import ROMSorterApp, main
+from .dialogs import AboutDialog, SettingsDialog, ErrorDialog, show_error_dialog, show_about_dialog, show_settings_dialog
+from .compat import is_ui_available, get_ui_mode
+
+# Theme-System
+try:
+    from .theme_manager import ThemeManager, Theme, ThemeType, ColorScheme
+    from .theme_integration import ThemeIntegrator
+    THEME_SUPPORT = True
+except ImportError:
+    THEME_SUPPORT = False
+
+# Exposing the main function for starting the application
+__all__ = [
+    'STYLE', 'BaseApp', 'center_window', 'create_tooltip',
+    'FolderSelector', 'ToggleSwitch', 'FileListBox', 'ProgressDialog',
+    'ThemeManager', 'Theme', 'ThemeType', 'ColorScheme', 'ThemeIntegrator', 'THEME_SUPPORT',
+    'TabPanel', 'OptionsPanel', 'StatisticsPanel', 'LogPanel',
+    'DragDropSupport', 'CustomTreeview',
+    'ROMSorterWindow', 'ROMSorterApp', 'main',
+    'AboutDialog', 'SettingsDialog', 'ErrorDialog',
+    'show_error_dialog', 'show_about_dialog', 'show_settings_dialog',
+    'is_ui_available', 'get_ui_mode'
+]

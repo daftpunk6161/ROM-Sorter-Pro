@@ -1,0 +1,545 @@
+#!/usr/bin/env python3
+# -*-coding: utf-8-*-
+
+"""
+ROM Sorter Pro - KI-basierte ROM-Erkennung
+
+Dieses Modul implementiert eine KI-basierte ROM-Erkennungsfunktion, die Muster
+in ROM-Headern und Dateinamen identifiziert, um die Konsolenplattform präziser
+zu bestimmen. Das System verwendet eine Kombination aus regelbasierten Heuristiken
+und einfachen Klassifikationsalgorithmen, um auch ohne externe ML-Bibliotheken
+zu funktionieren.
+
+Features:
+- Header-basierte Signaturerkennung mit gewichteter Ähnlichkeitsanalyse
+- Selbstlernendes System, das aus Benutzerfeedback lernt
+- Lokales Feature-Caching zur Leistungsoptimierung
+- Robustes Fallback-System bei unbekannten ROMs
+"""
+
+import os
+import re
+import logging
+import json
+import hashlib
+import threading
+from pathlib import Path
+from datetime import datetime
+from typing import Dict, List, Any, Tuple, Optional, Union, Set, Callable
+from functools import lru_cache
+from collections import Counter, defaultdict
+import pickle
+
+# Configure logger
+logger = logging.getLogger(__name__)
+
+# Local imports
+try:
+    from src.detectors.base_detector import BaseDetector
+    from src.detectors.ml_detector_fixed import RuleBasedConsoleDetector, detect_console_with_rules
+    from src.utils.fuzzy_matching import get_similarity_score
+except ImportError as e:
+# Fallback implementations
+    logger.warning(f"Fehler beim Importieren der notwendigen Module: {e}")
+
+    BaseDetector = object
+
+    def detect_console_with_rules(file_path, header_data=None):
+        return "Unknown", 0.0, "fallback"
+
+    class RuleBasedConsoleDetector:
+        def __init__(self):
+            pass
+        def detect(self, file_path):
+            return "Unknown", 0.0, "fallback"
+
+    def get_similarity_score(a, b):
+        return 0.0
+
+# Configure logger
+logger = logging.getLogger(__name__)
+
+# Constant
+_MODELS_PATH = os.path.join(os.path.dirname(__file__), '..', '..', 'models', 'ai_models')
+_SIGNATURES_DB = os.path.join(_MODELS_PATH, 'rom_signatures.json')
+_FEEDBACK_DB = os.path.join(_MODELS_PATH, 'user_feedback.json')
+_MIN_CONFIDENCE = 0.7
+
+
+class AIEnhancedROMDetector:
+    """
+    ROM-Detector mit KI-ähnlichen Funktionen, der ohne externe ML-Bibliotheken funktioniert.
+    Verwendet Header-Signaturen, Heuristiken und Benutzerfeedback für kontinuierliche Verbesserung.
+    """
+
+    def __init__(self):
+        """Initialisiere den KI-basierten Detector."""
+        self.rule_detector = RuleBasedConsoleDetector()
+        self.signatures = self._load_signatures()
+        self.feedback_data = self._load_feedback()
+        self._lock = threading.RLock()
+
+# Make sure the model directory exists
+        os.makedirs(_MODELS_PATH, exist_ok=True)
+
+# Header signature cache
+        self._header_cache = {}
+
+    def _load_signatures(self) -> Dict[str, Dict[str, Any]]:
+        """Lade die ROM-Signaturen aus der JSON-Datei."""
+        if os.path.exists(_SIGNATURES_DB):
+            try:
+                with open(_SIGNATURES_DB, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            except Exception as e:
+                logger.error(f"Fehler beim Laden der ROM-Signaturen: {e}")
+
+# Default signatures if the file does not exist or is incorrect
+        default_signatures = {
+            "header_patterns": {
+                "Nintendo Entertainment System": {
+                    "header_bytes": ["4E45531A"],  # "NES\x1A"
+                    "offset": 0,
+                    "confidence": 0.95
+                },
+                "Super Nintendo": {
+                    "header_bytes": ["AABB"],  # SMC Header
+                    "offset": 0,
+                    "confidence": 0.9
+                },
+                "Nintendo 64": {
+                    "header_bytes": ["80371240", "37804012"],  # N64 Boot-Code (beide Byte-Orders)
+                    "offset": 0,
+                    "confidence": 0.95
+                },
+                "Sega Genesis": {
+                    "header_bytes": ["53454741"],  # "SEGA"
+                    "offset": 0x100,  # Typische Position des SEGA-Headers
+                    "confidence": 0.95
+                },
+                "PlayStation": {
+                    "header_bytes": ["504C4159535441"], # "PLAYSTA"
+                    "offset": 0,
+                    "confidence": 0.9
+                },
+                "GameBoy": {
+                    "header_bytes": ["CEED6666"],  # Teil des Nintendo-Logos im GB-Header
+                    "offset": 0x104,
+                    "confidence": 0.95
+                },
+                "GameBoy Advance": {
+                    "header_bytes": ["24FFAE51699AA221"],  # Teil des Nintendo-Logos im GBA-Header
+                    "offset": 0x4,
+                    "confidence": 0.95
+                }
+            },
+            "string_patterns": {
+                "PlayStation": ["BOOT=cdrom:", "Sony Computer Entertainment"],
+                "PlayStation 2": ["PS2DVD", "SCEI", "Sony Computer Entertainment Inc"],
+                "Sega Saturn": ["SEGA SATURN", "SEGASATURN"],
+                "Sega Dreamcast": ["SEGA DREAMCAST", "SEGADREAMCAST"],
+                "GameCube": ["NINTENDO GAMECUBE", "dolphin"]
+            },
+            "file_ext_confidence": {
+                ".nes": {"console": "Nintendo Entertainment System", "confidence": 0.9},
+                ".smc": {"console": "Super Nintendo", "confidence": 0.85},
+                ".sfc": {"console": "Super Nintendo", "confidence": 0.9},
+                ".n64": {"console": "Nintendo 64", "confidence": 0.9},
+                ".z64": {"console": "Nintendo 64", "confidence": 0.9},
+                ".v64": {"console": "Nintendo 64", "confidence": 0.85},
+                ".gb": {"console": "GameBoy", "confidence": 0.9},
+                ".gbc": {"console": "GameBoy Color", "confidence": 0.9},
+                ".gba": {"console": "GameBoy Advance", "confidence": 0.9},
+                ".nds": {"console": "Nintendo DS", "confidence": 0.9},
+                ".md": {"console": "Sega Genesis", "confidence": 0.85},
+                ".gen": {"console": "Sega Genesis", "confidence": 0.85},
+                ".iso": {"console": "Unknown CD-ROM", "confidence": 0.5},
+                ".bin": {"console": "Unknown CD-ROM", "confidence": 0.5},
+                ".cue": {"console": "Unknown CD-ROM", "confidence": 0.5}
+            }
+        }
+
+# Save the default signatures
+        try:
+            with open(_SIGNATURES_DB, 'w', encoding='utf-8') as f:
+                json.dump(default_signatures, f, indent=2)
+        except Exception as e:
+            logger.error(f"Fehler beim Speichern der Default-ROM-Signaturen: {e}")
+
+        return default_signatures
+
+    def _load_feedback(self) -> Dict[str, Any]:
+        """Lade das gesammelte Benutzerfeedback."""
+        if os.path.exists(_FEEDBACK_DB):
+            try:
+                with open(_FEEDBACK_DB, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            except Exception as e:
+                logger.error(f"Fehler beim Laden des Benutzerfeedbacks: {e}")
+
+# Default feedback data structure
+        default_feedback = {
+            "corrections": {},      # ROM-Hash -> Korrekte Konsole
+            "confirmations": {},    # ROM-Hash -> Bestätigte Konsole + Anzahl
+            "patterns": {},         # Gefundene Muster mit Konfidenz
+            "metadata": {
+                "total_feedback": 0,
+                "last_updated": None,
+                "confidence_adjustments": {}
+            }
+        }
+
+# Save the default structure
+        try:
+            with open(_FEEDBACK_DB, 'w', encoding='utf-8') as f:
+                json.dump(default_feedback, f, indent=2)
+        except Exception as e:
+            logger.error(f"Fehler beim Speichern der Default-Feedback-Struktur: {e}")
+
+        return default_feedback
+
+    def detect_console(self, filename: str, content: Optional[bytes] = None) -> Tuple[str, float, str]:
+        """
+        Erkennt die Konsole eines ROMs mit KI-ähnlicher Logik.
+
+        Args:
+            filename: Dateiname oder -pfad
+            content: Optionaler Dateiinhalt für Header-Analyse
+
+        Returns:
+            Tuple mit (Konsolenname, Konfidenz, Erkennungsmethode)
+        """
+# Calculate the hash for feedback lookup (if content is available)
+        rom_hash = None
+        if content:
+            rom_hash = hashlib.md5(content[:4096]).hexdigest()
+
+# Check whether we already have feedback for this Rome
+            if rom_hash in self.feedback_data["corrections"]:
+                console = self.feedback_data["corrections"][rom_hash]
+                return console, 1.0, "user_feedback"
+
+# 1. Attempts Header-based detection when content is available
+        if content and len(content) > 512:
+            console, confidence = self._detect_by_header(content)
+            if confidence >= _MIN_CONFIDENCE:
+                return console, confidence, "header_signature"
+
+# 2. Try file -based detection
+        console, confidence = self.rule_detector.detect_console(filename)
+        if confidence >= _MIN_CONFIDENCE:
+            return console, confidence, "rule_based"
+
+# 3. Attempts Fuzzy-Matching with known names when confidence is low
+        if confidence < _MIN_CONFIDENCE:
+            fuzzy_console, fuzzy_confidence = self._detect_by_fuzzy_matching(filename)
+            if fuzzy_confidence > confidence:
+                console, confidence = fuzzy_console, fuzzy_confidence
+                if confidence >= _MIN_CONFIDENCE:
+                    return console, confidence, "fuzzy_matching"
+
+# 4.
+        ext = os.path.splitext(filename.lower())[1]
+        if ext in self.signatures["file_ext_confidence"]:
+            ext_info = self.signatures["file_ext_confidence"][ext]
+            if ext_info["confidence"] > confidence:
+                return ext_info["console"], ext_info["confidence"], "extension"
+
+# If a sufficient confidence was not reached
+        if confidence < 0.4:
+            return "Unknown", confidence, "low_confidence"
+
+        return console, confidence, "combined"
+
+    def _detect_by_header(self, content: bytes) -> Tuple[str, float]:
+        """
+        Erkennt die Konsole basierend auf ROM-Header-Signaturen.
+
+        Args:
+            content: ROM-Inhalt
+
+        Returns:
+            Tuple mit (Konsolenname, Konfidenz)
+        """
+        best_match = None
+        best_confidence = 0.0
+
+# Check every header pattern
+        for console, pattern_info in self.signatures["header_patterns"].items():
+# Hole offset and header-bytes list
+            offset = pattern_info.get("offset", 0)
+            header_bytes_list = pattern_info.get("header_bytes", [])
+            base_confidence = pattern_info.get("confidence", 0.8)
+
+# Make sure we have enough bytes to compare
+            for header_hex in header_bytes_list:
+                header_bytes = bytes.fromhex(header_hex)
+                header_len = len(header_bytes)
+
+# Check whether there is enough content
+                if len(content) < offset + header_len:
+                    continue
+
+# Extract the relevant part of the content
+                content_part = content[offset:offset+header_len]
+
+# Compare the bytes
+                if content_part == header_bytes:
+                    if base_confidence > best_confidence:
+                        best_confidence = base_confidence
+                        best_match = console
+
+# Check also on string patterns in the Rome
+        content_str = content[:4096].decode('ascii', errors='ignore')
+        for console, patterns in self.signatures["string_patterns"].items():
+            for pattern in patterns:
+                if pattern in content_str:
+                    match_confidence = 0.85  # Etwas geringere Konfidenz als exakte Header-Matches
+                    if match_confidence > best_confidence:
+                        best_confidence = match_confidence
+                        best_match = console
+
+        if best_match:
+            return best_match, best_confidence
+        else:
+            return "Unknown", 0.0
+
+    def _detect_by_fuzzy_matching(self, filename: str) -> Tuple[str, float]:
+        """
+        Verwendet Fuzzy-Matching, um ROM-Namen mit bekannten Mustern zu vergleichen.
+
+        Args:
+            filename: Dateiname
+
+        Returns:
+            Tuple mit (Konsolenname, Konfidenz)
+        """
+        basename = os.path.basename(filename).lower()
+
+# Extract tokens from the file name
+        tokens = set(re.findall(r'\w+', basename))
+
+# Frequent console names and their aliaasse
+        console_keywords = {
+            "Nintendo Entertainment System": {"nes", "nintendo", "famicom", "8bit", "8-bit"},
+            "Super Nintendo": {"snes", "sfc", "superfamicom", "supernintendo", "16bit", "16-bit"},
+            "Nintendo 64": {"n64", "nintendo64", "64bit", "64-bit"},
+            "GameBoy": {"gb", "gameboy", "dmg", "pocket"},
+            "GameBoy Color": {"gbc", "gameboycolor", "color", "colour"},
+            "GameBoy Advance": {"gba", "gameboyadvance", "advance", "advanced"},
+            "Nintendo DS": {"nds", "nintendods", "dualscreen"},
+            "PlayStation": {"psx", "ps1", "playstation", "psone"},
+            "PlayStation 2": {"ps2", "playstation2", "dvd"},
+            "Sega Genesis": {"genesis", "megadrive", "md", "sega16"},
+            "Sega Saturn": {"saturn", "segasaturn"},
+            "Sega Dreamcast": {"dreamcast", "segadreamcast", "dc"},
+            "Atari 2600": {"atari", "2600", "vcs"},
+        }
+
+        best_match = None
+        best_score = 0.0
+
+# Find the best match between tokens and console keywords
+        for console, keywords in console_keywords.items():
+            intersection = tokens.intersection(keywords)
+            if intersection:
+# Calculate a score based on the number of matching keywords
+# and their relevance for the file name
+                score = min(0.95, len(intersection) * 0.2 + 0.6)
+
+                if score > best_score:
+                    best_score = score
+                    best_match = console
+
+        if best_match:
+            return best_match, best_score
+        else:
+            return "Unknown", 0.0
+
+    def add_feedback(self, filename: str, content: Optional[bytes], detected_console: str,
+                    correct_console: str, user_confidence: float = 1.0) -> bool:
+        """
+        Fügt Benutzerfeedback zur Erkennungsdatenbank hinzu.
+
+        Args:
+            filename: Dateiname der ROM
+            content: ROM-Inhalt (falls verfügbar)
+            detected_console: Ursprünglich erkannte Konsole
+            correct_console: Vom Benutzer angegebene korrekte Konsole
+            user_confidence: Vom Benutzer angegebene Konfidenz (1.0 = sicher)
+
+        Returns:
+            True wenn das Feedback erfolgreich hinzugefügt wurde
+        """
+        try:
+            with self._lock:
+# Calculate the Rome Hash if available
+                rom_hash = None
+                if content:
+                    rom_hash = hashlib.md5(content[:4096]).hexdigest()
+                else:
+# Without content we use the file name as a weak replacement
+                    rom_hash = hashlib.md5(filename.encode('utf-8')).hexdigest() + "_namehash"
+
+# Update the feedback data
+                if detected_console != correct_console:
+# This is a correction
+                    self.feedback_data["corrections"][rom_hash] = correct_console
+
+# Also update the confidence adjustments
+                    if detected_console not in self.feedback_data["metadata"]["confidence_adjustments"]:
+                        self.feedback_data["metadata"]["confidence_adjustments"][detected_console] = -0.05
+                    else:
+# Reduce the confidence for incorrect recognitions
+                        current = self.feedback_data["metadata"]["confidence_adjustments"][detected_console]
+                        self.feedback_data["metadata"]["confidence_adjustments"][detected_console] = max(-0.3, current - 0.05)
+                else:
+# This is a confirmation
+                    if rom_hash not in self.feedback_data["confirmations"]:
+                        self.feedback_data["confirmations"][rom_hash] = {
+                            "console": correct_console,
+                            "count": 1
+                        }
+                    else:
+                        self.feedback_data["confirmations"][rom_hash]["count"] += 1
+
+# Increase the confidence for correct recognitions
+                    if correct_console not in self.feedback_data["metadata"]["confidence_adjustments"]:
+                        self.feedback_data["metadata"]["confidence_adjustments"][correct_console] = 0.02
+                    else:
+                        current = self.feedback_data["metadata"]["confidence_adjustments"][correct_console]
+                        self.feedback_data["metadata"]["confidence_adjustments"][correct_console] = min(0.2, current + 0.02)
+
+# Extract patterns from the file name for future improvements
+                self._extract_patterns(filename, correct_console, user_confidence)
+
+# Update metadata
+                self.feedback_data["metadata"]["total_feedback"] = self.feedback_data["metadata"].get("total_feedback", 0) + 1
+                self.feedback_data["metadata"]["last_updated"] = datetime.now().isoformat()
+
+# Saving updated feedback data
+                with open(_FEEDBACK_DB, 'w', encoding='utf-8') as f:
+                    json.dump(self.feedback_data, f, indent=2)
+
+                logger.info(f"Benutzerfeedback für '{os.path.basename(filename)}' hinzugefügt: {detected_console} -> {correct_console}")
+                return True
+
+        except Exception as e:
+            logger.error(f"Fehler beim Hinzufügen von Benutzerfeedback: {e}")
+            return False
+
+    def _extract_patterns(self, filename: str, console: str, confidence: float) -> None:
+        """
+        Extrahiert Muster aus dem Dateinamen für zukünftiges Lernen.
+
+        Args:
+            filename: Dateiname der ROM
+            console: Korrekte Konsolenplattform
+            confidence: Konfidenz der Zuordnung
+        """
+        basename = os.path.basename(filename).lower()
+
+# Extract tokens and N-grammels
+        tokens = re.findall(r'\w+', basename)
+        ext = os.path.splitext(basename)[1].lower()
+
+# Update token statistics
+        for token in tokens:
+            if token not in self.feedback_data["patterns"]:
+                self.feedback_data["patterns"][token] = {}
+
+            if console not in self.feedback_data["patterns"][token]:
+                self.feedback_data["patterns"][token][console] = {
+                    "count": 1,
+                    "confidence": confidence
+                }
+            else:
+                current = self.feedback_data["patterns"][token][console]
+                self.feedback_data["patterns"][token][console] = {
+                    "count": current["count"] + 1,
+                    "confidence": (current["confidence"] * current["count"] + confidence) / (current["count"] + 1)
+                }
+
+# Update expansion statistics
+        if ext:
+            if ext not in self.signatures["file_ext_confidence"]:
+                self.signatures["file_ext_confidence"][ext] = {
+                    "console": console,
+                    "confidence": 0.7  # Start mit vorsichtiger Konfidenz
+                }
+            elif self.signatures["file_ext_confidence"][ext]["console"] == console:
+# Increase the confidence when the assignment is confirmed
+                current = self.signatures["file_ext_confidence"][ext]["confidence"]
+                self.signatures["file_ext_confidence"][ext]["confidence"] = min(0.95, current + 0.02)
+            else:
+# If we have contradictory data, reduce the confidence
+                current = self.signatures["file_ext_confidence"][ext]["confidence"]
+                self.signatures["file_ext_confidence"][ext]["confidence"] = max(0.4, current - 0.1)
+
+# Saving updated signatures
+        try:
+            with open(_SIGNATURES_DB, 'w', encoding='utf-8') as f:
+                json.dump(self.signatures, f, indent=2)
+        except Exception as e:
+            logger.error(f"Fehler beim Aktualisieren der ROM-Signaturen: {e}")
+
+
+# Global detector for uniform access
+_ai_detector = None
+
+def get_ai_detector() -> AIEnhancedROMDetector:
+    """
+    Gibt eine globale AI-Detector-Instanz zurück.
+
+    Returns:
+        Eine Instanz von AIEnhancedROMDetector
+    """
+    global _ai_detector
+    if _ai_detector is None:
+        _ai_detector = AIEnhancedROMDetector()
+    return _ai_detector
+
+
+def detect_console_with_ai(filename: str, content: Optional[bytes] = None) -> Tuple[str, float, Dict[str, Any]]:
+    """
+    Hochlevel-Funktion zur ROM-Konsolenerkennung mit erweiterter KI-ähnlicher Logik.
+
+    Args:
+        filename: Dateiname oder -pfad
+        content: Optionaler Dateiinhalt für Header-Analyse
+
+    Returns:
+        Tuple mit (Konsolenname, Konfidenz, Metadaten-Dictionary)
+    """
+    detector = get_ai_detector()
+    console, confidence, method = detector.detect_console(filename, content)
+
+# Metadata for transparency and debug
+    metadata = {
+        "method": method,
+        "confidence": confidence,
+        "console": console,
+        "filename": os.path.basename(filename)
+    }
+
+    return console, confidence, metadata
+
+
+# Feedback function for user interaction
+def add_user_feedback(filename: str, content: Optional[bytes], detected_console: str,
+                     correct_console: str, user_confidence: float = 1.0) -> bool:
+    """
+    Fügt Benutzerfeedback zur KI-Erkennungsdatenbank hinzu.
+
+    Args:
+        filename: Dateiname der ROM
+        content: ROM-Inhalt (falls verfügbar)
+        detected_console: Ursprünglich erkannte Konsole
+        correct_console: Vom Benutzer angegebene korrekte Konsole
+        user_confidence: Vom Benutzer angegebene Konfidenz (1.0 = sicher)
+
+    Returns:
+        True wenn das Feedback erfolgreich hinzugefügt wurde
+    """
+    detector = get_ai_detector()
+    return detector.add_feedback(filename, content, detected_console, correct_console, user_confidence)
