@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+# -*-coding: utf-8-*-
 """
 ROM Sorter Pro - Desktop-Integration Startpunkt
 Phase 1 Implementation: Desktop-Optimierung und Integration
@@ -14,7 +14,7 @@ import logging
 import argparse
 from pathlib import Path
 
-# Konfiguriere Logging
+# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -30,7 +30,7 @@ def ensure_dependencies():
     """Stellt sicher, dass alle notwendigen Abhängigkeiten installiert sind."""
     qt_available = False
 
-    # Versuche zuerst PyQt6 zu importieren
+# Try to import PYQT6 first
     try:
         import PyQt6
         logger.info("PyQt6 ist installiert")
@@ -38,7 +38,7 @@ def ensure_dependencies():
     except ImportError:
         logger.warning("PyQt6 ist nicht installiert - versuche PyQt5 als Alternative...")
 
-        # Versuche PyQt5 als Fallback
+# Experiments PYQT5 as a fallback
         try:
             import PyQt5
             logger.info("PyQt5 ist als Fallback installiert")
@@ -49,7 +49,7 @@ def ensure_dependencies():
             try:
                 import subprocess
 
-                # Versuche zuerst PyQt6 zu installieren
+# Try to install PYQT6 first
                 try:
                     logger.info("Versuche PyQt6 zu installieren...")
                     subprocess.check_call([sys.executable, "-m", "pip", "install", "PyQt6"])
@@ -59,7 +59,7 @@ def ensure_dependencies():
                     logger.warning(f"PyQt6 Installation fehlgeschlagen: {e}")
                     logger.warning("Versuche PyQt5 zu installieren...")
 
-                    # Als Fallback PyQt5 versuchen
+# Try as fallback PYQT5
                     try:
                         subprocess.check_call([sys.executable, "-m", "pip", "install", "PyQt5"])
                         logger.info("PyQt5 wurde als Fallback erfolgreich installiert")
@@ -80,38 +80,38 @@ def main():
     parser.add_argument('--cli', action='store_true', help='Startet im CLI-Modus ohne GUI')
     args = parser.parse_args()
 
-    # Setze Log-Level basierend auf Debug-Flag
+# Set log level based on Debug-Flag
     if args.debug:
         logging.getLogger().setLevel(logging.DEBUG)
         logger.debug("Debug-Modus aktiviert")
 
-    # Stelle sicher, dass das logs-Verzeichnis existiert
+# Make sure the logs directory exists
     os.makedirs('logs', exist_ok=True)
 
-    # Überprüfe und installiere Abhängigkeiten, wenn nicht im CLI-Modus
+# Check and install dependencies if not in CLI mode
     if not args.cli and not ensure_dependencies():
         logger.warning("Qt-Abhängigkeiten fehlen, starte im CLI-Modus als Fallback")
         args.cli = True  # Setze CLI-Modus als Fallback
 
     try:
-        # Füge Hauptverzeichnis zum Python-Pfad hinzu, falls nötig
+# Add the main directory to the Python path, if necessary
         current_dir = Path(__file__).parent.resolve()  # src/
         root_dir = current_dir.parent.resolve()       # Projektroot
 
-        # Füge beide Verzeichnisse zum Pfad hinzu
+# Add both directories to the path
         for directory in [str(root_dir), str(current_dir)]:
             if directory not in sys.path:
                 sys.path.insert(0, directory)
                 logger.debug(f"Verzeichnis zum Python-Pfad hinzugefügt: {directory}")
 
-        # Starte die Anwendung entsprechend dem gewählten Modus
+# Start the application according to the chosen mode
         if args.cli:
-            # CLI-Modus: Starte die Konsolenversion
+# Cli mode: Start the console version
             from src.cli.console_interface import start_cli_mode
             logger.info("Starte ROM Sorter Pro CLI-Edition...")
             start_cli_mode()
         else:
-            # GUI-Modus: Starte die Desktop-UI
+# GUI mode: Start the desktop UI
             from src.ui.qt.integrated_window import start_integrated_ui
             logger.info("Starte ROM Sorter Pro Desktop-Edition...")
             start_integrated_ui()

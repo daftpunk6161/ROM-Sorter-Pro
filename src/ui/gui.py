@@ -926,12 +926,12 @@ class OptimizedDragDropFrame(tk.Frame):
             print(f"Drop-Event Daten: {event.data}")
             print(f"Drop-Event Typ: {type(event.data)}")
 
-            # Especially for Windows: With TKDND 2.X, a format such as "{C:/Path/Zu/File}" is returned
+            # Especialy for Windows: with Tkdnd 2.x, a format search as "{c:/path/zu/file}" is returned
             raw_data = event.data
 
             # Treat Windows Explorer specific format with curly brackets
             if os.name == 'nt' and isinstance(raw_data, str):
-                # When the data looks like a direct Windows path
+                # When the Data Looks Like A Direct Windows Path
                 if raw_data.startswith('{') and raw_data.endswith('}') and ':\\' in raw_data:
                     clean_path = raw_data.strip('{}')
                     if os.path.exists(clean_path):
@@ -1039,7 +1039,7 @@ class OptimizedDragDropFrame(tk.Frame):
 
         # Behandle unterschiedliche Datentypen
         if isinstance(data, (list, tuple)):
-            # If a list has already been handed over
+            # If a List Has Already Been Handed over
             data_items = list(data)
         else:
             # Convert to string for string-based processing
@@ -1098,7 +1098,7 @@ class OptimizedDragDropFrame(tk.Frame):
                             elif char == quote_type:  # Ende eines zitierten Abschnitts
                                 in_quotes = False
                                 quote_type = None
-                            else:  # Another quotation mark within a quoted section
+                            else:  # Another Quotation Mark Within A Quoted Section
                                 current_item += char
                         elif char.isspace() and not in_quotes:  # Spaces outside of quotation marks
                             if current_item:
@@ -1280,7 +1280,7 @@ class EfficientLogWidget(tk.Frame):
     def _start_log_processor(self):
         """Start log processing thread."""
         def process_logs():
-            # Use a stop event to properly terminate the thread
+            # Use a stop event to properly terminal the thread
             stop_event = threading.Event()
             self._log_stop_event = stop_event
 
@@ -1308,7 +1308,7 @@ class EfficientLogWidget(tk.Frame):
 
                     if batch and not stop_event.is_set():
                         # Use thread-safe invocation with proper reference
-                        # Store a reference to prevent garbage collection during callback
+                        # Store A Reference to Prevent Garbage Collection During Callback
                         batch_copy = batch.copy()
                         self.after_idle(lambda b=batch_copy: self._process_batch(b))
 
@@ -1481,7 +1481,7 @@ class OptimizedStatsWidget(tk.Frame):
             if self._pending_update:
                 self.after_cancel(self._pending_update)
 
-            # Schedule update for later with a copy of the stats
+            # Schedule Update for Later With A Copy of the Stats
             stats_copy = dict(cleaned_stats)
             self._pending_update = self.after(
                 int(self._update_threshold * 1000),
@@ -1575,7 +1575,7 @@ class OptimizedStatsWidget(tk.Frame):
         self._last_update_time = time.time()
         self._pending_update = None
 
-        # Generate a new hash for the stats
+        # Generates A New Hash for the Stats
         stats_hash = hash(frozenset(stats.items()))
         self._last_hash = stats_hash
 
@@ -1796,7 +1796,7 @@ class FastFileScanner:
             'threading_enabled': self.__class__._settings['use_threading']
         }
 
-        # Save extensions as a set for O (1) Lookup
+        # Save Extensions as a Set for O (1) Lookup
         self.ROM_EXTENSIONS = set(ext.lower() for ext in extensions) if extensions else {
             # Archives and disk-images
             '.zip', '.7z', '.rar', '.iso', '.bin', '.cue', '.chd', '.cso', '.gdi', '.cdi',
@@ -1824,7 +1824,7 @@ class FastFileScanner:
         }
 
         # Pres compiled expansion test for performance
-        # Use a memory -efficient and quick approach with __Contains__
+        # Use a memory -efficient and Quick Approach with __Contains__
         self._is_rom_file = lru_cache(maxsize=2048)(self._optimized_extension_check)
 
     def _optimized_extension_check(self, path):
@@ -1864,7 +1864,7 @@ class FastFileScanner:
                         # Optimized review: Sample instead of checking all files
                         valid = True
                         if cached_files:
-                            # Sension notification: a maximum of 10 files or 5% of the cache
+                            # Sension Notification: A Maximum of 10 Files or 5% of the Cache
                             sample_size = min(10, max(1, len(cached_files) // 20))
                             sample_indices = sorted(random.sample(range(len(cached_files)), sample_size))
 
@@ -1888,7 +1888,7 @@ class FastFileScanner:
         # Measure the file system performance for adaptive adjustments
         self._measure_filesystem_performance(norm_directory)
 
-        # Choose the best scan method based on a directory size and file system
+        # Choose the Best Scan Method Based on A Directory Size and File System
         if self._should_use_threading(norm_directory):
             found_files = self._scan_with_threading(norm_directory, progress_callback)
         else:
@@ -1941,7 +1941,7 @@ class FastFileScanner:
 
             # Only check if we have no current metrics
             if time.time() - self.__class__._performance_metrics['last_scan_time'] > 300:
-                # Try to scan a few directories for a sample
+                # Try to Scan a Few Directors for a Sample
                 with os.scandir(directory) as it:
                     for entry in it:
                         if count >= sample_size or (time.time() - start) > 0.5:
@@ -2271,11 +2271,11 @@ class FastFileScanner:
 
     def _create_balanced_dir_chunks(self, dirs, num_chunks):
         """Creates balanced directory chunks for multi-threading."""
-        # If only a few directories, simply divide evenly
+        # If only a fla directories, Simply Divide Evenly
         if len(dirs) <= num_chunks * 2:
             return [dirs[i::num_chunks] for i in range(num_chunks)]
 
-        # For a more balanced distribution, attempts to estimate directory variables
+        # For a more balanced distribution, Attempts to Estimate Directory variables
         dir_sizes = []
         for d in dirs:
             try:
@@ -2551,7 +2551,7 @@ class OptimizedROMSorterGUI:
                     else:
                         print("Warnung: TkinterDnD scheint nicht richtig initialisiert zu sein")
                 else:
-                    # Create a standard TK window for native drag & drop
+                    # Create A Standard TK Window for Native Drag & Drop
                     self.root = tk.Tk()
 
                     # Patch the window for cross-platform drag & drop support
@@ -2689,7 +2689,7 @@ class OptimizedROMSorterGUI:
     def _show_drag_drop_feedback(self, message):
         """Shows a short visual feedback for Drag & Drop operations."""
         try:
-            # Create a temporary label for feedback
+            # Create A Temporary Label for Feedback
             feedback = tk.Label(
                 self.root,
                 text=message,
@@ -3319,7 +3319,7 @@ Features:
                         'Xbox_360': ['xbox 360', 'x360']
                     }
 
-                    # Check whether the file name or folder name indicates a certain console
+                    # Check Whether the File Name Or Folder Name Indicates A Certain Console
                     for potential_console, keywords in console_keywords.items():
                         for keyword in keywords:
                             if keyword in filename_lower or keyword in parent_dir:
@@ -3359,7 +3359,7 @@ Features:
 
                     # Extract additional metadata if needed
                     if hasattr(self, '_extract_detailed_metadata') and random.random() < 0.01:
-                        # Only sample a small percentage of files for detailed analysis
+                        # ONLY SAMPLE A SMAll Percentage of Files for Detailed Analysis
                         self._extract_detailed_metadata(file_path)
                 except:
                     # Skip problematic files
@@ -3615,7 +3615,7 @@ Features:
                             file_path = root_path / filename
                             ext = file_path.suffix.lower()
 
-                            # Check whether it is a supported file extension
+                            # Check Whether it is a supported file extension
                             if ext in self.CONSOLE_MAP:
                                 all_files.append(file_path)
 
@@ -3679,7 +3679,7 @@ Features:
                                         is_chd_file, detect_console_from_chd
                                     )
 
-                                    # Check whether it is a CHD file and recognize the console
+                                    # Check Whether it is a chd file and recognize the console
                                     if is_chd_file(str(file_path)):
                                         detected_console, confidence = detect_console_from_chd(str(file_path))
                                         if detected_console != "Unknown" and confidence >= 0.6:
@@ -4285,7 +4285,7 @@ Features:
             if hasattr(self, '_shutdown_requested'):
                 self._shutdown_requested.set()
 
-            # Update UI after a short delay to allow worker threads to respond to stop signal
+            # Update ui after a short delay to allow worker threads to respond to stop signal
             self.root.after(100, self._confirm_operation_stopped)
         except Exception as e:
             # If anything fails, force stop
@@ -4300,7 +4300,7 @@ Features:
 
         # Check if thread has actually stopped
         if self.worker_thread and self.worker_thread.is_alive():
-            # Thread still running, wait a bit longer
+            # Thread Still Running, Wait a bit Longer
             self.root.after(300, self._force_operation_stopped)
         else:
             # Thread stopped successfully
@@ -4568,7 +4568,7 @@ except Exception as e:
 def _open_log_file(self):
     """Öffnet die aktuelle Log-Datei."""
     try:
-        # Go up to the logs from the UI directory a directory for the logs
+        # Go up to the logs from the Ui Directory a Directory for the Logs
         ui_dir = os.path.dirname(os.path.abspath(__file__))
         app_dir = os.path.dirname(ui_dir)
         log_path = os.path.join(app_dir, 'logs')

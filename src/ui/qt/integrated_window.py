@@ -159,7 +159,7 @@ class IntegratedMainWindow(ROMSorterMainWindow):
 
     def _on_scan_action(self):
         """Handler für die Scan-Aktion im Menü."""
-        # Open a directory selection dialogue
+        # Open A Directory Selection Dialogue
         directory = QFileDialog.getExistingDirectory(
             self, "ROM-Verzeichnis auswählen", "",
             QFileDialog.Option.ShowDirsOnly | QFileDialog.Option.DontResolveSymlinks
@@ -296,7 +296,7 @@ class IntegratedMainWindow(ROMSorterMainWindow):
     def _on_query_completed(self, results):
         """Handler für abgeschlossene Datenbankabfragen."""
         # This method would be implemented to the results
-        # to display in the UI, e.g. in a table or list
+        # to display in the UI, e.G. In A Table Or List
         logger.debug(f"Abfrage abgeschlossen: {len(results)} Ergebnisse")
 
     def _on_update_completed(self, success, message):
@@ -329,13 +329,13 @@ class IntegratedMainWindow(ROMSorterMainWindow):
 
     def _on_import_action(self):
         """Handler für die Import-Aktion im Menü."""
-        # This method would be implemented to a file selection dialogue
+        # This Method would be implemented to a file selection dialogue
         # to open and start a database import
         pass
 
     def _on_export_action(self):
         """Handler für die Export-Aktion im Menü."""
-        # This method would be implemented to a file selection dialogue
+        # This Method would be implemented to a file selection dialogue
         # to open and start database export
         pass
 

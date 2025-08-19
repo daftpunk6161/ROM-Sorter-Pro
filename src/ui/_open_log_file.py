@@ -14,7 +14,7 @@ def open_log_file(self):
     Diese Methode ist dafür gedacht, in die OptimizedROMSorterGUI-Klasse integriert zu werden.
     """
     try:
-        # Go up to the logs from the UI directory a directory for the logs
+        # Go up to the logs from the Ui Directory a Directory for the Logs
         ui_dir = os.path.dirname(os.path.abspath(__file__))
         app_dir = os.path.dirname(ui_dir)
         log_path = os.path.join(app_dir, 'logs')

@@ -94,7 +94,7 @@ def get_sorted_rom_list(directory_path: Union[str, Path], filter_extensions: Opt
     if filter_extensions is None:
         filter_extensions = get_all_rom_extensions()
     else:
-# Make sure that all extensions are without a point
+# Make Sure that all extensions are without a point
         filter_extensions = [ext.lstrip('.') for ext in filter_extensions]
 
 # Find all files with suitable extensions
@@ -199,7 +199,7 @@ def calculate_rom_signature(file_path: Union[str, Path], chunk_size: int = 16 * 
                 header = f.read(min(chunk_size, file_size))
                 hasher.update(header)
 
-# Jump to the middle of the file and read a chunk
+# Jump to the Middle of the File and Read a Chunk
             if file_size > chunk_size * 2:
                 mid_pos = file_size // 2 - chunk_size // 2
                 f.seek(mid_pos)

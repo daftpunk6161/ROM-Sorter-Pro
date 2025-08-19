@@ -36,7 +36,7 @@ except ImportError:
     pass  # Module may not yet
 
 # Wrapper for functions that are still imported from utils.py
-# This enables a gentle migration
+# This enables a Gentle Migration
 logger = logging.getLogger(__name__)
 
 # Perform the charging message for debugging purposes

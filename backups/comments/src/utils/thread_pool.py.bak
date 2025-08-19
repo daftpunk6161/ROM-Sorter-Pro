@@ -51,8 +51,8 @@ class Task:
     def __lt__(self, other):
         """Vergleich für die Prioritätsqueue - höhere Priorität zuerst."""
         if self.priority != other.priority:
-            return self.priority > other.priority  # Höhere Zahlen = höhere Priorität
-        return self.creation_time < other.creation_time  # Bei gleicher Priorität: FIFO
+            return self.priority > other.priority  # Higher numbers = higher priority
+        return self.creation_time < other.creation_time  # With the same priority: fifo
 
     def execute(self):
         """Führt die Aufgabe aus und erfasst das Ergebnis oder Fehler."""
@@ -93,7 +93,7 @@ class AdaptiveThreadPool:
         self.name_prefix = name_prefix
         self.daemon = daemon
 
-        # Task-Queues und Worker-Management
+        # Task Queues and Worker Management
         self.task_queue = queue.PriorityQueue()
         self.workers = []
         self.active_workers = 0
@@ -106,13 +106,13 @@ class AdaptiveThreadPool:
         self.on_task_complete = None  # Callback: (task: Task) -> None
         self.on_task_error = None  # Callback: (task: Task, error: Exception) -> None
 
-        # Status und Synchronisation
+        # Status and synchronization
         self.running = False
         self._lock = threading.RLock()
         self._worker_event = threading.Event()
         self._shutdown_event = threading.Event()
 
-        # Performance-Monitoring und Anpassung
+        # Performance monitoring and adaptation
         self.performance_metrics = {
             'avg_task_time': 0.0,
             'avg_queue_time': 0.0,
@@ -121,7 +121,7 @@ class AdaptiveThreadPool:
         }
         self.adjustment_interval = 10.0  # Sekunden zwischen Anpassungen
 
-        # Thread für Performance-Überwachung und Worker-Anpassung
+        # Thread for performance monitoring and worker adjustment
         self.monitor_thread = None
 
     def start(self):
@@ -133,11 +133,11 @@ class AdaptiveThreadPool:
             self.running = True
             self._shutdown_event.clear()
 
-            # Initialisiere die Worker-Threads
+            # Initialize the worker threads
             for _ in range(self.min_workers):
                 self._add_worker()
 
-            # Starte den Überwachungs-Thread
+            # Start the surveillance thread
             self.monitor_thread = threading.Thread(
                 target=self._monitor_performance,
                 name=f"{self.name_prefix}_monitor",
@@ -197,7 +197,7 @@ class AdaptiveThreadPool:
             self.task_queue.put(task)
             self._worker_event.set()  # Weckt einen wartenden Worker auf
 
-        # Prüfen, ob wir mehr Worker brauchen
+        # Check whether we need more worker
         self._check_worker_count()
 
         return task.task_id
@@ -224,21 +224,21 @@ class AdaptiveThreadPool:
         """Hauptschleife für Worker-Threads."""
         while self.running and not self._shutdown_event.is_set():
             try:
-                # Versuche, eine Aufgabe zu bekommen
+                # Try to get a task
                 try:
-                    # Warte für eine kurze Zeit auf eine Aufgabe
+                    # Wait for a task for a short time
                     task = self.task_queue.get(timeout=0.1)
                 except queue.Empty:
-                    # Keine Aufgabe verfügbar, prüfe, ob wir beenden sollen
+                    # No task available, check whether we should end
                     if self._shutdown_event.is_set():
                         break
 
-                    # Warte auf ein Signal oder Timeout
+                    # Wait for a signal or timeout
                     self._worker_event.wait(1.0)
                     self._worker_event.clear()
                     continue
 
-                # Aufgabe gefunden, führe sie aus
+                # Found task, lead them out
                 with self._lock:
                     self.active_workers += 1
 
@@ -248,7 +248,7 @@ class AdaptiveThreadPool:
                     except Exception as e:
                         logger.error(f"Fehler im on_task_start-Callback: {e}")
 
-                # Führe die Aufgabe aus
+                # Perform the task
                 task.execute()
 
                 # Aktualisiere Statistiken
@@ -288,7 +288,7 @@ class AdaptiveThreadPool:
                             except Exception as e:
                                 logger.error(f"Fehler im on_task_error-Callback: {e}")
 
-                # Markiere die Aufgabe als erledigt
+                # Mark the task as done
                 self.task_queue.task_done()
 
             except Exception as e:
@@ -299,7 +299,7 @@ class AdaptiveThreadPool:
         """Überprüft, ob die Anzahl der Worker angepasst werden muss."""
         now = time.time()
 
-        # Nicht zu oft anpassen
+        # Do not adapt too often
         if now - self.performance_metrics['last_adjustment_time'] < self.adjustment_interval:
             return
 
@@ -308,12 +308,12 @@ class AdaptiveThreadPool:
             current_workers = len(self.workers)
             active_workers = self.active_workers
 
-            # Wenn die Queue wächst und wir aktive Worker haben,
-            # fügen wir mehr Worker hinzu
+            # When the cue grows and we have active workers
+            # Let's add more workers
             if queue_size > current_workers * 2 and active_workers >= current_workers * 0.8:
                 workers_to_add = min(
-                    queue_size // 4,  # Maximal 1/4 der Queue-Größe
-                    self.max_workers - current_workers  # Aber nicht mehr als maximal erlaubt
+                    queue_size // 4,  # A maximum of 1/4 of the queue size
+                    self.max_workers - current_workers  # But no more than maximum allowed
                 )
 
                 for _ in range(workers_to_add):
@@ -323,14 +323,14 @@ class AdaptiveThreadPool:
                 if workers_to_add > 0:
                     logger.info(f"{workers_to_add} Worker hinzugefügt (jetzt {len(self.workers)})")
 
-            # Zeit der letzten Anpassung aktualisieren
+            # Update time of the last adjustment
             self.performance_metrics['last_adjustment_time'] = now
 
     def _monitor_performance(self):
         """Überwacht die Performance und passt die Anzahl der Worker an."""
         while self.running and not self._shutdown_event.is_set():
             try:
-                # Schlaf für ein Intervall
+                # Sleep for an interval
                 time.sleep(self.adjustment_interval)
 
                 with self._lock:
@@ -353,10 +353,10 @@ class AdaptiveThreadPool:
                             alpha * current_throughput
                         )
 
-                    # Überprüfe, ob wir die Worker-Anzahl anpassen müssen
+                    # Check whether we have to adjust the number of workers
                     self._check_worker_count()
 
-                    # Aktualisiere die Zeit der letzten Anpassung
+                    # Update the time of the last adaptation
                     self.performance_metrics['last_adjustment_time'] = now
 
                     # Log Performance-Metriken
@@ -422,7 +422,7 @@ class BatchProcessor:
         self.on_batch_complete = None
         self.on_batch_progress = None
 
-        # Status und Synchronisation
+        # Status and synchronization
         self._lock = threading.RLock()
 
     def start(self):
@@ -525,11 +525,11 @@ class BatchProcessor:
                 logger.error(f"Batch {batch_id} hat den Status {batch['status']}")
                 return None
 
-            # Task-ID für Tracking erstellen
+            # Create task ID for tracking
             task_kwargs = kwargs.copy()
             task_id = task_kwargs.pop('task_id', None) or f"{batch_id}_task_{batch['total_tasks'] + 1}"
 
-            # Task zum Thread-Pool hinzufügen
+            # Add task to the thread pool
             task_id = self.thread_pool.submit(
                 func, *args, **task_kwargs, task_id=task_id, batch_id=batch_id
             )
@@ -583,7 +583,7 @@ class BatchProcessor:
                 batch['tasks'][task.task_id]['end_time'] = time.time()
                 batch['completed_tasks'] += 1
 
-                # Prüfe, ob der Batch abgeschlossen ist
+                # Check whether the batch is complete
                 if batch['completed_tasks'] + batch['failed_tasks'] >= batch['total_tasks']:
                     self._finish_batch(batch_id)
                 else:
@@ -618,7 +618,7 @@ class BatchProcessor:
                 batch['tasks'][task.task_id]['error'] = str(error)
                 batch['failed_tasks'] += 1
 
-                # Prüfe, ob der Batch abgeschlossen ist
+                # Check whether the batch is complete
                 if batch['completed_tasks'] + batch['failed_tasks'] >= batch['total_tasks']:
                     self._finish_batch(batch_id)
                 else:
@@ -668,14 +668,14 @@ class BatchProcessor:
 
             batch = self.batches[batch_id].copy()
 
-            # Berechne zusätzliche Informationen
+            # Calculate additional information
             if batch['status'] == 'running' and batch['total_tasks'] > 0:
                 batch['progress'] = batch['completed_tasks'] / batch['total_tasks']
 
                 if batch['start_time']:
                     elapsed = time.time() - batch['start_time']
                     if batch['completed_tasks'] > 0 and elapsed > 0:
-                        # Schätze die verbleibende Zeit
+                        # Estimate the remaining time
                         items_per_second = batch['completed_tasks'] / elapsed
                         remaining_items = batch['total_tasks'] - batch['completed_tasks']
                         estimated_seconds = remaining_items / items_per_second if items_per_second > 0 else 0
@@ -718,14 +718,14 @@ class BatchProcessor:
             if status['status'] == 'completed':
                 return True
 
-            # Prüfe auf Timeout
+            # Check on timeout
             if timeout and time.time() - start_time > timeout:
                 return False
 
-            # Kurze Pause, um CPU zu schonen
+            # Short break to protect CPU
             time.sleep(0.1)
 
-# Hauptfunktion für Testzwecke
+# Main function for test purposes
 def main():
     """Testfunktion für den AdaptiveThreadPool und BatchProcessor."""
     # Logging konfigurieren
@@ -741,16 +741,16 @@ def main():
         logger.info(f"Task {task_id} abgeschlossen")
         return f"Ergebnis von Task {task_id}"
 
-    # Test für AdaptiveThreadPool
+    # Test for adaptive thread pool
     def test_thread_pool():
         logger.info("Teste AdaptiveThreadPool...")
 
         pool = AdaptiveThreadPool(min_workers=2, max_workers=8)
         pool.start()
 
-        # Tasks hinzufügen
+        # Add tasks
         for i in range(20):
-            sleep_time = 0.5 + (i % 5) * 0.3  # Variiert zwischen 0.5 und 1.7 Sekunden
+            sleep_time = 0.5 + (i % 5) * 0.3  # Vary between 0.5 and 1.7 seconds
             pool.submit(example_task, f"pool_{i}", sleep_time)
 
         # Warte auf Abschluss
@@ -761,14 +761,14 @@ def main():
         pool.shutdown()
         logger.info("AdaptiveThreadPool-Test abgeschlossen")
 
-    # Test für BatchProcessor
+    # Test for batchprocessor
     def test_batch_processor():
         logger.info("Teste BatchProcessor...")
 
         processor = BatchProcessor(min_workers=2, max_workers=8)
         processor.start()
 
-        # Callback für Batch-Fortschritt
+        # Callback for batch progress
         def on_progress(batch_id, batch, progress):
             logger.info(f"Batch {batch_id}: {progress*100:.1f}% abgeschlossen")
 
@@ -778,9 +778,9 @@ def main():
         batch_id = processor.create_batch("Testbatch")
         processor.start_batch(batch_id)
 
-        # Tasks hinzufügen
+        # Add tasks
         for i in range(10):
-            sleep_time = 0.2 + (i % 3) * 0.3  # Variiert zwischen 0.2 und 0.8 Sekunden
+            sleep_time = 0.2 + (i % 3) * 0.3  # Varized between 0.2 and 0.8 seconds
             processor.add_task(batch_id, example_task, f"batch_{i}", sleep_time)
 
         # Warte auf Abschluss des Batches
@@ -791,7 +791,7 @@ def main():
         processor.shutdown()
         logger.info("BatchProcessor-Test abgeschlossen")
 
-    # Führe Tests aus
+    # Perform tests
     test_thread_pool()
     print("\n" + "-" * 60 + "\n")
     test_batch_processor()

@@ -169,7 +169,7 @@ class DragDropMixin:
     """Mixin-Klasse, die Drag & Drop-Funktionalität zu Tkinter-Widgets hinzufügt."""
 
     def __init__(self, *args, **kwargs):
-# Make sure that this method is not called without a parent class
+# Make sura that this method is not called without a parent class
         if not hasattr(self, 'winfo_id'):
             raise TypeError("DragDropMixin muss mit einer Tkinter-Widget-Klasse verwendet werden")
 
@@ -219,23 +219,23 @@ class DragDropMixin:
     def _register_windows_drop_target(self) -> bool:
         """Registriert das Widget als Drop-Ziel unter Windows."""
         try:
-# Set a flag to prevent the widget from being registered twice
+# Set A Flag to Prevent the Widget from Being Registered Twice
             if hasattr(self, '_drop_target_registered') and self._drop_target_registered:
                 logger.warning(f"Widget {self.winfo_id()} ist bereits als Drop-Target registriert")
                 return True
 
-# Check whether the widget is a top level window
+# Check Whether the Widget is a Top Level Window
             is_toplevel = False
             try:
-# A top level window can interact with World Cup
+# A Top Level Window Can Interact With World Cup
                 self.tk.call('wm', 'title', self._w)
                 is_toplevel = True
             except:
-# Non-top level widgets throw a mistake
+# Non-top level widgets throw a Mistake
                 pass
 
             if is_toplevel:
-# Top level windows can be registered directly as a drop target
+# Top Level Windows Can Be Registered Directly AS A Drop Target
                 hwnd = self.winfo_id()
                 _DragAcceptFiles(hwnd, True)
 
@@ -259,17 +259,17 @@ class DragDropMixin:
 # Find the overarching top level window
                     toplevel = self.winfo_toplevel()
 
-# Register the top level window as a drop-down star
+# Register the Top Level Window as a Drop-Down Star
                     hwnd = toplevel.winfo_id()
                     _DragAcceptFiles(hwnd, True)
 
-# Save a reference to the current widget at the top level
+# Save a Reference to the Current Widget at the Top Level
                     if not hasattr(toplevel, '_dnd_widgets'):
                         toplevel._dnd_widgets = {}
 
                     toplevel._dnd_widgets[str(id(self))] = weakref.ref(self)
 
-# If the top level window does not yet have a drop handler
+# If the Top Level Window does not Yet have a drop handler
                     if not hasattr(toplevel, '_drop_handler_installed'):
 # Overwrite the tkinter event treatment for WM_Dropfiles
                         def _toplevel_drop_handler(hwnd, message, wparam, lparam):

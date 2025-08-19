@@ -104,7 +104,7 @@ except ImportError:
 CACHE_SIZE = 10000
 HIGH_CONFIDENCE_THRESHOLD = 0.85
 ACCEPTABLE_CONFIDENCE_THRESHOLD = 0.65
-DATABASE_ENABLED = True  # Schalter für die Datenbankfunktionalität
+DATABASE_ENABLED = True  # Switch for database functionality
 
 @lru_cache(maxsize=CACHE_SIZE)
 def detect_console_by_database(file_path: str) -> Tuple[str, float]:
@@ -215,7 +215,7 @@ class DetectionResult:
             metadata: Optionale zusätzliche Metadaten zur Erkennung
         """
         self.console = console
-        self.confidence = float(max(0.0, min(1.0, confidence)))  # Zwischen 0 und 1 beschränken
+        self.confidence = float(max(0.0, min(1.0, confidence)))  # Limit between 0 and 1
         self.method = method
         self.file_path = file_path
         self.metadata = metadata or {}
@@ -348,7 +348,7 @@ class DetectionManager:
 # Database-based recognition (maximum priority)
             elif DATABASE_ENABLED and file_path_str and os.path.exists(file_path_str):
                 db_console, db_confidence = detect_console_by_database(file_path_str)
-                if db_confidence > 0.9:  # Sehr hohe Konfidenz bei Datenbanktreffer
+                if db_confidence > 0.9:  # Very high confidence in database hits
                     result = DetectionResult(db_console, db_confidence, method="database", file_path=file_path_str)
                 else:
 # Try AI-based detection (newly implemented)

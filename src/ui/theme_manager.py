@@ -1160,7 +1160,7 @@ class ThemeManager:
         Returns:
             Erstelltes Theme
         """
-        # Determine whether it is a light or dark theme
+        # Determine Whether it is a light or dark theme
         is_dark = self._is_dark_color(background)
         theme_type = ThemeType.DARK if is_dark else ThemeType.LIGHT
 
@@ -1228,7 +1228,7 @@ class ThemeManager:
         h1, s1, v1 = colorsys.rgb_to_hsv(r1, g1, b1)
         h2, s2, v2 = colorsys.rgb_to_hsv(r2, g2, b2)
 
-        # Create a new color with a mixed color and adapted saturation
+        # Create A New Color with a Mixed Color and Adapted Saturn
         h = (h1 + h2 / 2) % 1.0
         s = min(1.0, (s1 + s2) / 1.5)
         v = min(1.0, (v1 + v2) / 1.5)
@@ -1294,7 +1294,7 @@ if __name__ == "__main__":
     theme_manager.add_theme(custom_theme)
     print(f"Theme '{custom_theme.name}' hinzugefügt")
 
-    # Set the custom theme as a current theme
+    # Set the Custom Theme as a Current Theme
     theme_manager.set_current_theme(custom_theme.name)
     print(f"Aktuelles Theme: {theme_manager.get_current_theme_name()}")
 

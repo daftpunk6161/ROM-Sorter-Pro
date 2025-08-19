@@ -165,7 +165,7 @@ def main():
     start_time = time.time()
     logger.info("Starte Installation der Abhängigkeiten...")
     
-# Check whether we are in a virtual environment
+# Check Whether we are in A Virtual Environment
     in_venv = hasattr(sys, 'real_prefix') or (
         hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix
     )

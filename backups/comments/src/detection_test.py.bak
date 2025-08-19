@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+# -*-coding: utf-8-*-
 """
 ROM Sorter Pro - Test-Module für die ML-Detection
 
@@ -14,13 +14,13 @@ from typing import Optional, Tuple, Dict, Any
 import sys
 import os
 
-# Füge das Hauptverzeichnis zum Pfad hinzu
+# Add the main directory to the path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.detectors.detection_handler import DetectionManager, DetectionResult
 from src.detectors.ml_detector import detect_console_with_ml
 
-# Aliase für Abwärtskompatibilität
+# Aliases for downward compatibility
 DetectionHandler = DetectionManager
 
 def test_detection_pipeline(rom_path: str) -> Tuple[str, float]:
@@ -37,17 +37,17 @@ def test_detection_pipeline(rom_path: str) -> Tuple[str, float]:
         print(f"Datei nicht gefunden: {rom_path}")
         return "Unknown", 0.0
 
-    # Erstelle Manager-Instanz
+# Create a manager instance
     manager = DetectionManager.get_instance()
 
-    # Extrahiere Dateinamen
+# Extract file names
     file_path = Path(rom_path)
     filename = file_path.name
 
-    # Führe Erkennung durch
+# Create detection
     result = manager.detect_console_with_metadata(filename, str(file_path))
 
-    # Alternative: Direkter Test der ML-Erkennung
+# Alternative: Direct test of ML detection
     ml_result = detect_console_with_ml(rom_path)
 
     print(f"Standard-Erkennung: {result}")
@@ -56,7 +56,7 @@ def test_detection_pipeline(rom_path: str) -> Tuple[str, float]:
     return result.console, result.confidence
 
 if __name__ == "__main__":
-    # Beispiel für die Verwendung
+# Example of use
     import sys
 
     if len(sys.argv) > 1:

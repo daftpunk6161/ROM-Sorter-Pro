@@ -261,7 +261,7 @@ class ConsoleDetector:
 # Process every directory as a group
         for directory, files in dir_files.items():
             if len(files) <= 1:
-                continue  # Überspringen wenn nur eine Datei im Verzeichnis
+                continue  # Skip if only one file in the directory
 
 # Create similarity cluster based on file names
             name_clusters = self._cluster_similar_files([f[0] for f in files])
@@ -528,7 +528,7 @@ class ConsoleDetector:
 # Extract common patterns from the file name
                     parts = re.split(r'[\s\-_\.]+', base_name.lower())
                     for part in parts:
-                        if len(part) > 2:  # Ignoriere zu kurze Teile
+                        if len(part) > 2:  # Ignorize too short parts
                             if part not in patterns:
                                 patterns[part] = {}
                             if result.console not in patterns[part]:

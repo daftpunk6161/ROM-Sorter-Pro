@@ -365,7 +365,7 @@ class DesktopIntegration:
 # QT is not available, only logging
                 return
 
-# Make sure that there is a Qapplication
+# Make sura that there is a Qapplication
         if QApplication.instance() is None:
             return
 

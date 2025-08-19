@@ -390,7 +390,7 @@ class ThemeIntegrator:
         success = self.theme_manager.set_current_theme(theme_name)
         if success:
             self.apply_theme()
-            # Show a notification if available
+            # Show a notification If Available
             if hasattr(self.gui, 'show_notification'):
                 self.gui.show_notification(f"Theme '{theme_name}' wurde angewendet", "info")
 
@@ -524,7 +524,7 @@ class ThemeIntegrator:
                 self.apply_theme()
                 customizer.destroy()
 
-                # Show a notification if available
+                # Show a notification If Available
                 if hasattr(self.gui, 'show_notification'):
                     self.gui.show_notification(f"Theme '{new_theme.name}' wurde erstellt und angewendet", "info")
 

@@ -264,7 +264,7 @@ class MetadataCache:
             Pfad zum gespeicherten Bild oder None bei Fehler
         """
         try:
-# Create a directory for Rome
+# Create a Directory for Rome
             rom_image_dir = os.path.join(_IMAGE_CACHE_DIR, rom_id)
             os.makedirs(rom_image_dir, exist_ok=True)
 
@@ -430,7 +430,7 @@ class TheGamesDBAPI:
                 if "data" in data and "games" in data["data"] and len(data["data"]["games"]) > 0:
                     game_data = data["data"]["games"][0]
 
-# Create a structured metadata dictionary
+# Create a Structured Metadata Dictionary
                     metadata = {
                         "title": game_data.get("game_title", ""),
                         "overview": game_data.get("overview", ""),
@@ -569,7 +569,7 @@ class MobyGamesAPI:
             if response.status_code == 200:
                 game_data = response.json()
 
-# Create a structured metadata dictionary
+# Create a Structured Metadata Dictionary
                 metadata = {
                     "title": game_data.get("title", ""),
                     "description": game_data.get("description", ""),
@@ -700,7 +700,7 @@ class MetadataManager:
         Returns:
             Metadaten-Dictionary oder None bei Fehler
         """
-# Generate a clear ID for Rome
+# Generates A Clear ID for Rome
         if rom_content:
             rom_id = hashlib.md5(rom_content[:4096]).hexdigest()
         else:
@@ -831,7 +831,7 @@ def get_rom_image(rom_name: str, console: str, image_type: str = "front",
     """
     cache = MetadataCache()
 
-# Generate a clear ID for Rome
+# Generates A Clear ID for Rome
     if rom_content:
         rom_id = hashlib.md5(rom_content[:4096]).hexdigest()
     else:

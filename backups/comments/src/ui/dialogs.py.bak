@@ -31,7 +31,7 @@ class AboutDialog(tk.Toplevel):
         self.title("Über ROM Sorter Pro")
         self.geometry("500x400")
         self.resizable(False, False)
-        self.transient(parent)  # Dialog gehört zum übergeordneten Fenster
+        self.transient(parent)  # Dialogue belongs to the overarching window
         self.grab_set()  # Modaler Dialog
 
 # Central positioning
@@ -44,7 +44,7 @@ class AboutDialog(tk.Toplevel):
 # App logo (placeholder)
         logo_frame = tk.Frame(main_frame, bg=STYLE.colors.accent_primary, width=100, height=100)
         logo_frame.pack(pady=(0, 20))
-        logo_frame.pack_propagate(False)  # Verhindert, dass der Frame schrumpft
+        logo_frame.pack_propagate(False)  # Prevents the frame from shrinking
 
         logo_text = tk.Label(
             logo_frame,
@@ -152,7 +152,7 @@ class SettingsDialog(tk.Toplevel):
         self.title("Einstellungen")
         self.geometry("600x500")
         self.resizable(True, True)
-        self.transient(parent)  # Dialog gehört zum übergeordneten Fenster
+        self.transient(parent)  # Dialogue belongs to the overarching window
         self.grab_set()  # Modaler Dialog
 
 # Configuration and callback
@@ -293,7 +293,7 @@ class ErrorDialog(tk.Toplevel):
         self.title(title)
         self.geometry("500x300")
         self.resizable(True, True)
-        self.transient(parent)  # Dialog gehört zum übergeordneten Fenster
+        self.transient(parent)  # Dialogue belongs to the overarching window
         self.grab_set()  # Modaler Dialog
 
 # Save the parameters

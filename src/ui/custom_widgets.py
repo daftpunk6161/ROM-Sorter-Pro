@@ -109,7 +109,7 @@ class CustomTreeview(ttk.Treeview):
 
     def _initialize_icons(self):
         """Initialisiere Icons für verschiedene Dateitypen."""
-# In a complete implementation, the icons would be loaded here
+# In a complete implementation, The Icons would be loaded here
 # Placeholder for the actual implementation
         pass
 
@@ -162,31 +162,31 @@ class CustomTreeview(ttk.Treeview):
 
     def _on_open(self):
         """Öffne das ausgewählte Item."""
-# In a complete implementation, the file would be opened here
+# In A Complete implementation, The File would be opened here
 # Placeholder for the actual implementation
         pass
 
     def _on_show_in_explorer(self):
         """Zeige das ausgewählte Item im Explorer an."""
-# In a complete implementation, the Explorer would be opened here
+# In a complete implementation, The Explorer would be opened here
 # Placeholder for the actual implementation
         pass
 
     def _on_copy(self):
         """Kopiere das ausgewählte Item."""
-# In a complete implementation, the item would be copied here
+# In A Complete Implementation, The Item would be copied here
 # Placeholder for the actual implementation
         pass
 
     def _on_rename(self):
         """Benenne das ausgewählte Item um."""
-# In a complete implementation, the item would be renamed here
+# In a complete implementation, The Item would be renamed here
 # Placeholder for the actual implementation
         pass
 
     def _on_delete(self):
         """Lösche das ausgewählte Item."""
-# In a complete implementation, the item would be deleted here
+# In a complete implementation, The Item would be deleted here
 # Placeholder for the actual implementation
         pass
 

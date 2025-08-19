@@ -53,7 +53,7 @@ def is_valid_directory(path: Union[str, Path], must_exist: bool = True) -> bool:
 
 # Check on suspicious paths
         suspicious_patterns = [
-            r'\\\\', r'\.\.'  # Doppelte Backslashes oder Directory-Traversal
+            r'\\\\', r'\.\.'  # Double backslashes or directory traversal
         ]
         path_str = str(path_obj)
         for pattern in suspicious_patterns:

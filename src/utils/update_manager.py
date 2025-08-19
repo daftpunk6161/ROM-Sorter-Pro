@@ -288,7 +288,7 @@ class UpdateManager:
             if not download_url:
                 download_url = f"{server_url}/download?version={self.available_version}"
 
-            # Check whether there is a direct download link
+            # Check Whether there is a direct download link
             if not download_url.startswith("http"):
                 download_url = f"{server_url}/{download_url}"
 
@@ -406,7 +406,7 @@ class UpdateManager:
 
         self._report_progress(0, "Update wird installiert...")
 
-        # Create a temporary directory for the unpacked update files
+        # Create A Temporary Directory for the Unpacked Update Files
         extract_dir = os.path.join(TEMP_UPDATE_DIR, f"extract_{datetime.now().strftime('%Y%m%d%H%M%S')}")
         os.makedirs(extract_dir, exist_ok=True)
 
@@ -421,13 +421,13 @@ class UpdateManager:
             with zipfile.ZipFile(update_file_path, 'r') as zip_ref:
                 zip_ref.extractall(extract_dir)
 
-            # Check whether there is a pre-update script and lead it out
+            # Check Whether there is a pre-update script and lead it out
             pre_update_script = os.path.join(extract_dir, "pre_update.py")
             if os.path.exists(pre_update_script):
                 self._report_progress(20, "Führe Vor-Update-Skript aus...")
                 self._run_python_script(pre_update_script)
 
-            # Create a backup of the current installation
+            # Create A Backup of the Current Installation
             backup_dir = os.path.join(TEMP_UPDATE_DIR, f"backup_{datetime.now().strftime('%Y%m%d%H%M%S')}")
             self._report_progress(30, "Erstelle Backup...")
             self._create_backup(program_dir, backup_dir)
@@ -441,7 +441,7 @@ class UpdateManager:
                 with open(VERSION_FILE, 'w') as f:
                     f.write(self.available_version)
 
-            # Check whether there is a post-update script and carry it out
+            # Check Whether there is a post-update script and Carry it out
             post_update_script = os.path.join(extract_dir, "post_update.py")
             if os.path.exists(post_update_script):
                 self._report_progress(80, "Führe Nach-Update-Skript aus...")

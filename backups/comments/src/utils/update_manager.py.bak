@@ -44,7 +44,7 @@ UPDATE_CONFIG_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'config
 # Version des Programms
 VERSION_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'version.txt')
 
-# Pfad für temporäre Update-Dateien
+# Path for temporary update files
 TEMP_UPDATE_DIR = os.path.join(tempfile.gettempdir(), "romsorter_updates")
 
 
@@ -78,10 +78,10 @@ class UpdateManager:
         self.update_info = None
         self.update_progress_callback = None
 
-        # Stelle sicher, dass das temporäre Update-Verzeichnis existiert
+        # Make sure the temporary update directory exists
         os.makedirs(TEMP_UPDATE_DIR, exist_ok=True)
 
-        # Starte automatische Prüfung, falls aktiviert
+        # Start automatic testing if activated
         if self.auto_check:
             self._start_auto_check()
 
@@ -125,14 +125,14 @@ class UpdateManager:
                 with open(UPDATE_CONFIG_FILE, 'r') as f:
                     config = json.load(f)
 
-                # Ergänze fehlende Einträge mit Standardwerten
+                # Complete missing entries with standard values
                 for key, value in default_config.items():
                     if key not in config:
                         config[key] = value
 
                 return config
             else:
-                # Erstelle die Konfigurationsdatei mit Standardwerten
+                # Create the configuration file with standard values
                 os.makedirs(os.path.dirname(UPDATE_CONFIG_FILE), exist_ok=True)
                 with open(UPDATE_CONFIG_FILE, 'w') as f:
                     json.dump(default_config, f, indent=2)
@@ -162,7 +162,7 @@ class UpdateManager:
         """Startet die automatische Update-Prüfung."""
         def check_thread():
             while self.auto_check:
-                # Prüfe, ob eine Update-Prüfung erforderlich ist
+                # Check whether an update test is required
                 if self.update_config["last_check"] is None:
                     perform_check = True
                 else:
@@ -173,7 +173,7 @@ class UpdateManager:
                 if perform_check and not self.is_checking:
                     self.check_for_updates()
 
-                # Warte für eine Stunde, bevor erneut geprüft wird
+                # Wait for an hour before checking again
                 time.sleep(3600)
 
         self.update_thread = threading.Thread(target=check_thread)
@@ -218,11 +218,11 @@ class UpdateManager:
         self._report_progress(0, "Prüfe auf Updates...")
 
         try:
-            # Bestimme die zu verwendende Update-Server-URL
+            # Determine the update server url to be used
             server_url = self.update_config.get("custom_update_server") or UPDATE_SERVER
             update_channel = self.update_config.get("update_channel", "stable")
 
-            # Erstelle die URL für die Update-Prüfung
+            # Create the URL for the update examination
             url = f"{server_url}/check?version={self.current_version}&channel={update_channel}"
 
             # Konfiguriere den Proxy, falls vorhanden
@@ -230,7 +230,7 @@ class UpdateManager:
             if self.update_config.get("proxy"):
                 proxies = {"http": self.update_config["proxy"], "https": self.update_config["proxy"]}
 
-            # Führe die Anfrage aus
+            # Perform the request
             self._report_progress(20, "Verbindung zum Update-Server wird hergestellt...")
             response = requests.get(url, proxies=proxies, timeout=30)
 
@@ -247,7 +247,7 @@ class UpdateManager:
                     logger.info("Keine Updates verfügbar")
                     self._report_progress(100, "Die Software ist auf dem neuesten Stand")
 
-                # Aktualisiere den Zeitpunkt der letzten Prüfung
+                # Update the time of the last examination
                 self.last_check_time = datetime.now()
                 self.update_config["last_check"] = self.last_check_time.isoformat()
                 self._save_update_config()
@@ -280,15 +280,15 @@ class UpdateManager:
         self._report_progress(0, "Update wird vorbereitet...")
 
         try:
-            # Bestimme die zu verwendende Update-Server-URL
+            # Determine the update server url to be used
             server_url = self.update_config.get("custom_update_server") or UPDATE_SERVER
 
-            # URL für den Download
+            # URL for the download
             download_url = self.update_info.get("download_url")
             if not download_url:
                 download_url = f"{server_url}/download?version={self.available_version}"
 
-            # Prüfe, ob ein direkter Download-Link vorhanden ist
+            # Check whether there is a direct download link
             if not download_url.startswith("http"):
                 download_url = f"{server_url}/{download_url}"
 
@@ -297,15 +297,15 @@ class UpdateManager:
             if self.update_config.get("proxy"):
                 proxies = {"http": self.update_config["proxy"], "https": self.update_config["proxy"]}
 
-            # Dateipfad für das heruntergeladene Update
+            # File path for the downloaded update
             update_filename = f"romsorter_update_{self.available_version}.zip"
             update_filepath = os.path.join(TEMP_UPDATE_DIR, update_filename)
 
-            # Lösche vorherige Update-Dateien
+            # Delete previous update files
             if os.path.exists(update_filepath):
                 os.remove(update_filepath)
 
-            # Lade das Update herunter
+            # Download the update
             self._report_progress(10, "Update wird heruntergeladen...")
 
             with requests.get(download_url, proxies=proxies, stream=True, timeout=300) as r:
@@ -319,7 +319,7 @@ class UpdateManager:
                             f.write(chunk)
                             downloaded += len(chunk)
 
-                            # Berechne und melde den Fortschritt
+                            # Calculate and report the progress
                             if total_size > 0:
                                 progress = int(10 + (downloaded / total_size) * 70)
                                 self._report_progress(
@@ -327,7 +327,7 @@ class UpdateManager:
                                     f"Update wird heruntergeladen... {downloaded / 1024 / 1024:.1f} MB / {total_size / 1024 / 1024:.1f} MB"
                                 )
 
-            # Prüfe die Integrität des heruntergeladenen Updates
+            # Check the integrity of the downloaded update
             if "checksum" in self.update_info:
                 self._report_progress(80, "Überprüfe Update-Integrität...")
 
@@ -374,7 +374,7 @@ class UpdateManager:
                 hasher = hashlib.sha256()
 
             with open(file_path, 'rb') as f:
-                # Lese die Datei in Chunks, um den Speicherverbrauch zu begrenzen
+                # Read the file in chunks to limit memory consumption
                 chunk_size = 4096
                 for chunk in iter(lambda: f.read(chunk_size), b''):
                     hasher.update(chunk)
@@ -406,7 +406,7 @@ class UpdateManager:
 
         self._report_progress(0, "Update wird installiert...")
 
-        # Erstelle ein temporäres Verzeichnis für die entpackten Update-Dateien
+        # Create a temporary directory for the unpacked update files
         extract_dir = os.path.join(TEMP_UPDATE_DIR, f"extract_{datetime.now().strftime('%Y%m%d%H%M%S')}")
         os.makedirs(extract_dir, exist_ok=True)
 
@@ -414,40 +414,40 @@ class UpdateManager:
             # Pfad zum Programmverzeichnis
             program_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 
-            # Entpacke das Update
+            # Unpack the update
             self._report_progress(10, "Update wird entpackt...")
 
             import zipfile
             with zipfile.ZipFile(update_file_path, 'r') as zip_ref:
                 zip_ref.extractall(extract_dir)
 
-            # Prüfe, ob ein pre-update-Skript vorhanden ist, und führe es aus
+            # Check whether there is a pre-update script and lead it out
             pre_update_script = os.path.join(extract_dir, "pre_update.py")
             if os.path.exists(pre_update_script):
                 self._report_progress(20, "Führe Vor-Update-Skript aus...")
                 self._run_python_script(pre_update_script)
 
-            # Erstelle ein Backup der aktuellen Installation
+            # Create a backup of the current installation
             backup_dir = os.path.join(TEMP_UPDATE_DIR, f"backup_{datetime.now().strftime('%Y%m%d%H%M%S')}")
             self._report_progress(30, "Erstelle Backup...")
             self._create_backup(program_dir, backup_dir)
 
-            # Kopiere die Update-Dateien in das Programmverzeichnis
+            # Copy the update files into the program directory
             self._report_progress(50, "Installiere Update-Dateien...")
             self._copy_update_files(extract_dir, program_dir)
 
-            # Aktualisiere die Versionsdatei
+            # Update the version file
             if self.available_version:
                 with open(VERSION_FILE, 'w') as f:
                     f.write(self.available_version)
 
-            # Prüfe, ob ein post-update-Skript vorhanden ist, und führe es aus
+            # Check whether there is a post-update script and carry it out
             post_update_script = os.path.join(extract_dir, "post_update.py")
             if os.path.exists(post_update_script):
                 self._report_progress(80, "Führe Nach-Update-Skript aus...")
                 self._run_python_script(post_update_script)
 
-            # Bereinige temporäre Dateien
+            # Cleaning temporary files
             self._report_progress(90, "Bereinige temporäre Dateien...")
             shutil.rmtree(extract_dir, ignore_errors=True)
 
@@ -464,7 +464,7 @@ class UpdateManager:
             logger.error(f"Fehler bei der Update-Installation: {e}")
             self._report_progress(100, f"Fehler bei der Update-Installation: {e}")
 
-            # Versuche, das Backup wiederherzustellen
+            # Try to restore the backup
             try:
                 if os.path.exists(backup_dir):
                     self._report_progress(0, "Update fehlgeschlagen - stelle Backup wieder her...")
@@ -492,15 +492,15 @@ class UpdateManager:
             source_dir: Quellverzeichnis
             backup_dir: Zielverzeichnis für das Backup
         """
-        # Erstelle das Backup-Verzeichnis, falls es nicht existiert
+        # Create the backup directory if it does not exist
         os.makedirs(backup_dir, exist_ok=True)
 
-        # Kopiere alle Dateien und Unterverzeichnisse
+        # Copy all files and subdirectories
         for item in os.listdir(source_dir):
             source_item = os.path.join(source_dir, item)
             backup_item = os.path.join(backup_dir, item)
 
-            # Ignoriere bestimmte Verzeichnisse und Dateien
+            # Ignore certain directories and files
             if item in ['.git', '__pycache__', 'logs', 'temp'] or item.endswith('.pyc'):
                 continue
 
@@ -517,18 +517,18 @@ class UpdateManager:
             backup_dir: Backup-Verzeichnis
             target_dir: Zielverzeichnis für die Wiederherstellung
         """
-        # Kopiere alle Dateien und Unterverzeichnisse zurück
+        # Copy all files and subdirectories back
         for item in os.listdir(backup_dir):
             backup_item = os.path.join(backup_dir, item)
             target_item = os.path.join(target_dir, item)
 
             if os.path.isdir(backup_item):
-                # Wenn das Zielverzeichnis existiert, lösche es zuerst
+                # If the target directory exists, delete it first
                 if os.path.exists(target_item):
                     shutil.rmtree(target_item)
                 shutil.copytree(backup_item, target_item, symlinks=True)
             else:
-                # Wenn die Zieldatei existiert, lösche sie zuerst
+                # If the target file exists, you will delete it first
                 if os.path.exists(target_item):
                     os.remove(target_item)
                 shutil.copy2(backup_item, target_item)
@@ -541,26 +541,26 @@ class UpdateManager:
             update_dir: Verzeichnis mit den Update-Dateien
             target_dir: Zielverzeichnis für die Installation
         """
-        # Prüfe, ob eine update.json-Datei existiert
+        # Check whether an update.json file exists
         update_json_path = os.path.join(update_dir, "update.json")
         if os.path.exists(update_json_path):
-            # Lese die Update-Anweisungen
+            # Read the update instructions
             with open(update_json_path, 'r') as f:
                 update_instructions = json.load(f)
 
-            # Verarbeite die Anweisungen
+            # Process the instructions
             if "files" in update_instructions:
                 for file_info in update_instructions["files"]:
                     source_path = os.path.join(update_dir, file_info["source"])
                     target_path = os.path.join(target_dir, file_info["target"])
 
-                    # Stelle sicher, dass das Zielverzeichnis existiert
+                    # Make sure the target directory exists
                     os.makedirs(os.path.dirname(target_path), exist_ok=True)
 
-                    # Kopiere die Datei
+                    # Copy the file
                     shutil.copy2(source_path, target_path)
 
-            # Verarbeite zu löschende Dateien
+            # Processed files to be deleted
             if "delete" in update_instructions:
                 for delete_path in update_instructions["delete"]:
                     full_path = os.path.join(target_dir, delete_path)
@@ -575,7 +575,7 @@ class UpdateManager:
                 # Berechne den relativen Pfad
                 rel_path = os.path.relpath(root, update_dir)
 
-                # Erstelle die Zielverzeichnisse
+                # Create the target directories
                 if rel_path != ".":
                     target_subdir = os.path.join(target_dir, rel_path)
                     os.makedirs(target_subdir, exist_ok=True)
@@ -615,19 +615,19 @@ def check_and_update() -> None:
 
         update_manager.set_progress_callback(progress_callback)
 
-        # Prüfe auf Updates
+        # Check on updates
         if update_manager.check_for_updates():
             print(f"Update auf Version {update_manager.available_version} verfügbar.")
 
             choice = input("Möchten Sie das Update herunterladen und installieren? (j/n): ")
             if choice.lower() in ['j', 'ja', 'y', 'yes']:
-                # Lade das Update herunter
+                # Download the update
                 update_file = update_manager.download_update()
 
                 if update_file:
                     print(f"Update heruntergeladen: {update_file}")
 
-                    # Installiere das Update
+                    # Install the update
                     if update_manager.install_update(update_file):
                         print("Update erfolgreich installiert.")
                         print("Bitte starten Sie das Programm neu, um die Änderungen zu übernehmen.")
@@ -644,6 +644,6 @@ def check_and_update() -> None:
         print(f"Fehler bei der Update-Prüfung: {e}")
 
 
-# Beispiel für die Verwendung des UpdateManager
+# Example of using the update manager
 if __name__ == "__main__":
     check_and_update()

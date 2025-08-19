@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+# -*-coding: utf-8-*-
 """
 ROM Sorter Pro v2.1.5 - Universal console ROM organizer with refactored architecture
 
@@ -34,7 +34,7 @@ from collections import defaultdict
 import multiprocessing
 from queue import Queue, Empty
 
-# Importiere aus den spezialisierten Modulen
+# Import from the specialized modules
 from src.core.file_utils import (
     normalize_filename
 )
@@ -51,8 +51,8 @@ from src.security.security_utils import (
     sanitize_path as validate_path
 )
 
-# Import some functions for legacy compatibility
-# Define a simple validation function since the original one cannot be imported
+# Import Some Functions for Legacy Compatibility
+# Define A Simple Validation Function Since the Original One Cannot Be Imported
 def validate_config(config: dict) -> bool:
     """
     Simple configuration validation function.
@@ -65,29 +65,29 @@ def validate_config(config: dict) -> bool:
     """
     return config is not None and isinstance(config, dict)
 
-# Import exceptions for centralized error handling
+# Import Exceptions for Centralized Error Handling
 from src.exceptions import (ConfigurationError, ValidationError,
                           ProcessingError, ConsoleDetectionError, FileOperationError)
 
-# Configure main logger
+# Configure Main Logger
 logger = logging.getLogger(__name__)
 
 # Optional imports with enhanced error handling
 try:
-    # These imports are currently not directly used in this file
-    # but may be needed in future or by other modules
+# THESE Imports ARE Currently not Directly used in this file
+# But May be needed in future or by other module
     # Commented out to satisfy linter but kept for reference
-    # from ai_features import (
-    #     OptimizedROMDatabase as ROMDatabase,
-    #     OptimizedMetadataEnricher as MetadataEnricher,
-    #     OptimizedOnlineMetadataProvider as OnlineMetadataProvider,
-    #     EnhancedAIConsoleDetector as AIConsoleDetector,
-    #     EnhancedDuplicateDetector as DuplicateDetector,
-    #     OptimizedSmartRecommendationSystem as SmartRecommendationSystem,
-    #     OptimizedCoverArtDownloader as CoverArtDownloader
-    # )
+# From ai_features import (
+# Optimizedromdabase as Romdatabase,
+# Optimized metataenricher as metadataenricher,
+# OptimizedonlinemememememneMatadapaprovider AS online meta provider,
+# Enhancedaiconsoledetetector AS Aiconsoledetector,
+# Enhancedduplicatedetetector as duplicatedetetector,
+# Optimized MARMENTRECOMMENDATION SYSTEM AS SMARTREMECOMMENDATION System,
+# Optimized cover artdownloader as cover artdownloader
+# )))
     # Just check if the module exists, but don't import it directly
-    # to avoid unused import warning
+# to avoid unused import Warning
     import importlib
     spec = importlib.util.find_spec("ai_features")
     AI_FEATURES_AVAILABLE = spec is not None
@@ -98,27 +98,27 @@ except ImportError as e:
     logger.warning(f"AI features not available: {e}")
     logger.warning("Using base functionality")
 
-# GUI import will be done dynamically when needed to avoid circular imports
+# Gui Import wants be done dynamically when needed to avoid circular imports
 GUI_AVAILABLE = False
 try:
-    # Check first for the new modular UI
+# Check First for the New Modular UI
     spec = importlib.util.find_spec("src.ui")
     if spec is not None:
-        # Check if new modular UI is available
+# Check IF New Modular Ui is Available
         try:
             from src.ui.compat import is_ui_available, get_ui_mode
             GUI_AVAILABLE = is_ui_available()
             UI_MODE = get_ui_mode()
             logger.info(f"GUI module available (Mode: {UI_MODE})")
         except ImportError:
-            # Fallback to direct check of old GUI
+# Fallback to Direct Check of Old Gui
             spec = importlib.util.find_spec("gui")
             if spec is not None:
                 GUI_AVAILABLE = True
                 UI_MODE = "legacy"
                 logger.info("GUI module available (Legacy)")
     else:
-        # Fallback to direct check of old GUI
+# Fallback to Direct Check of Old Gui
         spec = importlib.util.find_spec("gui")
         if spec is not None:
             GUI_AVAILABLE = True
@@ -128,7 +128,7 @@ except ImportError as e:
     logger.warning(f"GUI module not available: {e}")
     UI_MODE = "none"
 
-# Web interface availability
+# Web Interface Availability
 try:
     import importlib.util
     spec = importlib.util.find_spec("web_interface")
@@ -142,9 +142,9 @@ except ImportError as e:
     logger.warning(f"Web interface not available: {e}")
 
 
-# ============================================================================
-# REFACTORED COMPONENTS - ADDRESSING GOD CLASS ISSUES
-# ============================================================================
+# =====================================================================================================
+# Refactored Components - Addressing God Class Issues
+# =====================================================================================================
 
 @contextmanager
 def log_operation_context(operation_name: str,
@@ -158,7 +158,7 @@ def log_operation_context(operation_name: str,
     start_time = time.time()
     operation_id = f"{int(start_time * 1000)}-{threading.get_ident()}"
 
-    # Eintrag bei Beginn der Operation
+# Entry at the start of the operation
     log_data = {
         'operation': operation_name,
         'operation_id': operation_id,
@@ -173,7 +173,7 @@ def log_operation_context(operation_name: str,
 
     try:
         yield operation_id
-        # Erfolgreicher Abschluss
+# Successful end
         duration = time.time() - start_time
         log_data['duration'] = duration
         log_data['status'] = 'success'
@@ -182,7 +182,7 @@ def log_operation_context(operation_name: str,
         logger.debug(msg, extra={'context': log_data})
 
     except Exception as e:
-        # Error during the operation
+# Error During the Operation
         duration = time.time() - start_time
         log_data['duration'] = duration
         log_data['status'] = 'error'
@@ -214,7 +214,7 @@ class ProcessingOptions:
         """Validate options after initialization."""
         self._validate_options()
 
-        # Ensure sensible limits
+# Ensure sensitive limits
         if self.max_workers and (self.max_workers < 1 or self.max_workers > 32):
             self.max_workers = min(os.cpu_count() or 4, 8)
 
@@ -234,7 +234,7 @@ class ProcessingOptions:
 
     def _validate_options(self) -> None:
         """Validates the processing options."""
-        # Validate batch_size (positive and within reasonable range)
+# Validate Batch_Size (positive and within Reasonable Range)
         if not isinstance(self.batch_size, int) or self.batch_size < 1:
             raise ValidationError("batch_size must be a positive integer",
                                   field_name="batch_size",
@@ -243,13 +243,13 @@ class ProcessingOptions:
             logger.warning(f"Very large batch_size selected ({self.batch_size}). "
                            f"This could lead to memory issues.")
 
-        # Validate max_workers
+# Validate Max_Workers
         if self.max_workers is not None:
             if not isinstance(self.max_workers, int) or self.max_workers < 1:
                 raise ValidationError("max_workers must be None or a positive integer",
                                       field_name="max_workers",
                                       expected_type="positive integer or None")
-            # Warning for too many workers
+# Warning for Too many workers
             cpu_count = multiprocessing.cpu_count()
             if self.max_workers > cpu_count * 2:
                 logger.warning(f"max_workers ({self.max_workers}) is significantly higher "
@@ -276,7 +276,7 @@ class ProcessingOptions:
     io_timeout: float = 30.0
     skip_existing: bool = True
     create_symlinks: bool = False
-    # New options for unknown ROMs and duplicates
+# New Options for Unknown Roms and Duplicates
     separate_unknown_roms: bool = True  # Separate ROMs with unclear detection
     unknown_roms_folder: str = "Unknown"  # Folder for unknown ROMs
     separate_duplicates: bool = True  # Move duplicates to a separate folder
@@ -360,17 +360,17 @@ class MemoryManager:
 
     def __init__(self, max_memory_mb: int = 512):
         self.max_memory_mb = max_memory_mb
-        # Dynamic threshold that adapts to usage
+# Dynamic Threshold That Adapts to Usage
         self.gc_threshold = max_memory_mb * 0.8
-        # Minimum threshold to avoid excessive GC calls
+# Minimum Threshold to avoid excessive GC Calls
         self.min_threshold_mb = 64
         self.last_gc = time.time()
-        # Adaptive GC interval that adjusts based on memory pressure
+# Adaptive GC Interval That Adjusts Based on Memory Pressure
         self.base_gc_interval = 30
         self.gc_interval = self.base_gc_interval
         self.memory_pressure = 0.0  # 0.0 bis 1.0
 
-        # Advanced memory statistics
+# Advanced Memory Statistics
         self._memory_stats = {
             'peak': 0,
             'collections': 0,
@@ -387,10 +387,10 @@ class MemoryManager:
             }
         }
 
-        # Optimierung der Garbage Collection
+# Optimization of the Garbage Collection
         self._configure_gc()
 
-        # Initialisieren des Speichertrends
+# Initialize the memory trend
         self._update_system_memory()
 
     def _configure_gc(self):
@@ -398,14 +398,14 @@ class MemoryManager:
 
         Optimizes collection for handling large data volumes.
         """
-        # Enable automatic generation collection with optimized thresholds
+# ENABLE Automatic Generation Collection with Optimized Thresholds
         gc.enable()
-        # Adjust generation thresholds (defaults are often too conservative)
-        # Higher thresholds reduce collection frequency
+# Adjust Generation Thresholds (Defaults are Often Too Conservative)
+# Higher Thresholds Reduce Collection Frequency
         old_thresholds = gc.get_threshold()
-        # Increase Gen0 threshold - allow more objects before GC trigger
+# Increase Gen0 Threshold - Allow More Objects Before GC Trigger
         gen0_threshold = old_thresholds[0] * 2
-        # Adjust Gen1/Gen2 ratios
+# Adjust Gen1/Gen2 Ratios
         gen1_threshold = 10
         gen2_threshold = 10
         gc.set_threshold(gen0_threshold, gen1_threshold, gen2_threshold)
@@ -436,22 +436,22 @@ class MemoryManager:
             peak = self._memory_stats['peak']
             self._memory_stats['peak'] = max(peak, memory_mb)
 
-            # Update memory trend for leak detection
+# Update Memory Trend for Leak Detection
             self._update_memory_trend(memory_mb)
 
-            # Update system memory status (every 10 checks)
+# Update System Memory Status (Every 10 Checks)
             if self._memory_stats['collections'] % 10 == 0:
                 self._update_system_memory()
 
-            # Calculate memory pressure (0.0-1.0, where 1.0 is maximum pressure)
+# Calculate Memory Pressure (0.0-1.0, where 1.0 is maximum pressure)
             self.memory_pressure = min(1.0, memory_mb / self.max_memory_mb)
 
-            # Adaptive GC interval based on memory pressure
+# Adaptive GC Interval Based on Memory Pressure
             factor = 1.0 - self.memory_pressure
             self.gc_interval = max(5, self.base_gc_interval * factor)
 
-            # Adjust dynamic threshold based on memory pressure
-            # With high pressure, we lower the threshold more aggressively
+# Adjust Dynamic Threshold Based on Memory Pressure
+# With high pressure, We Lower the Threshold more aggressively
             pressure_factor = 0.9 - 0.3 * self.memory_pressure
             self.gc_threshold = max(
                 self.min_threshold_mb,
@@ -463,7 +463,7 @@ class MemoryManager:
                 memory_mb = process.memory_info().rss / 1024 / 1024
                 return memory_mb < self.max_memory_mb
 
-            # Memory leak detection
+# Memory Leak Detection
             if self._detect_memory_leak():
                 logging.warning("Possible memory leak detected! "
                                 "Performing intensive garbage collection.")
@@ -481,14 +481,14 @@ class MemoryManager:
         """Updates memory trend for leak detection."""
         history = self._memory_stats['last_values']
 
-        # Store last N values for trend analysis
+# Store Last N Values for Trend Analysis
         history.append(current_memory_mb)
         if len(history) > self._memory_stats['history_size']:
             history.pop(0)
 
         # If we have enough data, calculate growth rate
         if len(history) >= 3:
-            # Simple linear regression to estimate growth rate
+# Simple linear regression to Estimate Growth Rate
             x = list(range(len(history)))
             y = history
             n = len(x)
@@ -506,7 +506,7 @@ class MemoryManager:
                 slope = numerator / denominator
                 self._memory_stats['leak_detection']['growth_rate'] = slope
 
-            # Count consecutive increases
+# Count Consecutive Increases
             increases = 0
             for i in range(1, len(history)):
                 if history[i] > history[i-1]:
@@ -523,15 +523,15 @@ class MemoryManager:
         """Detects possible memory leaks based on usage trends."""
         leak_data = self._memory_stats['leak_detection']
 
-        # Continuous increase in memory consumption over time
+# Continuous Increase in Memory Consumpto Over Time
         if leak_data['consecutive_increases'] >= 5:
             return True
 
-        # Positive growth rate above threshold
-        # 5% of maximum memory limit
+# Positive Growth Rate Above Threshold
+# 5% of Maximum Memory Limit
         growth_rate_threshold = 0.05 * self.max_memory_mb
 
-        # Only check at high memory pressure
+# ONLY Check at High Memory Pressure
         high_pressure = self.memory_pressure > 0.7
         high_growth = leak_data['growth_rate'] > growth_rate_threshold
 
@@ -542,15 +542,15 @@ class MemoryManager:
 
     def _handle_memory_leak(self):
         """Response to detected memory leaks."""
-        # Perform a complete garbage collection
+# Perform a Complete Garbage Collection
         gc.collect(0)  # Generation 0
         gc.collect(1)  # Generation 1
         gc.collect(2)  # Generation 2 (oldest)
 
-        # Explicit cleanup of large data structures (if known)
+# Explicit Cleanup of Large Data Structures (IF Known)
         # This could be a custom function that deletes critical objects
 
-        # Reset leak detection after cleanup
+# Reset Leak Detection After Cleanup
         self._memory_stats['leak_detection']['consecutive_increases'] = 0
 
     def _trigger_gc(self):
@@ -560,9 +560,9 @@ class MemoryManager:
             logging.debug(f"Triggering garbage collection "
                           f"(memory pressure: {self.memory_pressure:.2f})")
 
-            # Selective collection based on memory pressure
+# Selective Collection Based on Memory Pressure
             if self.memory_pressure > 0.9:
-                # Critical memory pressure: complete collection of all generations
+# Critical Memory Pressure: Complete Collection of All Generations
                 collected = gc.collect()
                 logging.debug(f"Complete GC: {collected} objects collected")
             elif self.memory_pressure > 0.7:
@@ -572,7 +572,7 @@ class MemoryManager:
                 collected = collected_gen0 + collected_gen1
                 logging.debug(f"GC Gen0+1: {collected} objects collected")
             else:
-                # Normal memory pressure: only Generation 0
+# Normal Memory Pressure: ONLY Generation 0
                 collected = gc.collect(0)
                 logging.debug(f"GC Gen0: {collected} objects collected")
 
@@ -583,7 +583,7 @@ class MemoryManager:
         """Returns detailed memory statistics."""
         stats = self._memory_stats.copy()
 
-        # Add current process information if available
+# Add Current Process Information IF Available
         try:
             import psutil
             process = psutil.Process()
@@ -604,7 +604,7 @@ class MemoryManager:
         except (ImportError, Exception):
             pass
 
-        # Add GC information
+# Add GC Information
         stats['gc'] = {
             'enabled': gc.isenabled(),
             'thresholds': gc.get_threshold(),
@@ -629,15 +629,15 @@ class MemoryManager:
         logging.info(f"Active memory pressure reduction attempt "
                      f"(current: {current:.2f}, target: {target_pressure:.2f})")
 
-        # Strategy 1: Complete garbage collection
+# Strategy 1: Complete Garbage Collection
         logging.debug("Performing complete garbage collection")
         gc.collect()
 
-        # Strategy 2: Clear Python object cache
+# Strategy 2: Clear Python Object Cache
         logging.debug("Cleaning up cache objects")
         gc.collect()
 
-        # Re-check memory pressure after measures
+# Re-Check Memory Pressure After Measures
         self.check_memory_usage()
 
         return self.memory_pressure <= target_pressure
@@ -703,14 +703,14 @@ class FileOperationsManager:
                     destination: Union[str, Path]) -> bool:
         """Securely move file with validation."""
         try:
-            # Direct Path conversion
+# Direct Path Conversion
             source_path = Path(source).resolve()
             dest_path = Path(destination).resolve()
 
-            # Ensure destination directory exists
+# Ensure Destination Directory Exist
             dest_path.parent.mkdir(parents=True, exist_ok=True)
 
-            # Perform the move
+# Perform The Move
             shutil.move(str(source_path), str(dest_path))
             return True
 
@@ -722,14 +722,14 @@ class FileOperationsManager:
                       destination: Union[str, Path]) -> bool:
         """Securely copy file with validation."""
         try:
-            # Direct Path conversion
+# Direct Path Conversion
             source_path = Path(source).resolve()
             dest_path = Path(destination).resolve()
 
-            # Ensure destination directory exists
+# Ensure Destination Directory Exist
             dest_path.parent.mkdir(parents=True, exist_ok=True)
 
-            # Perform the copy
+# Perform The Copy
             shutil.copy2(str(source_path), str(dest_path))
             return True
 
@@ -740,7 +740,7 @@ class FileOperationsManager:
     def ensure_directory_exists(self, directory: Union[str, Path]) -> bool:
         """Securely ensure directory exists."""
         try:
-            # Direct Path conversion to avoid validate_path problems
+# Direct Path Conversion to Avoid Validate_Path Problems
             dir_path = Path(directory).resolve()
             dir_path.mkdir(parents=True, exist_ok=True)
             return True
@@ -768,7 +768,7 @@ class ConsoleAnalyzer:
             console_stats[console]['size'] += rom_file.get('size', 0)
             console_stats[console]['files'].append(rom_file['filename'])
 
-        # Convert to regular dict and add statistics
+# Convert to Regular Dict and Add Statistics
         result = {}
         for console, stats in console_stats.items():
             result[console] = {
@@ -828,16 +828,16 @@ class DuplicateDetector:
             score = 0
             filename = rom_file['filename'].lower()
 
-            # Prefer larger files
+# Prefer Larger Files
             score += rom_file.get('size', 0) / 1024
 
-            # Region preferences
+# Preferences region
             for region, priority in self.region_priorities.items():
                 if region.lower() in filename:
                     score += priority * 1000
                     break
 
-            # Penalize unwanted patterns
+# Penalize Unperted Patterns
             unwanted_patterns = [r'\b(beta|alpha|demo|prototype)\b']
             import re
             for pattern in unwanted_patterns:
@@ -865,7 +865,7 @@ class RefactoredROMSorterPro:
         self.config = self.load_config()
         self.setup_logging()
 
-        # Initialize focused components via dependency injection
+# Initialize Focused Components via Dependency Injection
         allowed_dirs = [os.path.dirname(self.config_path), os.getcwd()]
         self.file_ops = FileOperationsManager(allowed_dirs)
         self.console_analyzer = ConsoleAnalyzer()
@@ -873,12 +873,12 @@ class RefactoredROMSorterPro:
             self.config.get('region_priorities', {})
         )
 
-        # Enhanced components
+# Enhanced Components
         self.performance_monitor = performance_monitor
         self.stats = ProcessingStatistics()
         self.memory_manager = MemoryManager(self.options.memory_limit_mb)
 
-        # Threading and concurrency
+# Threading and Concurrency
         self._shutdown_event = threading.Event()
         self._worker_pool: Optional[ThreadPoolExecutor] = None
         self._work_queue: Optional[WorkStealingQueue] = None
@@ -887,7 +887,7 @@ class RefactoredROMSorterPro:
         self._resource_stack = ExitStack()
         self._file_handles = weakref.WeakSet()
 
-        # Secure signal handling - only in main thread
+# Secure Signal Handling - Only in Main Thread
         if threading.current_thread() is threading.main_thread():
             try:
                 signal.signal(signal.SIGINT, self._signal_handler)
@@ -993,30 +993,30 @@ class RefactoredROMSorterPro:
         self.performance_monitor.start_monitoring()
 
         try:
-            # Enhanced validation using file operations manager
+# Enhanced Validation Using File Operations Manager
             self._validate_directories(source_dir, dest_dir)
 
-            # Phase 1: Enhanced ROM scanning
+# Phase 1: Enhanced Rome Scanning
             rom_files = self._scan_rom_files(source_dir)
             if not rom_files:
                 logging.warning("No ROM files found!")
                 return self._get_final_stats()
 
-            # Phase 2: Console analysis using focused analyzer
+# Phase 2: Console Analysis Using focused analyzer
             console_stats = self.console_analyzer.analyze_files(rom_files)
 
-            # Phase 3: Enhanced duplicate detection using focused detector
+# Phase 3: Enhanced Duplicate Detection Using Focused Detector
             if self.options.detect_duplicates:
                 rom_files = self.duplicate_detector.detect_and_filter_duplicates(rom_files)
 
-            # Phase 4: Optimized sorting
+# Phase 4: Optimized Sorting
             if not self.options.dry_run:
                 self._perform_sorting(rom_files, dest_dir)
             else:
                 logging.info("DRY-RUN mode - no files will be moved")
                 self._simulate_sorting(rom_files, dest_dir)
 
-            # Phase 5: Enhanced statistics
+# Phase 5: Enhanced Statistics
             self.stats.end_time = datetime.now()
             final_stats = self._get_final_stats()
 
@@ -1038,7 +1038,7 @@ class RefactoredROMSorterPro:
     def _validate_directories(self, source_dir: str, dest_dir: str):
         """Enhanced directory validation using file operations manager."""
         try:
-            # Validate source directory - Direkte Path-Verwendung zur Vermeidung von Import-Problemen
+# Validate Source Directory-Direct Path use to avoid import problems
             source_path = Path(source_dir).resolve()
             if not source_path.exists():
                 raise FileNotFoundError(f"Source directory not found: {source_path}")
@@ -1046,7 +1046,7 @@ class RefactoredROMSorterPro:
             if not source_path.is_dir():
                 raise ValueError(f"Source path is not a directory: {source_path}")
 
-            # Validate destination directory
+# Validate Destination Directory
             dest_path = Path(dest_dir).resolve()
             self.file_ops.ensure_directory_exists(dest_path)
 
@@ -1074,21 +1074,21 @@ class RefactoredROMSorterPro:
 
             logger.info(f"Searching for ROMs with {len(rom_extensions)} supported file extensions")
 
-            # Path validation with improved security
+# Path Validation with Improved Security
             try:
                 source_path = Path(source_dir).resolve()
                 logger.debug(f"Validated source path: {source_path}")
             except Exception as e:
                 raise FileOperationError(f"Invalid source path: {e}", file_path=source_dir, operation="validate")
 
-            # Import optimized modules
+# Import Optimized Module
             from src.detectors.console_detector import ConsoleDetector, CACHE_SIZE
             from src.scanning.optimized_scanner import OptimizedFileScanner
 
-            # Singleton instances for optimized processing
+# Singleton instance for optimized processing
             console_detector = ConsoleDetector()
 
-            # Start optimized file scan
+# Start Optimized File Scan
             start_time = time.time()
             logger.info(f"Starting optimized ROM scan in {source_path}")
             scanner = OptimizedFileScanner(extensions=rom_extensions)
@@ -1108,26 +1108,26 @@ class RefactoredROMSorterPro:
 
             logger.info(f"Optimized scan completed: {len(found_paths)} potential ROM files found in {dirs_processed} directories")
 
-            # Extract ROM information with optimized batching strategy
+# Extract Rome Information with Optimized Batching Strategy
             batch_size = 100  # Optimal batch size for ROM processing
             current_batch = []
 
-            # Process all found ROM files
+# Process All Found Rome Files
             for i, file_path in enumerate(found_paths):
-                # Progress indicator for large file sets
+# Progress Indicator for Large File Sets
                 if i % 1000 == 0 and i > 0:
                     elapsed = time.time() - start_time
                     files_per_sec = i / max(0.001, elapsed)
                     logger.info(f"Progress: {i}/{len(found_paths)} files processed in {elapsed:.2f}s ({files_per_sec:.1f} files/sec)")
 
-                # Security validation for each file
+# Security Validation for Each File
                 try:
                     validated_file_path = Path(file_path) if isinstance(file_path, str) else file_path
 
-                    # Batch processing for optimal performance
+# Batch Processing for optimal performance
                     current_batch.append(validated_file_path)
                     if len(current_batch) >= batch_size:
-                        # Process current batch
+# Process Current Batch
                         console_detector.process_batch(current_batch)
                         current_batch = []
                     file_size = validated_file_path.stat().st_size
@@ -1137,7 +1137,7 @@ class RefactoredROMSorterPro:
                     filename = validated_file_path.name
                     file_ext = validated_file_path.suffix.lower()
 
-                    # Erweiterte ROM-Informationserfassung
+# Extended ROM information recording
                     rom_info = {
                         'path': str(validated_file_path),
                         'filename': filename,
@@ -1147,21 +1147,21 @@ class RefactoredROMSorterPro:
                         'last_modified': datetime.fromtimestamp(validated_file_path.stat().st_mtime).isoformat()
                     }
 
-                    # Konsolenerkennung mit verbesserter Fehlerbehandlung und Performance-Messung
+# Console detection with improved error treatment and performance measurement
                     with log_operation_context("console_detection", {
                         'file': filename,
                         'path': str(validated_file_path),
                         'operation_id': op_id
                     }):
                         try:
-                            # Improved console detection with optimized cache
+# Improved Console Detection with Optimized Cache
                             detection_result = console_detector.detect_console(filename, str(validated_file_path))
                             console = detection_result.console
                             confidence = detection_result.confidence
 
-                            # Detailed log information with optimized threshold values
+# Detailed Log Information with Optimized Threshold Values
                             if confidence < 0.3:
-                                # Reduced logging frequency for low confidence
+# Reduced Logging Frequency for Low Confidence
                                 if self.stats.files_processed % 10 == 0:  # Log only every 10th file
                                     logger.warning(f"Low detection confidence for {filename}: {confidence:.2f}, detected as {console}")
                             elif confidence < 0.6:
@@ -1192,18 +1192,18 @@ class RefactoredROMSorterPro:
 
                     # Adaptive memory usage optimization
                     if self.stats.files_processed % 1000 == 0:
-                        # Improved GC strategy with two tiers
+# IMPROVED GC Strategy With Two Tiers
                         if self.stats.files_processed % 5000 == 0:
                             # Intensive memory optimization every 5000 files
                             gc.collect(generation=2)
                             logger.debug(f"Complete memory cleanup after {self.stats.files_processed} files")
                         else:
-                            # Light memory optimization every 1000 files
+# Light Memory Optimization Every 1000 Files
                             gc.collect(generation=0)
 
-                        # Remove old cache entries with large file volumes
+# Remove Old Cache Entries with Large File Volumes
                         if hasattr(console_detector, '_in_memory_cache') and len(console_detector._in_memory_cache) > CACHE_SIZE:
-                            # Remove the oldest 20% of cache entries
+# Remove the Oldest 20% of Cache Entries
                             cache_keys = list(console_detector._in_memory_cache.keys())
                             entries_to_remove = len(cache_keys) // 5
                             for key in cache_keys[:entries_to_remove]:
@@ -1215,7 +1215,7 @@ class RefactoredROMSorterPro:
                     logger.error(f"Error processing {file_path}: {e}")
                     self.stats.errors += 1
 
-            # Verarbeite verbleibenden Batch
+# Processed remaining batch
             if current_batch:
                 console_detector.process_batch(current_batch)
 
@@ -1223,17 +1223,17 @@ class RefactoredROMSorterPro:
             scan_duration = time.time() - start_time
             files_per_second = self.stats.files_processed / max(scan_duration, 0.001)
 
-            # Extended cache statistics
+# Extended Cache Statistics
             cache_stats = getattr(console_detector, '_performance_stats', {})
 
-            # Summary logging information with performance data
+# Summary Logging Information with Performance Data
             logger.info(f"ROM scan completed: {len(rom_files)} ROMs found, "
                         f"{hidden_dirs_skipped} hidden directories skipped, "
                         f"{hidden_files_skipped} hidden files skipped, "
                         f"{unsupported_files_skipped} unsupported files skipped, "
                         f"Performance: {files_per_second:.1f} files/sec, Duration: {scan_duration:.1f}s")
 
-            # Detailed performance metrics in debug level
+# Detailed Performance Metrics in Debug Level
             if logger.isEnabledFor(logging.DEBUG):
                 cache_hit_rate = cache_stats.get('cache_hits', 0) / max(cache_stats.get('cache_hits', 0) + cache_stats.get('cache_misses', 1), 1) * 100
                 logger.debug(f"Performance metrics: Dirs: {dirs_processed}, "
@@ -1241,7 +1241,7 @@ class RefactoredROMSorterPro:
                             f"Batch hits: {cache_stats.get('batch_hits', 0)}, "
                             f"Memory usage: {gc.get_stats()}")
 
-            # Warnings for empty results
+# Warning for Empty Results
             if len(rom_files) == 0:
                 if unsupported_files_skipped > 0:
                     logger.warning(f"No supported ROM files found, but {unsupported_files_skipped} "
@@ -1283,19 +1283,19 @@ class RefactoredROMSorterPro:
             console = rom_file.get('console', 'Unknown')
             source_path = rom_file['path']
 
-            # Ensure console directory exists
+# Ensure Console Directory Exists
             dest_dir_path = Path(dest_dir)
             console_dir = dest_dir_path / console
             self.file_ops.ensure_directory_exists(console_dir)
 
-            # Determine destination path
+# Determine Destination Path
             dest_path = console_dir / rom_file['filename']
 
-            # Check if file already exists
+# Check IF File Already Exists
             if dest_path.exists() and self.options.skip_existing:
                 return {'action': 'skipped', 'reason': 'already_exists'}
 
-            # Move or copy file using file operations manager
+# Move Or Copy File Using File Operations Manager
             if self.options.create_backup:
                 success = self.file_ops.safe_copy_file(source_path, dest_path)
                 action = 'copied'
@@ -1388,14 +1388,14 @@ class RefactoredROMSorterPro:
         logging.info("COMPREHENSIVE PROCESSING REPORT")
         logging.info("="*100)
 
-        # Summary statistics
+# Summary Statistics
         logging.info(f"Total files processed: {final_stats['files_processed']}")
         logging.info(f"Files moved: {final_stats['files_moved']}")
         logging.info(f"Files copied: {final_stats['files_copied']}")
         logging.info(f"Files skipped: {final_stats['files_skipped']}")
         logging.info(f"Files failed: {final_stats['files_failed']}")
 
-        # Performance metrics
+# Performance Metrics
         logging.info(f"Duration: {final_stats['duration_seconds']:.2f} seconds")
         logging.info(f"Processing rate: {final_stats['files_per_second']:.2f} files/sec")
         logging.info(f"Success rate: {final_stats['success_rate']:.1f}%")
@@ -1408,17 +1408,17 @@ class RefactoredROMSorterPro:
     def _cleanup_resources(self):
         """Enhanced resource cleanup."""
         try:
-            # Close all database connections
+# Close All Database Connections
             try:
                 from src.database.connection_pool import DatabaseConnectionPool
-                # Close all connections in the pool
+# Close All Connections in the pool
                 pool = DatabaseConnectionPool.get_instance()
                 pool.close_all()
                 logging.debug("All database connections closed")
             except Exception as db_error:
                 logging.warning(f"Error closing database connections: {db_error}")
 
-            # Close any open file handles
+# Close Any Open File Handles
             for handle in list(self._file_handles):
                 try:
                     if hasattr(handle, 'close'):
@@ -1426,11 +1426,11 @@ class RefactoredROMSorterPro:
                 except:
                     pass
 
-            # Clear caches
+# Clear Caches
             if hasattr(self, '_config_cache'):
                 self._config_cache.clear()
 
-            # Force garbage collection
+# Force Garbage Collection
             collected = gc.collect()
             logging.debug(f"Final cleanup: collected {collected} objects")
 
@@ -1446,7 +1446,7 @@ class RefactoredROMSorterPro:
             logging.error(f"Cleanup error: {e}")
 
 
-# Compatibility aliases for backward compatibility
+# Compatibility alias for Backward Compatibility
 OptimizedROMSorterPro = RefactoredROMSorterPro  # Main alias
 AdvancedROMSorterPro = RefactoredROMSorterPro   # Legacy alias
 SortingOptions = ProcessingOptions              # Legacy alias
@@ -1455,9 +1455,9 @@ ProcessingStats = ProcessingStatistics         # Legacy alias
 EnhancedProcessingStats = ProcessingStatistics # Legacy alias
 
 
-# ============================================================================
-# CLI INTERFACE
-# ============================================================================
+# =====================================================================================================
+# Cli Interface
+# =====================================================================================================
 
 def create_argument_parser():
     """Create argument parser for command line interface."""
@@ -1527,7 +1527,7 @@ def handle_exception(exc: Exception) -> int:
             print(f"Affected file: {exc.details['rom_path']}")
         return 1
 
-    # General error case
+# General Error Case
     logger.error(f"Unhandled error: {exc}", exc_info=True)
     print(f"An unexpected error occurred: {exc}")
     return 1
@@ -1539,12 +1539,12 @@ def main():
         parser = create_argument_parser()
         args = parser.parse_args()
 
-        # Configure logging level
+# Configure Logging Level
         if args.verbose:
             logging.getLogger().setLevel(logging.DEBUG)
             logger.info("Verbose logging mode activated")
 
-        # Create processing options with validation
+# Create Processing options with validation
         try:
             options = ProcessingOptions(
                 dry_run=args.dry_run,
@@ -1558,22 +1558,22 @@ def main():
             print(f"Fehler: {ve}")
             return 1
 
-        # Launch appropriate interface
+# Launch Appropriate Interface
         if args.gui:
             if GUI_AVAILABLE:
                 try:
                     if UI_MODE == "new":
-                        # Use the new modular UI
+# Use the new modular ui
                         from src.ui.compat import launch_gui
                         logger.info("Starting modular GUI...")
                         launch_gui()
                     elif UI_MODE == "legacy":
-                        # Use the old GUI
+# Use the old gui
                         from src.ui.gui import launch_gui
                         logger.info("Starting legacy GUI...")
                         launch_gui()
                     else:
-                        # Direct import attempts as fallback
+# Direct import Attempts as Fallback
                         try:
                             from src.ui import main as ui_main
                             logger.info("Starting GUI (direct import)...")
@@ -1605,12 +1605,12 @@ def main():
                 print("Web interface not available. Please install Flask and required dependencies.")
                 return 1
         else:
-            # Command line interface
+# Command Line Interface
             logger.info(f"Command line mode: Sorting from '{args.source}' to '{args.dest}'")
             sorter = RefactoredROMSorterPro(args.config, options)
             result = sorter.sort_by_console_advanced(args.source, args.dest)
 
-            # Detailed success or error messages
+# Detailed Success or Error Messages
             if result.get('errors', 0) > 0:
                 logger.error(f"Sorting completed with {result.get('errors', 0)} errors")
                 print(f"Sorting completed with {result.get('errors', 0)} errors.")
@@ -1653,25 +1653,25 @@ def memory_optimized_batch_process_roms(
     msg = f"Starting memory-optimized batch processing of ROMs in {directory}"
     logging.info(msg)
 
-    # Use all known ROM extensions by default
+# Use all Known Rome Extensions by Default
     if extensions is None:
         try:
             # We already imported get_all_rom_extensions at the top of the file
-            # so just use it directly
+# So just use it directly
             ext_set = get_all_rom_extensions()
             extensions = list(ext_set) if ext_set else []
         except (ImportError, AttributeError):
-            # Fallback to a list of common extensions
+# Fallback to a List of Common Extensions
             extensions = [
                 ".rom", ".bin", ".iso", ".cue", ".chd", ".gba",
                 ".nes", ".smc", ".z64", ".n64", ".v64", ".smd",
                 ".md", ".gb", ".gbc", ".sfc", ".wsc", ".ngc"
             ]
 
-    # Memory manager for monitoring and optimizing memory usage
+# Memory Manager for Monitoring and Optimizing Memory Usage
     memory_manager = MemoryManager(max_memory_mb=max_memory_mb)
 
-    # Statistics for logging
+# Statistics for Logging
     stats = {
         "processed_files": 0,
         "detected_roms": 0,
@@ -1680,20 +1680,20 @@ def memory_optimized_batch_process_roms(
     }
 
     try:
-        # Traverse directory and find ROM files
+# Traverse Directory and Find Rome Files
         def find_rom_files():
             for root, _, files in os.walk(directory):
                 for file in files:
-                    # Check if file has a known ROM extension
+# Check If File Has a Known Rome Extension
                     file_lower = file.lower()
                     if any(file_lower.endswith(ext.lower())
                            for ext in extensions):
                         yield os.path.join(root, file)
 
-                    # Monitor memory usage and adjust dynamically
+# Monitor Memory Usage and Adjust Dynamically
                     memory_manager.check_memory_usage()
 
-        # Generator for ROM files
+# Generator for Rome Files
         rom_files = find_rom_files()
 
         current_batch = []
@@ -1704,10 +1704,10 @@ def memory_optimized_batch_process_roms(
             stats["processed_files"] += 1
             current_batch.append(rom_file)
 
-            # Process batch when batch size is reached
+# Process Batch When Batch Size is Reached
             if len(current_batch) >= current_batch_size:
-                # Process the current batch
-                # Process the batch and yield results
+# Process the Current Batch
+# Process the Batch and Yield Results
                 for rom_info in _process_rom_batch(
                     current_batch, memory_manager
                 ):
@@ -1718,17 +1718,17 @@ def memory_optimized_batch_process_roms(
                 stats["batches_processed"] += 1
                 current_batch = []
 
-                # Dynamically adjust batch size based on memory pressure
+# Dynamically Adjust Batch Size Based on Memory Pressure
                 memory_pressure = memory_manager.memory_pressure
                 if memory_pressure > 0.8:
-                    # Reduce batch size when memory pressure is high
+# Reduce Batch Size When Memory Pressure is high
                     current_batch_size = max(10, int(current_batch_size * 0.7))
                     logging.info(
                         f"High memory pressure ({memory_pressure:.2f}): "
                         f"Batch size reduced to {current_batch_size}"
                     )
                 elif memory_pressure < 0.3 and current_batch_size < batch_size:
-                    # Increase batch size when memory pressure is low
+# Increase Batch size when memory pressure is low
                     new_size = int(current_batch_size * 1.3)
                     current_batch_size = min(batch_size, new_size)
                     logging.info(
@@ -1736,7 +1736,7 @@ def memory_optimized_batch_process_roms(
                         f"Batch size increased to {current_batch_size}"
                     )
 
-                # Reduce memory pressure after each batch
+# Reduce Memory Pressure After Each Batch
                 memory_manager.reduce_memory_pressure(target_pressure=0.5)
 
         # Process remaining files
@@ -1746,7 +1746,7 @@ def memory_optimized_batch_process_roms(
                 yield rom_info
             stats["batches_processed"] += 1
 
-        # Log final statistics
+# Log Final Statistics
         elapsed = time.time() - stats["start_time"]
         memory_stats = memory_manager.get_stats()
         logging.info(
@@ -1770,24 +1770,24 @@ def _process_rom_batch(
     """
     for rom_file in rom_files:
         try:
-            # Perform ROM detection and data extraction
+# Perform Rome Detection and Data Extraction
             # Normally we would call detect_console and other functions here
             # In this simplified version, we return basic information
             rom_name = os.path.basename(rom_file)
             file_size = os.path.getsize(rom_file)
             file_extension = os.path.splitext(rom_file)[1].lower()
 
-            # Create basic ROM info
+# Create Basic Rome Info
             rom_info = {
                 "path": rom_file,
                 "name": rom_name,
                 "size": file_size,
                 "extension": file_extension,
-                # We would add more information here, such as detected console,
-                # metadata, etc., depending on available functions
+# We would add more information here, search as detected console,
+# Metadata, etc., Depending on Available Functions
             }
 
-            # Try to detect the console if the function is available
+# Try to Detect the Console if the Function is Available
             try:
                 from .detectors.ml_detector_fixed import detect_console_with_ml
                 console_name, confidence = detect_console_with_ml(rom_file)
@@ -1797,18 +1797,18 @@ def _process_rom_batch(
             except ImportError:
                 pass
 
-            # Monitor memory usage
+# Monitor Memory Usage
             memory_manager.check_memory_usage()
 
             yield rom_info
 
         except Exception as e:
             logging.error(f"Error processing ROM {rom_file}: {e}")
-            # Continue despite error and skip the problematic ROM
+# Continue Despite Error and Skip The Problematic Rome
             continue
 
 
-# Export the new function as the standard batch processing function
+# Export the New Function as The Standard Batch Processing Function
 batch_process_roms = memory_optimized_batch_process_roms
 
 if __name__ == "__main__":

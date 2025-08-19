@@ -636,7 +636,7 @@ class WebInterface:
             self.is_running = True
             logger.info(f"Web-Interface gestartet auf http://{self.host}:{self.port}")
 
-            # Warte kurz, um sicherzustellen, dass der Server gestartet ist
+            # Wait short to ensure that the server has started
             time.sleep(1)
 
             # Open the browser if the server is running on localhost

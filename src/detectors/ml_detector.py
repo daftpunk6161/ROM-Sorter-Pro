@@ -147,7 +147,7 @@ def detect_console_with_ml(file_path: str) -> DetectionResult:
             "features_used": detector.last_features_used
         })
 
-# Create a result object
+# Create A Result Object
         result = DetectionResult(console, confidence, method="rule_based", file_path=file_path)
 
 # Provide debug info

@@ -236,7 +236,7 @@ class SettingsDialog(tk.Toplevel):
         tab = ttk.Frame(self.notebook)
         self.notebook.add(tab, text="Erscheinungsbild")
 
-# In a complete implementation, the appearance settings would be added here
+# In A Complete Implementation, The Appearance Settings would be added here
         label = tk.Label(
             tab,
             text="Erscheinungsbild-Einstellungen",
@@ -249,7 +249,7 @@ class SettingsDialog(tk.Toplevel):
         tab = ttk.Frame(self.notebook)
         self.notebook.add(tab, text="Erweitert")
 
-# In a complete implementation, the extended settings would be added here
+# In A Complete Implementation, The Extended Settings would be added here
         label = tk.Label(
             tab,
             text="Erweiterte Einstellungen",
@@ -259,7 +259,7 @@ class SettingsDialog(tk.Toplevel):
 
     def _save_settings(self):
         """Speichere die Einstellungen."""
-# In a complete implementation, the settings from the UI would be read here
+# In a complete implementation, The Settings from the Ui would be read here
 # and saved in self.config
 
         if self.on_save:

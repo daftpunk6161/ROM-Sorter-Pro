@@ -46,7 +46,7 @@ def is_valid_directory(path: Union[str, Path], must_exist: bool = True) -> bool:
             logger.warning(f"Verzeichnis existiert nicht: {path_obj}")
             return False
 
-# Check whether it is a directory (or could be)
+# Check Whether it is a directory (or could be)
         if path_obj.exists() and not path_obj.is_dir():
             logger.warning(f"Pfad ist kein Verzeichnis: {path_obj}")
             return False

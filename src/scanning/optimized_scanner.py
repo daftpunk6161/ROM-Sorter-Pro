@@ -39,7 +39,7 @@ warnings.warn(
     DeprecationWarning, stacklevel=2
 )
 
-# Logger setup with efficient zero handler as a default
+# Logger Setup With Efficient Zero Handler AS A Default
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 

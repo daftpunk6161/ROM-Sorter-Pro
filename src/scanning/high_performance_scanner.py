@@ -158,7 +158,7 @@ class HighPerformanceScanner:
         self.is_paused = False
         self._reset_counters()
 
-# Pack scan options in a dictionary
+# Pack Scan options in a dictionary
         scan_options = {
             'recursive': recursive,
             'file_types': file_types,
@@ -236,7 +236,7 @@ class HighPerformanceScanner:
             follow_symlinks = options.get('follow_symlinks', False)
             use_cache = options.get('use_cache', True)
 
-# Write a message into the log
+# Write a Message Into the Log
             logger.info(f"Starte Scan von {directory} mit Optionen: recursive={recursive}, "
                        f"max_depth={max_depth}, follow_symlinks={follow_symlinks}")
 
@@ -278,7 +278,7 @@ class HighPerformanceScanner:
                         file_path = futures[future]
                         rom_info = future.result()
 
-# If a valid Rome was found
+# If a valid rome was found
                         if rom_info:
                             self.roms_found += 1
 
@@ -425,7 +425,7 @@ class HighPerformanceScanner:
 # Check whether it is an archive
             if any(file_path.lower().endswith(ext) for ext in ARCHIVE_EXTENSIONS):
                 self.archives_found += 1
-# In a complete implementation, the archive content would be scanned here
+# In A Complete Implementation, The Archive Content would be scanned here
                 return None
 
 # Collect basic file information
@@ -524,7 +524,7 @@ class HighPerformanceScanner:
         Returns:
             ROM-Informationen oder None, wenn nicht im Cache oder veraltet
         """
-# In a complete implementation, cache access would take place here
+# In A Complete implementation, Cache Access Wood Take Place Here
         return None
 
     def _save_to_cache(self, file_path: str, rom_info: Dict):
@@ -535,7 +535,7 @@ class HighPerformanceScanner:
             file_path: Pfad zur Datei
             rom_info: ROM-Informationen
         """
-# In a complete implementation, cache storage would take place here
+# In A Complete implementation, Cache Storage would take place place here
         pass
 
     def _finish_scan(self, message: str):
@@ -578,5 +578,5 @@ class HighPerformanceScanner:
         self.is_paused = False
         self.should_stop = False
 
-# Exports this class as a standard scanner
+# Exports This Class as a Standard Scanner
 default_scanner = HighPerformanceScanner

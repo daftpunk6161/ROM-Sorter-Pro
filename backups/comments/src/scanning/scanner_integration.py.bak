@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+# -*-coding: utf-8-*-
 """
 ROM Sorter Pro - Integrationsbrücke für High-Performance-Scanner
 Phase 1 Implementation: Desktop-Optimierung
@@ -16,20 +16,20 @@ import threading
 import time
 from typing import Dict, List, Optional, Callable, Union, Any, Tuple, TypeVar
 
-# Type-Alias für die Config-Klasse definieren
+# Define the type alias for the config class
 ConfigType = TypeVar('ConfigType')
 
-# Lokale Importe
+# Local imports
 try:
     from .high_performance_scanner import HighPerformanceScanner
     from ..config import Config
 except ImportError:
-    # Fallback für direkten Aufruf dieses Moduls
+# Fallback for direct call to this module
     from high_performance_scanner import HighPerformanceScanner
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     from config import Config
 
-# Logging einrichten
+# Set up logging
 logger = logging.getLogger(__name__)
 
 class ScannerIntegration:
@@ -104,23 +104,23 @@ class ScannerIntegration:
         Returns:
             Scan-ID, die zur Identifizierung des Scans verwendet werden kann
         """
-        # Überprüft, ob das Verzeichnis existiert
+# Check whether the directory exists
         if not os.path.isdir(directory):
             self._handle_callback('error', f"Verzeichnis existiert nicht: {directory}")
             return None
 
-        # Neue Scan-ID erstellen
+# Create new scan-ID
         self.scan_counter += 1
         scan_id = f"scan_{self.scan_counter}"
 
-        # Startet den Scan in einem eigenen Thread
+# Starts the scan in a separate thread
         scan_thread = threading.Thread(
             target=self._run_scan,
             args=(scan_id, directory, recursive, file_types, max_depth, follow_symlinks, use_cache),
             daemon=True
         )
 
-        # Thread speichern und starten
+# Save and start the thread
         self.active_scans[scan_id] = {
             'thread': scan_thread,
             'directory': directory,
@@ -148,7 +148,7 @@ class ScannerIntegration:
         try:
             self.active_scans[scan_id]['status'] = 'running'
 
-            # Startet den Scanner
+# Starts the scanner
             result = self.scanner.scan(
                 directory, recursive, file_types, max_depth, follow_symlinks, use_cache
             )
@@ -185,7 +185,7 @@ class ScannerIntegration:
                 return result
             return False
         else:
-            # Alle laufenden Scans pausieren
+# Pause all ongoing scans
             paused_any = False
             for scan_id in self.active_scans:
                 if self.active_scans[scan_id]['status'] == 'running':
@@ -212,7 +212,7 @@ class ScannerIntegration:
                 return result
             return False
         else:
-            # Alle pausierten Scans fortsetzen
+# Continue all paused scans
             resumed_any = False
             for scan_id in self.active_scans:
                 if self.active_scans[scan_id]['status'] == 'paused':
@@ -239,7 +239,7 @@ class ScannerIntegration:
                 return result
             return False
         else:
-            # Alle laufenden oder pausierten Scans stoppen
+# Stop all running or paused scans
             stopped_any = False
             for scan_id in self.active_scans:
                 if self.active_scans[scan_id]['status'] in ['running', 'paused']:
@@ -285,12 +285,12 @@ class ScannerIntegration:
 
         return len(completed_scans)
 
-# Hauptfunktion für Testzwecke
+# Main function for test purposes
 def main():
     """Testfunktion für die Scanner-Integration."""
     import argparse
 
-    # Logging konfigurieren
+# Configure logging
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -322,7 +322,7 @@ def main():
         print(f"Fehler: {stats.get('errors', 0)}")
         print(f"Dauer: {stats.get('duration_seconds', 0):.2f} Sekunden")
 
-        # Systeme anzeigen
+# Show systems
         system_counts = stats.get('system_counts', {})
         if system_counts:
             print("\nGefundene Systeme:")
@@ -332,17 +332,17 @@ def main():
     def on_error(error):
         print(f"Fehler: {error}")
 
-    # Scanner-Integration initialisieren
+# Initialize scanner integration
     integration = ScannerIntegration()
 
-    # Callbacks registrieren
+# Register callbacks
     integration.register_callback('file_found', on_file_found)
     integration.register_callback('rom_found', on_rom_found)
     integration.register_callback('progress', on_progress)
     integration.register_callback('complete', on_complete)
     integration.register_callback('error', on_error)
 
-    # Scan starten
+# Start scan
     print(f"Starte Scan von {args.directory}...")
     scan_id = integration.scan_directory(
         args.directory,
@@ -354,7 +354,7 @@ def main():
     if scan_id:
         print(f"Scan gestartet mit ID: {scan_id}")
 
-        # Warte auf Abschluss
+# Wait for a conclusion
         try:
             while integration.active_scans[scan_id]['thread'].is_alive():
                 time.sleep(0.1)

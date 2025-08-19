@@ -14,24 +14,24 @@ def open_log_file(self):
     Diese Methode ist dafür gedacht, in die OptimizedROMSorterGUI-Klasse integriert zu werden.
     """
     try:
-        # Gehe vom UI-Verzeichnis ein Verzeichnis nach oben für die logs
+        # Go up to the logs from the UI directory a directory for the logs
         ui_dir = os.path.dirname(os.path.abspath(__file__))
         app_dir = os.path.dirname(ui_dir)
         log_path = os.path.join(app_dir, 'logs')
 
-        # Finde die neueste Log-Datei
+        # Find the latest log file
         if os.path.exists(log_path):
             log_files = [f for f in os.listdir(log_path) if f.startswith('rom_sorter_')]
             if log_files:
                 log_files.sort(reverse=True)  # Neueste zuerst
                 latest_log = os.path.join(log_path, log_files[0])
 
-                # Öffne die Log-Datei
+                # Open the log file
                 if platform.system() == 'Windows':
                     os.startfile(latest_log)
                 elif platform.system() == 'Darwin':  # macOS
                     os.system(f'open "{latest_log}"')
-                else:  # Linux und andere
+                else:  # Linux and others
                     os.system(f'xdg-open "{latest_log}"')
                 return
 

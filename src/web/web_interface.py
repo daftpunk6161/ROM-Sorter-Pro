@@ -128,7 +128,7 @@ class WebInterface:
                     open(os.path.join(TEMPLATES_PATH, 'index.html')).read()
                 )
 
-            # Otherwise generate a simple dashboard
+            # OtherWise Generates A Simple Dashboard
             return render_template_string(self._generate_dashboard_template())
 
         @app.route('/login', methods=['GET', 'POST'])
@@ -653,7 +653,7 @@ class WebInterface:
             logger.warning("Web interface is not running")
             return
 
-        # Flask doesn't have a simple way to stop the server
+        # Flask does not have a simple way to stop the server
         # In a real application, you would implement a shutdown function here
         self.is_running = False
         logger.info("Web interface stopped")

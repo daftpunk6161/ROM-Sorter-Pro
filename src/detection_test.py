@@ -37,7 +37,7 @@ def test_detection_pipeline(rom_path: str) -> Tuple[str, float]:
         print(f"Datei nicht gefunden: {rom_path}")
         return "Unknown", 0.0
 
-# Create a manager instance
+# Create A Manager Instance
     manager = DetectionManager.get_instance()
 
 # Extract file names

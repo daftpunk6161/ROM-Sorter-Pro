@@ -197,7 +197,7 @@ def is_valid_drop(mime_data: Any, allowed_extensions: Optional[List[str]] = None
 # Convert all extensions to small letters
     allowed_extensions = [ext.lower() for ext in allowed_extensions]
 
-# Check whether at least one file has a permitted extension
+# Check Whether at Least One File Has a Permitted Extension
     for url in urls:
         ext = os.path.splitext(url)[1].lower()
         if ext in allowed_extensions:
@@ -420,7 +420,7 @@ def handle_dropped_files(files: FileList, callback: DropCallback) -> None:
         callback: Aufzurufende Funktion
     """
     try:
-# Give the callback in a safe environment
+# Give the Callback in A Safe Environment
         callback(files)
     except Exception as e:
         logger.error(f"Fehler bei der Verarbeitung abgelegter Dateien: {e}")

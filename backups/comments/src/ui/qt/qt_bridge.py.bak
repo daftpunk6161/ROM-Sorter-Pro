@@ -26,17 +26,17 @@ except ImportError:
 
 # Lokale Importe
 try:
-    # Relativer Import für normalen Import-Pfad
+    # Relative import for normal import path
     from ...scanning.scanner_integration import ScannerIntegration
     from ...database.rom_database import ROMDatabase
     from ...config.enhanced_config import get_enhanced_config
     from ...utils.thread_pool import AdaptiveThreadPool
 except ImportError:
-    # Absoluter Import für direkten Aufruf oder ungewöhnliche Import-Pfade
+    # Absolute import for direct calls or unusual import paths
     import sys
     from pathlib import Path
 
-    # Füge Hauptverzeichnis zum Pfad hinzu, falls nötig
+    # Add the main directory to the path, if necessary
     src_dir = Path(__file__).resolve().parent.parent.parent
     if str(src_dir) not in sys.path:
         sys.path.insert(0, str(src_dir))
@@ -120,7 +120,7 @@ class ScannerWorker(QThread):
                 use_cache=use_cache
             )
 
-            # Warte auf Abschluss (dies wird intern durch die Callbacks signalisiert)
+            # Wait for a conclusion (this is signaled internally by the callbacks)
             while self.scanner.is_scan_active(scan_id):
                 self.msleep(100)
 
@@ -210,9 +210,9 @@ class DatabaseWorker(QThread):
         import_file = self.params.get('file')
         import_type = self.params.get('type', 'dat')
 
-        # Dies würde tatsächlich einen inkrementellen Import mit Fortschrittsrückmeldungen durchführen
+        # This would actually carry out an incremental import with feedback feedback
         # Hier nur als Beispiel implementiert
-        total_items = 100  # In der Realität aus der Importdatei bestimmt
+        total_items = 100  # Determined in reality from the import file
 
         for i in range(total_items):
             # Simuliere Import-Fortschritt
@@ -226,7 +226,7 @@ class DatabaseWorker(QThread):
         export_file = self.params.get('file')
         export_type = self.params.get('type', 'csv')
 
-        # Dies würde tatsächlich einen inkrementellen Export mit Fortschrittsrückmeldungen durchführen
+        # This would actually carry out incremental export with feedback feedback
         # Hier nur als Beispiel implementiert
         total_items = self.params.get('count', 50)
 
@@ -286,7 +286,7 @@ class QtIntegrationBridge:
             True, wenn erfolgreich gestoppt, sonst False
         """
         if worker_id in self.active_workers:
-            # Suche nach zugehöriger Scan-ID und stoppe den Scan
+            # Search for the associated scan-ID and stop the scan
             scan_ids = self.scanner.get_active_scans()
             for scan_id in scan_ids:
                 self.scanner.stop_scan(scan_id)
@@ -351,7 +351,7 @@ class QtIntegrationBridge:
         for worker_id, worker in list(self.active_workers.items()):
             self.cancel_operation(worker_id)
 
-        # Schließe Datenbank
+        # Close database
         if hasattr(self.database, 'close'):
             self.database.close()
 

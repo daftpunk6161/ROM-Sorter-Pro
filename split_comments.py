@@ -24,7 +24,7 @@ def split_long_comment_lines(file_path, max_line_length=79):
         for i in range(len(lines)):
             line = lines[i]
 
-# Check whether it is a comment line and whether it is too long
+# Check Whether it is a comment line and whether it is too long
             if line.strip().startswith('#') and len(line.rstrip()) > max_line_length:
 # Find indentation
                 indent = re.match(r'^(\s*)', line).group(1)
@@ -32,7 +32,7 @@ def split_long_comment_lines(file_path, max_line_length=79):
 # Share the comment text
                 comment_text = line.strip()[1:].strip()  # Remove # and leading spaces
 
-# Simple strategy: Find and divide for a space for approx. 70 characters
+# Simple strategy: Find and Divide for a Space for Approx. 70 Character
                 words = comment_text.split()
                 new_comment_lines = []
                 current_line = "#"

@@ -282,7 +282,7 @@ def detect_chd_console(file_path: str) -> Tuple[str, float]:
     Returns:
         Tuple aus (console_name, confidence)
     """
-# Check whether it is actually a CHD file
+# Check Whether it is actual a chd file
     if not file_path.lower().endswith('.chd'):
         return "Unknown", 0.0
 

@@ -128,7 +128,7 @@ def calculate_file_hash(file_path: Union[str, Path], algorithm='md5', block_size
         file_size = file_path_obj.stat().st_size
         
 # Processing optimized for small files
-        if file_size < 1024 * 1024 and os.name != 'nt':  # 1MB, nicht für Windows (wegen mmap-Einschränkungen)
+        if file_size < 1024 * 1024 and os.name != 'nt':  # 1MB, not for Windows (because of MMAP restrictions)
             return _calculate_small_file_hash(file_path_obj, algorithm)
             
 # Choose Hashalgorithm

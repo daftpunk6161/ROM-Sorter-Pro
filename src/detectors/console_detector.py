@@ -258,7 +258,7 @@ class ConsoleDetector:
             except (TypeError, ValueError):
                 continue
 
-# Process every directory as a group
+# Process Every Directory AS A Group
         for directory, files in dir_files.items():
             if len(files) <= 1:
                 continue  # Skip if only one file in the directory

@@ -98,8 +98,8 @@ class CollectionAnalyzer:
             return False
 
         try:
-# Example: Acceptance of a SQLite database with a certain structure
-# In a real application, this would be adapted to the actual DB structure
+# Example: Acceptance of a SQLITE DATABASE WITH A Certain Structure
+# In a real application, this would be adapted to the actual db Structure
 
 # Rome's shop
             cursor = self.db_connection.cursor()
@@ -361,7 +361,7 @@ class ReportGenerator:
 
         stats = self.analyzer.statistics
 
-# Create a structured amount of data for the report
+# Create a Structured Amount of Data for the Report
         self.report_data = {
             'title': 'ROM-Sammlungsbericht',
             'generation_date': datetime.datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
@@ -447,7 +447,7 @@ class ReportGenerator:
         """
         missing_roms = self.analyzer.get_missing_roms()
 
-# Group according to console for a better reporting structure
+# Group According to Console for A Better Reporting Structure
         consoles = defaultdict(list)
         for rom in missing_roms[:100]:  # Limit to 100 entries
             consoles[rom.get('console_name', 'Unbekannt')].append({
@@ -480,7 +480,7 @@ class ReportGenerator:
 
         os.makedirs(output_dir, exist_ok=True)
 
-# Create a time stamp for clear file names
+# Create A Time Stamp for Clear File Names
         timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
 
         try:
@@ -639,7 +639,7 @@ class ReportGenerator:
             self.prepare_report_data()
 
         try:
-# Create a flat dictionary for CSV export
+# Create a flat dictionary for csv export
             flat_data = []
 
 # Console data
@@ -728,13 +728,13 @@ class ReportGenerator:
 # Charge the template
             template_path = os.path.join(TEMPLATE_DIR, 'report_template.html')
 
-# If the template does not exist, create a standard template
+# If the Template Does Not Exist, Create A Standard Template
             if not os.path.exists(template_path):
                 os.makedirs(os.path.dirname(template_path), exist_ok=True)
                 with open(template_path, 'w', encoding='utf-8') as f:
                     f.write(self._get_default_html_template())
 
-# Create a Jinja2 environment
+# Create a Jinja2 Environment
             env = Environment(loader=FileSystemLoader(os.path.dirname(template_path)))
             template = env.get_template(os.path.basename(template_path))
 
@@ -1135,7 +1135,7 @@ if __name__ == "__main__":
     print("ROM Sorter Pro - Statistik- und Berichtsmodul")
     print("-----------------------------------------")
 
-# Generate a sample report
+# Generates A Sample Report
     reports = generate_collection_report(formats=['html', 'csv', 'json'])
 
     if reports:

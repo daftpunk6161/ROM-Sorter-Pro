@@ -90,7 +90,7 @@ class DatabaseConnectionPool:
                 try:
                     conn.close()
                 except:
-                    pass  # Ignoriere Fehler beim Schließen
+                    pass  # Ignore mistakes when closing
                 self._active_connections -= 1
 
     def _create_connection(self) -> sqlite3.Connection:
@@ -98,8 +98,8 @@ class DatabaseConnectionPool:
         try:
             conn = sqlite3.connect(
                 self.db_path,
-                isolation_level=None,  # Autocommit-Modus für bessere Performance
-                check_same_thread=False,  # Erlaubt Thread-übergreifende Nutzung
+                isolation_level=None,  # AutoCommit mode for better performance
+                check_same_thread=False,  # Allows thread cross-use use
                 timeout=30.0
             )
 
@@ -134,7 +134,7 @@ class DatabaseConnectionPool:
                 try:
                     conn.close()
                 except:
-                    pass  # Ignoriere Fehler beim Schließen
+                    pass  # Ignore mistakes when closing
             self._active_connections = 0
 
 

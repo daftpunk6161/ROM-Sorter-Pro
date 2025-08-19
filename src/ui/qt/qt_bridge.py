@@ -120,7 +120,7 @@ class ScannerWorker(QThread):
                 use_cache=use_cache
             )
 
-            # Wait for a conclusion (this is signaled internally by the callbacks)
+            # Wait for a Conclusion (this is signaled internaly by the callbacks)
             while self.scanner.is_scan_active(scan_id):
                 self.msleep(100)
 

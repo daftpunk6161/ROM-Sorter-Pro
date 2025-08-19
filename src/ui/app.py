@@ -140,7 +140,7 @@ class ROMSorterApp:
         if self.config.get("use_adaptive_scanner", False):
             self.scanner = AdaptiveScanner(max_workers=options.max_workers)
         else:
-# The optimized scanner only takes filter_extensions and max_workers as a parameter
+# The Optimized Scanner Only Takes Filter_Extensions and Max_Workers as a Parameter
             self.scanner = Scanner(None, options.max_workers)
 
         logging.debug("Scanner initialisiert mit Optionen: %s", options)
@@ -153,7 +153,7 @@ class ROMSorterApp:
             return
 
 # Easy argument processing
-# In a complete implementation, an argument parser would be used here
+# In a complete implementation, to argument parser would be used here
         for i, arg in enumerate(args):
             if arg == "--source" and i + 1 < len(args):
                 self.window.source_path.set(args[i + 1])

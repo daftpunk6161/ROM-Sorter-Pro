@@ -243,7 +243,7 @@ class MetadataCache:
                 self._cache["last_updated"] = datetime.now().isoformat()
 
 # Save the cache regularly
-                if len(self._cache["metadata"]) % 10 == 0:  # Speichere nach jedem 10. Eintrag
+                if len(self._cache["metadata"]) % 10 == 0:  # Save after each 10.
                     self._save_cache()
 
                 return True
@@ -575,9 +575,9 @@ class MobyGamesAPI:
                     "description": game_data.get("description", ""),
                     "genres": [genre["genre_name"] for genre in game_data.get("genres", [])],
                     "platforms": [platform["platform_name"] for platform in game_data.get("platforms", [])],
-                    "release_date": "",  # Wird aus der Release-Anfrage extrahiert
-                    "developers": [],    # Wird aus den Credits extrahiert
-                    "publishers": [],    # Wird aus der Release-Anfrage extrahiert
+                    "release_date": "",  # Is extracted from the release request
+                    "developers": [],    # Is extracted from the credits
+                    "publishers": [],    # Is extracted from the release request
                     "images": {},
                     "source": "mobygames",
                     "source_id": str(game_id)
@@ -773,9 +773,9 @@ class MetadataManager:
         patterns = [
             r'\([^\)]*\)',  # Text in Klammern
             r'\[[^\]]*\]',  # Text in eckigen Klammern
-            r'[Rr][Ee][Vv][\s\._-]*[0-9]+',  # Rev/Revision mit Nummer
+            r'[Rr][Ee][Vv][\s\._-]*[0-9]+',  # REV/Revision with number
             r'[Vv][0-9\.]+',  # Versionsnummer
-            r'[\._-]*(EUR|USA|JPN|JAP|NTSC|PAL|[Uu]nleashed|ROM|[Cc]lean)',  # Regionen und Tags
+            r'[\._-]*(EUR|USA|JPN|JAP|NTSC|PAL|[Uu]nleashed|ROM|[Cc]lean)',  # Regions and tags
             r'[\._-]*([Hh]ack|[Bb]eta|[Dd]emo|[Pp]rototype|[Ff]inal)',  # Statusbezeichnungen
         ]
 

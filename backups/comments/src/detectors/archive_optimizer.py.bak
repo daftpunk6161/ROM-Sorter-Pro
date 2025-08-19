@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+# -*-coding: utf-8-*-
 
 """
 ROM Sorter Pro - Erweiterte Archiv-Erkennung und Verarbeitung
@@ -29,10 +29,10 @@ import shutil
 from pathlib import Path
 from typing import Dict, List, Any, Tuple, Optional, Union, Set, Generator, BinaryIO
 
-# Logger konfigurieren
+# Configure logger
 logger = logging.getLogger(__name__)
 
-# Konstanten für unterstützte Archivformate
+# Constants for supported archive formats
 ARCHIVE_EXTENSIONS = {
     '.zip': 'ZIP',
     '.7z': '7Z',
@@ -52,7 +52,7 @@ ARCHIVE_EXTENSIONS = {
     '.chd': 'CHD'
 }
 
-# ROMs, die oft in Archiven enthalten sind
+# ROMS that are often contained in archives
 ROM_EXTENSIONS = [
     '.nes', '.smc', '.sfc', '.n64', '.z64', '.v64',
     '.gb', '.gbc', '.gba', '.nds', '.md', '.smd',
@@ -60,7 +60,7 @@ ROM_EXTENSIONS = [
     '.img', '.rom', '.pce'
 ]
 
-# Konstanten für externe Tools
+# Constants for external tools
 _7ZIP_PATHS = [
     r"C:\Program Files\7-Zip\7z.exe",
     r"C:\Program Files (x86)\7-Zip\7z.exe",
@@ -80,7 +80,7 @@ def find_7zip_path() -> Optional[str]:
         if os.path.exists(path):
             return path
 
-    # Versuche es über PATH zu finden
+# Try to find it via Path
     try:
         if os.name == 'nt':  # Windows
             result = subprocess.run(["where", "7z"], capture_output=True, text=True, check=False)
@@ -186,17 +186,17 @@ class AdvancedArchiveDetector:
         archive_info = ArchiveInfo(file_path)
 
         try:
-            # ZIP-Dateien mit Python-Bibliothek verarbeiten
+# Process zip files with Python library
             if archive_info.archive_type == "ZIP":
                 self._process_zip_archive(archive_info, scan_nested)
-            # Für andere Formate 7-Zip verwenden, wenn verfügbar
+# Use for other formats 7-Zip if available
             elif self._7zip_path:
                 self._process_archive_with_7zip(archive_info, scan_nested)
             else:
                 logger.warning(f"Kein 7-Zip gefunden, kann {file_path} nicht verarbeiten")
                 return archive_info
 
-            # Bestimme, ob es sich um ein Multi-ROM-Archiv handelt
+# Determine whether it is a multi-Rome archive
             if len(archive_info.rom_files) > 1:
                 archive_info.is_multi_rom = True
 
@@ -215,7 +215,7 @@ class AdvancedArchiveDetector:
         """
         try:
             with zipfile.ZipFile(archive_info.file_path, 'r') as zip_file:
-                # Sammle Informationen über alle Dateien
+# Collect information about all files
                 for file_info in zip_file.infolist():
                     if file_info.is_dir():
                         continue
@@ -227,19 +227,19 @@ class AdvancedArchiveDetector:
                         'date_time': file_info.date_time
                     })
 
-                    # Komprimierungsgröße
+# Compression size
                     archive_info.compressed_size += file_info.compress_size
 
-                    # Prüfe, ob es sich um eine ROM-Datei handelt
+# Check whether it is a Rome file
                     ext = os.path.splitext(file_info.filename.lower())[1]
                     if ext in ROM_EXTENSIONS:
                         archive_info.rom_files.append(file_info.filename)
 
-                    # Prüfe auf verschachtelte Archive
+# Check on nested archives
                     if scan_nested and ext in ARCHIVE_EXTENSIONS:
                         archive_info.nested_archives.append(file_info.filename)
 
-                        # Optional: Extrahiere und scanne verschachtelte Archive
+# Optional: Extract and scanne nested archives
                         if scan_nested:
                             with tempfile.TemporaryDirectory() as temp_dir:
                                 nested_path = os.path.join(temp_dir, os.path.basename(file_info.filename))
@@ -251,7 +251,7 @@ class AdvancedArchiveDetector:
                                     for rom in nested_info.rom_files:
                                         archive_info.rom_files.append(f"{file_info.filename}/{rom}")
 
-                # Berechne Kompressionsrate
+# Calculate compression rate
                 if archive_info.size > 0:
                     archive_info.compression_ratio = archive_info.compressed_size / archive_info.size
 
@@ -269,7 +269,7 @@ class AdvancedArchiveDetector:
             scan_nested: Ob verschachtelte Archive gescannt werden sollen
         """
         try:
-            # Listenmodus für Archivinhalt
+# List mode for archive content
             cmd = [self._7zip_path, "l", "-slt", archive_info.file_path]
             process = subprocess.run(cmd, capture_output=True, text=True, check=False)
 
@@ -281,7 +281,7 @@ class AdvancedArchiveDetector:
             files = []
             current_file = None
 
-            # Parse 7-Zip-Ausgabe
+# Parse 7-Zip edition
             for line in output.splitlines():
                 line = line.strip()
 
@@ -309,11 +309,11 @@ class AdvancedArchiveDetector:
                 elif line.startswith("Modified = ") and current_file:
                     current_file['date_time'] = line[11:]
 
-            # Letzter Eintrag hinzufügen
+# Add last entry
             if current_file:
                 files.append(current_file)
 
-            # Verarbeite Dateien
+# Processed files
             for file_info in files:
                 if file_info['name'].endswith('/'):  # Verzeichnis
                     continue
@@ -321,16 +321,16 @@ class AdvancedArchiveDetector:
                 archive_info.files.append(file_info)
                 archive_info.compressed_size += file_info['compressed_size']
 
-                # Prüfe, ob es sich um eine ROM-Datei handelt
+# Check whether it is a Rome file
                 ext = os.path.splitext(file_info['name'].lower())[1]
                 if ext in ROM_EXTENSIONS:
                     archive_info.rom_files.append(file_info['name'])
 
-                # Prüfe auf verschachtelte Archive
+# Check on nested archives
                 if ext in ARCHIVE_EXTENSIONS:
                     archive_info.nested_archives.append(file_info['name'])
 
-                    # Optional: Extrahiere und scanne verschachtelte Archive
+# Optional: Extract and scanne nested archives
                     if scan_nested:
                         with tempfile.TemporaryDirectory() as temp_dir:
                             nested_path = os.path.join(temp_dir, os.path.basename(file_info['name']))
@@ -344,7 +344,7 @@ class AdvancedArchiveDetector:
                                     for rom in nested_info.rom_files:
                                         archive_info.rom_files.append(f"{file_info['name']}/{rom}")
 
-            # Berechne Kompressionsrate
+# Calculate compression rate
             if archive_info.size > 0:
                 archive_info.compression_ratio = archive_info.compressed_size / archive_info.size
 
@@ -366,21 +366,21 @@ class AdvancedArchiveDetector:
         try:
             archive_type = self.get_archive_type(archive_path)
 
-            # ZIP-Dateien mit Python-Bibliothek verarbeiten
+# Process zip files with Python library
             if archive_type == "ZIP":
                 with zipfile.ZipFile(archive_path, 'r') as zip_file:
-                    # Prüfe, ob die Datei im Archiv existiert
+# Check whether the file exists in the archive
                     try:
                         info = zip_file.getinfo(file_path)
                     except KeyError:
                         logger.error(f"Datei {file_path} nicht im Archiv {archive_path} gefunden")
                         return False
 
-                    # Extrahiere die Datei
+# Extract the file
                     zip_file.extract(file_path, output_path)
                     return True
 
-            # Für andere Formate 7-Zip verwenden, wenn verfügbar
+# Use for other formats 7-Zip if available
             elif self._7zip_path:
                 cmd = [self._7zip_path, "e", "-y", "-o" + output_path, archive_path, file_path]
                 process = subprocess.run(cmd, capture_output=True, check=False)
@@ -412,18 +412,18 @@ class AdvancedArchiveDetector:
 
             extracted_files = []
 
-            # Erstelle das Zielverzeichnis, falls es nicht existiert
+# Create the target directory if it does not exist
             os.makedirs(output_path, exist_ok=True)
 
             archive_type = self.get_archive_type(archive_path)
 
-            # ZIP-Dateien mit Python-Bibliothek verarbeiten
+# Process zip files with Python library
             if archive_type == "ZIP":
                 with zipfile.ZipFile(archive_path, 'r') as zip_file:
                     for rom_file in archive_info.rom_files:
-                        # Prüfe, ob die ROM-Datei direkt im Archiv oder in einem verschachtelten Archiv ist
+# Check whether the Rome file is directly in the archive or in a nested archive
                         if "/" in rom_file and rom_file.split("/")[0] in archive_info.nested_archives:
-                            # Verschachtelte ROM - extrahiere zuerst das innere Archiv
+# Nested Rome - first extract the inner archive
                             nested_archive = rom_file.split("/")[0]
                             inner_rom = "/".join(rom_file.split("/")[1:])
 
@@ -432,49 +432,49 @@ class AdvancedArchiveDetector:
                                 with zip_file.open(nested_archive) as source, open(temp_archive, 'wb') as target:
                                     shutil.copyfileobj(source, target)
 
-                                # Extrahiere ROM aus verschachteltem Archiv
+# Extract Rome from nested archive
                                 if self.extract_file_from_archive(temp_archive, inner_rom, output_path):
                                     extracted_path = os.path.join(output_path, os.path.basename(inner_rom))
                                     if os.path.exists(extracted_path):
                                         extracted_files.append(extracted_path)
                         else:
-                            # Direkte ROM-Datei
+# Direct Rome file
                             zip_file.extract(rom_file, output_path)
                             extracted_path = os.path.join(output_path, rom_file)
                             if os.path.exists(extracted_path):
                                 extracted_files.append(extracted_path)
 
-            # Für andere Formate 7-Zip verwenden, wenn verfügbar
+# Use for other formats 7-Zip if available
             elif self._7zip_path:
-                # Extrahiere alle ROM-Dateien
+# Extract all Rome files
                 cmd = [self._7zip_path, "e", "-y", "-o" + output_path, archive_path]
                 cmd.extend([f for f in archive_info.rom_files if "/" not in f])
 
                 if cmd[4:]:  # Wenn es direkte ROMs gibt
                     process = subprocess.run(cmd, capture_output=True, check=False)
                     if process.returncode == 0:
-                        # Füge extrahierte Dateien zur Liste hinzu
+# Add extracted files to the list
                         for rom_file in archive_info.rom_files:
                             if "/" not in rom_file:
                                 extracted_path = os.path.join(output_path, os.path.basename(rom_file))
                                 if os.path.exists(extracted_path):
                                     extracted_files.append(extracted_path)
 
-                # Verarbeite verschachtelte Archive
+# Processed nested archives
                 for rom_file in archive_info.rom_files:
                     if "/" in rom_file:
                         nested_archive = rom_file.split("/")[0]
                         inner_rom = "/".join(rom_file.split("/")[1:])
 
                         with tempfile.TemporaryDirectory() as temp_dir:
-                            # Extrahiere das innere Archiv
+# Extract the inner archive
                             extract_cmd = [self._7zip_path, "e", "-y", "-o" + temp_dir, archive_path, nested_archive]
                             extract_process = subprocess.run(extract_cmd, capture_output=True, check=False)
 
                             if extract_process.returncode == 0:
                                 temp_archive = os.path.join(temp_dir, os.path.basename(nested_archive))
                                 if os.path.exists(temp_archive):
-                                    # Extrahiere ROM aus verschachteltem Archiv
+# Extract Rome from nested archive
                                     if self.extract_file_from_archive(temp_archive, inner_rom, output_path):
                                         extracted_path = os.path.join(output_path, os.path.basename(inner_rom))
                                         if os.path.exists(extracted_path):
@@ -504,16 +504,16 @@ class AdvancedArchiveDetector:
                 logger.warning("Keine Dateien zum Archivieren angegeben")
                 return False
 
-            # Stelle sicher, dass alle Dateien existieren
+# Make sure that all files exist
             for file_path in files:
                 if not os.path.exists(file_path):
                     logger.error(f"Datei {file_path} existiert nicht")
                     return False
 
-            # Erstelle das Ausgabeverzeichnis, falls nötig
+# Create the output directory, if necessary
             os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
 
-            # Wähle die Archivierungsmethode
+# Choose the archiving method
             if archive_type == "ZIP":
                 return self._create_zip_archive(files, output_path)
             elif archive_type == "7Z" and self._7zip_path:
@@ -542,7 +542,7 @@ class AdvancedArchiveDetector:
 
             with zipfile.ZipFile(output_path, 'w', compression=compression) as zip_file:
                 for file_path in files:
-                    # Verwende den Dateinamen ohne Pfad als Archiveintrag
+# Use the file name without a path as an archive entry
                     zip_file.write(file_path, arcname=os.path.basename(file_path))
 
             return True
@@ -563,7 +563,7 @@ class AdvancedArchiveDetector:
             True bei Erfolg, False bei Fehler
         """
         try:
-            # Wechsle zum Verzeichnis der ersten Datei, damit nur Dateinamen archiviert werden
+# Change to the directory of the first file so that only file names are archived
             working_dir = os.path.dirname(files[0])
             filenames = [os.path.basename(f) for f in files]
 
@@ -589,15 +589,15 @@ class AdvancedArchiveDetector:
         """
         ext = os.path.splitext(file_path.lower())[1]
 
-        # Für bereits komprimierte Dateiformate ist ZIP oft besser
+# ZIP is often better for compressed file formats
         if ext in ['.jpg', '.jpeg', '.png', '.mp3', '.mp4', '.ogg', '.iso']:
             return "ZIP"
 
-        # Für ROM-Dateien ist 7Z oft besser
+# 7Z is often better for Rome files
         if ext in ROM_EXTENSIONS:
             return "7Z" if self._7zip_path else "ZIP"
 
-        # Standardwert
+# Standard value
         return "ZIP"
 
 
@@ -653,7 +653,7 @@ def create_rom_archive(rom_files: List[str], output_path: str) -> bool:
     """
     detector = get_advanced_archive_detector()
 
-    # Bestimme das beste Format anhand der ersten Datei
+# Determine the best format based on the first file
     if rom_files:
         archive_type = detector.get_best_compression_format(rom_files[0])
     else:

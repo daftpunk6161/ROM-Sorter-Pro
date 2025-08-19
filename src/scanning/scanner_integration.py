@@ -354,7 +354,7 @@ def main():
     if scan_id:
         print(f"Scan gestartet mit ID: {scan_id}")
 
-# Wait for a conclusion
+# Wait for a Conclusion
         try:
             while integration.active_scans[scan_id]['thread'].is_alive():
                 time.sleep(0.1)

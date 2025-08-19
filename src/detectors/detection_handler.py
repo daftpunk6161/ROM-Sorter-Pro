@@ -396,7 +396,7 @@ class DetectionManager:
                     if ml_result.confidence >= 0.7:
                         return ml_result
 
-# Standard detection without a database
+# Standard Detection Without A Database
                 self.stats["standard_detections"] += 1
                 console, confidence = detect_console_enhanced(filename, file_path_str)
                 result = DetectionResult(console, confidence, method="enhanced", file_path=file_path_str)

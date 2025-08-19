@@ -37,19 +37,19 @@ from typing import Tuple, Dict, List, Optional, Set, Any
 
 logger = logging.getLogger(__name__)
 
-# CHD-Header Signatur für Typ-Erkennung
+# CHD header signature for type detection
 CHD_SIGNATURE = b'MComprHD'
 CHD_V5_SIGNATURE = b'MComprHD\x05'
 
-# Bekannte CHD-Format Version und entsprechende Konsolen
+# Well-known CHD format version and corresponding consoles
 CHD_CONSOLE_MAPPING = {
-    # MAME CHD-Formate haben oft spezifische Merkmale
+# MAME CHD formats often have specific features
     'MAME': [
         r'chd[0-9]+', r'harddisk', r'cdrom\d*', r'chd[\\/]',
         r'arcade', r'mame', r'final\s*burn', r'neogeo'
     ],
 
-    # Sony PlayStation
+# Sony Playstation
     'Sony - PlayStation': [
         r'ps[x1]', r'playstation(?!\s*[234])', r'psx', r'psone'
     ],
@@ -69,7 +69,7 @@ CHD_CONSOLE_MAPPING = {
         r'sega\s*cd', r'mega\s*cd', r'scd', r'mega\-cd'
     ],
 
-    # Nintendo GameCube
+# Nintendo Gamecube
     'Nintendo - GameCube': [
         r'gamecube', r'gc', r'nintendo\s*gc'
     ],
@@ -80,7 +80,7 @@ CHD_CONSOLE_MAPPING = {
     ],
 }
 
-# Typische Spiel-ID Muster für verschiedene Konsolen
+# Typical game ID patterns for different consoles
 CONSOLE_ID_PATTERNS = {
     'Sony - PlayStation': [
         r'S[A-Z]{2,3}\-\d{4,5}',  # SCUS-12345, SCES-12345
@@ -103,7 +103,7 @@ CONSOLE_ID_PATTERNS = {
     ],
 }
 
-# Liste der typischen Dateigröße nach Konsole (ungefährer Bereich in MB)
+# List of typical file size according to the console (approximate area in MB)
 CONSOLE_SIZE_RANGES = {
     'MAME - Arcade': (5, 5000),           # Sehr variabel
     'Sony - PlayStation': (300, 750),      # Typisch 650MB
@@ -124,37 +124,37 @@ def get_chd_console(chd_path: str) -> Tuple[str, float]:
     Returns:
         Tuple mit (console_name, confidence)
     """
-    # Standardwerte
+# Standard values
     console = "MAME - Arcade"  # Standard-Fallback
     confidence = 0.5
 
-    # Existiert die Datei überhaupt?
+# Does the file even exist?
     if not os.path.exists(chd_path):
         logger.warning(f"CHD-Datei existiert nicht: {chd_path}")
         return console, confidence
 
-    # 1. Dateinamenmuster-Überprüfung
+# 1. File name pattern check
     filename = os.path.basename(chd_path).lower()
     parent_dir = os.path.basename(os.path.dirname(chd_path)).lower()
 
-    # Prüfen auf Konsolen-spezifische Muster im Dateinamen und Ordnernamen
+# Check for console-specific patterns in the file name and folder names
     console_scores = {}
 
-    # Analysiere Dateinamen und Verzeichnis
+# Analyze file names and directory
     for console_name, patterns in CHD_CONSOLE_MAPPING.items():
         score = 0
         for pattern in patterns:
-            # Prüfe im Dateinamen
+# Check in the file name
             if re.search(pattern, filename, re.IGNORECASE):
                 score += 0.3
 
-            # Prüfe im übergeordneten Verzeichnis (höheres Gewicht)
+# Check in the higher -level directory (higher weight)
             if re.search(pattern, parent_dir, re.IGNORECASE):
                 score += 0.4
 
         console_scores[console_name] = score
 
-    # 2. Dateigröße-basierte Analyse
+# 2. File size-based analysis
     try:
         file_size_mb = os.path.getsize(chd_path) / (1024 * 1024)
 
@@ -162,7 +162,7 @@ def get_chd_console(chd_path: str) -> Tuple[str, float]:
             if min_size <= file_size_mb <= max_size:
                 console_scores[console_name] = console_scores.get(console_name, 0) + 0.1
 
-                # Typische Größen für bestimmte Konsolen bekommen einen zusätzlichen Bonus
+# Typical sizes for certain consoles get an additional bonus
                 if console_name == 'Sony - PlayStation' and 600 <= file_size_mb <= 700:
                     console_scores[console_name] += 0.1
                 elif console_name == 'Sony - PlayStation 2' and 4300 <= file_size_mb <= 4700:
@@ -170,21 +170,21 @@ def get_chd_console(chd_path: str) -> Tuple[str, float]:
     except Exception as e:
         logger.warning(f"Fehler bei der Größenberechnung von {chd_path}: {e}")
 
-    # 3. Versuche Metadaten aus der CHD-Datei zu extrahieren (vereinfacht)
+# 3. Try to extract metadata from the CHD file (simplified)
     try:
-        # Öffne die ersten 100 Bytes, um Header zu lesen
+# Open the first 100 bytes to read header
         with open(chd_path, 'rb') as f:
             header = f.read(100)
 
-            # Prüfen auf MAME CHD-Signatur
+# Check on MAME CHD signature
             if CHD_SIGNATURE in header:
                 console_scores['MAME - Arcade'] = console_scores.get('MAME - Arcade', 0) + 0.2
 
-                # CHD v5-Format wird oft für neuere MAME-Versionen verwendet
+# CHD V5 format is often used for newer Mame versions
                 if CHD_V5_SIGNATURE in header:
                     console_scores['MAME - Arcade'] += 0.1
 
-            # Suche nach Konsolenspezifischen IDs im gesamten Header
+# Search for console -specific IDs throughout the header
             header_str = header.decode('utf-8', errors='ignore')
             for console_name, patterns in CONSOLE_ID_PATTERNS.items():
                 for pattern in patterns:
@@ -193,9 +193,9 @@ def get_chd_console(chd_path: str) -> Tuple[str, float]:
     except Exception as e:
         logger.warning(f"Fehler beim Lesen des CHD-Headers von {chd_path}: {e}")
 
-    # 4. Datenbank-Überprüfung, falls vorhanden
+# 4. Database check, if available
     try:
-        # Berechne MD5 nur für die ersten 4MB (schneller)
+# Calculate MD5 only for the first 4MB (faster)
         md5_hash = calculate_partial_md5(chd_path, 4*1024*1024)
         if md5_hash:
             db_console = check_chd_database(md5_hash)
@@ -204,7 +204,7 @@ def get_chd_console(chd_path: str) -> Tuple[str, float]:
     except Exception as e:
         logger.debug(f"Fehler bei der Datenbankabfrage für {chd_path}: {e}")
 
-    # Finde die Konsole mit der höchsten Punktzahl
+# Find the console with the highest score
     if console_scores:
         best_console = max(console_scores.items(), key=lambda x: x[1])
 
@@ -251,16 +251,16 @@ def check_chd_database(md5_hash: str) -> Optional[str]:
     """
     from src.database.connection_pool import ROM_DATABASE_PATH, database_connection
 
-    # Wenn Datenbank nicht existiert, nicht versuchen
+# If database does not exist, do not try
     if not Path(ROM_DATABASE_PATH).exists():
         return None
 
     try:
-        # Verwende den Context-Manager für sichere Datenbankverbindungen
+# Use the context manager for secure database connections
         with database_connection(ROM_DATABASE_PATH) as conn:
             cursor = conn.cursor()
 
-            # Prüfe nach dem Hash in der Datenbank
+# Check after the hash in the database
             cursor.execute("SELECT console FROM roms WHERE md5=? OR crc=? OR sha1=? LIMIT 1",
                          (md5_hash, md5_hash[:8], md5_hash))
             result = cursor.fetchone()
@@ -282,7 +282,7 @@ def detect_chd_console(file_path: str) -> Tuple[str, float]:
     Returns:
         Tuple aus (console_name, confidence)
     """
-    # Prüfen, ob es tatsächlich eine CHD-Datei ist
+# Check whether it is actually a CHD file
     if not file_path.lower().endswith('.chd'):
         return "Unknown", 0.0
 
@@ -302,7 +302,7 @@ def is_chd_file(file_path: str) -> bool:
         return False
 
     try:
-        # Prüfe auf CHD-Header-Signatur
+# Check on CHD header signature
         with open(file_path, 'rb') as f:
             header = f.read(8)
             return header == CHD_SIGNATURE or header == CHD_V5_SIGNATURE[:8]

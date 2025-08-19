@@ -38,7 +38,7 @@ except ImportError:
 try:
     import matplotlib.pyplot as plt
     import matplotlib
-    matplotlib.use('Agg')  # Nicht-interaktiver Backend für Serverumgebungen
+    matplotlib.use('Agg')  # Non-interactive backend for server environments
     HAS_MATPLOTLIB = True
 except ImportError:
     HAS_MATPLOTLIB = False
@@ -449,7 +449,7 @@ class ReportGenerator:
 
 # Group according to console for a better reporting structure
         consoles = defaultdict(list)
-        for rom in missing_roms[:100]:  # Begrenzen auf 100 Einträge
+        for rom in missing_roms[:100]:  # Limit to 100 entries
             consoles[rom.get('console_name', 'Unbekannt')].append({
                 'name': rom.get('name', 'Unbekannt'),
                 'size': self._format_size(rom.get('size', 0)),

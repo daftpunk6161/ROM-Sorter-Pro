@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 FilePath = Union[str, Path]
 FileList = List[FilePath]
 DropCallback = Callable[[FileList], None]
-T = TypeVar('T')  # Allgemeiner Typ für generische Funktionen
+T = TypeVar('T')  # General type for generic functions
 
 # Check whether PYQT5 is available
 PYQT_AVAILABLE = False

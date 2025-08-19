@@ -69,7 +69,7 @@ def fuzz_ratio(s1: str, s2: str) -> int:
     if _USE_EXTERNAL_FUZZ:
         return fuzz.ratio(s1, s2)
 
-    # Simple implementation with a lack of external library
+    # Simple implementation with a Lack of External Library
     s1, s2 = _process_strings(s1, s2)
     if not s1 or not s2:
         return 0
@@ -104,7 +104,7 @@ def fuzz_partial_ratio(s1: str, s2: str) -> int:
     if not s1 or not s2:
         return 0
 
-    # Use the shorter string as a reference
+    # Use The Shorter String as a Reference
     if len(s1) > len(s2):
         s1, s2 = s2, s1
 

@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 
 # Constant
 MAX_WORKERS = os.cpu_count() or 4  # Fallback auf 4 Threads
-CHUNK_SIZE = 4 * 1024 * 1024  # 4 MB für Datei-Chunking
+CHUNK_SIZE = 4 * 1024 * 1024  # 4 MB for file chunking
 FILE_EXTENSIONS = {
     'Nintendo': ['.nes', '.fds'],
     'Super Nintendo': ['.sfc', '.smc'],
@@ -81,7 +81,7 @@ class HighPerformanceScanner:
 
 # Definitely determines the optimal thread number based on the CPU number
         cpu_count = os.cpu_count() or 4
-        self.max_workers = min(32, max(4, cpu_count * 2))  # Zwischen 4 und 32 Threads
+        self.max_workers = min(32, max(4, cpu_count * 2))  # Between 4 and 32 threads
         logger.info(f"Scanner konfiguriert mit {self.max_workers} Threads")
 
 # Callbacks for event handler
@@ -102,8 +102,8 @@ class HighPerformanceScanner:
         self.end_time = 0
 
 # Extended tracking for detailed analysis
-        self.system_counts = {}  # Zählt ROMs pro System
-        self.extension_counts = {}  # Zählt Dateien pro Erweiterung
+        self.system_counts = {}  # Counts Roms per system
+        self.extension_counts = {}  # Counts files per expansion
         self.size_distribution = {
             'small': 0,    # <1MB
             'medium': 0,   # 1-50MB
@@ -440,7 +440,7 @@ class HighPerformanceScanner:
 # Unknown file type
                 return None
 
-# Berechnet Pruefsummen (effizienter mit Chunking fuer grosse Dateien)
+# Calculates pruef sums (more efficient with chunking for large files)
             crc32, md5 = self._calculate_checksums(file_path)
 
 # Creates the ROM information object
@@ -452,7 +452,7 @@ class HighPerformanceScanner:
                 'crc32': crc32,
                 'md5': md5,
                 'last_modified': file_stat.st_mtime,
-                'valid': True  # Könnte später durch Validierung geändert werden
+                'valid': True  # Could be changed later by validation
             }
 
 # Saves the information in the cache

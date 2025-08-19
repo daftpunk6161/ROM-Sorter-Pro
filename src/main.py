@@ -279,7 +279,7 @@ class ProcessingOptions:
 # New Options for Unknown Roms and Duplicates
     separate_unknown_roms: bool = True  # Separate ROMs with unclear detection
     unknown_roms_folder: str = "Unknown"  # Folder for unknown ROMs
-    separate_duplicates: bool = True  # Move duplicates to a separate folder
+    separate_duplicates: bool = True  # Move Duplicates to a separate folder
     duplicates_folder: str = "Duplicates"  # Folder for duplicates
     min_confidence_threshold: float = 0.7  # Minimum confidence for definitive assignment
     organize_by_year: bool = False  # Organize ROMs by release year

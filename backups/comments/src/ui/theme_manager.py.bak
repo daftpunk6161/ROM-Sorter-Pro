@@ -4,17 +4,17 @@
 """
 ROM Sorter Pro - Theme Manager
 
-Dieses Modul implementiert ein flexibles Theme-System für ROM Sorter Pro,
-das die Anpassung der Benutzeroberfläche mit verschiedenen Themes ermöglicht,
-einschließlich heller und dunkler Modi, benutzerdefinierter Farbschemata und
-anpassbarer UI-Elemente.
+This module implements a flexible theme system for ROM Sorter Pro,
+which allows customizing the user interface with different themes,
+including light and dark modes, custom color schemes, and
+customizable UI elements.
 
 Features:
-- Unterstützung für helle und dunkle Themes
-- Benutzerdefinierte Themenerstellung
-- Automatische Themenerkennung basierend auf Systemeinstellungen
-- Speichern und Laden von Themes aus Konfigurationsdateien
-- Integration mit PyQt und Web-Interface
+- Support for light and dark themes
+- Custom theme creation
+- Automatic theme detection based on system settings
+- Saving and loading themes from configuration files
+- Integration with PyQt and web interface
 """
 
 import os
@@ -25,19 +25,19 @@ import colorsys
 from enum import Enum
 from typing import Dict, Any, Optional, List, Tuple
 
-# Logger konfigurieren
+# Configure logger
 logger = logging.getLogger(__name__)
 
 
 class ThemeType(Enum):
-    """Enum für die verschiedenen Theme-Typen."""
+    """Enum for the different theme types."""
     LIGHT = "light"
     DARK = "dark"
     CUSTOM = "custom"
 
 
 class ColorScheme:
-    """Verwaltet ein Farbschema für ein Theme."""
+    """Manages a color scheme for a theme."""
 
     def __init__(self,
                  primary: str = "#3498db",
@@ -156,12 +156,12 @@ class ColorScheme:
         """
         inverted = ColorScheme()
 
-        # Invertiere die Hauptfarben
+        # Invert the main colors
         inverted.background = self._invert_color(self.background)
         inverted.text = self._invert_color(self.text)
         inverted.border = self._invert_color(self.border)
 
-        # Für andere Farben, behalte den Farbton aber passe die Helligkeit an
+        # For other colors, keep the color but adapts to the brightness
         inverted.primary = self._adjust_brightness(self.primary, is_background=False)
         inverted.secondary = self._adjust_brightness(self.secondary, is_background=False)
         inverted.accent = self._adjust_brightness(self.accent, is_background=False)
@@ -181,14 +181,14 @@ class ColorScheme:
         Returns:
             Invertierter Hex-Farbcode
         """
-        # Entferne das #-Zeichen und konvertiere zu RGB
+        # Remove the #symbol and convert to RGB
         hex_color = hex_color.lstrip('#')
         r, g, b = int(hex_color[0:2], 16), int(hex_color[2:4], 16), int(hex_color[4:6], 16)
 
-        # Invertiere die Werte
+        # Invert the values
         r, g, b = 255 - r, 255 - g, 255 - b
 
-        # Konvertiere zurück zu Hex
+        # Convert back to hex
         return f"#{r:02x}{g:02x}{b:02x}"
 
     def _adjust_brightness(self, hex_color: str, is_background: bool = True) -> str:
@@ -202,27 +202,27 @@ class ColorScheme:
         Returns:
             Angepasster Hex-Farbcode
         """
-        # Entferne das #-Zeichen und konvertiere zu RGB
+        # Remove the #symbol and convert to RGB
         hex_color = hex_color.lstrip('#')
         r, g, b = int(hex_color[0:2], 16), int(hex_color[2:4], 16), int(hex_color[4:6], 16)
 
-        # Konvertiere zu HSV
+        # Convert to HSV
         r, g, b = r/255.0, g/255.0, b/255.0
         h, s, v = colorsys.rgb_to_hsv(r, g, b)
 
-        # Passe die Helligkeit an
+        # Adapt the brightness
         if is_background:
-            # Für Hintergründe: Wenn hell, dann dunkel machen und umgekehrt
+            # For backgrounds: if light, then make dark and vice versa
             v = 0.1 if v > 0.5 else 0.9
         else:
-            # Für andere Farben: Passe die Helligkeit an
+            # For other colors: adapter the brightness
             v = min(1.0, v * 1.2) if v < 0.5 else max(0.0, v * 0.8)
 
-        # Konvertiere zurück zu RGB
+        # Convert back to RGB
         r, g, b = colorsys.hsv_to_rgb(h, s, v)
         r, g, b = int(r*255), int(g*255), int(b*255)
 
-        # Konvertiere zurück zu Hex
+        # Convert back to hex
         return f"#{r:02x}{g:02x}{b:02x}"
 
 
@@ -760,20 +760,20 @@ class Theme:
         Returns:
             Angepasster Hex-Farbcode
         """
-        # Entferne das #-Zeichen und konvertiere zu RGB
+        # Remove the #symbol and convert to RGB
         hex_color = hex_color.lstrip('#')
         r, g, b = int(hex_color[0:2], 16) / 255.0, int(hex_color[2:4], 16) / 255.0, int(hex_color[4:6], 16) / 255.0
 
-        # Aufhellen oder Abdunkeln basierend auf dem Theme-Typ
+        # Lighten or darken based on the theme type
         if self.type == ThemeType.DARK:
-            amount = -amount  # Für dunkle Themes umkehren
+            amount = -amount  # Reverse for dark themes
 
-        # Anpassen der Werte
+        # Adjust the values
         r = max(0, min(1, r + amount))
         g = max(0, min(1, g + amount))
         b = max(0, min(1, b + amount))
 
-        # Zurück zu Hex konvertieren
+        # Convert back to Hex
         r, g, b = int(r * 255), int(g * 255), int(b * 255)
         return f"#{r:02x}{g:02x}{b:02x}"
 
@@ -789,19 +789,19 @@ class Theme:
         Returns:
             Gemischter Hex-Farbcode
         """
-        # Entferne das #-Zeichen und konvertiere zu RGB
+        # Remove the #symbol and convert to RGB
         color1 = color1.lstrip('#')
         r1, g1, b1 = int(color1[0:2], 16), int(color1[2:4], 16), int(color1[4:6], 16)
 
         color2 = color2.lstrip('#')
         r2, g2, b2 = int(color2[0:2], 16), int(color2[2:4], 16), int(color2[4:6], 16)
 
-        # Mische die Farben
+        # Mix the colors
         r = int(r1 * alpha + r2 * (1 - alpha))
         g = int(g1 * alpha + g2 * (1 - alpha))
         b = int(b1 * alpha + b2 * (1 - alpha))
 
-        # Konvertiere zurück zu Hex
+        # Convert back to hex
         return f"#{r:02x}{g:02x}{b:02x}"
 
 
@@ -827,7 +827,7 @@ class ThemeManager:
         self.themes: Dict[str, Theme] = {}
         self.current_theme_name = "default"
 
-        # Stelle sicher, dass das Konfigurationsverzeichnis existiert
+        # Make sure the configuration directory exists
         os.makedirs(self.config_dir, exist_ok=True)
 
         # Lade Standardthemes
@@ -905,14 +905,14 @@ class ThemeManager:
             border_radius=0
         )
 
-        # Füge die Standardthemes hinzu
+        # Add the Standarddthemes
         self.themes["Light"] = light_theme
         self.themes["Dark"] = dark_theme
         self.themes["Blue"] = blue_theme
         self.themes["Dark Blue"] = dark_blue_theme
         self.themes["Retro Gaming"] = retro_theme
 
-        # Setze das Standardtheme
+        # Set the standard.
         if self._detect_system_theme() == ThemeType.DARK:
             self.current_theme_name = "Dark"
         else:
@@ -921,7 +921,7 @@ class ThemeManager:
     def _load_saved_themes(self) -> None:
         """Lädt gespeicherte Themes aus Konfigurationsdateien."""
         try:
-            # Lade die Theme-Liste
+            # Upload the theme list
             theme_index_file = os.path.join(self.config_dir, "theme_index.json")
             custom_themes = []
 
@@ -982,7 +982,7 @@ class ThemeManager:
             True bei Erfolg, False bei Fehler
         """
         try:
-            # Füge das Theme zum Dictionary hinzu
+            # Add the theme to the dictionary
             self.themes[theme.name] = theme
 
             # Wenn es ein benutzerdefiniertes Theme ist, speichere es
@@ -1011,7 +1011,7 @@ class ThemeManager:
         Returns:
             True bei Erfolg, False bei Fehler
         """
-        # Standardthemes können nicht entfernt werden
+        # Standarddthemes cannot be removed
         if theme_name in ['Light', 'Dark', 'Blue', 'Dark Blue', 'Retro Gaming']:
             logger.warning(f"Standardtheme '{theme_name}' kann nicht entfernt werden")
             return False
@@ -1021,15 +1021,15 @@ class ThemeManager:
             return False
 
         try:
-            # Lösche die Theme-Datei
+            # Delete the theme file
             theme_file = os.path.join(self.config_dir, f"{theme_name}.json")
             if os.path.exists(theme_file):
                 os.remove(theme_file)
 
-            # Entferne das Theme aus dem Dictionary
+            # Remove the theme from the dictionary
             del self.themes[theme_name]
 
-            # Wenn es das aktuelle Theme war, wechsle zum Standard
+            # If it was the current theme, change to the standard
             if self.current_theme_name == theme_name:
                 if self._detect_system_theme() == ThemeType.DARK:
                     self.current_theme_name = "Dark"
@@ -1113,7 +1113,7 @@ class ThemeManager:
                 pass
 
         elif system == "Linux":
-            # Versuche, das GNOME-Theme zu erkennen
+            # Attempts to recognize the gnome theme
             try:
                 import subprocess
                 result = subprocess.run(
@@ -1160,11 +1160,11 @@ class ThemeManager:
         Returns:
             Erstelltes Theme
         """
-        # Bestimme, ob es ein helles oder dunkles Theme ist
+        # Determine whether it is a light or dark theme
         is_dark = self._is_dark_color(background)
         theme_type = ThemeType.DARK if is_dark else ThemeType.LIGHT
 
-        # Erstelle das ColorScheme mit abgeleiteten Akzentfarben
+        # Create the color scheme with derived accent colors
         colors = ColorScheme(
             primary=primary,
             secondary=secondary,
@@ -1177,7 +1177,7 @@ class ThemeManager:
             border=self._generate_border_color(background, text)
         )
 
-        # Erstelle das Theme
+        # Create the theme
         theme = Theme(
             name=name,
             type=theme_type if theme_type != ThemeType.LIGHT else ThemeType.CUSTOM,
@@ -1196,14 +1196,14 @@ class ThemeManager:
         Returns:
             True, wenn die Farbe dunkel ist, sonst False
         """
-        # Entferne das #-Zeichen und konvertiere zu RGB
+        # Remove the #symbol and convert to RGB
         hex_color = hex_color.lstrip('#')
         r, g, b = int(hex_color[0:2], 16), int(hex_color[2:4], 16), int(hex_color[4:6], 16)
 
-        # Berechne die Helligkeit (0-255)
+        # Calculate the brightness (0-255)
         brightness = (r * 299 + g * 587 + b * 114) / 1000
 
-        # Dunkel, wenn die Helligkeit unter 128 liegt
+        # Dark when the brightness is below 128
         return brightness < 128
 
     def _generate_accent_color(self, primary: str, secondary: str) -> str:
@@ -1217,23 +1217,23 @@ class ThemeManager:
         Returns:
             Generierte Akzentfarbe
         """
-        # Entferne das #-Zeichen und konvertiere zu RGB
+        # Remove the #symbol and convert to RGB
         primary = primary.lstrip('#')
         r1, g1, b1 = int(primary[0:2], 16) / 255.0, int(primary[2:4], 16) / 255.0, int(primary[4:6], 16) / 255.0
 
         secondary = secondary.lstrip('#')
         r2, g2, b2 = int(secondary[0:2], 16) / 255.0, int(secondary[2:4], 16) / 255.0, int(secondary[4:6], 16) / 255.0
 
-        # Konvertiere zu HSV
+        # Convert to HSV
         h1, s1, v1 = colorsys.rgb_to_hsv(r1, g1, b1)
         h2, s2, v2 = colorsys.rgb_to_hsv(r2, g2, b2)
 
-        # Erstelle eine neue Farbe mit gemischtem Farbton und angepasster Sättigung
+        # Create a new color with a mixed color and adapted saturation
         h = (h1 + h2 / 2) % 1.0
         s = min(1.0, (s1 + s2) / 1.5)
         v = min(1.0, (v1 + v2) / 1.5)
 
-        # Konvertiere zurück zu RGB und dann zu Hex
+        # Convert back to RGB and then to Hex
         r, g, b = colorsys.hsv_to_rgb(h, s, v)
         r, g, b = int(r * 255), int(g * 255), int(b * 255)
 
@@ -1250,14 +1250,14 @@ class ThemeManager:
         Returns:
             Generierte Randfarbe
         """
-        # Entferne das #-Zeichen und konvertiere zu RGB
+        # Remove the #symbol and convert to RGB
         background = background.lstrip('#')
         r1, g1, b1 = int(background[0:2], 16), int(background[2:4], 16), int(background[4:6], 16)
 
         text = text.lstrip('#')
         r2, g2, b2 = int(text[0:2], 16), int(text[2:4], 16), int(text[4:6], 16)
 
-        # Mische die Farben (80% Hintergrund, 20% Text)
+        # Mix the colors (80% background, 20% text)
         r = int(r1 * 0.8 + r2 * 0.2)
         g = int(g1 * 0.8 + g2 * 0.2)
         b = int(b1 * 0.8 + b2 * 0.2)
@@ -1265,7 +1265,7 @@ class ThemeManager:
         return f"#{r:02x}{g:02x}{b:02x}"
 
 
-# Beispiel für die Verwendung der Modul-Funktionen
+# Example of using the module functions
 if __name__ == "__main__":
     # Konfiguriere Logging
     logging.basicConfig(level=logging.INFO,
@@ -1277,7 +1277,7 @@ if __name__ == "__main__":
     # Erstelle einen ThemeManager
     theme_manager = ThemeManager()
 
-    # Gib verfügbare Themes aus
+    # Give out available themes
     print(f"Verfügbare Themes: {', '.join(theme_manager.get_theme_names())}")
     print(f"Aktuelles Theme: {theme_manager.get_current_theme_name()}")
 
@@ -1290,11 +1290,11 @@ if __name__ == "__main__":
         text="#212121"
     )
 
-    # Füge das Theme hinzu
+    # Add the theme
     theme_manager.add_theme(custom_theme)
     print(f"Theme '{custom_theme.name}' hinzugefügt")
 
-    # Setze das benutzerdefinierte Theme als aktuelles Theme
+    # Set the custom theme as a current theme
     theme_manager.set_current_theme(custom_theme.name)
     print(f"Aktuelles Theme: {theme_manager.get_current_theme_name()}")
 

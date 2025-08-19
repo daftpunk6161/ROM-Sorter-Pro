@@ -8,14 +8,14 @@ import logging
 import os
 import sys
 
-# Importiere UI-Komponenten
+# Import UI components
 from .base import STYLE, BaseApp, center_window, create_tooltip
 from .main_window import ROMSorterWindow
 from .widgets import ProgressDialog, FolderSelector, ToggleSwitch, FileListBox
 from .panels import StatisticsPanel, LogPanel, OptionsPanel
 from .custom_widgets import CustomTreeview, DragDropSupport
 
-# Scanner-Optionen Klasse für Kompatibilität
+# Scanner options great for compatibility
 class ScannerOptions:
     """Konfigurationsoptionen für den Scanner."""
 
@@ -40,15 +40,15 @@ class ScannerOptions:
         return (f"ScannerOptions(recursive={self.recursive}, hash_method={self.hash_method}, "
                 f"parallel={self.parallel}, max_workers={self.max_workers})")
 
-# Versuche, die Modul-Imports zu importieren
+# Try to import the module imports
 try:
-    # Korrekte Imports für die neue Modulstruktur
+# Correct imports for the new module structure
     from ..scanning.scanner import OptimizedScanner as Scanner
     from ..scanning.adaptive_scanner import AdaptiveScanner
     from ..config import ConfigManager
 except ImportError:
-    # Fallback, wenn das Modul nicht direkt importiert werden kann
-    # Dies kann in einigen Testszenarien oder bei direkter Ausführung passieren
+# Fallback if the module cannot be imported directly
+# This can happen in some test scenarios or in direct execution
     import sys
     from os.path import dirname, abspath, join
     sys.path.insert(0, dirname(dirname(abspath(__file__))))
@@ -62,21 +62,21 @@ class ROMSorterApp:
 
     def __init__(self):
         """Initialisiere die Anwendung."""
-        # Grundlegende Konfiguration
+# Basic configuration
         self.app_dir = Path(__file__).parent.parent.parent
         self.config_manager = ConfigManager(self.app_dir / "config.json")
         self.config = self.config_manager.load_config()
 
-        # Logging einrichten
+# Set up logging
         self._setup_logging()
 
-        # Erstelle das Hauptfenster
+# Create the main window
         self.window = ROMSorterWindow()
 
-        # Erweitere das Hauptfenster mit der App-Logik
+# Expand the main window with the app logic
         self._setup_window()
 
-        # Verarbeite Befehlszeilenargumente
+# Processed command line arguments
         self._process_command_line_args()
 
         logging.info("ROM Sorter Anwendung gestartet")
@@ -88,7 +88,7 @@ class ROMSorterApp:
 
         log_file = log_dir / f"rom_sorter_{self._get_date_string()}.log"
 
-        # Konfiguriere den Logger
+# Configure the logger
         logging.basicConfig(
             level=logging.DEBUG if self.config.get("debug_mode", False) else logging.INFO,
             format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -105,30 +105,30 @@ class ROMSorterApp:
 
     def _setup_window(self):
         """Erweitere das Hauptfenster mit der App-Logik."""
-        # Verbinde Konfiguration mit UI-Elementen
+# Connect configuration with UI elements
         self._connect_config_to_ui()
 
-        # Registriere Event-Handler
+# Register event handler
         self._register_event_handlers()
 
-        # Initialisiere den Scanner
+# Initialize the scanner
         self._init_scanner()
 
     def _connect_config_to_ui(self):
         """Verbinde die Konfiguration mit den UI-Elementen."""
-        # Hier würden die UI-Elemente mit den Konfigurationswerten verknüpft werden
-        # Platzhalter für die tatsächliche Implementierung
+# Here the UI elements would be linked to the configuration values
+# Placeholder for the actual implementation
         pass
 
     def _register_event_handlers(self):
         """Registriere Event-Handler für UI-Interaktionen."""
-        # Hier würden Event-Handler für Buttons, Menüs etc. registriert werden
-        # Platzhalter für die tatsächliche Implementierung
+# Event handler for buttons, menus etc. would be registered here
+# Placeholder for the actual implementation
         pass
 
     def _init_scanner(self):
         """Initialisiere den Scanner mit den aktuellen Einstellungen."""
-        # Scanner-Optionen erstellen
+# Create scanner options
         options = ScannerOptions(
             recursive=self.config.get("recursive_scan", True),
             hash_method=self.config.get("hash_method", "crc32"),
@@ -136,11 +136,11 @@ class ROMSorterApp:
             max_workers=self.config.get("max_workers", 4)
         )
 
-        # Scanner erstellen
+# Create scanner
         if self.config.get("use_adaptive_scanner", False):
             self.scanner = AdaptiveScanner(max_workers=options.max_workers)
         else:
-            # Der OptimizedScanner nimmt nur filter_extensions und max_workers als Parameter
+# The optimized scanner only takes filter_extensions and max_workers as a parameter
             self.scanner = Scanner(None, options.max_workers)
 
         logging.debug("Scanner initialisiert mit Optionen: %s", options)
@@ -152,15 +152,15 @@ class ROMSorterApp:
         if not args:
             return
 
-        # Einfache Argumentverarbeitung
-        # In einer vollständigen Implementierung würde hier ein Argument-Parser verwendet werden
+# Easy argument processing
+# In a complete implementation, an argument parser would be used here
         for i, arg in enumerate(args):
             if arg == "--source" and i + 1 < len(args):
                 self.window.source_path.set(args[i + 1])
             elif arg == "--dest" and i + 1 < len(args):
                 self.window.dest_path.set(args[i + 1])
             elif arg == "--auto-start":
-                # Automatischer Start, wenn sowohl Quell- als auch Zielordner gesetzt sind
+# Automatic start if both source and target folders are set
                 if self.window.source_path.get() and self.window.dest_path.get():
                     self.window.after(1000, self.window._on_start_sorting)
 
@@ -170,13 +170,13 @@ class ROMSorterApp:
 
     def cleanup(self):
         """Bereinige Ressourcen bei Beendigung."""
-        # Speichere Konfiguration
+# Saving configuration
         self.config_manager.save_config(self.config)
 
-        # Schließe den Logger
+# Close the logger
         logging.shutdown()
 
-        # Gib andere Ressourcen frei
+# Give other resources released
         if hasattr(self, 'scanner'):
             self.scanner.cleanup()
 

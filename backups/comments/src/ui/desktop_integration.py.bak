@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+# -*-coding: utf-8-*-
 """
 ROM Sorter Pro - Integrationsmodul für Desktop-Anwendung
 Phase 1 Implementation: Desktop-Optimierung
@@ -16,18 +16,18 @@ import time
 from typing import Dict, List, Any, Optional, Callable, Union, Tuple
 from pathlib import Path
 
-# Qt-Importe werden verzögert geladen, um sicherzustellen, dass
-# die Konfiguration zuerst geladen wird
+# QT imports are loaded delayed to ensure that
+# The configuration is first loaded
 QApplication = None
 QMessageBox = None
 
-# Lokale Importe
+# Local imports
 from ..config.enhanced_config import get_enhanced_config
 from ..scanning.scanner_integration import ScannerIntegration
 from ..utils.thread_pool import AdaptiveThreadPool
 from ..database.rom_database import ROMDatabase
 
-# Logging konfigurieren
+# Configure logging
 logger = logging.getLogger(__name__)
 
 class DesktopIntegration:
@@ -45,13 +45,13 @@ class DesktopIntegration:
         self.database = None
         self._initialized = False
 
-        # Ereignis-Callbacks
+# Event callbacks
         self.on_rom_found = None
         self.on_scan_progress = None
         self.on_scan_complete = None
         self.on_error = None
 
-        # Thread-Sicherheit
+# Thread security
         self._lock = threading.RLock()
 
     def initialize(self):
@@ -69,7 +69,7 @@ class DesktopIntegration:
             try:
                 logger.info("Initialisiere Desktop-Integration...")
 
-                # Thread-Pool initialisieren
+# Initialize the thread pool
                 scanner_config = self.config.get_scanner_config()
                 max_threads = self.config.get_max_threads()
 
@@ -82,7 +82,7 @@ class DesktopIntegration:
                 )
                 self.thread_pool.start()
 
-                # Datenbank initialisieren
+# Initialize database
                 db_config = self.config.get_database_config()
                 cache_enabled = db_config.get("use_memory_cache", True)
 
@@ -92,11 +92,11 @@ class DesktopIntegration:
                     cache_enabled=cache_enabled
                 )
 
-                # Scanner initialisieren
+# Initialize scanner
                 logger.info("Initialisiere Scanner")
                 self.scanner = ScannerIntegration(self.config)
 
-                # Scanner-Callbacks registrieren
+# Register scanner callbacks
                 self.register_scanner_callbacks()
 
                 self._initialized = True
@@ -113,15 +113,15 @@ class DesktopIntegration:
         if not self.scanner:
             return
 
-        # Datei gefunden
+# File found
         def on_file_found(path):
             logger.debug(f"Datei gefunden: {path}")
 
-        # ROM gefunden
+# Rome found
         def on_rom_found(info):
             logger.debug(f"ROM gefunden: {info.get('name', 'Unbekannt')}")
 
-            # Füge ROM zur Datenbank hinzu
+# Add Rome to the database
             try:
                 if self.database and 'crc32' in info:
                     system_name = info.get('system', 'Unbekannt')
@@ -141,14 +141,14 @@ class DesktopIntegration:
             except Exception as e:
                 logger.error(f"Fehler beim Hinzufügen von ROM zur Datenbank: {e}")
 
-            # Rufe UI-Callback auf, falls vorhanden
+# Call Ui-Callback, if available
             if self.on_rom_found:
                 try:
                     self.on_rom_found(info)
                 except Exception as e:
                     logger.error(f"Fehler im on_rom_found-Callback: {e}")
 
-        # Fortschritt
+# Progress
         def on_progress(current, total):
             logger.debug(f"Fortschritt: {current}/{total}")
 
@@ -158,7 +158,7 @@ class DesktopIntegration:
                 except Exception as e:
                     logger.error(f"Fehler im on_scan_progress-Callback: {e}")
 
-        # Scan abgeschlossen
+# Scan completed
         def on_complete(stats):
             logger.info(f"Scan abgeschlossen: {stats}")
 
@@ -168,7 +168,7 @@ class DesktopIntegration:
                 except Exception as e:
                     logger.error(f"Fehler im on_scan_complete-Callback: {e}")
 
-        # Fehler
+# Mistake
         def on_error(error):
             logger.error(f"Scanner-Fehler: {error}")
 
@@ -180,7 +180,7 @@ class DesktopIntegration:
             else:
                 self.show_error_dialog("Scanner-Fehler", str(error))
 
-        # Registriere Callbacks
+# Register callbacks
         self.scanner.register_callback('file_found', on_file_found)
         self.scanner.register_callback('rom_found', on_rom_found)
         self.scanner.register_callback('progress', on_progress)
@@ -298,22 +298,22 @@ class DesktopIntegration:
         logger.info("Fahre Desktop-Integration herunter...")
 
         try:
-            # Scanner herunterfahren
+# Shut down scanner
             if self.scanner:
                 for scan_id in self.scanner.active_scans:
                     self.scanner.stop_scan(scan_id)
 
-            # Thread-Pool herunterfahren
+# Dill down thread pool
             if self.thread_pool:
                 self.thread_pool.shutdown(wait=True)
 
-            # Datenbank schließen
+# Close the database
             if self.database:
                 db_config = self.config.get_database_config()
                 if db_config.get("vacuum_on_exit", True):
                     logger.info("Führe Datenbank-Vacuum durch...")
                     try:
-                        # Führe VACUUM aus, um die Datenbank zu optimieren
+# Perform vacuum to optimize the database
                         self.database.conn.execute("VACUUM")
                     except Exception as e:
                         logger.error(f"Fehler beim Vacuum der Datenbank: {e}")
@@ -338,14 +338,14 @@ class DesktopIntegration:
 
         global QApplication, QMessageBox
 
-        # Versuche Qt zu importieren, falls noch nicht geschehen
+# Try to import QT if not yet done
         if QMessageBox is None:
-            # Überprüfe zuerst, ob das Qt-Modul verfügbar ist
+# First check whether the QT module is available
             qt_available = False
 
-            # Versuche Qt-Module zu importieren
+# Try to import QT modules
             try:
-                # Versuche, das Qt-Modul zu importieren
+# Try to import the QT module
                 from src.ui.qt import can_use_qt, get_qt_version
 
                 if can_use_qt():
@@ -354,7 +354,7 @@ class DesktopIntegration:
                         from PyQt6.QtWidgets import QApplication, QMessageBox
                         qt_available = True
                     elif qt_version == 5:
-                        # Nur importieren wenn verfügbar - der Import wird durch Module-Checks bereits abgefangen
+# Import only if available - the import is already intercepted by modules checks
                         try:
                             from PyQt5.QtWidgets import QApplication, QMessageBox
                             qt_available = True
@@ -362,17 +362,17 @@ class DesktopIntegration:
                             pass
             except ImportError as e:
                 logger.debug(f"Qt-Module nicht verfügbar: {e}")
-                # Qt ist nicht verfügbar, nur Protokollierung
+# QT is not available, only logging
                 return
 
-        # Stelle sicher, dass eine QApplication existiert
+# Make sure that there is a Qapplication
         if QApplication.instance() is None:
             return
 
-        # Zeige Fehlerdialog an
+# Show on error dialogue
         QMessageBox.critical(None, title, message)
 
-# Globale Instanz der Desktop-Integration
+# Global instance of the desktop integration
 desktop_integration_instance = None
 
 def get_desktop_integration() -> DesktopIntegration:

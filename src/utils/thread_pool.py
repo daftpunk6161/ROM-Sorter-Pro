@@ -226,7 +226,7 @@ class AdaptiveThreadPool:
             try:
                 # Try to get a task
                 try:
-                    # Wait for a task for a short time
+                    # Wait for a Task for a short time
                     task = self.task_queue.get(timeout=0.1)
                 except queue.Empty:
                     # No task available, check whether we should end
@@ -312,7 +312,7 @@ class AdaptiveThreadPool:
             # Let's add more workers
             if queue_size > current_workers * 2 and active_workers >= current_workers * 0.8:
                 workers_to_add = min(
-                    queue_size // 4,  # A maximum of 1/4 of the queue size
+                    queue_size // 4,  # A Maximum of 1/4 of the Queue Size
                     self.max_workers - current_workers  # But no more than maximum allowed
                 )
 

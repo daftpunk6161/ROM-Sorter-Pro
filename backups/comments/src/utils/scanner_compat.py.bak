@@ -21,11 +21,11 @@ from typing import List, Union, Optional, Dict, Any, Callable
 from functools import wraps
 import threading
 
-# Logger-Setup mit NullHandler als Default
+# Logger setup with zero handler as a default
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
-# Lazy-Loading von Modulen für verbesserte Startzeit
+# Lazy loading of modules for improved start time
 _lazy_imports = {}
 _import_lock = threading.RLock()
 
@@ -53,7 +53,7 @@ def _import_scanner():
             }
         except ImportError as e:
             logger.error(f"Fehler beim Importieren der Scanner-Module: {e}")
-            # Stelle minimale Funktionalität bereit
+            # Provide minimal functionality
             class FallbackScanner:
                 def __init__(self, filter_extensions=None): pass
                 def scan_directory_adaptive(self, *args, **kwargs): return []
@@ -105,7 +105,7 @@ def with_performance_tracking(func):
         finally:
             duration = time.perf_counter() - start_time
             try:
-                # Performance-Monitoring nur wenn verfügbar
+                # Performance monitoring only if available
                 if 'performance' not in _lazy_imports:
                     _import_performance()
                 perf = _lazy_imports.get('performance', {})
@@ -143,7 +143,7 @@ def scan_directory(directory: str, progress_callback=None, stop_event=None, use_
         scanner_module = _lazy_imports['scanner']
         scanner = scanner_module['AdaptiveScanner']()
 
-        # Wenn progress_callback vorhanden ist, passen wir es für die neue API an
+        # If progress_callback is available, we adjust it for the new API
         if progress_callback:
             def adapted_callback(completed, total, percentage):
                 try:
@@ -151,7 +151,7 @@ def scan_directory(directory: str, progress_callback=None, stop_event=None, use_
                 except Exception as e:
                     logger.warning(f"Fehler im Progress-Callback: {e}")
 
-            # Verwende scan_with_progress_callback wenn verfügbar
+            # Use scan_with_pogress_callback if available
             if hasattr(scanner, 'scan_with_progress_callback'):
                 results = scanner.scan_with_progress_callback(
                     directory_path=directory,
@@ -159,16 +159,16 @@ def scan_directory(directory: str, progress_callback=None, stop_event=None, use_
                     recursive=True
                 )
             else:
-                # Fallback für ältere Scanner-Versionen
+                # Fallback for older scanner versions
                 results = scanner.scan_directory_adaptive(directory, recursive=True, use_cache=use_cache)
         else:
-            # Ohne Callback verwenden wir scan_directory_adaptive
+            # Without callback we use scan_directory_adaptive
             results = scanner.scan_directory_adaptive(directory, recursive=True, use_cache=use_cache)
 
-        # Konvertiere ROMMetadata zu Path für Abwärtskompatibilität
+        # Convert rommetadata to Path for downward compatibility
         if results and hasattr(results[0], 'path'):
             return [item.path for item in results]
-        return results  # Bereits eine Liste von Paths oder leer
+        return results  # Already a list of paths or empty
         
     except Exception as e:
         logger.error(f"Fehler beim Scannen von {directory}: {e}")
@@ -258,7 +258,7 @@ class OptimizedFileScanner:
             _import_scanner()
             
         scanner_module = _lazy_imports['scanner']
-        # Erstelle echten Scanner mit verzögerter Initialisierung
+        # Create real scanner with delayed initialization
         self._real_scanner = scanner_module['AdaptiveScanner'](filter_extensions=extensions)
         logger.debug("OptimizedFileScanner-Wrapper initialisiert")
 
@@ -277,7 +277,7 @@ class OptimizedFileScanner:
             Liste von ROM-Dateipfaden
         """
         try:
-            # Delegiere an die globale Wrapper-Funktion
+            # Delegiers to the global wrapper function
             return scan_directory(directory, progress_callback, stop_event, use_cache)
         except Exception as e:
             logger.error(f"Fehler beim Scannen von {directory}: {e}")

@@ -38,7 +38,7 @@ def ensure_dependencies():
     except ImportError:
         logger.warning("PyQt6 ist nicht installiert - versuche PyQt5 als Alternative...")
 
-# Experiments PYQT5 as a fallback
+# Experiments PYQT5 AS A Fallback
         try:
             import PyQt5
             logger.info("PyQt5 ist als Fallback installiert")

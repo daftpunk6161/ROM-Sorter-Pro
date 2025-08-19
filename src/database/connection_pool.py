@@ -62,12 +62,12 @@ class DatabaseConnectionPool:
                 self._active_connections += 1
                 return conn
 
-# Wait a short time and try again
+# WAIT A SHORT TIME AND TRY AGAIN
             time.sleep(0.01)
             if self._pool:
                 return self._pool.popleft()
 
-# Create a new connection in an emergency
+# Create A New Connection in an Emergency
             return self._create_connection()
 
     def return_connection(self, conn: sqlite3.Connection):

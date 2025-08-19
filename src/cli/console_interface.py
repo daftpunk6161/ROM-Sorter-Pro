@@ -69,7 +69,7 @@ def scan_directory():
     print("Für vollständige Funktionalität verwenden Sie bitte die GUI-Version.")
 
 # Here you could implement the actual scanner functionality
-# We only show a simulation for this simple CLI mode
+# We only show a simulation for this simple cli mode
     print("\nSimuliere Scanvorgang...")
     import time
     for i in range(5):

@@ -54,7 +54,7 @@ if project_root not in sys.path:
 try:
     from src.ui.theme_integration import ThemeIntegrator
     THEME_SUPPORT = True
-    print("Theme-Unterstützung wurde geladen")
+    print("Theme support loaded")
 except ImportError:
     THEME_SUPPORT = False
     print("Theme support could not be loaded")
@@ -121,7 +121,7 @@ try:
                 MODULES_AVAILABLE = True
                 print("✅ ROM Sorter modules loaded successfully (relative)")
             except ImportError:
-                # Module nicht verfügbar, aber GUI funktioniert trotzdem
+                # Modules not available, but GUI still works
                 MODULES_AVAILABLE = False
                 print("⚠️ Module nicht geladen, aber GUI wird trotzdem funktionieren")
 
@@ -180,11 +180,11 @@ class OptimizedStyleManager:
     @property
     def colors(self) -> Dict[str, str]:
         if self._colors is None:
-            # Versuche systemweite Einstellungen zu berücksichtigen (z.B. Dark/Light Mode)
+            # Test to take system -wide settings into account (e.g. Dark/Light Mode)
             is_dark_mode = self._detect_system_dark_mode()
             theme_key = "dark" if is_dark_mode else "light"
 
-            # Verwende Cache wenn möglich
+            # Use cache if possible
             if theme_key in self._theme_cache:
                 self._colors = self._theme_cache[theme_key]
             else:
@@ -253,24 +253,24 @@ class OptimizedStyleManager:
     @property
     def fonts(self) -> Dict[str, tuple]:
         if self._fonts is None:
-            # Systemabhängige Schriftart mit Fallback-Optionen
+            # System-dependent font with fallback options
             if platform.system() == 'Windows':
                 base_fonts = ['Segoe UI', 'Arial', 'Tahoma']
                 mono_fonts = ['Consolas', 'Courier New', 'Lucida Console']
             elif platform.system() == 'Darwin':  # macOS
                 base_fonts = ['SF Pro Text', 'Helvetica Neue', 'Helvetica']
                 mono_fonts = ['SF Mono', 'Menlo', 'Monaco']
-            else:  # Linux und andere
+            else:  # Linux and others
                 base_fonts = ['Ubuntu', 'Liberation Sans', 'DejaVu Sans']
                 mono_fonts = ['Ubuntu Mono', 'Liberation Mono', 'DejaVu Sans Mono']
 
-            # Wähle die erste verfügbare Schriftart
+            # Choose the first available font
             base_font = self._find_available_font(base_fonts)
             mono_font = self._find_available_font(mono_fonts)
 
-            # Systemabhängige Schriftgrößenanpassung
+            # System -dependent font size adjustment
             size_adjust = 0
-            if platform.system() == 'Darwin':  # macOS verwendet größere Schriften
+            if platform.system() == 'Darwin':  # MacOS uses larger fonts
                 size_adjust = 1
 
             self._fonts = {
@@ -283,8 +283,8 @@ class OptimizedStyleManager:
         return self._fonts
 
     def _find_available_font(self, font_list: List[str]) -> str:
-        """Sucht die erste verfügbare Schriftart aus einer Liste."""
-        # Importiere nur bei Bedarf, um Startzeit zu optimieren
+        """Finds the first available font from a list."""
+        # Import only if necessary to optimize start time
         try:
             if not hasattr(self, '_available_fonts'):
                 if platform.system() == 'Windows':
@@ -294,10 +294,10 @@ class OptimizedStyleManager:
                     self._available_fonts = set(tkinter.font.families())
                     root.destroy()
                 else:
-                    # Fallback für andere Betriebssysteme
+                    # Fallback for other operating systems
                     self._available_fonts = set()
 
-            # Suche erste verfügbare Schriftart
+            # Find the first available font
             for font in font_list:
                 if font in self._available_fonts:
                     return font
@@ -317,14 +317,14 @@ STYLE = OptimizedStyleManager()
 class MemoryEfficientProgressBar(ttk.Progressbar):
     """Memory-efficient progress bar with throttled updates and adaptive behavior."""
 
-    # Klassenvariable für geteilte Optimierungseinstellungen
+    # Class variable for shared optimization settings
     _adaptive_settings = {
         'min_update_threshold': 0.05,  # Minimale Aktualisierungsschwelle in Sekunden
         'max_update_threshold': 0.5,   # Maximale Aktualisierungsschwelle in Sekunden
-        'current_batch_size': 5,       # Aktuelle Batchgröße, wird adaptiv angepasst
-        'frame_rate_history': deque(maxlen=10),  # Historie der Bildwiederholraten
-        'last_performance_check': 0,   # Zeitpunkt der letzten Leistungsüberprüfung
-        'ui_congestion_detected': False  # Flag für erkannte UI-Überlastung
+        'current_batch_size': 5,       # Current batch size is adaptively adjusted
+        'frame_rate_history': deque(maxlen=10),  # History of refresh rates
+        'last_performance_check': 0,   # Time of the last performance check
+        'ui_congestion_detected': False  # Flag for recognized UI overload
     }
 
     def __init__(self, parent, **kwargs):
@@ -334,11 +334,11 @@ class MemoryEfficientProgressBar(ttk.Progressbar):
         self._update_threshold = 0.1  # seconds
         self._animation_active = False
         self._update_queue = []
-        self._parent_ref = weakref.ref(parent)  # Schwache Referenz auf das Elternelement
+        self._parent_ref = weakref.ref(parent)  # Weak reference to the parent element
         self._adaptive_mode = kwargs.get('adaptive_mode', True)
         self._frame_times = deque(maxlen=5)
 
-        # Leistungsüberwachung für adaptive Anpassungen
+        # Performance monitoring for adaptive adjustments
         self._performance_metrics = {
             'updates_processed': 0,
             'updates_batched': 0,
@@ -359,20 +359,20 @@ class MemoryEfficientProgressBar(ttk.Progressbar):
         # Adaptive Aktualisierung basierend auf Systemleistung
         current_time = time.time()
 
-        # UI-Überlastungserkennung
+        # UI overload recognition
         if self._adaptive_mode and current_time - self._performance_metrics['last_ui_check'] > 2.0:
             self._performance_metrics['last_ui_check'] = current_time
             parent = self._parent_ref()
             if parent:
-                # UI-Thread-Belastungsprüfung durchführen
+                # Carry out the UI thread load test
                 self._check_ui_responsiveness(parent)
 
-        # Benutze die adaptiven Einstellungen für Aktualisierungsschwelle und Batchgröße
+        # Use the adaptive settings for update threshold and batch size
         update_threshold = self._update_threshold
         batch_size = self.__class__._adaptive_settings['current_batch_size']
 
         if current_time - self._last_update >= update_threshold:
-            # Bedeutende Änderung oder lange Zeit ohne Update -> sofort aktualisieren
+            # Significant change or long without update -> update immediately
             if abs(value - (self['value'] or 0)) > 5 or current_time - self._last_update >= 0.5:
                 try:
                     self['value'] = value
@@ -380,18 +380,18 @@ class MemoryEfficientProgressBar(ttk.Progressbar):
                     self._frame_times.append(current_time)
                     return True
                 except tk.TclError:
-                    # Widget möglicherweise zerstört
+                    # Widget may be destroyed
                     return False
             else:
-                # Aktualisierung in die Warteschlange stellen, um UI-Overhead zu reduzieren
+                # Put update in the queue to reduce Ui-O-O-ORHEAD
                 self._update_queue.append(value)
                 self._performance_metrics['updates_batched'] += 1
 
-                # Batch verarbeiten, wenn genug Einträge vorhanden oder wenn seit letztem Update zu viel Zeit vergangen ist
+                # Process the batch if there is enough entries or if too much time has passed since the last update
                 if (len(self._update_queue) >= batch_size or
                     current_time - self._last_update >= update_threshold * 3):
                     try:
-                        # Verwende gewichteten Durchschnitt mit mehr Gewicht auf neueren Werten
+                        # Used average with more weight in recent values
                         weights = [0.1 + (0.9 * i / (len(self._update_queue) - 1 or 1)) for i in range(len(self._update_queue))]
                         weighted_avg = sum(v * w for v, w in zip(self._update_queue, weights)) / sum(weights)
 
@@ -401,19 +401,19 @@ class MemoryEfficientProgressBar(ttk.Progressbar):
                         self._frame_times.append(current_time)
                         return True
                     except (tk.TclError, ZeroDivisionError):
-                        # Widget möglicherweise zerstört oder leere Queue
+                        # Widget may be destroyed or empty queue
                         self._update_queue.clear()
                         return False
         else:
-            # Update wird übersprungen
+            # Update is skipped
             self._performance_metrics['updates_skipped'] += 1
 
         return False
 
     def _check_ui_responsiveness(self, parent):
-        """Überprüft die UI-Reaktionsfähigkeit und passt Einstellungen an."""
+        """Checks the UI responsiveness and adjusts settings."""
         try:
-            # Berechne aktuelle Bildwiederholrate wenn genügend Datenpunkte vorhanden sind
+            # Calculate current refresh rate if there are enough data points
             if len(self._frame_times) >= 2:
                 frame_times = list(self._frame_times)
                 intervals = [frame_times[i] - frame_times[i-1] for i in range(1, len(frame_times))]
@@ -423,7 +423,7 @@ class MemoryEfficientProgressBar(ttk.Progressbar):
                 cls = self.__class__
                 cls._adaptive_settings['frame_rate_history'].append(current_fps)
 
-                # Anpassung der Einstellungen nach Leistungsmetriken
+                # Adaptation of the settings according to power metrics
                 now = time.time()
                 if now - cls._adaptive_settings['last_performance_check'] > 5.0:
                     cls._adaptive_settings['last_performance_check'] = now
@@ -432,15 +432,15 @@ class MemoryEfficientProgressBar(ttk.Progressbar):
                     if cls._adaptive_settings['frame_rate_history']:
                         avg_fps = sum(cls._adaptive_settings['frame_rate_history']) / len(cls._adaptive_settings['frame_rate_history'])
 
-                        # UI-Überlastungserkennung und Anpassung
-                        if avg_fps < 15:  # Unter 15 FPS gilt die UI als überlastet
+                        # UI overload recognition and adaptation
+                        if avg_fps < 15:  # The UI is considered overloaded under 15 fps
                             cls._adaptive_settings['ui_congestion_detected'] = True
-                            # Erhöhe Update-Schwelle und Batchgröße für weniger UI-Updates
+                            # Recover update threshold and batch size for fewer UI updates
                             cls._adaptive_settings['current_batch_size'] = min(20, cls._adaptive_settings['current_batch_size'] + 2)
                             self._update_threshold = min(cls._adaptive_settings['max_update_threshold'], self._update_threshold * 1.5)
-                        elif avg_fps > 30:  # UI ist flüssig
+                        elif avg_fps > 30:  # Ui is liquid
                             cls._adaptive_settings['ui_congestion_detected'] = False
-                            # Reduziere Update-Schwelle und Batchgröße für responsivere UI
+                            # Reduce update threshold and batch size for more responsive UI
                             cls._adaptive_settings['current_batch_size'] = max(3, cls._adaptive_settings['current_batch_size'] - 1)
                             self._update_threshold = max(cls._adaptive_settings['min_update_threshold'], self._update_threshold * 0.8)
         except Exception:
@@ -455,7 +455,7 @@ class MemoryEfficientProgressBar(ttk.Progressbar):
                 self.start(10)
                 self._animation_active = True
             except tk.TclError:
-                # Widget möglicherweise zerstört
+                # Widget may be destroyed
                 pass
 
     def stop_animation(self):
@@ -466,7 +466,7 @@ class MemoryEfficientProgressBar(ttk.Progressbar):
                 self.configure(mode='determinate')
                 self._animation_active = False
             except tk.TclError:
-                # Widget möglicherweise zerstört
+                # Widget may be destroyed
                 pass
 
     def get_performance_metrics(self):
@@ -486,14 +486,14 @@ class MemoryEfficientProgressBar(ttk.Progressbar):
                 self.stop()
             except:
                 pass
-        # Lösche Warteschlangen und Caches
+        # Delete queues and caches
         self._update_queue.clear()
         self._frame_times.clear()
 
 class SmartThread(threading.Thread):
     """Memory-efficient thread with proper cleanup and resource management."""
 
-    # Klassenvariablen zur Überwachung aktiver Threads
+    # Class variables for monitoring active threads
     _active_threads = weakref.WeakSet()
     _thread_stats = {
         'created': 0,
@@ -503,7 +503,7 @@ class SmartThread(threading.Thread):
     }
     _stats_lock = threading.Lock()
 
-    # Thread-Pool für wiederverwendbare Worker
+    # Thread pool for reusable worker
     _thread_pool = None
     _pool_lock = threading.Lock()
 
@@ -519,7 +519,7 @@ class SmartThread(threading.Thread):
         self.daemon = True
         self._error = None
 
-        # Benutze einen Proxy für die Zielfunktion zur Überwachung
+        # Use a proxy for the target function for monitoring
         if target:
             self._target = self._wrap_target(target)
 
@@ -531,10 +531,10 @@ class SmartThread(threading.Thread):
             SmartThread._thread_stats['created'] += 1
 
     def _wrap_target(self, target):
-        """Umhüllt die Zielfunktion mit Fehler- und Ressourcenüberwachung."""
+        """Wraps the target function with error and resource monitoring."""
         def wrapped_target(*args, **kwargs):
             try:
-                # Beginn der Ausführung aufzeichnen
+                # Record the start of the execution
                 self._start_time = time.time()
                 SmartThread._active_threads.add(self)
 
@@ -544,23 +544,23 @@ class SmartThread(threading.Thread):
                     if current_active > SmartThread._thread_stats['max_concurrent']:
                         SmartThread._thread_stats['max_concurrent'] = current_active
 
-                # Überprüfen auf Stoppanweisung
+                # Check for stop instructions
                 if self._stop_event.is_set():
                     return
 
-                # Führe die eigentliche Funktion aus
+                # Perform the actual function
                 return target(*args, **kwargs)
             except Exception as e:
                 self._error = e
-                # Fehler für Diagnose erfassen
+                # Record errors for diagnosis
                 with self._stats_lock:
                     SmartThread._thread_stats['errors'] += 1
-                # Protokolliere den Fehler, werfe ihn aber nicht hoch
+                # Record the mistake, but do not throw it up
                 logging.error(f"Error in thread {threading.current_thread().name}: {str(e)}")
                 if hasattr(e, '__traceback__'):
                     logging.error(''.join(traceback.format_exception(type(e), e, e.__traceback__)))
             finally:
-                # Ende der Ausführung aufzeichnen
+                # Record the end of the execution
                 self._end_time = time.time()
                 with self._stats_lock:
                     SmartThread._thread_stats['finished'] += 1
@@ -585,7 +585,7 @@ class SmartThread(threading.Thread):
         return self._stop_event.is_set()
 
     def get_execution_time(self):
-        """Gibt die Ausführungszeit des Threads zurück."""
+        """Returns the execution time of the thread."""
         if self._start_time is None:
             return 0
 
@@ -593,12 +593,12 @@ class SmartThread(threading.Thread):
         return end_time - self._start_time
 
     def get_error(self):
-        """Gibt den aufgetretenen Fehler zurück (falls vorhanden)."""
+        """Returns the error that occurred (if any)."""
         return self._error
 
     @classmethod
     def get_stats(cls):
-        """Gibt Statistiken über Thread-Verwendung zurück."""
+        """Returns statistics about thread usage."""
         with cls._stats_lock:
             stats = dict(cls._thread_stats)
             stats['currently_active'] = len(cls._active_threads)
@@ -615,11 +615,11 @@ class SmartThread(threading.Thread):
 
     @classmethod
     def get_thread_pool(cls, max_workers=None):
-        """Gibt einen gemeinsamen Thread-Pool zurück."""
+        """Returns a shared thread pool."""
         with cls._pool_lock:
             if cls._thread_pool is None:
                 if max_workers is None:
-                    # Optimale Pool-Größe basierend auf System
+                    # Optimal pool size based on system
                     max_workers = min(32, (os.cpu_count() or 4) * 2)
                 cls._thread_pool = ThreadPoolExecutor(max_workers=max_workers,
                                                     thread_name_prefix="SmartPool")
@@ -634,7 +634,7 @@ class SmartThread(threading.Thread):
             except:
                 pass
 
-        # Verweise auf Funktionen und Argumente löschen
+        # Delete references to functions and arguments
         self._original_target = None
         self._original_args = None
         self._original_kwargs = None
@@ -679,7 +679,7 @@ class OptimizedDragDropFrame(tk.Frame):
 
         sub_text = "Browse for ROM folder"
         if DND_AVAILABLE:
-            sub_text = f"Drag & Drop unterstützt ({DND_MODE})"
+            sub_text = f"Drag & Drop supported ({DND_MODE})"
 
         self.sub_label = tk.Label(
             self, text=sub_text,
@@ -717,7 +717,7 @@ class OptimizedDragDropFrame(tk.Frame):
 
         if DND_AVAILABLE:
             try:
-                print(f"Initialisiere Drag & Drop-Unterstützung (Modus: {DND_MODE})...")
+                print(f"Initializing Drag & Drop support (Mode: {DND_MODE})...")
 
                 # Erstelle eine ansprechendere Drag & Drop-Zone
                 self.configure(
@@ -735,38 +735,38 @@ class OptimizedDragDropFrame(tk.Frame):
                     self.drop_frame = DropFrame(self, drop_callback=self._handle_native_drop)
                     self.drop_frame.pack(fill=tk.BOTH, expand=True)
 
-                    # Verstecke das innere Frame visuell
+                    # Hide the inner frame visually
                     self.drop_frame.configure(
                         bg=STYLE.colors['bg_accent'],
                         highlightthickness=0,
                         borderwidth=0
                     )
 
-                    print("Native Drag & Drop-Unterstützung erfolgreich registriert")
+                    print("Native Drag & Drop support successfully registered")
 
                 elif DND_MODE == "tkdnd":
                     # Verwende tkinterdnd2-Implementierung
 
-                    # Prüfen, ob die Root-Klasse TkinterDnD unterstützt
+                    # Check whether the root class supports Tkinterdnd
                     if not hasattr(self.winfo_toplevel(), 'TkdndVersion'):
-                        print("Root-Fenster unterstützt tkinterdnd nicht, versuche zu patchen")
+                        print("Root window does not support tkinterdnd, trying to patch")
 
-                        # Versuche die Root-Klasse zu patchen
+                        # Try to patch the root class
                         try:
                             from tkinterdnd2 import TkinterDnD
                             root = self.winfo_toplevel()
                             TkinterDnD._require(root.tk)
                             root.drop_target_register = lambda *args, **kw: TkinterDnD._drop_target_register(root.tk, *args, **kw)
                             root.dnd_bind = lambda *args, **kw: TkinterDnD._dnd_bind(root.tk, *args, **kw)
-                            print("Root-Fenster erfolgreich gepatcht")
+                            print("Root window successfully patched")
                         except Exception as patch_err:
-                            print(f"Patchen des Root-Fensters fehlgeschlagen: {patch_err}")
+                            print(f"Failed to patch root window: {patch_err}")
 
                     # Registriere als Drag & Drop-Ziel
                     self.drop_target_register(DND_FILES)
                     self.dnd_bind('<<Drop>>', self._on_drop)
 
-                    # Registriere zusätzliche Events für visuelles Feedback
+                    # Register additional events for visual feedback
                     self.dnd_bind('<<DragEnter>>', self._drag_enter)
                     self.dnd_bind('<<DragLeave>>', self._drag_leave)
 
@@ -777,14 +777,14 @@ class OptimizedDragDropFrame(tk.Frame):
                         widget.dnd_bind('<<DragEnter>>', self._drag_enter)
                         widget.dnd_bind('<<DragLeave>>', self._drag_leave)
 
-                    print("TkinterDnD Drag & Drop-Unterstützung erfolgreich registriert")
+                    print("TkinterDnD Drag & Drop support successfully registered")
 
-                print("Drag & Drop-Unterstützung aktiv")
+                print("Drag & Drop support active")
             except Exception as e:
                 print(f"Drag & Drop-Setup fehlgeschlagen: {e}")
                 import traceback
                 traceback.print_exc()
-                # Variable im äußeren Scope aktualisieren
+                # Update variable in the outer scope
                 globals()['DND_AVAILABLE'] = False
                 globals()['DND_MODE'] = "none"
 
@@ -796,7 +796,7 @@ class OptimizedDragDropFrame(tk.Frame):
         """Handle click events."""
         if self.callback:
             folder = filedialog.askdirectory(
-                title="Ordner mit ROM-Dateien auswählen",
+                title="Select folder with ROM files",
                 mustexist=True
             )
             if folder:
@@ -815,7 +815,7 @@ class OptimizedDragDropFrame(tk.Frame):
 
     def _drag_enter(self, event=None):
         """Handle drag enter event with visual feedback."""
-        # Lebendiges visuelles Feedback für Drag & Drop
+        # Lively visual feedback for drag & drop
         self.configure(
             bg=STYLE.colors['success'],
             relief="sunken",
@@ -831,7 +831,7 @@ class OptimizedDragDropFrame(tk.Frame):
         self.sub_label.configure(
             bg=STYLE.colors['success'],
             fg=STYLE.colors['text_primary'],
-            text="Ordner hierher ziehen"
+            text="Drag folder here"
         )
 
     def _drag_leave(self, event=None):
@@ -841,12 +841,12 @@ class OptimizedDragDropFrame(tk.Frame):
     def _handle_native_drop(self, file_paths):
         """Verarbeitet gedropte Dateien von der nativen Drag & Drop-Implementierung."""
         if not self.callback:
-            print("Kein Callback für Drag & Drop-Verarbeitung definiert")
+            print("No callback defined for Drag & Drop processing")
             return
 
-        # Verhindern von doppelten Events
+        # Prevent double events
         if hasattr(self, '_processing_drop') and self._processing_drop:
-            print("Bereits in Bearbeitung, überspringe doppeltes Event")
+            print("Already processing, skipping duplicate event")
             return
 
         self._processing_drop = True
@@ -862,11 +862,11 @@ class OptimizedDragDropFrame(tk.Frame):
 
             print(f"Gedropte Dateien: {file_paths}")
 
-            # Priorität 1: Suche nach Verzeichnissen
+            # Priority 1: Search for directories
             for path in file_paths:
                 try:
                     if os.path.exists(path) and os.path.isdir(path):
-                        print(f"Gültiges Verzeichnis gefunden: {path}")
+                        print(f"Valid directory found: {path}")
                         self.callback(path)
                         self._show_feedback(f"📁 {os.path.basename(path)}", True)
                         self._processing_drop = False
@@ -874,22 +874,22 @@ class OptimizedDragDropFrame(tk.Frame):
                 except Exception as path_err:
                     print(f"Fehler bei der Pfadverarbeitung: {path_err}")
 
-            # Priorität 2: Verwende Elternverzeichnisse von Dateien
+            # Priority 2: Use parent lists of files
             for path in file_paths:
                 try:
                     if os.path.exists(path) and os.path.isfile(path):
                         parent_dir = os.path.dirname(path)
                         if os.path.exists(parent_dir) and os.path.isdir(parent_dir):
-                            print(f"Verwende übergeordnetes Verzeichnis: {parent_dir}")
+                            print(f"Using parent directory: {parent_dir}")
                             self.callback(parent_dir)
                             self._show_feedback(f"📁 {os.path.basename(parent_dir)}", True)
                             return
                 except Exception as parent_err:
-                    print(f"Fehler bei der Elternverzeichnisverarbeitung: {parent_err}")
+                    print(f"Error in parent directory processing: {parent_err}")
 
-            # Wenn keine gültigen Verzeichnisse gefunden wurden
-            print("Kein gültiges Verzeichnis in den Drop-Daten gefunden")
-            self._show_feedback("Kein gültiger Ordner", False)
+            # If no valid directories were found
+            print("No valid directory found in drop data")
+            self._show_feedback("No valid folder", False)
 
         except Exception as e:
             print(f"Fehler bei nativer Drag & Drop-Verarbeitung: {e}")
@@ -897,18 +897,18 @@ class OptimizedDragDropFrame(tk.Frame):
             traceback.print_exc()
             self._show_feedback("Drop fehlgeschlagen", False)
 
-        # In jedem Fall zurücksetzen
+        # Reset
         self._processing_drop = False
 
     def _on_drop(self, event):
         """Verarbeitet TkinterDnD Drag & Drop-Events."""
         if not self.callback:
-            print("Kein Callback für Drag & Drop-Verarbeitung definiert")
+            print("No callback defined for Drag & Drop processing")
             return
 
-        # Verhindern von doppelten Events
+        # Prevent double events
         if hasattr(self, '_processing_drop') and self._processing_drop:
-            print("Bereits in Bearbeitung, überspringe doppeltes Event")
+            print("Already processing, skipping duplicate event")
             return
 
         self._processing_drop = True
@@ -922,16 +922,16 @@ class OptimizedDragDropFrame(tk.Frame):
                 self._processing_drop = False
                 return
 
-            # Debug-Ausgabe für alle Event-Details
+            # Debug edition for all event details
             print(f"Drop-Event Daten: {event.data}")
             print(f"Drop-Event Typ: {type(event.data)}")
 
-            # Speziell für Windows: Bei TkDnD 2.x wird ein Format wie "{C:/Pfad/zu/Datei}" zurückgegeben
+            # Especially for Windows: With TKDND 2.X, a format such as "{C:/Path/Zu/File}" is returned
             raw_data = event.data
 
-            # Windows Explorer spezifisches Format mit geschweiften Klammern behandeln
+            # Treat Windows Explorer specific format with curly brackets
             if os.name == 'nt' and isinstance(raw_data, str):
-                # Wenn die Daten wie ein direkter Windows-Pfad aussehen
+                # When the data looks like a direct Windows path
                 if raw_data.startswith('{') and raw_data.endswith('}') and ':\\' in raw_data:
                     clean_path = raw_data.strip('{}')
                     if os.path.exists(clean_path):
@@ -947,58 +947,58 @@ class OptimizedDragDropFrame(tk.Frame):
                                 self._show_feedback(f"📁 {os.path.basename(parent_dir)}", True)
                                 return
 
-            # Standardverarbeitung für alle anderen Fälle
+            # Standard processing for all other cases
             paths = self._extract_paths_from_drop(event.data)
             if not paths:
-                print("Keine gültigen Pfade extrahiert")
-                self._show_feedback("Keine gültigen Pfade", False)
+                print("No valid paths extrahiert")
+                self._show_feedback("No valid paths", False)
                 return
 
             print(f"Extrahierte Pfade: {paths}")
 
-            # Priorität 1: Suche nach Verzeichnissen
+            # Priority 1: Search for directories
             for path in paths:
                 try:
-                    # Normalisiere Pfad für Windows
+                    # Normalize path for Windows
                     if os.name == 'nt':
                         path = os.path.normpath(path)
 
                     if os.path.exists(path) and os.path.isdir(path):
-                        print(f"Gültiges Verzeichnis gefunden: {path}")
+                        print(f"Valid directory found: {path}")
                         self.callback(path)
                         self._show_feedback(f"📁 {os.path.basename(path)}", True)
                         return
                 except Exception as path_err:
                     print(f"Fehler bei der Pfadverarbeitung: {path_err}")
 
-            # Priorität 2: Verwende Elternverzeichnisse von Dateien
+            # Priority 2: Use parent lists of files
             for path in paths:
                 try:
-                    # Normalisiere Pfad für Windows
+                    # Normalize path for Windows
                     if os.name == 'nt':
                         path = os.path.normpath(path)
 
                     if os.path.exists(path) and os.path.isfile(path):
                         parent_dir = os.path.dirname(path)
                         if os.path.exists(parent_dir) and os.path.isdir(parent_dir):
-                            print(f"Verwende übergeordnetes Verzeichnis: {parent_dir}")
+                            print(f"Using parent directory: {parent_dir}")
                             self.callback(parent_dir)
                             self._show_feedback(f"📁 {os.path.basename(parent_dir)}", True)
                             return
                 except Exception as parent_err:
-                    print(f"Fehler bei der Elternverzeichnisverarbeitung: {parent_err}")
+                    print(f"Error in parent directory processing: {parent_err}")
 
-            # Priorität 3: Spezielle URL-Format-Behandlung
+            # Priority 3: Special URL format treatment
             for path in paths:
                 try:
-                    # Entferne URL-Präfix falls vorhanden
+                    # Remove URL prefix if available
                     if isinstance(path, str) and path.startswith('file:'):
                         import urllib.parse
                         fixed_path = urllib.parse.unquote(path[5:])
-                        # Entferne führenden Schrägstrich bei Windows-Pfaden
+                        # Remove leading slash in Windows paths
                         if os.name == 'nt' and fixed_path.startswith('/'):
                             fixed_path = fixed_path[1:]
-                        # Normalisiere Pfad für das Betriebssystem
+                        # Normalize path for the operating system
                         fixed_path = os.path.normpath(fixed_path)
 
                         print(f"URL-Pfad repariert: {fixed_path}")
@@ -1017,9 +1017,9 @@ class OptimizedDragDropFrame(tk.Frame):
                 except Exception as url_err:
                     print(f"Fehler bei der URL-Pfadverarbeitung: {url_err}")
 
-            # Wenn keine gültigen Verzeichnisse gefunden wurden
-            print("Kein gültiges Verzeichnis in den Drop-Daten gefunden")
-            self._show_feedback("Kein gültiger Ordner", False)
+            # If no valid directories were found
+            print("No valid directory found in drop data")
+            self._show_feedback("No valid folder", False)
 
         except Exception as e:
             print(f"Fehler bei Drag & Drop-Verarbeitung: {e}")
@@ -1027,11 +1027,11 @@ class OptimizedDragDropFrame(tk.Frame):
             traceback.print_exc()
             self._show_feedback("Drop fehlgeschlagen", False)
 
-        # In jedem Fall zurücksetzen
+        # Reset
         self._processing_drop = False
 
     def _extract_paths_from_drop(self, data):
-        """Erweiterte und robustere Pfadextraktion für verschiedene Betriebssysteme und Drag&Drop-Formate."""
+        """Enhanced and more robust path extraction for different operating systems and Drag&Drop formats."""
         if not data:
             return []
 
@@ -1039,23 +1039,23 @@ class OptimizedDragDropFrame(tk.Frame):
 
         # Behandle unterschiedliche Datentypen
         if isinstance(data, (list, tuple)):
-            # Falls bereits eine Liste übergeben wurde
+            # If a list has already been handed over
             data_items = list(data)
         else:
-            # Konvertiere zu String für String-basierte Verarbeitung
+            # Convert to string for string-based processing
             data_str = str(data).strip()
 
             # Windows Explorer Format direkt behandeln
             if os.name == 'nt' and data_str.startswith('{') and data_str.endswith('}') and ':\\' in data_str:
-                # Windows Explorer Format mit einem einzelnen Pfad in geschweiften Klammern
+                # Windows Explorer Format with a single path in curly brackets
                 clean_path = data_str.strip('{}').strip()
                 return [clean_path]
 
-            # Entferne Windows-spezifische geschweifte Klammern (für mehrere Einträge)
+            # Remove Windows-specific cute clips (for several entries)
             if data_str.startswith('{') and data_str.endswith('}'):
                 data_str = data_str[1:-1].strip()
 
-            # Versuche verschiedene Trennzeichen zu erkennen
+            # Try to recognize different separator
             if '\r\n' in data_str:
                 # Windows-Mehrzeilenmodus
                 data_items = [p.strip() for p in data_str.split('\r\n') if p.strip()]
@@ -1077,15 +1077,15 @@ class OptimizedDragDropFrame(tk.Frame):
                     # Einzelne URL
                     data_items = [data_str]
             elif os.name == 'nt' and ('"' in data_str or "'" in data_str):
-                # Windows mit Anführungszeichen
+                # Windows with quotation marks
                 try:
-                    # Versuche shlex für korrekte Anführungszeichenbehandlung
+                    # Attempts Shlex for correct quotation sign treatment
                     import shlex
                     data_items = shlex.split(data_str)
                 except Exception:
-                    # Fallback bei Fehlern
+                    # Fallback in the event of errors
                     data_items = []
-                    # Behandlung für Anführungszeichen
+                    # Treatment for quotation marks
                     in_quotes = False
                     quote_type = None
                     current_item = ""
@@ -1098,16 +1098,16 @@ class OptimizedDragDropFrame(tk.Frame):
                             elif char == quote_type:  # Ende eines zitierten Abschnitts
                                 in_quotes = False
                                 quote_type = None
-                            else:  # Ein anderes Anführungszeichen innerhalb eines zitierten Abschnitts
+                            else:  # Another quotation mark within a quoted section
                                 current_item += char
-                        elif char.isspace() and not in_quotes:  # Leerzeichen außerhalb von Anführungszeichen
+                        elif char.isspace() and not in_quotes:  # Spaces outside of quotation marks
                             if current_item:
                                 data_items.append(current_item)
                                 current_item = ""
                         else:
                             current_item += char
 
-                    if current_item:  # Den letzten Eintrag hinzufügen
+                    if current_item:  # Add the last entry
                         data_items.append(current_item)
             else:
                 # Standard-Trennung am Leerzeichen
@@ -1121,9 +1121,9 @@ class OptimizedDragDropFrame(tk.Frame):
             # URL-Format behandeln
             if isinstance(item, str) and item.startswith('file:'):
                 import urllib.parse
-                # Dekodiere URL und entferne file://-Präfix
+                # Decode URL and remove File: //-Prefix
                 path = urllib.parse.unquote(item[5:])
-                # Bei Windows entferne den führenden Schrägstrich
+                # In Windows, remove the leading slash
                 if os.name == 'nt' and path.startswith('/'):
                     path = path[1:]
             else:
@@ -1131,10 +1131,10 @@ class OptimizedDragDropFrame(tk.Frame):
 
             # Bereinige den Pfad
             if isinstance(path, str):
-                # Entferne Anführungszeichen und überflüssige Leerzeichen
+                # Remove quotation marks and unnecessary spaces
                 clean_path = path.strip('"\'').strip()
 
-                # Normalisiere Backslashes/Forwardslashes je nach Betriebssystem
+                # Normalized backslashes/forwardslashes depending on the operating system
                 if os.name == 'nt':
                     # Windows: Ersetze / durch \
                     clean_path = clean_path.replace('/', '\\')
@@ -1173,11 +1173,11 @@ class OptimizedDragDropFrame(tk.Frame):
         )
 
         if DND_AVAILABLE:
-            main_text = "📁 Ordner hierher ziehen oder klicken"
-            sub_text = "Drag & Drop unterstützt"
+            main_text = "📁 Drag folder here oder klicken"
+            sub_text = "Drag & Drop supported"
         else:
-            main_text = "📁 Klicken, um Ordner auszuwählen"
-            sub_text = "ROM-Ordner auswählen"
+            main_text = "📁 Click to select folder"
+            sub_text = "Select ROM folder"
 
         self.main_label.configure(
             bg=STYLE.colors['bg_accent'],
@@ -1466,7 +1466,7 @@ class OptimizedStatsWidget(tk.Frame):
         if self.export_btn['state'] == 'disabled':
             self.export_btn.configure(state='normal')
 
-        # Bereinige Statistiken (entferne doppelte Schlüssel, die sich nur durch Formatierung unterscheiden)
+        # Adjusted statistics (remove double keys that differ only by formatting)
         cleaned_stats = self._clean_console_stats(stats)
 
         # Hash the stats for cache lookup
@@ -1493,13 +1493,13 @@ class OptimizedStatsWidget(tk.Frame):
         self._process_stats_update(cleaned_stats)
 
     def _clean_console_stats(self, stats: Dict[str, int]) -> Dict[str, int]:
-        """Bereinigt Konsolenstatistiken für konsistente Anzeige und Performance."""
+        """Cleans console statistics for consistent display and performance."""
         cleaned_stats = {}
 
-        # Zwischenspeicher für Namensbereinigung
+        # Intermediate memory for name adjustment
         name_cache = {}
 
-        # Reguläre Ausdrücke für häufige Muster kompilieren
+        # Compile regular expressions for frequent patterns
         if not hasattr(self, '_regex_cache'):
             self._regex_cache = {
                 'parentheses': re.compile(r'\s*\([^)]*\)'),
@@ -1509,14 +1509,14 @@ class OptimizedStatsWidget(tk.Frame):
                 'special_chars': re.compile(r'[^a-zA-Z0-9\s]')
             }
 
-        # Wörter ignorieren, die nicht zur Konsolenidentifikation beitragen
+        # Ignore words that do not contribute to console identification
         if not hasattr(self, '_ignore_words'):
             self._ignore_words = {
                 'console', 'system', 'entertainment', 'computer', 'version',
                 'revision', 'model', 'series', 'family', 'edition', 'classic'
             }
 
-        # Konsolengruppierung für zusammengehörige Varianten
+        # Console group for related variants
         if not hasattr(self, '_console_groups'):
             self._console_groups = {
                 'Nintendo Entertainment System': ['NES', 'Famicom', 'Nintendo Entertainment System'],
@@ -1551,18 +1551,18 @@ class OptimizedStatsWidget(tk.Frame):
                 'PC Engine': ['PCE', 'PC Engine', 'TurboGrafx-16'],
                 'WonderSwan': ['WonderSwan', 'WonderSwan Color']
             }
-            # Erstelle umgekehrte Zuordnung für schnelleren Lookup
+            # Create reverse assignment for faster lookup
             self._console_mapping = {}
             for main_name, variants in self._console_groups.items():
                 for variant in variants:
                     self._console_mapping[variant.lower()] = main_name
 
-        # Normalisiere Konsolennamen für bessere Anzeige
+        # Normalize console names for better display
         for console, count in stats.items():
-            # Ersetze Unterstriche durch Leerzeichen für bessere Lesbarkeit
+            # Replace underlined underlined by spaces for better readability
             display_name = console.replace('_', ' ')
 
-            # Stelle sicher, dass ähnliche Namen zusammengefasst werden
+            # Make sure that similar names are summarized
             if display_name in cleaned_stats:
                 cleaned_stats[display_name] += count
             else:
@@ -1610,7 +1610,7 @@ class OptimizedStatsWidget(tk.Frame):
         """Generate formatted content with color tags."""
         total = sum(stats.values())
         if total == 0:
-            return "Keine Daten verfügbar", {}
+            return "No data available", {}
 
         content = []
         tags = {
@@ -1748,27 +1748,27 @@ class FastFileScanner:
     _cache_hit_count = 0
     _cache_miss_count = 0
 
-    # Klassen-Einstellungen für adaptive Leistung
+    # Class settings for adaptive performance
     _settings = {
         'use_threading': os.cpu_count() and os.cpu_count() > 2,
         'max_threads': max(1, min(8, (os.cpu_count() or 4) // 2)),
         'min_files_for_threading': 1000,
         'batch_size_base': 100,
-        'cache_ttl': 300,  # Sekunden, wie lange Cache gültig ist
+        'cache_ttl': 300,  # Seconds, how long cache is valid
         'max_cache_entries': 10,
         'skip_hidden_dirs': True,
         'skip_system_dirs': True,
-        'max_scan_depth': 20,  # Verhindert übermäßig tiefe Rekursion
+        'max_scan_depth': 20,  # Prevents excessively deep recursion
     }
 
-    # Ignoriere bestimmte System- und Versteckte Verzeichnisse
+    # Ignore certain system and hidden directories
     _ignored_dirs = {
         '.git', '.svn', '.hg', '__pycache__', 'node_modules', '.vscode',
         '.idea', 'System Volume Information', '$RECYCLE.BIN', 'Recovery',
         '$Windows.~BT', '$Windows.~WS', 'Windows', 'Program Files', 'Program Files (x86)'
     }
 
-    # Leistungsmetriken für adaptive Anpassung
+    # Performance metrics for adaptive adaptation
     _performance_metrics = {
         'last_scan_time': 0,
         'last_files_per_second': 0,
@@ -1780,7 +1780,7 @@ class FastFileScanner:
         self._file_count = 0
         self._dir_count = 0
         self._stop_event = None
-        self._progress_interval = 50  # Initiales Intervall für Fortschrittsupdates
+        self._progress_interval = 50  # Initial interval for progress updates
         self._progress_last_time = 0
         self._batch_size = self.__class__._settings['batch_size_base']
         self._start_time = 0
@@ -1789,16 +1789,16 @@ class FastFileScanner:
         self._active_threads = 0
         self._thread_lock = threading.Lock()
 
-        # Adaptive Parameter für Leistungsoptimierung
+        # Adaptive parameters for performance optimization
         self._adaptive_params = {
             'is_slow_filesystem': False,
             'batch_size_adjusted': self._batch_size,
             'threading_enabled': self.__class__._settings['use_threading']
         }
 
-        # Extensions als Set für O(1) Lookup speichern
+        # Save extensions as a set for O (1) Lookup
         self.ROM_EXTENSIONS = set(ext.lower() for ext in extensions) if extensions else {
-            # Archive und Disk-Images
+            # Archives and disk-images
             '.zip', '.7z', '.rar', '.iso', '.bin', '.cue', '.chd', '.cso', '.gdi', '.cdi',
             # Nintendo
             '.nes', '.smc', '.sfc', '.n64', '.z64', '.v64', '.ndd', '.gba', '.nds', '.3ds',
@@ -1815,7 +1815,7 @@ class FastFileScanner:
             '.rom', '.adf', '.hdf', '.mdf'
         }
 
-        # Reguläre Ausdrücke für häufige Muster kompilieren
+        # Compile regular expressions for frequent patterns
         self._regex_cache = {
             'rom_number': re.compile(r'[\(\[]?\s*[rR]om\s*\d+\s*[\)\]]?'),
             'disk_number': re.compile(r'[\(\[]?\s*[dD]is[ck]\s*\d+\s*[\)\]]?'),
@@ -1823,18 +1823,18 @@ class FastFileScanner:
             'region_pattern': re.compile(r'[\(\[]?\s*(US|USA|EUR|Europe|JP|Japan|PAL|NTSC)\s*[\)\]]?')
         }
 
-        # Vorkompilierte Erweiterungsprüfung für Leistung
-        # Verwende einen speichereffizienten und schnellen Ansatz mit __contains__
+        # Pres compiled expansion test for performance
+        # Use a memory -efficient and quick approach with __Contains__
         self._is_rom_file = lru_cache(maxsize=2048)(self._optimized_extension_check)
 
     def _optimized_extension_check(self, path):
-        """Optimierter Check für ROM-Dateierweiterungen."""
-        # Schnellster Ansatz für die Erweiterungsprüfung
+        """Optimized check for ROM file extensions."""
+        # Fastest approach for the expansion test
         ext = path.suffix.lower()
         return ext in self.ROM_EXTENSIONS
 
     def scan_directory(self, directory: str, progress_callback=None, stop_event=None, use_cache=False) -> List[Path]:
-        """Scannt Verzeichnis nach ROM-Dateien mit optimaler Leistung und adaptiver Anpassung."""
+        """Scans directory for ROM files with optimal performance and adaptive adjustment."""
         self._file_count = 0
         self._dir_count = 0
         self._stop_event = stop_event
@@ -1845,7 +1845,7 @@ class FastFileScanner:
         self._active_threads = 0
         found_files = []
 
-        # Cache-Lookup mit optimiertem Schlüssel
+        # Cache-Lookup with optimized key
         norm_directory = os.path.normpath(os.path.abspath(directory))
         cache_key = f"{norm_directory}:{hash(frozenset(self.ROM_EXTENSIONS))}"
 
@@ -1861,10 +1861,10 @@ class FastFileScanner:
                         self.__class__._cache_hit_count += 1
                         cached_files = cache_entry.get('files', [])
 
-                        # Optimierte Überprüfung: Stichprobe statt alle Dateien zu prüfen
+                        # Optimized review: Sample instead of checking all files
                         valid = True
                         if cached_files:
-                            # Stichprobenanzahl: maximal 10 Dateien oder 5% des Caches
+                            # Sension notification: a maximum of 10 files or 5% of the cache
                             sample_size = min(10, max(1, len(cached_files) // 20))
                             sample_indices = sorted(random.sample(range(len(cached_files)), sample_size))
 
@@ -1874,21 +1874,21 @@ class FastFileScanner:
                                     break
 
                         if valid and cached_files:
-                            # Melde Fortschritt für UI-Feedback auch bei Cache-Verwendung
+                            # Registration progress for Ui feedback also in the case of cache use
                             if progress_callback:
                                 progress_callback(len(cached_files))
                             return cached_files
 
                 self.__class__._cache_miss_count += 1
 
-        # Verzeichnis existiert vor dem Scannen überprüfen
+        # Directory exists before the scan
         if not os.path.isdir(norm_directory):
             return []
 
-        # Dateisystemleistung messen für adaptive Anpassungen
+        # Measure the file system performance for adaptive adjustments
         self._measure_filesystem_performance(norm_directory)
 
-        # Wähle beste Scanmethode basierend auf Verzeichnisgröße und Dateisystem
+        # Choose the best scan method based on a directory size and file system
         if self._should_use_threading(norm_directory):
             found_files = self._scan_with_threading(norm_directory, progress_callback)
         else:
@@ -1907,10 +1907,10 @@ class FastFileScanner:
                     'dirs_scanned': self._dir_count
                 }
 
-                # Cache-Größe begrenzen, um Speicherprobleme zu vermeiden
+                # Limit cache size to avoid memory problems
                 max_cache = self.__class__._settings['max_cache_entries']
                 if len(self._scan_cache) > max_cache:
-                    # Ältesten Cache-Eintrag entfernen
+                    # Remove the oldest cache entry
                     oldest_keys = sorted(
                         self._scan_cache.keys(),
                         key=lambda k: self._scan_cache[k]['time']
@@ -1919,29 +1919,29 @@ class FastFileScanner:
                     for key in oldest_keys:
                         del self._scan_cache[key]
 
-            # Leistungsmetriken aktualisieren für zukünftige Optimierungen
+            # Update power metrics for future optimizations
             if total_time > 0 and self._file_count > 0:
                 files_per_second = self._file_count / total_time
                 cls = self.__class__
                 cls._performance_metrics['last_scan_time'] = total_time
                 cls._performance_metrics['last_files_per_second'] = files_per_second
 
-                # Adaptive Parameter für zukünftige Scans anpassen
+                # Adapt adaptive parameters for future scans
                 self._adjust_adaptive_parameters(files_per_second, self._dir_count, total_time)
 
         return found_files
 
     def _measure_filesystem_performance(self, directory):
-        """Misst die Dateisystemleistung für adaptive Optimierung."""
+        """Measures file system performance for adaptive optimization."""
         try:
-            # Kurze I/O-Zeitmessung durchführen
+            # Perform short I/O time measurement
             start = time.time()
             sample_size = 3
             count = 0
 
-            # Prüfe nur, wenn wir keine aktuellen Leistungsmetriken haben
+            # Only check if we have no current metrics
             if time.time() - self.__class__._performance_metrics['last_scan_time'] > 300:
-                # Versuche, ein paar Verzeichnisse zu scannen für eine Stichprobe
+                # Try to scan a few directories for a sample
                 with os.scandir(directory) as it:
                     for entry in it:
                         if count >= sample_size or (time.time() - start) > 0.5:
@@ -1953,30 +1953,30 @@ class FastFileScanner:
                             except (PermissionError, OSError):
                                 continue
 
-                # Wenn wir genügend Samples haben, berechne durchschnittliche Latenz
+                # If we have enough samples, calculate average latency
                 elapsed = time.time() - start
                 if count > 0:
                     avg_latency = elapsed / count
                     self.__class__._performance_metrics['filesystem_latency'] = avg_latency
                     self._adaptive_params['is_slow_filesystem'] = avg_latency > 0.01  # 10ms
 
-                    # Batch-Größe anpassen basierend auf Dateisystemlatenz
+                    # Adjust the batch size based on file system latency
                     if self._adaptive_params['is_slow_filesystem']:
                         self._adaptive_params['batch_size_adjusted'] = max(20, self._batch_size // 5)
                     else:
                         self._adaptive_params['batch_size_adjusted'] = self._batch_size
         except Exception:
-            # Bei Fehler Standardwerte beibehalten
+            # Retain default values for errors
             pass
 
     def _should_use_threading(self, directory):
-        """Bestimmt, ob Threading für dieses Verzeichnis verwendet werden soll."""
-        # Überprüfe, ob Threading aktiviert und sinnvoll ist
+        """Determines whether threading should be used for this directory."""
+        # Check whether threading is activated and sensible
         if not self._adaptive_params['threading_enabled'] or self._adaptive_params['is_slow_filesystem']:
             return False
 
         try:
-            # Schnelle Zählung der obersten Verzeichnisebene
+            # Fast count of the top directory level
             dir_count = 0
             file_count = 0
 
@@ -1988,15 +1988,15 @@ class FastFileScanner:
                         elif entry.is_file() and self._is_rom_file(Path(entry.path)):
                             file_count += 1
 
-                        # Früh abbrechen, wenn wir genügend Informationen haben
+                        # Cancel early if we have enough information
                         if dir_count >= 10 and file_count >= 100:
                             break
                     except (PermissionError, OSError):
                         continue
 
             # Benutze Threading, wenn:
-            # 1. Genügend Unterverzeichnisse für Parallelisierung (min. 3)
-            # 2. Genügend potenzielle Dateien (basierend auf Stichprobe)
+            # 1. Sufficient subdirectaries for parallelization (min. 3)
+            # 2. Sufficient potential files (based on sample)
             # 3. Kein langsames Dateisystem erkannt wurde
             use_threading = (
                 dir_count >= 3 and
@@ -2006,11 +2006,11 @@ class FastFileScanner:
             return use_threading
 
         except Exception:
-            # Bei Fehler kein Threading verwenden
+            # Do not use threading in the event of error
             return False
 
     def _scan_sequential(self, directory, progress_callback=None):
-        """Sequentielles Scannen des Verzeichnisses ohne Threading."""
+        """Sequential scanning of the directory without threading."""
         found_files = []
         file_batch = []
         batch_size = self._adaptive_params['batch_size_adjusted']
@@ -2027,7 +2027,7 @@ class FastFileScanner:
                 current_dir = dirs_queue.popleft()
                 self._dir_count += 1
 
-                # Systemverzeichnisse und versteckte Verzeichnisse überspringen
+                # System directories and hidden directories skip
                 dir_name = os.path.basename(current_dir)
                 if (self.__class__._settings['skip_system_dirs'] and
                     dir_name in self.__class__._ignored_dirs):
@@ -2038,7 +2038,7 @@ class FastFileScanner:
                     continue
 
                 try:
-                    # Effizienteres Verzeichnisscannen mit scandir
+                    # More efficient directory scanning with scandir
                     with os.scandir(current_dir) as it:
                         subdirs = []
 
@@ -2047,9 +2047,9 @@ class FastFileScanner:
                                 break
 
                             try:
-                                # Effiziente Überprüfung auf Verzeichnis oder Datei
+                                # Efficient review on directory or file
                                 if entry.is_dir():
-                                    # Sammle Unterverzeichnisse für späteres Hinzufügen
+                                    # Collect subdirectaries for later add
                                     subdirs.append(entry.path)
                                 elif entry.is_file():
                                     file_path = Path(entry.path)
@@ -2057,7 +2057,7 @@ class FastFileScanner:
                                         file_batch.append(file_path)
                                         self._file_count += 1
 
-                                        # In Batches für bessere Leistung verarbeiten
+                                        # Process in batches for better performance
                                         if len(file_batch) >= batch_size:
                                             found_files.extend(file_batch)
                                             file_batch = []
@@ -2079,39 +2079,39 @@ class FastFileScanner:
                                             elif self._file_count > 1000:
                                                 self._progress_interval = 100
                             except (PermissionError, OSError):
-                                # Dateien/Verzeichnisse überspringen, auf die wir nicht zugreifen können
+                                # Skip files/directories that we cannot access
                                 continue
 
-                        # Unterverzeichnisse hinzufügen, nachdem die aktuelle Verzeichnisebene gescannt wurde
+                        # Add subdirectaries after the current directory has been scanned
                         dirs_queue.extend(subdirs)
 
                 except (PermissionError, OSError):
-                    # Verzeichnisse überspringen, auf die wir nicht zugreifen können
+                    # Skip lists that we cannot access
                     continue
 
             except IndexError:
-                # Queue ist leer, erhöhe die Tiefenstufe
+                # Queue is empty, increase the deep level
                 scan_depth += 1
 
-        # Verbleibende Dateien im Batch hinzufügen
+        # Add remaining files in the batch
         if file_batch:
             found_files.extend(file_batch)
 
         return found_files
 
     def _scan_with_threading(self, directory, progress_callback=None):
-        """Parallelisiertes Scannen des Verzeichnisses mit Threading."""
+        """Parallelized scanning of the directory with threading."""
         found_files = []
         all_dirs = []
 
-        # Zuerst erste Verzeichnisebene scannen, um Arbeit zu verteilen
+        # First scan first directory level to distribute work
         try:
             with os.scandir(directory) as it:
                 for entry in it:
                     if entry.is_dir():
                         dir_name = os.path.basename(entry.path)
 
-                        # Systemverzeichnisse und versteckte Verzeichnisse überspringen
+                        # System directories and hidden directories skip
                         if ((self.__class__._settings['skip_system_dirs'] and
                              dir_name in self.__class__._ignored_dirs) or
                             (self.__class__._settings['skip_hidden_dirs'] and
@@ -2120,29 +2120,29 @@ class FastFileScanner:
 
                         all_dirs.append(entry.path)
                     elif entry.is_file():
-                        # Dateien in der Wurzel direkt überprüfen
+                        # Check files directly in the root
                         file_path = Path(entry.path)
                         if self._is_rom_file(file_path):
                             found_files.append(file_path)
                             self._file_count += 1
         except (PermissionError, OSError):
-            # Bei Problemen mit dem Wurzelverzeichnis zum sequentiellen Scannen zurückkehren
+            # If there are problems with the root list to return to sequential scanning
             return self._scan_sequential(directory, progress_callback)
 
         if not all_dirs:
-            # Wenn keine Unterverzeichnisse vorhanden sind, verwende sequentielles Scannen
+            # If no subdirectories are present, use sequential scanning
             return self._scan_sequential(directory, progress_callback)
 
-        # Bereite Thread-Pool vor
+        # Prepare thread pool
         max_threads = min(len(all_dirs), self.__class__._settings['max_threads'])
         if max_threads <= 1:
-            # Nicht genügend Verzeichnisse für effektives Threading
+            # Not enough directories for effective threading
             return self._scan_sequential(directory, progress_callback)
 
-        # Verteile Verzeichnisse an Worker-Threads
+        # Distribute directories to worker threads
         chunks = self._create_balanced_dir_chunks(all_dirs, max_threads)
 
-        # Erstelle und starte Threads
+        # Create and start threads
         threads = []
         for i, chunk in enumerate(chunks):
             thread = threading.Thread(
@@ -2158,20 +2158,20 @@ class FastFileScanner:
         for thread in threads:
             thread.join()
 
-        # Fehler überprüfen
+        # Check error
         if self._thread_error:
             logging.error(f"Thread-Fehler aufgetreten: {self._thread_error}")
-            # Fallback zum sequentiellen Scannen bei Thread-Fehlern
+            # Fallback for sequential scanning in thread errors
             return self._scan_sequential(directory, progress_callback)
 
-        # Ergebnisse zusammenführen
+        # Code the results
         for result in self._thread_results:
             found_files.extend(result)
 
         return found_files
 
     def _thread_scan_worker(self, dirs, thread_id, progress_callback):
-        """Worker-Thread zum Scannen einer Liste von Verzeichnissen."""
+        """Worker thread to scan a list of directories."""
         try:
             with self._thread_lock:
                 self._active_threads += 1
@@ -2186,7 +2186,7 @@ class FastFileScanner:
                 if self._stop_event and self._stop_event.is_set():
                     break
 
-                # Verwende eine angepasste Tiefensuche für diesen Thread
+                # Use an adapted deep search for this thread
                 dirs_stack = [directory]
                 scan_depth = 0
                 max_depth = self.__class__._settings['max_scan_depth']
@@ -2198,7 +2198,7 @@ class FastFileScanner:
                     try:
                         current_dir = dirs_stack.pop()
 
-                        # Verzeichnisname überprüfen
+                        # Check directory name
                         dir_name = os.path.basename(current_dir)
                         if ((self.__class__._settings['skip_system_dirs'] and
                              dir_name in self.__class__._ignored_dirs) or
@@ -2209,7 +2209,7 @@ class FastFileScanner:
                         with self._thread_lock:
                             self._dir_count += 1
 
-                        # Verzeichnis scannen
+                        # Scan directory
                         try:
                             with os.scandir(current_dir) as it:
                                 subdirs = []
@@ -2244,8 +2244,8 @@ class FastFileScanner:
                                     except (PermissionError, OSError):
                                         continue
 
-                                # Unterverzeichnisse zum Stack hinzufügen
-                                dirs_stack.extend(reversed(subdirs))  # Umgekehrte Reihenfolge für DFS
+                                # Add subdirectaries to the stack
+                                dirs_stack.extend(reversed(subdirs))  # Reverse order for DFS
                         except (PermissionError, OSError):
                             continue
 
@@ -2270,30 +2270,30 @@ class FastFileScanner:
                 self._active_threads -= 1
 
     def _create_balanced_dir_chunks(self, dirs, num_chunks):
-        """Erstellt ausgeglichene Verzeichnis-Chunks für Multi-Threading."""
-        # Wenn nur wenige Verzeichnisse, einfach gleichmäßig aufteilen
+        """Creates balanced directory chunks for multi-threading."""
+        # If only a few directories, simply divide evenly
         if len(dirs) <= num_chunks * 2:
             return [dirs[i::num_chunks] for i in range(num_chunks)]
 
-        # Für eine ausgewogenere Verteilung, versuche Verzeichnisgrößen zu schätzen
+        # For a more balanced distribution, attempts to estimate directory variables
         dir_sizes = []
         for d in dirs:
             try:
-                # Schätze Verzeichnisgröße durch Zählen der Einträge auf oberster Ebene
+                # Treasures directory size by counting the entries at the top level
                 size = sum(1 for _ in os.scandir(d))
                 dir_sizes.append((d, size))
             except (PermissionError, OSError):
-                dir_sizes.append((d, 1))  # Minimalgröße für unzugängliche Verzeichnisse
+                dir_sizes.append((d, 1))  # Minimum size for inaccessible directories
 
-        # Sortiere Verzeichnisse nach geschätzter Größe (absteigend)
+        # Sorting directories according to estimated size (descending)
         dir_sizes.sort(key=lambda x: x[1], reverse=True)
 
-        # Verteile nach Greedy-Algorithmus (größte zuerst)
+        # Distribute to Greedy-Algorithm (largest first)
         chunks = [[] for _ in range(num_chunks)]
         chunk_sizes = [0] * num_chunks
 
         for dir_path, size in dir_sizes:
-            # Finde Chunk mit geringster aktueller Größe
+            # Find chunk with the lowest current size
             min_idx = chunk_sizes.index(min(chunk_sizes))
             chunks[min_idx].append(dir_path)
             chunk_sizes[min_idx] += size
@@ -2301,9 +2301,9 @@ class FastFileScanner:
         return chunks
 
     def _adjust_adaptive_parameters(self, files_per_second, dirs_scanned, total_time):
-        """Passt adaptive Parameter für künftige Scans basierend auf Leistungsmetriken an."""
+        """Adjusts adaptive parameters for future scans based on performance metrics."""
         try:
-            # Batch-Größe anpassen
+            # Adjust the batch size
             if files_per_second > 1000:
                 # Sehr schnelles Dateisystem
                 self._batch_size = min(500, self._batch_size * 1.5)
@@ -2313,14 +2313,14 @@ class FastFileScanner:
 
             # Threading-Entscheidung anpassen
             if dirs_scanned < 10 or total_time < 1.0:
-                # Kleine Verzeichnisstruktur - Threading deaktivieren
+                # Small directory structure - disabling threading
                 self._adaptive_params['threading_enabled'] = False
             elif dirs_scanned > 100 and total_time > 5.0 and files_per_second > 200:
-                # Große Verzeichnisstruktur mit guter Leistung - Threading aktivieren
+                # Large directory structure with good performance - activate threading
                 self._adaptive_params['threading_enabled'] = True
 
         except Exception:
-            # Bei Fehlern Parameter nicht ändern
+            # Do not change parameters in the event of errors
             pass
 
     @classmethod
@@ -2433,7 +2433,7 @@ class OptimizedROMSorterGUI:
         # Arcade Systems - Deutlich erweitert
         '.zip': 'MAME_Arcade',
         '.chd': 'MAME_Arcade',
-        '.7z': 'MAME_Arcade',  # MAME unterstützt auch 7z-Archive
+        '.7z': 'MAME_Arcade',  # Mame also supports 7Z archives
 
         # Spezielle Arcade-Systeme
         '.capcom': 'Capcom_CPS1',
@@ -2476,7 +2476,7 @@ class OptimizedROMSorterGUI:
         '.rom': 'ROM_File',
         '.img': 'Disk_Image',
 
-        # FM Towns und ähnliche Systeme
+        # FM Towns and similar systems
         '.fdi': 'FM_Towns',
         '.mfi': 'FM_Towns',
         '.mdx': 'Sharp_X68000',
@@ -2492,7 +2492,7 @@ class OptimizedROMSorterGUI:
         '.vhd': 'PC_Windows',
         '.gog': 'PC_GOG',
 
-        # Sharp, NEC und andere japanische Computer
+        # Sharp, NEC and other Japanese computers
         '.2mg': 'Apple_Macintosh',
         '.pc98': 'NEC_PC98',
         '.hdi': 'NEC_PC98',
@@ -2507,13 +2507,13 @@ class OptimizedROMSorterGUI:
         '.2hd': 'Sharp_X68000',
         '.cmd': 'MSX_DOS',
 
-        # Modernes Arcade und Flash
+        # Modern arcade and flash
         '.jamma': 'JAMMA',
         '.swf': 'Adobe_Flash',
         '.fla': 'Adobe_Flash',
         '.air': 'Adobe_AIR',
 
-        # Allgemeine Archive (niedrigste Priorität)
+        # General archives (lowest priority)
         '.zip': 'Archive',
         '.7z': 'Archive',
         '.rar': 'Archive',
@@ -2524,7 +2524,7 @@ class OptimizedROMSorterGUI:
     def __init__(self):
         self._initialize_window()
         self._initialize_variables()
-        self._create_menu()  # Menüleiste hinzugefügt
+        self._create_menu()  # Menu bar added
         self._create_interface()
         self._initialize_workers()
         self._initialize_theme_support()  # Theme-System initialisieren
@@ -2535,42 +2535,42 @@ class OptimizedROMSorterGUI:
 
     def _initialize_window(self):
         """Initialize main window with optimal performance settings."""
-        # Erstelle das Hauptfenster basierend auf der verfügbaren Drag & Drop-Unterstützung
+        # Create the main window based on the available drag & drop support
         if DND_AVAILABLE:
             try:
-                print(f"Erstelle Root-Fenster mit Drag & Drop-Unterstützung (Modus: {DND_MODE})...")
+                print(f"Create root window with Drag & Drop support (Mode: {DND_MODE})...")
 
                 if DND_MODE == "tkdnd":
                     # Verwende TkinterDnD
                     from tkinterdnd2 import TkinterDnD
                     self.root = TkinterDnD.Tk()
 
-                    # Überprüfe, ob TkinterDnD korrekt initialisiert wurde
+                    # Check whether tkinterdnd was correctly initialized
                     if hasattr(self.root, 'TkdndVersion'):
                         print(f"TkinterDnD Version: {self.root.TkdndVersion}")
                     else:
                         print("Warnung: TkinterDnD scheint nicht richtig initialisiert zu sein")
                 else:
-                    # Erstelle ein Standard-Tk-Fenster für native Drag & Drop
+                    # Create a standard TK window for native drag & drop
                     self.root = tk.Tk()
 
-                    # Patche das Fenster für plattformübergreifende Drag & Drop-Unterstützung
+                    # Patch the window for cross-platform drag & drop support
                     from src.dnd_support import patch_tkinter_root
                     patch_tkinter_root(self.root)
-                    print("Root-Fenster für native Drag & Drop gepatcht")
+                    print("Root window patched for native Drag & Drop")
 
             except Exception as e:
-                print(f"Fehler beim Erstellen des Fensters mit Drag & Drop-Unterstützung: {e}")
+                print(f"Error creating window with Drag & Drop support: {e}")
                 import traceback
                 traceback.print_exc()
 
-                # Fallback auf Standard-Tk-Fenster
+                # Fallback to standard Tk window
                 self.root = tk.Tk()
                 globals()['DND_AVAILABLE'] = False
                 globals()['DND_MODE'] = "none"
 
         else:
-            # Kein Drag & Drop verfügbar
+            # No drag & drop available
             self.root = tk.Tk()
 
         self.root.title("ROM Sorter Pro 🎮 - Optimized v2.1.4")
@@ -2618,7 +2618,7 @@ class OptimizedROMSorterGUI:
         self.root.configure(cursor="arrow")
 
     def _handle_root_drop(self, event):
-        """Behandle Drag & Drop-Ereignisse im Hauptfenster mit robuster Pfadextraktion."""
+        """Handle Drag & Drop events in the main window with robust path extraction."""
         try:
             print(f"Root-Drop-Event empfangen: {event}")
 
@@ -2626,31 +2626,31 @@ class OptimizedROMSorterGUI:
                 print("Root-Drop-Event hat keine Daten")
                 return
 
-            # Verwende die verbesserte Pfadextraktion
+            # Use the improved path extraction
             paths = self._extract_drop_paths(event.data)
 
             if not paths:
-                print("Keine gültigen Pfade im Root-Drop gefunden")
+                print("No valid paths im Root-Drop gefunden")
                 return
 
-            # Suche zuerst nach gültigen Verzeichnissen
+            # Search first for valid directories
             for path in paths:
                 if os.path.exists(path) and os.path.isdir(path):
-                    print(f"Root-Drop: Gültiges Verzeichnis gefunden: {path}")
+                    print(f"Root-Drop: Valid directory found: {path}")
                     self._set_source_folder(path)
                     # Zeige visuelles Feedback
-                    self._show_drag_drop_feedback(f"📁 {os.path.basename(path)} ausgewählt")
+                    self._show_drag_drop_feedback(f"📁 {os.path.basename(path)} selected")
                     return
 
-            # Dann versuche Elternverzeichnisse von Dateien
+            # Then try parent lists of files
             for path in paths:
                 if os.path.exists(path) and os.path.isfile(path):
                     parent_dir = os.path.dirname(path)
                     if os.path.exists(parent_dir) and os.path.isdir(parent_dir):
-                        print(f"Root-Drop: Verwende Elternverzeichnis: {parent_dir}")
+                        print(f"Root-Drop: Using parent directory: {parent_dir}")
                         self._set_source_folder(parent_dir)
                         # Zeige visuelles Feedback
-                        self._show_drag_drop_feedback(f"📁 {os.path.basename(parent_dir)} ausgewählt")
+                        self._show_drag_drop_feedback(f"📁 {os.path.basename(parent_dir)} selected")
                         return
 
         except Exception as e:
@@ -2659,19 +2659,19 @@ class OptimizedROMSorterGUI:
             traceback.print_exc()
 
     def _extract_drop_paths(self, data):
-        """Extrahiert Pfade aus Drop-Daten - wiederverwendbare Methode für verschiedene Drop-Ziele."""
+        """Extracts paths from drop data - reusable method for different drop targets."""
         try:
-            # Verwende die vorhandene Implementierung in OptimizedDragDropFrame
+            # Use the existing implementation in optimized dropstore drain
             from inspect import getmembers, ismethod
 
-            # Suche nach einer Instanz von OptimizedDragDropFrame in den untergeordneten Widgets
+            # Search for an instance of optimized drag drop in the subordinate widgets
             for child in self.root.winfo_children():
                 if isinstance(child, OptimizedDragDropFrame):
                     return child._extract_paths_from_drop(data)
 
             # Fallback: Eigene einfache Implementierung
             if isinstance(data, str):
-                # Für Windows Explorer Format
+                # For Windows Explorer Format
                 if os.name == 'nt' and data.startswith('{') and data.endswith('}'):
                     path = data.strip('{}')
                     if os.path.exists(path):
@@ -2687,9 +2687,9 @@ class OptimizedROMSorterGUI:
             return []
 
     def _show_drag_drop_feedback(self, message):
-        """Zeigt ein kurzes visuelles Feedback für Drag & Drop-Operationen."""
+        """Shows a short visual feedback for Drag & Drop operations."""
         try:
-            # Erstelle ein temporäres Label für Feedback
+            # Create a temporary label for feedback
             feedback = tk.Label(
                 self.root,
                 text=message,
@@ -2702,10 +2702,10 @@ class OptimizedROMSorterGUI:
                 borderwidth=2
             )
 
-            # Positioniere in der Mitte des Fensters
+            # Position in the middle of the window
             feedback.place(relx=0.5, rely=0.5, anchor="center")
 
-            # Animiere das Ausblenden
+            # Encourage the hide
             def fade_out(alpha=1.0):
                 if alpha > 0:
                     feedback.configure(bg=f"#{int(40 + (1-alpha)*215):02x}{int(167 + (1-alpha)*88):02x}{int(69 + (1-alpha)*186):02x}")
@@ -2713,26 +2713,26 @@ class OptimizedROMSorterGUI:
                 else:
                     feedback.destroy()
 
-            # Starte Ausblenden nach 1 Sekunde
+            # Start start after 1 second
             self.root.after(1000, fade_out)
 
         except Exception as e:
             print(f"Fehler beim Anzeigen des Feedbacks: {e}")
 
     def _create_menu(self):
-        """Erstellt die Hauptmenüleiste."""
+        """Creates the main menu bar."""
         menubar = tk.Menu(self.root)
         self.root.config(menu=menubar)
 
-        # Datei-Menü
+        # File menu
         file_menu = tk.Menu(menubar, tearoff=0)
-        file_menu.add_command(label="Quellordner öffnen...", command=self._select_source_folder)
-        file_menu.add_command(label="Zielordner öffnen...", command=self._select_dest_folder)
+        file_menu.add_command(label="Open source folder...", command=self._select_source_folder)
+        file_menu.add_command(label="Open destination folder...", command=self._select_dest_folder)
         file_menu.add_separator()
         file_menu.add_command(label="Beenden", command=self._on_closing)
         menubar.add_cascade(label="Datei", menu=file_menu)
 
-        # Aktionen-Menü
+        # Actions menu
         action_menu = tk.Menu(menubar, tearoff=0)
         action_menu.add_command(label="ROM-Sortierung starten", command=self._start_sorting)
         action_menu.add_command(label="Sortierung abbrechen", command=self._cancel_sorting)
@@ -2740,7 +2740,7 @@ class OptimizedROMSorterGUI:
         action_menu.add_command(label="Log-Datei öffnen", command=self._open_log_file)
         menubar.add_cascade(label="Aktionen", menu=action_menu)
 
-        # Datenbank-Menü (neu)
+        # Database menu (new)
         db_menu = tk.Menu(menubar, tearoff=0)
         db_menu.add_command(label="Datenbank-Status anzeigen", command=self._display_database_status)
         db_menu.add_command(label="ROM-Datenbank verwalten", command=self._show_database_manager)
@@ -2748,15 +2748,15 @@ class OptimizedROMSorterGUI:
         db_menu.add_command(label="Dokumentation zu Datenbanken", command=self._show_database_docs)
         menubar.add_cascade(label="Datenbank", menu=db_menu)
 
-        # Einstellungen-Menü (mit Theme-Optionen)
+        # Settings menu (with theme options)
         settings_menu = tk.Menu(menubar, tearoff=0)
         settings_menu.add_command(label="Allgemeine Einstellungen", command=self._show_settings)
 
-        # Theme-Untermenü
+        # Theme
         if THEME_SUPPORT and hasattr(self, 'theme_integrator') and self.theme_integrator:
             theme_menu = tk.Menu(settings_menu, tearoff=0)
 
-            # Füge alle verfügbaren Themes hinzu
+            # Add all available themes
             if hasattr(self.theme_integrator, 'theme_manager'):
                 theme_names = self.theme_integrator.theme_manager.get_theme_names()
                 current_theme = self.theme_integrator.theme_manager.get_current_theme_name()
@@ -2775,7 +2775,7 @@ class OptimizedROMSorterGUI:
 
         menubar.add_cascade(label="Einstellungen", menu=settings_menu)
 
-        # Hilfe-Menü
+        # Help menu
         help_menu = tk.Menu(menubar, tearoff=0)
         help_menu.add_command(label="Hilfe anzeigen", command=self._show_help)
         help_menu.add_command(label="Über ROM Sorter Pro", command=self._show_about)
@@ -2786,13 +2786,13 @@ class OptimizedROMSorterGUI:
         if THEME_SUPPORT:
             try:
                 self.theme_integrator = ThemeIntegrator(self)
-                print("Theme-System erfolgreich initialisiert")
+                print("Theme system successfully initialized")
             except Exception as e:
                 print(f"Fehler beim Initialisieren des Theme-Systems: {e}")
                 self.theme_integrator = None
         else:
             self.theme_integrator = None
-            print("Theme-System nicht verfügbar")
+            print("Theme system not available")
 
     def _initialize_variables(self):
         """Initialize GUI variables."""
@@ -2802,7 +2802,7 @@ class OptimizedROMSorterGUI:
         self.is_running = False
         self.worker_thread = None
         self._cleanup_callbacks = []
-        self.stop_requested = threading.Event()  # Event für die Abbruch-Anforderung
+        self.stop_requested = threading.Event()  # Event for the demolition request
 
     def _show_settings(self):
         """Zeigt den Dialog mit den allgemeinen Einstellungen an."""
@@ -2831,7 +2831,7 @@ class OptimizedROMSorterGUI:
                                 state="readonly")
         log_combo.pack(side="right", fill="x", expand=True, padx=(10, 0))
 
-        # Theme-Einstellungen, falls verfügbar
+        # Theme settings, if available
         if THEME_SUPPORT and self.theme_integrator:
             theme_frame = tk.LabelFrame(main_frame, text="Theme-Einstellungen")
             theme_frame.pack(fill="x", pady=10)
@@ -2839,8 +2839,8 @@ class OptimizedROMSorterGUI:
             theme_selection = self.theme_integrator.get_theme_selection_frame(theme_frame)
             theme_selection.pack(fill="x", padx=10, pady=10)
 
-        # Button zum Schließen
-        ttk.Button(main_frame, text="Schließen", command=settings_window.destroy).pack(pady=10)
+        # Button to close
+        ttk.Button(main_frame, text="Close", command=settings_window.destroy).pack(pady=10)
 
     def _change_theme(self, theme_name):
         """
@@ -2883,7 +2883,7 @@ Ein professionelles Werkzeug zur Organisation von ROM-Sammlungen.
 Features:
 - Automatische ROM-Erkennung mit mehreren Detektionsstrategien
 - Datenbank-basierte ROM-Identifikation (No-Intro und Redump)
-- Verbesserte CHD-Unterstützung
+- Improved CHD support
 - Drag & Drop-Support
 - Multithreading-Performance
 - Erweiterte Konsolen-Erkennung
@@ -3111,7 +3111,7 @@ Features:
         footer.pack(fill='x', side='bottom')
         footer.pack_propagate(False)
 
-        # Status-Label für Datenbankstatus und allgemeine Statusmeldungen
+        # Status label for database status and general status messages
         self.status_bar = tk.Label(
             footer, text="ROM Sorter Pro v2.1.4 - Memory Optimized",
             bg=STYLE.colors['bg_accent'],
@@ -3162,18 +3162,18 @@ Features:
         thread_local.check_shutdown = check_shutdown
 
     def _select_source_folder(self):
-        """Öffnet einen Dialog zur Auswahl des Quellordners."""
+        """Opens a dialog to select the source folder."""
         folder = filedialog.askdirectory(
-            title="Quellordner mit ROMs auswählen",
+            title="Select source folder with ROMs",
             initialdir=self.source_folder.get() or os.path.expanduser("~")
         )
         if folder:
             self._set_source_folder(folder)
 
     def _select_dest_folder(self):
-        """Öffnet einen Dialog zur Auswahl des Zielordners."""
+        """Opens a dialog to select the destination folder."""
         folder = filedialog.askdirectory(
-            title="Zielordner für sortierte ROMs auswählen",
+            title="Select destination folder for sorted ROMs",
             initialdir=self.dest_folder.get() or os.path.expanduser("~")
         )
         if folder:
@@ -3300,14 +3300,14 @@ Features:
                 # Verbesserte Konsolenerkennung
                 console = 'Unknown'
 
-                # Spezialbehandlung für Dateien mit mehrdeutigen Erweiterungen
+                # Special treatment for files with ambiguous extensions
                 if ext in ('.bin', '.iso', '.img', '.cue', '.chd', '.rom'):
-                    # Bei mehrdeutigen Erweiterungen versuchen wir, aus dem Dateinamen oder dem übergeordneten Ordner
-                    # weitere Hinweise zu bekommen
+                    # In the event of ambiguous extensions, we try to get out of the file name or the overriding folder
+                    # to get more information
                     filename_lower = file_path.name.lower()
                     parent_dir = file_path.parent.name.lower()
 
-                    # Konsolenspezifische Schlüsselwörter in Dateinamen oder Ordnernamen prüfen
+                    # Check console -specific keywords in file names or folder names
                     console_keywords = {
                         'PlayStation': ['ps1', 'psx', 'playstation', 'sony ps'],
                         'PlayStation_2': ['ps2', 'playstation 2', 'sony ps2'],
@@ -3319,7 +3319,7 @@ Features:
                         'Xbox_360': ['xbox 360', 'x360']
                     }
 
-                    # Prüfe, ob Dateiname oder Ordnername auf eine bestimmte Konsole hinweist
+                    # Check whether the file name or folder name indicates a certain console
                     for potential_console, keywords in console_keywords.items():
                         for keyword in keywords:
                             if keyword in filename_lower or keyword in parent_dir:
@@ -3328,7 +3328,7 @@ Features:
                         if console != 'Unknown':
                             break
 
-                # Wenn keine spezifische Konsole erkannt wurde, verwenden wir die Standard-Zuordnung
+                # If no specific console has been recognized, we use the standard assignment
                 if console == 'Unknown':
                     console = self.CONSOLE_MAP.get(ext, 'Unknown')
 
@@ -3599,27 +3599,27 @@ Features:
                     with sort_state['lock']:
                         sort_state['successful_files'] += 1
 
-                # Unser eigener optimierter Dateiverarbeitungscode unabhängig von MODULES_AVAILABLE
+                # Our own optimized file processing code regardless of modules_available
                 try:
-                    # Scannen und Organisieren der Dateien direkt in der GUI
+                    # Scanning and organizing the files directly in the GUI
                     source_dir = Path(self.source_folder.get())
                     dest_dir = Path(self.dest_folder.get())
 
-                    # Alle ROM-Dateien im Quellverzeichnis sammeln
+                    # Collect all ROM files in the source directory
                     all_files = []
                     for root, dirs, files in os.walk(source_dir):
                         root_path = Path(root)
 
-                        # Für jeden Dateinamen im aktuellen Verzeichnis
+                        # For each file name in the current directory
                         for filename in files:
                             file_path = root_path / filename
                             ext = file_path.suffix.lower()
 
-                            # Überprüfen, ob es sich um eine unterstützte Dateiendung handelt
+                            # Check whether it is a supported file extension
                             if ext in self.CONSOLE_MAP:
                                 all_files.append(file_path)
 
-                    # Die Gesamtanzahl der Dateien festlegen
+                    # Set the total number of files
                     total_files = len(all_files)
                     with sort_state['lock']:
                         sort_state['total_files'] = total_files
@@ -3633,7 +3633,7 @@ Features:
                         if stop_event.is_set() or (self.worker_thread and self.worker_thread.should_stop()):
                             break
 
-                        # Verbesserte Konsolentyperkennung aus Dateiendung
+                        # Improved console hypertension from file extension
                         ext = file_path.suffix.lower()
                         console_type = "Unknown"
 
@@ -3641,13 +3641,13 @@ Features:
                         if ext in self.CONSOLE_MAP:
                             console_type = self.CONSOLE_MAP.get(ext)
 
-                        # Verbesserte Konsolenerkennung für generische Dateitypen wie Archive, Binary usw.
+                        # Improved console detection for generic file types such as archives, binary, etc.
                         try:
-                            # Erweiterte Erkennung für mehrdeutige Dateierweiterungen (.bin, .iso, .zip, etc.)
+                            # Extended detection for ambiguous file extensions (.bin,.iso,.zip, etc.)
                             if console_type in ["Binary", "ROM_File", "Disk_Image", "Archive"]:
                                 print(f"Versuche bessere Konsolenerkennung für: {file_path.name}")
 
-                                # 0. Versuche fortgeschrittene Archivdetektion für Archive
+                                # 0. Experiments advanced archive detection for archives
                                 try:
                                     # Importiere den Archiv-Detektor
                                     from src.detectors.archive_detector import (
@@ -3655,7 +3655,7 @@ Features:
                                         improve_generic_type_detection
                                     )
 
-                                    # Verwende den Archiv-Detektor für verbesserte Erkennung
+                                    # Use the archive detector for improved detection
                                     if console_type == "Archive" and is_archive_file(str(file_path)):
                                         detected_console, confidence = detect_console_from_archive(str(file_path))
                                         if detected_console != "Archive" and confidence >= 0.6:
@@ -3670,7 +3670,7 @@ Features:
                                             console_type = detected_console
                                             print(f"Verbesserte Erkennung: {console_type} (Konfidenz: {confidence:.2f})")
                                 except ImportError:
-                                    # Wenn der Archiv-Detektor nicht importiert werden kann
+                                    # If the archive detector cannot be imported
                                     print("Archiv-Detektor nicht verfügbar, verwende Standard-Erkennung")
 
                                 # 1. Versuche CHD-Dateierkennung
@@ -3679,14 +3679,14 @@ Features:
                                         is_chd_file, detect_console_from_chd
                                     )
 
-                                    # Prüfe, ob es sich um eine CHD-Datei handelt und erkenne die Konsole
+                                    # Check whether it is a CHD file and recognize the console
                                     if is_chd_file(str(file_path)):
                                         detected_console, confidence = detect_console_from_chd(str(file_path))
                                         if detected_console != "Unknown" and confidence >= 0.6:
                                             console_type = detected_console
                                             print(f"CHD-Detektor erkannte Konsole: {console_type} (Konfidenz: {confidence:.2f})")
                                 except ImportError:
-                                    # Wenn der CHD-Detektor nicht importiert werden kann
+                                    # If the CHD detector cannot be imported
                                     print("CHD-Detektor nicht verfügbar, verwende Standard-Erkennung")
 
                                 # 1. Versuche Erkennung basierend auf Dateinamen (wenn noch generischer Typ)
@@ -3694,7 +3694,7 @@ Features:
                                     name_lower = file_path.name.lower()
                                     parent_dir = os.path.basename(os.path.dirname(str(file_path)))
 
-                                    # Versuche Konsolenerkennung aus Verzeichnisnamen
+                                    # Experiments console recognition from directory names
                                     if parent_dir.lower() not in ["roms", "games", "emulation"]:
                                         for console in self.CONSOLE_MAP.values():
                                             if console in ["Binary", "ROM_File", "Disk_Image", "Archive"]:
@@ -3702,7 +3702,7 @@ Features:
                                             console_name = console.lower().replace('_', ' ')
                                             if console_name in parent_dir.lower():
                                                 console_type = console
-                                                print(f"Erkannte Konsole aus Verzeichnisnamen: {console}")
+                                                print(f"Detected console from directory name: {console}")
                                                 break
 
                                 # Erkenne Konsolen basierend auf erweiterten Dateinamen-Mustern
@@ -3745,7 +3745,7 @@ Features:
                                         (r'\b(xbox\s*one|xone)\b', 'Xbox_One'),
                                         (r'\b(xbox\s*series)\b', 'Xbox_Series'),
 
-                                        # Arcade und andere Systeme
+                                        # Arcade and other systems
                                         (r'\b(arcade|mame|cps1|cps2|cps3)\b', 'MAME_Arcade'),
                                         (r'\b(neo\s*geo|mvs|aes|ngp)\b', 'Neo_Geo'),
                                         (r'\b(atari\s*2600|2600|vcs)\b', 'Atari_2600'),
@@ -3768,10 +3768,10 @@ Features:
                                             print(f"Erkannte Konsole aus erweitertem Muster: {console}")
                                             break
 
-                                # 2. Versuche utils.detect_console_fast zu verwenden, wenn verfügbar und noch immer generisch
+                                # 2. Try to use utils.detect_console_Fast if available and still generic
                                 if console_type in ["Binary", "ROM_File", "Disk_Image", "Archive"]:
                                     try:
-                                        # Verwende den verbesserten Detektionscode für ROMs
+                                        # Use the improved detection code for ROMS
                                         from src.utils import detect_console_fast, is_chd_file, detect_console_from_chd, is_archive_file, detect_console_from_archive
 
                                         # CHD-Datei-Erkennung
@@ -3790,14 +3790,14 @@ Features:
                                         else:
                                             detected, confidence = detect_console_fast(file_path.name, str(file_path))
                                             if detected != "Unknown" and confidence > 0.6:
-                                                # Formatiere den Konsolennamen für die Verzeichnisstruktur
+                                                # Format the console name for the directory structure
                                                 console_type = detected.replace(" ", "_")
                                                 print(f"Erkannte Konsole mit KI: {console_type} (Konfidenz: {confidence:.2f})")
                                     except (ImportError, ModuleNotFoundError) as e:
-                                        # Wenn utils nicht importiert werden kann
+                                        # If Utils cannot be imported
                                         print(f"Detektionsmodule nicht verfügbar: {e}")
 
-                                # Fallback: Prüfe Archive auf Inhalt
+                                # Fallback: Checking archives on content
                                 if console_type == "Archive" and ext == '.zip':
                                     try:
                                         import zipfile
@@ -3805,26 +3805,26 @@ Features:
 
                                         with zipfile.ZipFile(file_path, 'r') as zip_ref:
                                             file_list = zip_ref.namelist()
-                                            # Filtere Verzeichnisse und versteckte Dateien
+                                            # Filter directories and hidden files
                                             file_list = [f for f in file_list if not f.endswith('/')
                                                         and not f.startswith('__MACOSX')
                                                         and not f.startswith('.')]
 
-                                            # Prüfe max. 50 Dateien
+                                            # Check max. 50 files
                                             for zipped_file in file_list[:50]:
                                                 zipped_ext = os.path.splitext(zipped_file)[1].lower()
-                                                # Überspringe kleine Dateien wie READMEs
+                                                # Skip small files like readmes
                                                 if zipped_ext in ['.txt', '.nfo', '.diz', '.md']:
                                                     continue
 
-                                                # Erkenne Konsole aus Datei im Archiv
+                                                # Recognize console from file in the archive
                                                 if zipped_ext in self.CONSOLE_MAP:
                                                     detected_console = self.CONSOLE_MAP.get(zipped_ext)
                                                     # Ignoriere generische Typen
                                                     if detected_console not in ["Binary", "ROM_File", "Disk_Image", "Archive"]:
                                                         console_counts[detected_console] = console_counts.get(detected_console, 0) + 1
 
-                                        # Wenn wir Konsolen gefunden haben, nehmen wir die häufigste
+                                        # If we have found consoles, we take the most common
                                         if console_counts:
                                             most_common_console = max(console_counts.items(), key=lambda x: x[1])[0]
                                             console_type = most_common_console
@@ -3836,48 +3836,48 @@ Features:
                             import traceback
                             traceback.print_exc()
 
-                        # Zielverzeichnis erstellen, falls es nicht existiert
+                        # Create the target directory if it does not exist
                         console_dir = dest_dir / console_type
                         os.makedirs(console_dir, exist_ok=True)
 
-                        # Zieldateiname bestimmen mit Konfliktbehandlung
+                        # Target file name determine with conflict treatment
                         dest_file = console_dir / file_path.name
 
-                        # Behandlung von Namenskonflikten
+                        # Treatment of name conflicts
                         counter = 1
                         orig_name = file_path.stem
                         while dest_file.exists():
-                            # Füge Nummerierung für Duplikate hinzu
+                            # Add numbering for duplicates
                             new_name = f"{orig_name}_{counter}{file_path.suffix}"
                             dest_file = console_dir / new_name
                             counter += 1
 
                         try:
-                            # Tatsächliches Verschieben der Datei mit robuster Fehlerbehandlung
+                            # Actual moving the file with robust error handling
                             try:
                                 shutil.move(str(file_path), str(dest_file))
                             except (shutil.Error, PermissionError) as move_error:
-                                # Fallback: Wenn Verschieben fehlschlägt, versuche zu kopieren und dann zu löschen
+                                # Fallback: If moving fails to copy attempts and then delete
                                 print(f"Move fehlgeschlagen, versuche Kopieren: {move_error}")
                                 shutil.copy2(str(file_path), str(dest_file))
                                 os.unlink(str(file_path))
 
-                            # Erfolgreich verarbeitet
+                            # Successfully processed
                             with sort_state['lock']:
                                 sort_state['successful_files'] += 1
                                 sort_state['consoles_processed'].add(console_type)
                                 sort_state['current_console'] = console_type
 
-                            # Callback für Protokollierung
+                            # Callback for protocol
                             success_callback(str(file_path), console_type)
 
                         except Exception as e:
-                            # Verbesserte Fehlerbehandlung mit detaillierter Protokollierung
+                            # Improved error treatment with detailed logging
                             error_message = f"{type(e).__name__}: {str(e)}"
                             with sort_state['lock']:
                                 sort_state['failed_files'] += 1
 
-                            # Callback für detaillierte Protokollierung
+                            # Callback for detailed logging
                             error_callback(str(file_path), error_message)
 
                         # Fortschritt aktualisieren
@@ -3888,7 +3888,7 @@ Features:
                         # Fortschritts-Callback aufrufen
                         progress_callback(current_file, total_files, console_type)
 
-                    # Abschließende Statistiken erstellen
+                    # Create final statistics
                     result = {
                         'files_processed': current_file,
                         'successful_files': sort_state['successful_files'],
@@ -4019,9 +4019,9 @@ Features:
 
         # Add console info if available
         if consoles:
-            # Sortiere Konsolen alphabetisch für bessere Lesbarkeit
+            # Sorting consoles alphabetically for better readability
             consoles_sorted = sorted(consoles)
-            # Zeige alle Konsolen an, nicht nur die ersten paar
+            # Show all consoles, not just the first couple
             console_str = ", ".join(str(c).replace('_', ' ') for c in consoles_sorted)
             report_lines.append(f"• Konsolen: {console_str}")
 
@@ -4032,22 +4032,22 @@ Features:
 
         # Update stats if available
         if hasattr(self, 'stats_widget') and isinstance(self.stats_widget, OptimizedStatsWidget):
-            # Sammle tatsächliche Statistiken aus dem Zielordner
+            # Collect actual statistics from the target folder
             try:
                 console_stats = self._collect_actual_statistics()
                 if console_stats:
                     self.stats_widget.update_stats(console_stats)
                 else:
-                    # Fallback zur Schätzung, wenn tatsächliche Statistiken nicht verfügbar sind
+                    # Fallback on estimate if actual statistics are not available
                     if consoles:
                         console_stats = {}
                         for console in consoles:
-                            # Standardmäßig gleichmäßig aufteilen
+                            # Divide evenly by default
                             console_stats[console] = max(1, int(successful_files / len(consoles)))
                         self.stats_widget.update_stats(console_stats)
             except Exception as e:
                 print(f"Fehler beim Sammeln der Statistiken: {e}")
-                # Bei einem Fehler eine vereinfachte Statistik erstellen
+                # Create a simplified statistics in the event of an error
                 if consoles:
                     console_stats = {console: 1 for console in consoles}
                     self.stats_widget.update_stats(console_stats)
@@ -4055,13 +4055,13 @@ Features:
         # Reset UI state
         self._set_running_state(False)
 
-        # Show completion dialog with report - verbesserte Version mit modaler Anzeige
+        # Show Completion Dialog with Report - Improved version with Modaler Display
         self._show_sort_results("Erfolg", report_lines)
 
     def _show_sort_results(self, title: str, report_lines: List[str]):
         """Verbesserte Methode zum Anzeigen von Ergebnisdialogen mit Modal-Status.
         Verhindert doppelte oder überlappende Erfolgsmeldungen."""
-        # Alle vorherigen Toplevel-Fenster schließen, die Erfolg/Error-Dialoge sein könnten
+        # Close all previous top level windows that could be success/error dialogues
         for widget in self.root.winfo_children():
             if isinstance(widget, tk.Toplevel) and widget.wm_title() in ["Erfolg", "Error"]:
                 try:
@@ -4069,14 +4069,14 @@ Features:
                 except:
                     pass
 
-        # Neuen Dialog erstellen und als modal konfigurieren
+        # Create a new dialog and configure as a modal
         dialog = tk.Toplevel(self.root)
         dialog.title(title)
-        dialog.transient(self.root)  # Dialog an Hauptfenster binden
+        dialog.transient(self.root)  # Bind dialog to main window
         dialog.grab_set()  # Modal machen
         dialog.resizable(False, False)
 
-        # Icon für Erfolg
+        # Icon for success
         icon_label = tk.Label(dialog, text="✅", font=("Segoe UI", 24))
         icon_label.pack(pady=(15, 5))
 
@@ -4105,7 +4105,7 @@ Features:
         btn.focus_set()
 
     def _collect_actual_statistics(self) -> Dict[str, int]:
-        """Sammelt tatsächliche Statistiken aus dem Zielordner."""
+        """Collects actual statistics from the destination folder."""
         try:
             dest_dir = Path(self.dest_folder.get())
             if not dest_dir.exists() or not dest_dir.is_dir():
@@ -4113,24 +4113,24 @@ Features:
 
             stats = {}
 
-            # Durchlaufe alle Unterverzeichnisse im Zielordner
+            # Traverse all subdirectories in the destination folder
             for item in dest_dir.iterdir():
                 if item.is_dir():
-                    # Zähle alle Dateien im Konsolenverzeichnis
+                    # Cute all files in the console directory
                     console_name = item.name
                     file_count = 0
 
-                    # Zähle alle Dateien mit unterstützten Erweiterungen
+                    # Cute all files with supported extensions
                     for ext in self.CONSOLE_MAP.keys():
-                        # Normalisiere die Erweiterung
+                        # Normalize the expansion
                         ext_norm = ext.lower()
                         if not ext_norm.startswith('.'):
                             ext_norm = f".{ext_norm}"
 
-                        # Zähle Dateien mit dieser Erweiterung
+                        # Tot files with this extension
                         file_count += len(list(item.glob(f"*{ext_norm}")))
 
-                    # Füge zur Statistik hinzu, wenn Dateien gefunden wurden
+                    # Add to statistics when files have been found
                     if file_count > 0:
                         stats[console_name] = file_count
 
@@ -4174,18 +4174,18 @@ Features:
         # Erstelle Fehlermeldungstext
         error_lines = [f"Sortierung fehlgeschlagen: {error_msg}"]
 
-        # Füge Details hinzu, wenn verfügbar
+        # Add details if available
         if sort_state and sort_state.get('processed_files', 0) > 0:
             error_lines.append("")
             error_lines.append(f"Teilweiser Fortschritt: {sort_state['processed_files']} Dateien wurden vor dem Fehler verarbeitet.")
 
-        # Verwende die verbesserte Methode zum Anzeigen der Fehlermeldung
+        # Use the improved method for displaying the error message
         self._show_error_dialog("Fehler", error_lines)
 
     def _show_error_dialog(self, title: str, error_lines: List[str]):
         """Verbesserte Methode zum Anzeigen von Fehlerdialogen mit Modal-Status.
         Verhindert doppelte oder überlappende Fehlermeldungen."""
-        # Alle vorherigen Toplevel-Fenster schließen, die Erfolg/Error-Dialoge sein könnten
+        # Close all previous top level windows that could be success/error dialogues
         for widget in self.root.winfo_children():
             if isinstance(widget, tk.Toplevel) and widget.wm_title() in ["Erfolg", "Error", "Fehler"]:
                 try:
@@ -4193,14 +4193,14 @@ Features:
                 except:
                     pass
 
-        # Neuen Dialog erstellen und als modal konfigurieren
+        # Create a new dialog and configure as a modal
         dialog = tk.Toplevel(self.root)
         dialog.title(title)
-        dialog.transient(self.root)  # Dialog an Hauptfenster binden
+        dialog.transient(self.root)  # Bind dialog to main window
         dialog.grab_set()  # Modal machen
         dialog.resizable(False, False)
 
-        # Icon für Fehler
+        # Icon for errors
         icon_label = tk.Label(dialog, text="❌", font=("Segoe UI", 24), fg="red")
         icon_label.pack(pady=(15, 5))
 
@@ -4321,9 +4321,9 @@ Features:
         self.progress_label.configure(text="Operation stopped")
 
     def _close_all_dialogs(self):
-        """Schließt alle aktiven Dialog-Fenster."""
+        """Closes all active dialog windows."""
         try:
-            # Schließe alle Toplevel-Dialoge, die als Erfolgs- oder Fehlermeldungen dienen könnten
+            # Close all the top level dialogues that could serve as success or error messages
             for widget in self.root.winfo_children():
                 if isinstance(widget, tk.Toplevel) and widget.wm_title() in ["Erfolg", "Error", "Fehler"]:
                     try:
@@ -4331,13 +4331,13 @@ Features:
                     except:
                         pass
         except Exception as e:
-            print(f"Fehler beim Schließen von Dialogen: {e}")
+            print(f"Fehler beim Close von Dialogen: {e}")
 
     def _set_running_state(self, running: bool):
         """Set running state and update UI."""
         self.is_running = running
 
-        # Schließe alle bestehenden Dialoge beim Starten einer Operation
+        # Close all existing dialogues when starting an operation
         if running:
             self._close_all_dialogs()
 
@@ -4539,14 +4539,14 @@ Features:
 # MAIN ENTRY POINT
 # ============================================================================
 
-# Integriere die Datenbank-Funktionalität in die GUI-Klasse
+# Integrate the database functionality into the GUI class
 try:
     from src.database.db_gui_integration import add_database_methods_to_gui
     OptimizedROMSorterGUI = add_database_methods_to_gui(OptimizedROMSorterGUI)
 except Exception as e:
     print(f"Warnung: Datenbank-Integration konnte nicht geladen werden: {e}")
 
-    # Wenn die Datenbank-Integration nicht geladen werden kann, implementiere die fehlenden Methoden
+    # If the database integration cannot be loaded, the missing methods implement
     def _display_database_status(self):
         """Fallback-Implementierung für die Anzeige des Datenbankstatus."""
         self.status_bar.config(text="Datenbankstatus: Datenbank nicht verfügbar")
@@ -4559,33 +4559,33 @@ except Exception as e:
         """Fallback-Implementierung für die Dokumentation."""
         messagebox.showinfo("Dokumentation", "Die Datenbank-Dokumentation ist nicht verfügbar.")
 
-    # Füge die Fallback-Methoden zur Klasse hinzu
+    # Add the fallback methods to the class
     OptimizedROMSorterGUI._display_database_status = _display_database_status
     OptimizedROMSorterGUI._show_database_manager = _show_database_manager
     OptimizedROMSorterGUI._show_database_docs = _show_database_docs
 
-# Füge die fehlende Methode _open_log_file direkt zur GUI-Klasse hinzu
+# Add the missing method _open_log_file directly to the GUI class
 def _open_log_file(self):
     """Öffnet die aktuelle Log-Datei."""
     try:
-        # Gehe vom UI-Verzeichnis ein Verzeichnis nach oben für die logs
+        # Go up to the logs from the UI directory a directory for the logs
         ui_dir = os.path.dirname(os.path.abspath(__file__))
         app_dir = os.path.dirname(ui_dir)
         log_path = os.path.join(app_dir, 'logs')
 
-        # Finde die neueste Log-Datei
+        # Find the latest log file
         if os.path.exists(log_path):
             log_files = [f for f in os.listdir(log_path) if f.startswith('rom_sorter_')]
             if log_files:
                 log_files.sort(reverse=True)  # Neueste zuerst
                 latest_log = os.path.join(log_path, log_files[0])
 
-                # Öffne die Log-Datei
+                # Open the log file
                 if platform.system() == 'Windows':
                     os.startfile(latest_log)
                 elif platform.system() == 'Darwin':  # macOS
                     os.system(f'open "{latest_log}"')
-                else:  # Linux und andere
+                else:  # Linux and others
                     os.system(f'xdg-open "{latest_log}"')
                 return
 
@@ -4593,7 +4593,7 @@ def _open_log_file(self):
     except Exception as e:
         messagebox.showerror("Fehler", f"Fehler beim Öffnen der Log-Datei: {e}")
 
-# Füge die Methode nachträglich zur Klasse hinzu
+# Add the method to the class subsequently
 OptimizedROMSorterGUI._open_log_file = _open_log_file
 
 def launch_gui():
@@ -4620,3 +4620,5 @@ if __name__ == "__main__":
 # ============================================================================
 # END OF OPTIMIZED GUI MODULE
 # ============================================================================
+
+

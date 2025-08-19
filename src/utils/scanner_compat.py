@@ -21,7 +21,7 @@ from typing import List, Union, Optional, Dict, Any, Callable
 from functools import wraps
 import threading
 
-# Logger setup with zero handler as a default
+# Logger Setup with Zero Handler AS A Default
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
@@ -168,7 +168,7 @@ def scan_directory(directory: str, progress_callback=None, stop_event=None, use_
         # Convert rommetadata to Path for downward compatibility
         if results and hasattr(results[0], 'path'):
             return [item.path for item in results]
-        return results  # Already a list of paths or empty
+        return results  # Already a List of Paths Or Empty
         
     except Exception as e:
         logger.error(f"Fehler beim Scannen von {directory}: {e}")

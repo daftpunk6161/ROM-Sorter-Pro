@@ -12,13 +12,13 @@ import logging
 from typing import List, Tuple, TypeVar, Callable, Generic, Optional, Set, Dict, Any, Union
 from functools import lru_cache
 
-# Typ-Variable für generische Funktionen
+# Type variable for generic functions
 T = TypeVar('T')
 
 # Logger
 logger = logging.getLogger(__name__)
 
-# Versuche, das externe Fuzzywuzzy-Modul zu importieren
+# Attempts to import the external fuzzywuzzy module
 try:
     from fuzzywuzzy import fuzz, process
     _USE_EXTERNAL_FUZZ = True
@@ -40,7 +40,7 @@ def _process_strings(s1: str, s2: str) -> Tuple[str, str]:
     Returns:
         Tuple mit den normalisierten Strings
     """
-    # Zu Kleinbuchstaben konvertieren
+    # Convert to small letters
     s1 = s1.lower()
     s2 = s2.lower()
 
@@ -69,7 +69,7 @@ def fuzz_ratio(s1: str, s2: str) -> int:
     if _USE_EXTERNAL_FUZZ:
         return fuzz.ratio(s1, s2)
 
-    # Einfache Implementierung bei fehlender externer Bibliothek
+    # Simple implementation with a lack of external library
     s1, s2 = _process_strings(s1, s2)
     if not s1 or not s2:
         return 0
@@ -98,17 +98,17 @@ def fuzz_partial_ratio(s1: str, s2: str) -> int:
     if _USE_EXTERNAL_FUZZ:
         return fuzz.partial_ratio(s1, s2)
 
-    # Einfache Implementierung für partiellen Vergleich
+    # Simple implementation for partial comparison
     s1, s2 = _process_strings(s1, s2)
 
     if not s1 or not s2:
         return 0
 
-    # Verwende den kürzeren String als Referenz
+    # Use the shorter string as a reference
     if len(s1) > len(s2):
         s1, s2 = s2, s1
 
-    # Suche nach dem besten Übereinstimmungsbereich
+    # Search for the best agreement area
     best_score = 0
     for i in range(len(s2) - len(s1) + 1):
         substring = s2[i:i+len(s1)]
@@ -166,13 +166,13 @@ def fuzz_token_set_ratio(s1: str, s2: str) -> int:
     # Gemeinsame Tokens
     intersection = tokens1.intersection(tokens2)
 
-    # Union der Tokens
+    # Union of the tokens
     union = tokens1.union(tokens2)
 
     if not union:
         return 0
 
-    # Jaccard-Koeffizient für Token-Mengen
+    # Jaccard coefficient for quantities
     return round((len(intersection) / len(union)) * 100)
 
 
@@ -213,7 +213,7 @@ class ProcessMatch:
             if score >= score_cutoff:
                 results.append((choice, score))
 
-        # Sortieren nach Ähnlichkeitswert (absteigend)
+        # Sort according to similarity value (descending)
         results.sort(key=lambda x: x[1], reverse=True)
 
         return results[:limit]

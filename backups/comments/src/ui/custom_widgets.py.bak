@@ -209,7 +209,7 @@ class TreeviewDragDropSupport(DragDropSupport):
 
         if target_item and target_item != self.dragged_item:
 # Emphasize the target position
-            self.widget.see(target_item)  # Scrolle, um das Ziel sichtbar zu machen
+            self.widget.see(target_item)  # Scroll to make the goal visible
 
     def _reorder_items(self, source, target):
         """

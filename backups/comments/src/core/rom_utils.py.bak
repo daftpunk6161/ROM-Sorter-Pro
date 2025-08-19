@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+# -*-coding: utf-8-*-
 """
 ROM Sorter Pro - ROM Dateisystem-Funktionen
 
@@ -40,10 +40,10 @@ def get_all_rom_extensions(include_dot: bool = False) -> List[str]:
         # Atari
         'a26', 'a52', 'a78', 'j64', 'jag', 'lnx',
 
-        # SNK
+# Snk
         'ngp', 'ngc', 'npc', 'neo',
 
-        # NEC
+# Nec
         'pce', 'sgx', 'cue', 'ccd',
 
         # Commodore
@@ -57,13 +57,13 @@ def get_all_rom_extensions(include_dot: bool = False) -> List[str]:
         'col', 'sc', 'cas', 'sgm', 'st', 'msa', 'dsk', 'dmk', 'rzx', 'tzx',
         'udi', 'mgt', 'img', 'ima', 'vhd', 'vdi', 'xdf', 'fs', 'm3u', 'cso',
 
-        # Cartridge-Images
+# Cartridge-images
         'cart', 'ws', 'wsc',
 
         # Handheld
         'lnx', 'vboy', 'min',
 
-        # PC-Engine
+# PC engine
         'pce', 'tg16'
     ]
 
@@ -83,21 +83,21 @@ def get_sorted_rom_list(directory_path: Union[str, Path], filter_extensions: Opt
     Returns:
         Sortierte Liste von ROM-Dateipfaden
     """
-    # Normalisiere Pfad
+# Normalize path
     path_obj = Path(directory_path)
 
     if not path_obj.exists() or not path_obj.is_dir():
         logger.error(f"Ungültiges Verzeichnis: {directory_path}")
         return []
 
-    # Verwende alle ROM-Erweiterungen, wenn kein Filter angegeben ist
+# Use all ROM extensions if no filter is specified
     if filter_extensions is None:
         filter_extensions = get_all_rom_extensions()
     else:
-        # Stelle sicher, dass alle Erweiterungen ohne Punkt sind
+# Make sure that all extensions are without a point
         filter_extensions = [ext.lstrip('.') for ext in filter_extensions]
 
-    # Finde alle Dateien mit passenden Erweiterungen
+# Find all files with suitable extensions
     matching_files = []
     for file in path_obj.glob('**/*'):
         if file.is_file():
@@ -105,7 +105,7 @@ def get_sorted_rom_list(directory_path: Union[str, Path], filter_extensions: Opt
             if extension in filter_extensions:
                 matching_files.append(str(file))
 
-    # Sortiere die Liste
+# Sort the list
     matching_files.sort()
 
     return matching_files
@@ -121,25 +121,25 @@ def group_roms_by_console(rom_paths: List[str]) -> Dict[str, List[str]]:
     Returns:
         Dictionary mit Konsolen als Schlüssel und ROM-Listen als Werte
     """
-    # Importiere Erkennungsfunktionen
+# Importing identification functions
     from src.detectors import detect_console_fast
 
     grouped_roms = {}
 
     for rom_path in rom_paths:
         try:
-            # Erkenne Konsole
+# Recognize console
             console, _ = detect_console_fast(os.path.basename(rom_path), rom_path)
 
-            # Initialisiere Liste für Konsole, falls noch nicht vorhanden
+# Initialist list for console, if not yet available
             if console not in grouped_roms:
                 grouped_roms[console] = []
 
-            # Füge ROM zur entsprechenden Konsole hinzu
+# Add Rome to the corresponding console
             grouped_roms[console].append(rom_path)
         except Exception as e:
             logger.warning(f"Fehler beim Gruppieren von ROM {rom_path}: {e}")
-            # Füge ROM zur Gruppe "Unknown" hinzu
+# Add Rome to the "Unknown" group
             if "Unknown" not in grouped_roms:
                 grouped_roms["Unknown"] = []
             grouped_roms["Unknown"].append(rom_path)
@@ -157,13 +157,13 @@ def is_valid_rom_file(file_path: Union[str, Path]) -> bool:
     Returns:
         True, wenn es sich um eine gültige ROM-Datei handelt
     """
-    # Normalisiere Pfad
+# Normalize path
     path_obj = Path(file_path)
 
     if not path_obj.exists() or not path_obj.is_file():
         return False
 
-    # Prüfe Dateierweiterung
+# Check file extension
     extension = path_obj.suffix.lstrip('.').lower()
     valid_extensions = get_all_rom_extensions()
 
@@ -187,26 +187,26 @@ def calculate_rom_signature(file_path: Union[str, Path], chunk_size: int = 16 * 
     if not path_obj.exists() or not path_obj.is_file():
         raise FileNotFoundError(f"Datei nicht gefunden: {file_path}")
 
-    # Initialisiere Hasher
+# Initialisalize Hasher
     hasher = hashlib.md5()
 
     try:
         file_size = path_obj.stat().st_size
 
         with open(path_obj, 'rb') as f:
-            # Lese ersten Chunk (Header)
+# Read the first chunk (header)
             if file_size > 0:
                 header = f.read(min(chunk_size, file_size))
                 hasher.update(header)
 
-            # Springe zur Mitte der Datei und lese einen Chunk
+# Jump to the middle of the file and read a chunk
             if file_size > chunk_size * 2:
                 mid_pos = file_size // 2 - chunk_size // 2
                 f.seek(mid_pos)
                 mid_chunk = f.read(chunk_size)
                 hasher.update(mid_chunk)
 
-            # Lese letzten Chunk (Footer)
+# Read the last chunk (footer)
             if file_size > chunk_size:
                 f.seek(max(0, file_size - chunk_size))
                 footer = f.read(chunk_size)
@@ -216,7 +216,7 @@ def calculate_rom_signature(file_path: Union[str, Path], chunk_size: int = 16 * 
         logger.error(f"Fehler beim Berechnen der ROM-Signatur für {file_path}: {e}")
         return "error_signature"
 
-    # Füge Dateigröße als zusätzlichen Faktor hinzu
+# Add file size as an additional factor
     hasher.update(str(file_size).encode())
 
     return hasher.hexdigest()

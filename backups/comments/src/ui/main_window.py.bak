@@ -1,54 +1,58 @@
+# Gruppe 1: Standard-Bibliotheken
+import logging
+import queue
+import threading
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Callable, Union, Tuple
+
+# Gruppe 2: Drittanbieterbibliotheken
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
-import threading
-import queue
-import logging
 
+# Gruppe 4: Relative Imports
 from .base import STYLE, BaseApp, center_window
 
 class ROMSorterWindow(tk.Tk):
-    """Hauptfenster der ROM Sorter Anwendung."""
+    """Main window of the ROM Sorter application."""
 
     def __init__(self):
-        """Initialisiere das Hauptfenster."""
+        """Initialize the main window."""
         super().__init__()
-        self.title("ROM Sorter Pro 🎮 - Optimized v2.1.4")
+        self.title("ROM Sorter Pro 🎮 - Optimized v2.1.6")
         self.geometry("1000x700")
         self.minsize(800, 600)
 
-        # Verbessere die Renderleistung
+        # Improve the rendering performance
         self.tk.call('package', 'forget', 'Tk_syncLed')
         self.tk.call('tk', 'useinputmethods', '1')
-        self.tk.call('tk', 'scaling', '1.0')  # Konsistente Skalierung
+        self.tk.call('tk', 'scaling', '1.0')  # Consistent scaling
 
-        # Zentriere das Fenster
+        # Center the window
         center_window(self, 1000, 700)
 
-        # Initialisiere Variablen
+        # Initialize variables
         self._initialize_variables()
 
-        # Erstelle UI-Komponenten
+        # Create UI components
         self._create_menu()
         self._create_layout()
 
-        # Initialisiere Worker-Threads
+        # Initialize worker threads
         self._initialize_workers()
 
-        # Protokolliere die Erstellung des Fensters
-        logging.info("ROM Sorter Hauptfenster erstellt")
+        # Record the creation of the window
+        logging.info("ROM Sorter main window created")
 
-        # Schließe automatisch Ressourcen bei Beendigung
+        # Handle window close event
         self.protocol("WM_DELETE_WINDOW", self._on_close)
 
     def _initialize_variables(self):
-        """Initialisiere Variablen für die Anwendung."""
-        # Pfadvariablen
+        """Initialize variables for the application."""
+        # Path variables
         self.source_path = tk.StringVar()
         self.dest_path = tk.StringVar()
 
-        # Statusvariablen
+        # Status variables
         self.status_text = tk.StringVar(value="Bereit")
         self.progress_value = tk.DoubleVar(value=0.0)
         self.is_processing = threading.Event()
@@ -63,39 +67,39 @@ class ROMSorterWindow(tk.Tk):
         self.total_files = 0
         self.processed_files = 0
 
-        # Warteschlange für die Thread-Kommunikation
+        # Queue for thread communication
         self.message_queue = queue.Queue()
 
     def _create_menu(self):
-        """Erstelle die Menüleiste."""
+        """Create the menu bar."""
         menubar = tk.Menu(self)
 
-        # Datei-Menü
+        # File menu
         file_menu = tk.Menu(menubar, tearoff=0)
-        file_menu.add_command(label="Quellordner auswählen...", command=lambda: self._select_folder("source"))
-        file_menu.add_command(label="Zielordner auswählen...", command=lambda: self._select_folder("dest"))
+        file_menu.add_command(label="Select source folder...", command=lambda: self._select_folder("source"))
+        file_menu.add_command(label="Select destination folder...", command=lambda: self._select_folder("dest"))
         file_menu.add_separator()
-        file_menu.add_command(label="Beenden", command=self._on_close)
-        menubar.add_cascade(label="Datei", menu=file_menu)
+        file_menu.add_command(label="Exit", command=self._on_close)
+        menubar.add_cascade(label="File", menu=file_menu)
 
-        # Aktionen-Menü
+        # Actions menu
         action_menu = tk.Menu(menubar, tearoff=0)
         action_menu.add_command(label="ROMs sortieren", command=self._on_start_sorting)
         action_menu.add_command(label="Abbrechen", command=self._on_cancel_sorting)
         menubar.add_cascade(label="Aktionen", menu=action_menu)
 
-        # Hilfe-Menü
+        # Help menu
         help_menu = tk.Menu(menubar, tearoff=0)
         help_menu.add_command(label="Dokumentation", command=self._show_documentation)
         help_menu.add_command(label="Über ROM Sorter", command=self._show_about)
         menubar.add_cascade(label="Hilfe", menu=help_menu)
 
-        # Menüleiste anwenden
+        # Use menu bars
         self.config(menu=menubar)
 
     def _create_layout(self):
         """Erstelle das Hauptlayout der Anwendung."""
-        # Hauptframe mit Padding
+        # Main frame with padding
         main_frame = tk.Frame(self, bg=STYLE.colors.bg_primary)
         main_frame.pack(fill='both', expand=True, padx=10, pady=10)
 
@@ -109,13 +113,13 @@ class ROMSorterWindow(tk.Tk):
         # Linke Spalte
         left_frame = tk.Frame(content_frame, bg=STYLE.colors.bg_primary, width=300)
         left_frame.pack(side='left', fill='y', padx=5, pady=5)
-        left_frame.pack_propagate(False)  # Verhindert das Schrumpfen des Frames
+        left_frame.pack_propagate(False)  # Prevents the frame from shrinking
 
         # Rechte Spalte
         right_frame = tk.Frame(content_frame, bg=STYLE.colors.bg_primary)
         right_frame.pack(side='left', fill='both', expand=True, padx=5, pady=5)
 
-        # Erstelle die Panel-Inhalte
+        # Create the panel content
         self._create_left_panel(left_frame)
         self._create_right_panel(right_frame)
 
@@ -126,9 +130,9 @@ class ROMSorterWindow(tk.Tk):
         """Erstelle den Header-Bereich."""
         header_frame = tk.Frame(parent, bg=STYLE.colors.accent_primary, height=60)
         header_frame.pack(fill='x', pady=(0, 10))
-        header_frame.pack_propagate(False)  # Verhindert das Schrumpfen des Frames
+        header_frame.pack_propagate(False)  # Prevents the frame from shrinking
 
-        # Logo und Titel
+        # Logo and title
         title_label = tk.Label(
             header_frame,
             text="ROM Sorter Pro",
@@ -138,7 +142,7 @@ class ROMSorterWindow(tk.Tk):
         )
         title_label.pack(side='left', padx=20, pady=10)
 
-        # Version und Info
+        # Version and info
         version_label = tk.Label(
             header_frame,
             text="v2.1.4 Optimized",
@@ -150,21 +154,21 @@ class ROMSorterWindow(tk.Tk):
 
     def _create_left_panel(self, parent):
         """Erstelle das linke Panel mit Ordnerauswahl und Optionen."""
-        # Diese Methode wird in einer tatsächlichen Implementierung erweitert,
-        # um die Ordnerauswahl und Optionen zu erstellen
+        # This method is expanded in an actual implementation,
+        # To create the folder selection and options
         pass
 
     def _create_right_panel(self, parent):
-        """Erstelle das rechte Panel mit Tabs für Statistiken und Logs."""
-        # Diese Methode wird in einer tatsächlichen Implementierung erweitert,
-        # um die Tabs und ihre Inhalte zu erstellen
+        """Create the right panel with tabs for statistics and logs."""
+        # This method is expanded in an actual implementation,
+        # To create the tabs and its content
         pass
 
     def _create_footer(self, parent):
         """Erstelle den Footer-Bereich mit Statusanzeige und Fortschrittsbalken."""
         footer_frame = tk.Frame(parent, bg=STYLE.colors.bg_secondary, height=40)
         footer_frame.pack(fill='x', pady=(10, 0))
-        footer_frame.pack_propagate(False)  # Verhindert das Schrumpfen des Frames
+        footer_frame.pack_propagate(False)  # Prevents the frame from shrinking
 
         # Statusanzeige
         status_label = tk.Label(
@@ -187,8 +191,8 @@ class ROMSorterWindow(tk.Tk):
         progress_bar.pack(side='right', padx=10, pady=5)
 
     def _initialize_workers(self):
-        """Initialisiere Worker-Threads für Hintergrundaufgaben."""
-        # Thread zur Verarbeitung von UI-Updates
+        """Initialize worker threads for background tasks."""
+        # Thread for the processing of UI updates
         self.update_thread = threading.Thread(
             target=self._process_message_queue,
             daemon=True,
@@ -197,40 +201,40 @@ class ROMSorterWindow(tk.Tk):
         self.update_thread.start()
 
     def _process_message_queue(self):
-        """Verarbeite Nachrichten aus der Queue für UI-Updates."""
+        """Process messages from the queue for UI updates."""
         while True:
             try:
-                # Hole die nächste Nachricht aus der Queue
+                # Get the next message out of the queue
                 message = self.message_queue.get(timeout=0.1)
 
-                # Verarbeite die Nachricht basierend auf ihrem Typ
+                # Process the message based on your type
                 if message['type'] == 'status':
                     self.status_text.set(message['text'])
                 elif message['type'] == 'progress':
                     self.progress_value.set(message['value'])
                 elif message['type'] == 'log':
-                    # In einer vollständigen Implementierung würde hier der Log aktualisiert
+                    # In a complete implementation, the log would be updated here
                     pass
 
-                # Markiere die Nachricht als verarbeitet
+                # Mark the message as processed
                 self.message_queue.task_done()
             except queue.Empty:
-                # Keine Nachrichten in der Queue
+                # No messages in the queue
                 pass
 
-            # Kurze Pause zur Vermeidung von CPU-Last
+            # Short break to avoid CPU load
             import time
             time.sleep(0.01)
 
     def _select_folder(self, folder_type):
         """
-        Öffne einen Ordnerauswahldialog.
+        Open a folder selection dialog.
 
         Args:
-            folder_type: 'source' oder 'dest' für den Quell- oder Zielordner
+            folder_type: 'source' or 'dest' for the source or destination folder
         """
         folder = filedialog.askdirectory(
-            title=f"Wähle {'Quell' if folder_type == 'source' else 'Ziel'}-Ordner",
+            title=f"Select {'source' if folder_type == 'source' else 'destination'} folder",
             mustexist=True
         )
 
@@ -242,11 +246,11 @@ class ROMSorterWindow(tk.Tk):
 
     def _on_start_sorting(self):
         """Starte den Sortiervorgang."""
-        # Überprüfe, ob Quell- und Zielordner ausgewählt wurden
+        # Check whether the source and target folder have been selected
         if not self.source_path.get() or not self.dest_path.get():
             messagebox.showwarning(
-                "Fehlende Ordner",
-                "Bitte wähle einen Quell- und Zielordner aus."
+                "Missing folders",
+                "Please select a source and destination folder."
             )
             return
 
@@ -255,7 +259,7 @@ class ROMSorterWindow(tk.Tk):
         self.status_text.set("Sortiere ROMs...")
         self.progress_value.set(0.0)
 
-        # In einer vollständigen Implementierung würde hier der Sortiervorgang gestartet
+        # In a complete implementation, the sorting process would be started here
 
     def _on_cancel_sorting(self):
         """Breche den Sortiervorgang ab."""
@@ -280,7 +284,7 @@ class ROMSorterWindow(tk.Tk):
         )
 
     def _on_close(self):
-        """Handle das Schließen des Fensters."""
+        """Handle the window closing."""
         # Stoppe alle laufenden Threads
         self.is_processing.clear()
 
@@ -288,7 +292,7 @@ class ROMSorterWindow(tk.Tk):
         import gc
         gc.collect()
 
-        # Schließe das Fenster
+        # Close the window
         self.destroy()
 
 
@@ -302,3 +306,4 @@ if __name__ == "__main__":
     # Anwendung starten
     app = ROMSorterWindow()
     app.mainloop()
+

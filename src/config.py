@@ -1246,7 +1246,7 @@ class AdvancedConfigRepairer:
             original_line = line
 
             # Simple heuristic: replace single quotes with double quotes for keys
-            # This is a simplified approach and may need refinement
+            # This is a Simplified Approach and May Need Refinement
             if ':' in line and "'" in line:
                 # Look for patterns like 'key': value
                 line = re.sub(r"'([^']*)'(\s*:)", r'"\1"\2', line)

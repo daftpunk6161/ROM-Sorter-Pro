@@ -11,21 +11,21 @@ import re
 import logging
 from typing import Tuple, Optional, List, Dict, Any, Union
 
-# Modul-Exporte für einfachere Verwendung
+# Module exports for easier use
 try:
     from .fuzzy_matching import (
         fuzz_ratio, fuzz_partial_ratio, fuzz_token_sort_ratio,
         fuzz_token_set_ratio, ProcessMatch
     )
 except ImportError:
-    pass  # Modul möglicherweise noch nicht verfügbar
+    pass  # Module may not yet
 
 try:
     from .logging_enhanced import (
         TRACE, VERBOSE, ColoredFormatter, JSONFormatter, LogMetricsHandler
     )
 except ImportError:
-    pass  # Modul möglicherweise noch nicht verfügbar
+    pass  # Module may not yet
 
 try:
     from .performance import (
@@ -33,13 +33,13 @@ try:
         get_performance_report
     )
 except ImportError:
-    pass  # Modul möglicherweise noch nicht verfügbar
+    pass  # Module may not yet
 
-# Wrapper für Funktionen, die noch aus utils.py importiert werden
-# Dies ermöglicht eine sanfte Migration
+# Wrapper for functions that are still imported from utils.py
+# This enables a gentle migration
 logger = logging.getLogger(__name__)
 
-# Führe die Lademeldung aus für Debugging-Zwecke
+# Perform the charging message for debugging purposes
 logger.info("Utils-Modul mit Wrapper-Funktionen geladen")
 
 @lru_cache(maxsize=1000)
@@ -160,9 +160,9 @@ def detect_console_from_archive(file_path: str) -> Tuple[str, float]:
     return _detect_console_from_archive(file_path)
 
 
-# Import Wrapper-Funktionen für die Abwärtskompatibilität mit optimized_scanner.py
-# Diese Importe sorgen dafür, dass bestehender Code, der optimized_scanner.py verwendet,
-# weiterhin funktioniert, aber stattdessen die neuen Scanner-Module verwendet werden.
+# Import wrapper functions for downward compatibility with optimized_scanner.py
+# These imports ensure that existing code, the Optimized_Scanner.py uses, uses
+# Furthermore, the new scanner modules are used instead.
 try:
     from .scanner_compat import (
         OptimizedFileScanner,
@@ -171,5 +171,5 @@ try:
         get_cache_stats as get_scanner_cache_stats
     )
 except ImportError:
-    # Fallback, falls scanner_compat nicht verfügbar ist
+    # Fallback if scanner_compat is not available
     logging.warning("Die Scanner-Kompatibilitätsmodule konnten nicht importiert werden.")

@@ -208,7 +208,7 @@ class DatabaseManagerDialog:
 # Start thread
         threading.Thread(target=scan_thread, daemon=True).start()
 
-# Show to a waiting dialogue
+# Show to a Waiting Dialogue
         progress_dialog = tk.Toplevel(self.dialog)
         progress_dialog.title("Scanne ROMs...")
         progress_dialog.geometry("300x100")
@@ -246,7 +246,7 @@ class DatabaseManagerDialog:
             messagebox.showerror("Fehler", "Die ausgewählte Datei existiert nicht.")
             return
 
-# Start the import process in a separate thread
+# Start the Import Process in A separate thread
         def import_thread():
             try:
                 from scripts.update_rom_database import import_dat_file, setup_database
@@ -281,7 +281,7 @@ class DatabaseManagerDialog:
 # Start thread
         threading.Thread(target=import_thread, daemon=True).start()
 
-# Show to a waiting dialogue
+# Show to a Waiting Dialogue
         progress_dialog = tk.Toplevel(self.dialog)
         progress_dialog.title("Importiere DAT...")
         progress_dialog.geometry("300x100")

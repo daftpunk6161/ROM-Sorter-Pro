@@ -243,9 +243,9 @@ def create_tooltip(widget: tk.Widget, text: str) -> None:
         text: Der anzuzeigende Text
     """
     tooltip = tk.Toplevel(widget)
-    tooltip.wm_overrideredirect(True)  # Entfernt die Fensterdekorationen
-    tooltip.wm_geometry("+0+0")  # Platziert das Fenster anfänglich in der oberen linken Ecke
-    tooltip.withdraw()  # Versteckt das Fenster zunächst
+    tooltip.wm_overrideredirect(True)  # Removes the window decorations
+    tooltip.wm_geometry("+0+0")  # Initially placed the window in the upper left corner
+    tooltip.withdraw()  # Hidden the window first
 
     label = tk.Label(
         tooltip,

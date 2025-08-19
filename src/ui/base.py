@@ -187,7 +187,7 @@ class BaseApp:
         root.title(title)
         root.geometry(geometry)
 
-# Set a minimum size for the window
+# Set a minimum size for the Window
         root.minsize(640, 480)
 
 # Improve the rendering performance

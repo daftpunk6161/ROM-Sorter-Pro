@@ -426,7 +426,7 @@ class ROMSorterMainWindow(QMainWindow):
     def _update_rom_table(self, rom_info=None):
         """Aktualisiert die ROM-Tabelle mit neuen Daten."""
         if rom_info:
-            # Add a new Rome
+            # Add a new rome
             self.roms_table_data.append(rom_info)
 
             # Update the table
@@ -530,7 +530,7 @@ class ROMSorterMainWindow(QMainWindow):
             self.dir_input.text() or str(Path.home())
         )
 
-        if directory:  # Not empty if the user has made a selection
+        if directory:  # Not Empty if the user has made a selection
             self.dir_input.setText(directory)
 
     def _on_export_results(self):
@@ -570,7 +570,7 @@ class ROMSorterMainWindow(QMainWindow):
 
     def _on_refresh(self):
         """Aktualisiert die Ansichten."""
-        # In a real application, the data would be recharged here
+        # In a real application, the data would be ared here
         self._update_status("Ansicht aktualisiert")
 
     def _on_start_scan(self):
@@ -647,7 +647,7 @@ class ROMSorterMainWindow(QMainWindow):
 
     def _on_open_docs(self):
         """Öffnet die Dokumentation."""
-        # In a real application, the local documentation would be opened here
+        # In a real application, The Local Documentation would be opened here
         # Or the online documentation in the browser
         QMessageBox.information(self, "Dokumentation", "Diese Funktion ist noch nicht implementiert.")
 

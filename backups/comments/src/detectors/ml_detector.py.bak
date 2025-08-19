@@ -52,8 +52,8 @@ logger = logging.getLogger(__name__)
 DEFAULT_MODEL_PATH = Path("models/enhanced_ml_detector")
 DEFAULT_DATA_PATH = Path("data/ml_training")
 HEADER_BYTES_TO_READ = 4096  # Wie viele Bytes vom Dateianfang gelesen werden
-MAX_CACHE_SIZE = 10000  # Maximale Anzahl von Elementen im Cache
-MIN_CONFIDENCE_THRESHOLD = 0.7  # Schwellenwert für Konfidenz
+MAX_CACHE_SIZE = 10000  # Maximum number of elements in the cache
+MIN_CONFIDENCE_THRESHOLD = 0.7  # Threshold for confidence
 FEEDBACK_THRESHOLD = 20  # Anzahl neuer Feedbacks, bevor ein Modell-Update erfolgt
 
 # File duties according to the console
@@ -173,8 +173,8 @@ class MLEnhancedConsoleDetector(BaseDetector):
         self.feature_extractor = DefaultFeatureExtractor()
         self.model_version = "1.0.0-rule-based"
         self.feedback_buffer = deque(maxlen=FEEDBACK_THRESHOLD * 2)
-        self.result_cache = {}  # Cache für Erkennungsergebnisse
-        self.last_features_used = []  # Für Debugging und Transparenz
+        self.result_cache = {}  # Cache for detection results
+        self.last_features_used = []  # For debugging and transparency
 
 # Model metrics
         self.metrics = {
@@ -432,7 +432,7 @@ class MLEnhancedConsoleDetector(BaseDetector):
         """
         try:
             file_size = file_path.stat().st_size
-            if file_size > 1024 * 1024:  # Für Dateien > 1 MB
+            if file_size > 1024 * 1024:  # For files> 1 MB
                 with open(file_path, 'rb') as f:
 # Read the first 64k and then jump to the middle and to the end
                     start_bytes = f.read(65536)
@@ -460,7 +460,7 @@ class DefaultFeatureExtractor:
     """
 
     def __init__(self):
-        self.n_gram_range = (1, 3)  # Uni-, Bi- und Trigramme
+        self.n_gram_range = (1, 3)  # Uni, bi- and trigrams
         self._keyword_patterns = self._compile_keyword_patterns()
 
     def _compile_keyword_patterns(self) -> Dict[str, re.Pattern]:
@@ -500,7 +500,7 @@ class DefaultFeatureExtractor:
     def _extract_filename_features(self, file_path: Path) -> Dict[str, Any]:
         """Extrahiert Features aus dem Dateinamen."""
         filename = file_path.name
-        stem = file_path.stem  # Name ohne Erweiterung
+        stem = file_path.stem  # Name without expansion
         extension = file_path.suffix.lower()
 
         features = {

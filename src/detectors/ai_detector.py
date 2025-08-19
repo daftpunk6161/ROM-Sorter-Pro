@@ -245,7 +245,7 @@ class AIEnhancedROMDetector:
             if ext_info["confidence"] > confidence:
                 return ext_info["console"], ext_info["confidence"], "extension"
 
-# If a sufficient confidence was not reached
+# If a Suffed Confidence was not Reached
         if confidence < 0.4:
             return "Unknown", confidence, "low_confidence"
 
@@ -343,7 +343,7 @@ class AIEnhancedROMDetector:
         for console, keywords in console_keywords.items():
             intersection = tokens.intersection(keywords)
             if intersection:
-# Calculate a score based on the number of matching keywords
+# Calculate A Score Based on the Number of Matching Keywords
 # and their relevance for the file name
                 score = min(0.95, len(intersection) * 0.2 + 0.6)
 
@@ -378,7 +378,7 @@ class AIEnhancedROMDetector:
                 if content:
                     rom_hash = hashlib.md5(content[:4096]).hexdigest()
                 else:
-# Without content we use the file name as a weak replacement
+# Without Content We Use the File Name as a Weak Replacement
                     rom_hash = hashlib.md5(filename.encode('utf-8')).hexdigest() + "_namehash"
 
 # Update the feedback data

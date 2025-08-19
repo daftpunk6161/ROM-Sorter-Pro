@@ -4,15 +4,14 @@
 """
 ROM Sorter Pro - Dependency Manager
 
-Dieses Modul kümmert sich um die Prüfung und Installation der erforderlichen
-Abhängigkeiten für ROM Sorter Pro, einschließlich optionaler Abhängigkeiten
-für erweiterte Funktionen.
+This module handles checking and installing the required dependencies
+for ROM Sorter Pro, including optional dependencies for advanced features.
 
 Features:
-- Prüfung der installierten Pakete und Versionen
-- Automatische Installation fehlender Pakete
-- Unterstützung für optionale Abhängigkeiten (ML, GUI, etc.)
-- Plattformspezifische Anpassungen
+- Checking installed packages and versions
+- Automatic installation of missing packages
+- Support for optional dependencies (ML, GUI, etc.)
+- Platform-specific adaptations
 """
 
 import os
@@ -23,53 +22,53 @@ import platform
 import importlib.util
 from typing import Dict, List, Set, Tuple, Optional, Union, Any
 
-# Versuche pkg_resources zu importieren (optionale Abhängigkeit)
+# Try to import PKG_Resources (optional dependency)
 try:
     import pkg_resources
     HAS_PKG_RESOURCES = True
 except ImportError:
     HAS_PKG_RESOURCES = False
 
-# Logger konfigurieren
+# Configure logger
 logger = logging.getLogger(__name__)
 
-# Erforderliche Abhängigkeiten
+# Required dependencies
 REQUIRED_PACKAGES = [
     "PyQt5",            # GUI-Framework
-    "pandas",           # Datenverarbeitung
-    "requests",         # HTTP-Anfragen
-    "pillow",           # Bildverarbeitung
-    "appdirs",          # Pfade für Anwendungsdaten
-    "tqdm",             # Fortschrittsanzeige
+    "pandas",           # Data processing
+    "requests",         # HTTP requests
+    "pillow",           # Image processing
+    "appdirs",          # Paths for application data
+    "tqdm",             # Progress display
 ]
 
-# Optionale Abhängigkeiten nach Funktionalität
+# Optional dependencies according to functionality
 OPTIONAL_PACKAGES = {
     "ml": [
-        "scikit_learn",  # Maschinelles Lernen (scikit-learn wird als scikit_learn installiert)
-        "numpy",         # Numerische Berechnungen
-        "tensorflow",    # TensorFlow für maschinelles Lernen
+        "scikit_learn",  # Machine learning (scikit-learn is installed as scikit_learn)
+        "numpy",         # Numerical computations
+        "tensorflow",    # Tensorflow for machine learning
     ],
     "ai": [
-        "tensorflow",    # Deep Learning (falls GPU verfügbar)
-        "torch",         # PyTorch (Alternative zu TensorFlow)
+        "tensorflow",    # Deep Learning (if GPU available)
+        "torch",         # Pytorch (alternative to tensorflow)
     ],
     "web": [
         "flask",         # Web-Interface
         "flask-cors",    # Cross-Origin Resource Sharing
     ],
     "advanced": [
-        "pyunpack",      # Unterstützung für verschiedene Archivformate
-        "rarfile",       # RAR-Datei-Unterstützung
-        "py7zr",         # 7z-Datei-Unterstützung
+        "pyunpack",      # Support for various archive formats
+        "rarfile",       # RAR file support
+        "py7zr",         # 7Z file support
     ],
     "gui_extensions": [
-        "PyQt5-stubs",   # Typisierungsinformationen für PyQt5
-        "pyqtgraph",     # Plotting und Grafiken
+        "PyQt5-stubs",   # Typing information for PYQT5
+        "pyqtgraph",     # Plotting and graphics
     ],
 }
 
-# Platform-spezifische Abhängigkeiten
+# Platform-specific dependencies
 PLATFORM_PACKAGES = {
     "Windows": [
         "pywin32",       # Windows-API-Zugriff
@@ -79,7 +78,7 @@ PLATFORM_PACKAGES = {
         "pyobjc",        # macOS-API-Zugriff
     ],
     "Linux": [
-        "python-xlib",   # X11-Unterstützung für Linux
+        "python-xlib",   # X11 support for Linux
     ],
 }
 
@@ -103,16 +102,16 @@ class DependencyManager:
         """
         installed = {}
         try:
-            # Verwende pkg_resources, um installierte Pakete zu ermitteln
+            # Use PKG_Resources to determine installed packages
             if HAS_PKG_RESOURCES:
                 for package in pkg_resources.working_set:
                     # Speichere sowohl den key als auch den Projektnamen
                     installed[package.key] = package.version
-                    # Für scikit-learn speziell auch den Namen mit Bindestrich
+                    # For Scikit-Learn, especially the name with a hyphen
                     if package.key == "scikit_learn":
                         installed["scikit-learn"] = package.version
             else:
-                # Fallback: Verwende pip list über subprocess
+                # Fallback: Use PIP List via SubroCess
                 try:
                     import json
                     result = subprocess.run(
@@ -123,7 +122,7 @@ class DependencyManager:
                     for package in packages:
                         name = package["name"].lower().replace("-", "_")
                         installed[name] = package["version"]
-                        # Für scikit-learn speziell auch den Namen mit Bindestrich
+                        # For Scikit-Learn, especially the name with a hyphen
                         if name == "scikit_learn":
                             installed["scikit-learn"] = package["version"]
                 except Exception as e:
@@ -143,7 +142,7 @@ class DependencyManager:
         Returns:
             True, wenn das Paket installiert ist, sonst False
         """
-        # Normalisiere den Paketnamen für den Vergleich
+        # Normalize the package name for comparison
         package_name = package_name.lower().replace('-', '_')
         return package_name in self.installed_packages
 
@@ -161,27 +160,27 @@ class DependencyManager:
         """
         missing = []
 
-        # Prüfe erforderliche Pakete
+        # Checked packages
         for package in REQUIRED_PACKAGES:
             if not self.is_package_installed(package):
                 missing.append(package)
 
-        # Prüfe plattformspezifische Pakete
+        # Check platform -specific packages
         if self.platform in PLATFORM_PACKAGES:
             for package in PLATFORM_PACKAGES[self.platform]:
                 if not self.is_package_installed(package):
                     missing.append(package)
 
-        # Prüfe optionale Pakete
+        # Check optional packages
         if include_optional:
             if optional_groups is None:
-                # Alle optionalen Gruppen prüfen
+                # Check all optional groups
                 for group, packages in OPTIONAL_PACKAGES.items():
                     for package in packages:
                         if not self.is_package_installed(package):
                             missing.append(package)
             else:
-                # Nur angegebene optionale Gruppen prüfen
+                # Only check the specified optional groups
                 for group in optional_groups:
                     if group in OPTIONAL_PACKAGES:
                         for package in OPTIONAL_PACKAGES[group]:
@@ -221,11 +220,11 @@ class DependencyManager:
 
             cmd.extend(packages)
 
-            # Führe den pip-Befehl aus
+            # Carry out the PIP command
             logger.debug(f"Ausführen: {' '.join(cmd)}")
             process = subprocess.run(cmd, check=True, capture_output=True, text=True)
 
-            # Aktualisiere die Liste der installierten Pakete
+            # Update the list of installed packages
             self.installed_packages = self._get_installed_packages()
 
             logger.info("Paketinstallation abgeschlossen")
@@ -256,7 +255,7 @@ class DependencyManager:
         # Ermittle fehlende erforderliche Pakete
         missing = self.get_missing_packages(include_optional=False)
 
-        # Bei Bedarf plattformspezifische Pakete hinzufügen
+        # Add platform -specific packages if necessary
         if include_platform and self.platform in PLATFORM_PACKAGES:
             for package in PLATFORM_PACKAGES[self.platform]:
                 if not self.is_package_installed(package) and package not in missing:
@@ -268,7 +267,7 @@ class DependencyManager:
 
         logger.warning(f"Fehlende erforderliche Abhängigkeiten: {', '.join(missing)}")
 
-        # Automatisch installieren, wenn gewünscht
+        # Install automatically if desired
         if auto_install:
             return self.install_packages(missing)
 
@@ -314,7 +313,7 @@ class DependencyManager:
 
         logger.warning(f"Fehlende Pakete in Gruppe '{group}': {', '.join(missing)}")
 
-        # Automatisch installieren, wenn gewünscht
+        # Install automatically if desired
         if auto_install:
             return self.install_packages(missing)
 
@@ -363,7 +362,7 @@ def ensure_gui_dependencies(auto_install: bool = False) -> bool:
     """
     manager = DependencyManager()
 
-    # Prüfe, ob PyQt5 installiert ist
+    # Check whether PYQT5 is installed
     if not manager.is_package_installed("PyQt5"):
         logger.warning("PyQt5 ist nicht installiert")
         if auto_install:
@@ -410,14 +409,14 @@ def has_gpu_support() -> bool:
     """
     manager = DependencyManager()
 
-    # Prüfe, ob TensorFlow oder PyTorch installiert ist
+    # Check whether tensorflow or pytorch is installed
     tf_available = manager.can_import_module("tensorflow")
     torch_available = manager.can_import_module("torch")
 
     if not tf_available and not torch_available:
         return False
 
-    # Prüfe GPU-Unterstützung in TensorFlow
+    # Check GPU support in Tensorflow
     if tf_available:
         try:
             import tensorflow as tf
@@ -426,7 +425,7 @@ def has_gpu_support() -> bool:
         except Exception as e:
             logger.debug(f"Fehler beim Prüfen der TensorFlow GPU-Unterstützung: {e}")
 
-    # Prüfe GPU-Unterstützung in PyTorch
+    # Check GPU support in Pytorch
     if torch_available:
         try:
             import torch
@@ -437,7 +436,7 @@ def has_gpu_support() -> bool:
     return False
 
 
-# Beispiel für die Verwendung des DependencyManager
+# Example of the use of the dependent cym manager
 if __name__ == "__main__":
     # Konfiguriere Logging
     logging.basicConfig(level=logging.INFO,
@@ -452,7 +451,7 @@ if __name__ == "__main__":
     print(f"Installierte Pakete: {len(manager.installed_packages)}")
     print()
 
-    # Prüfe erforderliche Abhängigkeiten
+    # Check necessary dependencies
     missing_required = manager.get_missing_packages()
     if missing_required:
         print(f"Fehlende erforderliche Abhängigkeiten: {', '.join(missing_required)}")
@@ -467,7 +466,7 @@ if __name__ == "__main__":
     else:
         print("Alle erforderlichen Abhängigkeiten sind installiert")
 
-    # Prüfe optionale Abhängigkeiten
+    # Check optional dependencies
     print("\nOptionale Abhängigkeiten:")
     for group in OPTIONAL_PACKAGES:
         all_installed, missing = manager.check_optional_group(group)
@@ -478,7 +477,7 @@ if __name__ == "__main__":
 
         print(f"  {group}: {status}")
 
-    # Prüfe GPU-Unterstützung
+    # Check GPU support
     if has_gpu_support():
         print("\nGPU-Unterstützung: Verfügbar")
     else:

@@ -196,7 +196,7 @@ class AdvancedArchiveDetector:
                 logger.warning(f"Kein 7-Zip gefunden, kann {file_path} nicht verarbeiten")
                 return archive_info
 
-# Determine whether it is a multi-Rome archive
+# Determine Whether it is a multi-rome archive
             if len(archive_info.rom_files) > 1:
                 archive_info.is_multi_rom = True
 
@@ -230,7 +230,7 @@ class AdvancedArchiveDetector:
 # Compression size
                     archive_info.compressed_size += file_info.compress_size
 
-# Check whether it is a Rome file
+# Check Whether it is a rome file
                     ext = os.path.splitext(file_info.filename.lower())[1]
                     if ext in ROM_EXTENSIONS:
                         archive_info.rom_files.append(file_info.filename)
@@ -321,7 +321,7 @@ class AdvancedArchiveDetector:
                 archive_info.files.append(file_info)
                 archive_info.compressed_size += file_info['compressed_size']
 
-# Check whether it is a Rome file
+# Check Whether it is a rome file
                 ext = os.path.splitext(file_info['name'].lower())[1]
                 if ext in ROM_EXTENSIONS:
                     archive_info.rom_files.append(file_info['name'])
@@ -421,7 +421,7 @@ class AdvancedArchiveDetector:
             if archive_type == "ZIP":
                 with zipfile.ZipFile(archive_path, 'r') as zip_file:
                     for rom_file in archive_info.rom_files:
-# Check whether the Rome file is directly in the archive or in a nested archive
+# Check Whether the Rome File is Directly in the Archive Or in A Nested Archive
                         if "/" in rom_file and rom_file.split("/")[0] in archive_info.nested_archives:
 # Nested Rome - first extract the inner archive
                             nested_archive = rom_file.split("/")[0]
