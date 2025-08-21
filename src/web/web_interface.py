@@ -35,16 +35,16 @@ if parent_dir not in sys.path:
 
 # Import the main web interface implementation
 try:
-    web_interface_module = import_module('src.web_interface')
+    # Import from parent module without referencing 'src'
+    web_interface_module = import_module('web_interface')
     # Re-export all symbols from the main module
     for attr in dir(web_interface_module):
         if not attr.startswith('_'):  # Skip private attributes
             globals()[attr] = getattr(web_interface_module, attr)
-    logger.debug("Successfully imported web_interface from src")
+    logger.debug("Successfully imported web_interface")
 except ImportError as e:
     logger.error(f"Failed to import web_interface: {e}")
     # If import fails, keep the simplified version
-"""
 
 import os
 import json
@@ -103,18 +103,16 @@ class WebInterfaceError(Exception):
 
 
 class WebInterface:
-    """
-    Implementiert ein Web-Interface für ROM Sorter Pro.
-    """
+    """Implements a web interface for ROM Sorter Pro."""
 
     def __init__(self, host: str = '127.0.0.1', port: int = 8080, debug: bool = False):
         """
-        Initialisiert das Web-Interface.
+        Initializes the web interface.
 
         Args:
-            host: Hostname oder IP-Adresse, auf der der Server lauscht
-            port: Port, auf dem der Server lauscht
-            debug: Debug-Modus aktivieren
+            host: Hostname or IP address on which the server listens
+            port: Port on which the server listens
+            debug: Enable debug mode
         """
         self.host = host
         self.port = port
@@ -185,7 +183,7 @@ class WebInterface:
             session.pop('logged_in', None)
             return redirect(url_for('login'))
 
-        # API-Routen
+        # API routes
         @app.route('/api/v1/status', methods=['GET'])
         def api_status():
             return jsonify({
@@ -289,29 +287,29 @@ class WebInterface:
                     'size': os.path.getsize(filepath)
                 })
 
-            return jsonify({'error': 'Fehler beim Hochladen der Datei'}), 500
+            return jsonify({'error': 'Error uploading file'}), 500
 
-        # Fehlerbehandlung
+        # Error handling
         @app.errorhandler(404)
         def not_found(error):
-            return jsonify({'error': 'Nicht gefunden'}), 404
+            return jsonify({'error': 'Not found'}), 404
 
         @app.errorhandler(500)
         def server_error(error):
-            return jsonify({'error': 'Serverfehler'}), 500
+            return jsonify({'error': 'Server error'}), 500
 
         return app
 
     def _generate_dashboard_template(self) -> str:
         """
-        Generiert ein einfaches Dashboard-Template.
+        Generates a simple dashboard template.
 
         Returns:
-            HTML-Template als String
+            HTML template as a string
         """
-        return """
+        return '''
         <!DOCTYPE html>
-        <html lang="de">
+        <html lang="en">
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -397,7 +395,7 @@ class WebInterface:
             <header>
                 <div class="container">
                     <h1>ROM Sorter Pro</h1>
-                    <p>Web-Interface für ROM-Verwaltung</p>
+                    <p>Web Interface for ROM Management</p>
                 </div>
             </header>
 
@@ -405,42 +403,42 @@ class WebInterface:
                 <h2>Dashboard</h2>
 
                 <div class="upload-area" id="uploadArea">
-                    <h3>ROMs hochladen</h3>
-                    <p>Ziehe Dateien hierher oder klicke, um Dateien auszuwählen</p>
+                    <h3>Upload ROMs</h3>
+                    <p>Drag files here or click to select files</p>
                     <input type="file" id="fileInput" multiple>
-                    <button id="uploadButton">Dateien auswählen</button>
+                    <button id="uploadButton">Select Files</button>
                 </div>
 
                 <div class="dashboard">
                     <div class="card">
-                        <h3>Statistiken</h3>
-                        <p>Gesamtanzahl ROMs: <strong>0</strong></p>
-                        <p>Sortierte ROMs: <strong>0</strong></p>
-                        <p>Nicht erkannte ROMs: <strong>0</strong></p>
+                        <h3>Statistics</h3>
+                        <p>Total ROMs: <strong>0</strong></p>
+                        <p>Sorted ROMs: <strong>0</strong></p>
+                        <p>Unidentified ROMs: <strong>0</strong></p>
                     </div>
 
                     <div class="card">
-                        <h3>Neueste Aktivität</h3>
-                        <p>Keine Aktivität vorhanden</p>
+                        <h3>Recent Activity</h3>
+                        <p>No activity available</p>
                     </div>
 
                     <div class="card">
-                        <h3>API-Status</h3>
-                        <p>Status: <span id="apiStatus">Prüfe...</span></p>
+                        <h3>API Status</h3>
+                        <p>Status: <span id="apiStatus">Checking...</span></p>
                         <p>Version: <span id="apiVersion">-</span></p>
-                        <button id="checkApiButton">API prüfen</button>
+                        <button id="checkApiButton">Check API</button>
                     </div>
                 </div>
             </div>
 
             <footer class="footer">
-                <p>ROM Sorter Pro &copy; 2025 | Web-Interface Version 2.1.7</p>
+                <p>ROM Sorter Pro &copy; 2025 | Web Interface Version 2.1.7</p>
             </footer>
 
             <script>
-                // JavaScript für Dashboard-Funktionalität
+                // JavaScript for dashboard functionality
                 document.addEventListener('DOMContentLoaded', function() {
-                    // Upload-Bereich
+                    // Upload area
                     const uploadArea = document.getElementById('uploadArea');
                     const fileInput = document.getElementById('fileInput');
                     const uploadButton = document.getElementById('uploadButton');
@@ -476,16 +474,16 @@ class WebInterface:
                     function handleFiles(files) {
                         if (files.length === 0) return;
 
-                        // In einer echten Anwendung würde hier der Upload über AJAX erfolgen
-                        console.log(`${files.length} Dateien ausgewählt`);
-                        alert(`${files.length} Dateien wurden ausgewählt. In einer echten Anwendung würden diese jetzt hochgeladen werden.`);
+                        // In a real application, the upload would happen via AJAX here
+                        console.log(`${files.length} files selected`);
+                        alert(`${files.length} files have been selected. In a real application, these would now be uploaded.`);
                     }
 
-                    // API-Status prüfen
+                    // Check API status
                     const checkApiButton = document.getElementById('checkApiButton');
                     checkApiButton.addEventListener('click', checkApiStatus);
 
-                    // API-Status beim Laden prüfen
+                    // Check API status on load
                     checkApiStatus();
 
                     function checkApiStatus() {
@@ -512,21 +510,21 @@ class WebInterface:
             </script>
         </body>
         </html>
-        """
+        '''
 
     def _generate_login_template(self, error: str = None) -> str:
         """
-        Generiert ein einfaches Login-Template.
+        Generates a simple login template.
 
         Args:
-            error: Optionale Fehlermeldung
+            error: Optional error message
 
         Returns:
-            HTML-Template als String
+            HTML template as a string
         """
-        return f"""
+        return f'''
         <!DOCTYPE html>
-        <html lang="de">
+        <html lang="en">
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -599,26 +597,26 @@ class WebInterface:
 
                 <form action="/login" method="post">
                     <div class="form-group">
-                        <label for="username">Benutzername</label>
+                        <label for="username">Username</label>
                         <input type="text" id="username" name="username" required>
                     </div>
                     <div class="form-group">
-                        <label for="password">Passwort</label>
+                        <label for="password">Password</label>
                         <input type="password" id="password" name="password" required>
                     </div>
-                    <button type="submit">Anmelden</button>
+                    <button type="submit">Login</button>
                 </form>
             </div>
         </body>
         </html>
-        """
+        '''
 
     def _generate_token(self) -> str:
         """
-        Generiert ein API-Token.
+        Generates an API token.
 
         Returns:
-            API-Token
+            API token
         """
         # Simple token generation - in a real application you would
         # use a more secure method
@@ -628,27 +626,27 @@ class WebInterface:
 
     def _validate_token(self, token: str) -> bool:
         """
-        Validiert ein API-Token.
+        Validates an API token.
 
         Args:
-            token: Zu validierendes Token
+            token: Token to validate
 
         Returns:
-            True, wenn das Token gültig ist, sonst False
+            True if the token is valid, otherwise False
         """
         if token not in API_TOKENS:
             return False
 
         expiry = API_TOKENS[token]
         if datetime.now() > expiry:
-            # Token ist abgelaufen
+            # Token has expired
             del API_TOKENS[token]
             return False
 
         return True
 
     def start(self) -> None:
-        """Startet den Web-Server in einem separaten Thread."""
+        """Starts the web server in a separate thread."""
         if self.is_running:
             logger.warning("Web interface is already running")
             return
@@ -659,13 +657,13 @@ class WebInterface:
             def run_server():
                 self.app.run(host=self.host, port=self.port, debug=self.debug)
 
-            # Starte den Server in einem separaten Thread
+            # Start the server in a separate thread
             self.server_thread = threading.Thread(target=run_server)
             self.server_thread.daemon = True
             self.server_thread.start()
 
             self.is_running = True
-            logger.info(f"Web-Interface gestartet auf http://{self.host}:{self.port}")
+            logger.info(f"Web interface started at http://{self.host}:{self.port}")
 
             # Wait short to ensure that the server has started
             time.sleep(1)
@@ -675,11 +673,11 @@ class WebInterface:
                 webbrowser.open(f"http://{self.host}:{self.port}")
 
         except Exception as e:
-            logger.error(f"Fehler beim Starten des Web-Interface: {e}")
-            raise WebInterfaceError(f"Fehler beim Starten des Web-Interface: {e}")
+            logger.error(f"Error starting web interface: {e}")
+            raise WebInterfaceError(f"Error starting web interface: {e}")
 
     def stop(self) -> None:
-        """Stoppt den Web-Server."""
+        """Stops the web server."""
         if not self.is_running:
             logger.warning("Web interface is not running")
             return
@@ -693,15 +691,15 @@ class WebInterface:
 def start_web_interface(host: str = '127.0.0.1', port: int = 8080,
                        open_browser: bool = True) -> WebInterface:
     """
-    Startet das Web-Interface für ROM Sorter Pro.
+    Starts the web interface for ROM Sorter Pro.
 
     Args:
-        host: Hostname oder IP-Adresse, auf der der Server lauscht
-        port: Port, auf dem der Server lauscht
-        open_browser: Ob der Browser automatisch geöffnet werden soll
+        host: Hostname or IP address on which the server listens
+        port: Port on which the server listens
+        open_browser: Whether to automatically open the browser
 
     Returns:
-        WebInterface-Instanz
+        WebInterface instance
     """
     # Check if Flask is installed
     if not HAS_FLASK:

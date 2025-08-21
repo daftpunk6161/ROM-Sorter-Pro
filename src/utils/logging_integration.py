@@ -28,17 +28,17 @@ from contextlib import contextmanager
 
 # Import existierender Logging-Module
 try:
-    # Versuche, die verschiedenen Logging-Module zu importieren
+    # Attempts to import the different logging modules
     from src.utils.logger import setup_logger
     from src.utils.logging_enhanced import ColoredFormatter, JsonFormatter
     from src.logging_config import FastFormatter
 
-    # Setze Flags für verfügbare Module
+    # Set flags for available modules
     BASIC_LOGGING_AVAILABLE = True
     ENHANCED_LOGGING_AVAILABLE = True
     FAST_LOGGING_AVAILABLE = True
 except ImportError as e:
-    # Bei Import-Fehlern setze entsprechende Flags
+    # In the case of import defects, corresponding flags set
     if 'logger' in str(e):
         BASIC_LOGGING_AVAILABLE = False
     else:
@@ -70,7 +70,7 @@ _subsystem_levels: Dict[str, int] = {}
 _performance_stats: Dict[str, Dict[str, Any]] = {}
 _stats_lock = threading.RLock()
 
-# Kontext für strukturiertes Logging
+# Context for structured logging
 _context_local = threading.local()
 
 
@@ -108,7 +108,7 @@ def initialize_logging(log_dir: Optional[str] = None,
         else:
             _log_dir = Path(log_dir)
 
-        # Sicherstellen, dass das Log-Verzeichnis existiert
+        # Make sure the log directory exists
         _log_dir.mkdir(parents=True, exist_ok=True)
 
         # Root-Logger konfigurieren
@@ -124,10 +124,10 @@ def initialize_logging(log_dir: Optional[str] = None,
         console_handler.setLevel(level)
 
         if use_colors and ENHANCED_LOGGING_AVAILABLE:
-            # Farbige Formatierung verwenden, wenn verfügbar
+            # Use colored formatting if available
             formatter = ColoredFormatter(DEFAULT_LOG_FORMAT, DEFAULT_DATE_FORMAT)
         elif FAST_LOGGING_AVAILABLE:
-            # Schnelle Formatierung verwenden, wenn verfügbar
+            # Use fast formatting if available
             formatter = FastFormatter(enable_colors=use_colors)
         else:
             # Standard-Formatierung als Fallback
@@ -144,10 +144,10 @@ def initialize_logging(log_dir: Optional[str] = None,
         file_handler.setLevel(level)
 
         if use_json and ENHANCED_LOGGING_AVAILABLE:
-            # JSON-Formatierung für strukturierte Logs
+            # JSON formatting for structured logs
             formatter = JsonFormatter()
         else:
-            # Standard-Formatierung für Textlogs
+            # Standard formatting for text logs
             formatter = logging.Formatter(DEFAULT_LOG_FORMAT, DEFAULT_DATE_FORMAT)
 
         file_handler.setFormatter(formatter)
@@ -178,14 +178,14 @@ def initialize_logging(log_dir: Optional[str] = None,
         return True
 
     except Exception as e:
-        # Fallback zur Basic-Konfiguration bei Fehlern - ohne stdout Handler
+        # Fallback for basic configuration in the event of errors - without Stdout handler
         # Zuerst alle bestehenden Handler entfernen
         root_logger = logging.getLogger()
         for handler in root_logger.handlers[:]:
             if isinstance(handler, logging.StreamHandler) and handler.stream == sys.stdout:
                 root_logger.removeHandler(handler)
 
-        # Nur einen File-Handler hinzufügen, keinen StreamHandler
+        # Just add one file handler, no stream handler
         log_dir = Path('logs')
         log_dir.mkdir(parents=True, exist_ok=True)
         error_log = log_dir / 'error_init.log'
@@ -217,7 +217,7 @@ def get_logger(name: str) -> logging.Logger:
     if name in _loggers:
         return _loggers[name]
 
-    # Prüfen, ob ein spezifisches Level für das Subsystem existiert
+    # Check whether there is a specific level for the subsystem
     level = DEFAULT_LOG_LEVEL
     for subsystem, subsystem_level in _subsystem_levels.items():
         if name.startswith(subsystem):
@@ -226,7 +226,7 @@ def get_logger(name: str) -> logging.Logger:
 
     # Logger erstellen
     if BASIC_LOGGING_AVAILABLE:
-        # Verwende setup_logger, falls verfügbar
+        # Use Setup_logger, if available
         logger = setup_logger(name, level)
     else:
         # Standard-Logger als Fallback
@@ -289,11 +289,11 @@ def log_performance(logger_name: str = None, operation: str = None, level: int =
             start_time = time.time()
 
             try:
-                # Funktion ausführen
+                # Run out
                 result = func(*args, **kwargs)
                 return result
             finally:
-                # Endzeit messen und loggen
+                # Measure and log in the end time
                 elapsed = time.time() - start_time
                 logger.log(level, f"Performance: {operation} - {elapsed:.6f} Sekunden")
 
@@ -339,7 +339,7 @@ def log_exception(logger_name: str = None, level: int = logging.ERROR, reraise: 
         @wraps(func)
         def wrapper(*args, **kwargs):
             try:
-                # Funktion ausführen
+                # Run out
                 return func(*args, **kwargs)
             except Exception as e:
                 # Ausnahme loggen
@@ -390,6 +390,6 @@ def log_stats():
                    f"Max: {op_stats['max_time']:.6f}s")
 
 
-# Automatisches Logging der Performance-Statistiken beim Beenden
+# Automatic logging of the performance statistics when ending
 import atexit
 atexit.register(log_stats)

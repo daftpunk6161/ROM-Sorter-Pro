@@ -23,11 +23,11 @@ class Config:
         self.config_data = {}
 
     def load_config(self):
-        """Lädt die Konfiguration"""
+        """Lädt die Configuration"""
         pass
 
     def get(self, key, default=None):
-        """Gibt den Wert für einen Schlüssel zurück"""
+        """Gibt den Value für einen Key zurück"""
         return default
 
 class ConfigError(Exception):
@@ -62,7 +62,7 @@ def load_config(config_path=None):
 # Erzeuge eine Standard-Instanz
 config_instance = Config()
 
-# Importieren der erweiterten Konfiguration, ohne zirkuläre Importe zu verursachen
+# Importing the extended configuration without causing circular imports
 def get_enhanced_config():
     """
     Liefert die erweiterte Konfigurationsinstanz.
@@ -71,11 +71,11 @@ def get_enhanced_config():
     """
     return config_instance
 
-# Importiere die erweiterte Konfiguration erst nach der Definition der Hilfsfunktionen
+# Import the extended configuration only after defining the auxiliary functions
 from .enhanced_config import EnhancedConfig, get_enhanced_config as get_enhanced_config_impl
 
-# Überschreibe die vorläufige Funktion mit der richtigen Implementierung
+# Overwritten the preliminary function with the correct implementation
 get_enhanced_config = get_enhanced_config_impl
 
-# Liste der öffentlich verfügbaren Namen für den Import
+# List of the publicly available names for import
 __all__ = ['Config', 'EnhancedConfig', 'ConfigError', 'load_config', 'get_enhanced_config']

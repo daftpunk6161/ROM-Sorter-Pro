@@ -162,7 +162,7 @@ class UpdateManager:
             return False
 
     def _start_auto_check(self) -> None:
-        """Startet die automatische Update-Prüfung."""
+        """Startet die automatische Update-Check."""
         def check_thread():
             while self.auto_check:
                 # Check whether an update test is required

@@ -76,7 +76,7 @@ def get_default_theme_settings(theme_name="system"):
             except:
                 pass
 
-        # Fallback, wenn die Systemeinstellung nicht ermittelt werden kann
+        # Fallback if the system setting cannot be determined
         return THEME_SETTINGS["light"]
 
     elif theme_name in THEME_SETTINGS:

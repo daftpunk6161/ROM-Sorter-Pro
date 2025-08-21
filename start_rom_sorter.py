@@ -92,7 +92,7 @@ def main():
         else:
             logger.info("Starting in GUI mode with refactored UI...")
             try:
-                # Zuerst versuchen wir die neue modulare Struktur zu verwenden
+                # First we try to use the new modular structure
                 from src.ui import main as start_gui
                 exit_code = start_gui()
                 if exit_code != 0:

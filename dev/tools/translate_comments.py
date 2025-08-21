@@ -23,9 +23,10 @@ except Exception as e:
     print("[INFO] Missing dependency deep-translator. Install with: pip install deep-translator", file=sys.stderr)
     raise
 
-ROOT = Path(__file__).parent
-CACHE_FILE = ROOT / "comment-translation-cache.json"
-BACKUP_ROOT = ROOT / "backups" / "comments"   # Central backup folder
+ROOT = Path(__file__).parent.parent.parent  # Navigate to project root
+DEFAULT_START_DIR = ROOT  # Default starting directory is project root
+CACHE_FILE = Path(__file__).parent / "comment-translation-cache.json"  # Cache in dev/tools
+BACKUP_ROOT = ROOT / "backups" / "comments"   # Central backup folder in project root
 
 EXCLUDE_DIRS = {".git", ".venv", "venv", "__pycache__", "node_modules"}
 EXCLUDE_SUFFIXES = {".bak"}

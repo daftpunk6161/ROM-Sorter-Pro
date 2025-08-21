@@ -32,7 +32,7 @@ def split_long_comment_lines(file_path, max_line_length=79):
 # Share the comment text
                 comment_text = line.strip()[1:].strip()  # Remove # and leading spaces
 
-# Simple strategy: Find and Divide for a Space for Approx. 70 Character
+# Simple strategy: Find and Divide for a Space for Approx. 70 character
                 words = comment_text.split()
                 new_comment_lines = []
                 current_line = "#"

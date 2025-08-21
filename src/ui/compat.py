@@ -35,7 +35,7 @@ try:
     logger.info("Alte GUI verfügbar")
 except ImportError as e:
     logger.warning(f"Alte GUI nicht verfügbar: {e}")
-    DND_AVAILABLE = False  # Fallback, falls der Import fehlschlägt
+    DND_AVAILABLE = False  # Fallback if the import fails
 
 # Aliases for downward compatibility
 if UI_MODULES_AVAILABLE:
@@ -82,7 +82,7 @@ else:
                 raise ImportError("Keine GUI-Implementierung verfügbar")
 
             def run(self):
-                """Dummy-Implementierung für run-Methode."""
+                """Dummy-Implementierung für run-Method."""
                 raise ImportError("Keine GUI-Implementierung verfügbar")
 
         ROMSorterGUI = DummyGUI

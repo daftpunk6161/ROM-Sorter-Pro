@@ -64,7 +64,7 @@ class TestConsoleMappings(unittest.TestCase):
     def test_extension_consistency(self):
         """Testet, ob alle Extensions im CONSOLE_MAP definiert sind"""
         for extension in EXTENSION_PRIORITY_MAP.keys():
-            # Stelle sicher, dass die Extension nicht in CONSOLE_MAP ist
+            # Make sure that the extension is not in console_map
             self.assertNotIn(extension, CONSOLE_MAP)
 
             # Make sure the priority list is not empty

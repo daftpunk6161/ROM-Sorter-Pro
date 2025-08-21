@@ -29,15 +29,15 @@ def setup_logger(name, level=logging.INFO):
     if logger.handlers:
         return logger
 
-    # Sicherstellen, dass das Log-Verzeichnis existiert
+    # Make sure the log directory exists
     logs_dir = Path('logs')
     logs_dir.mkdir(exist_ok=True)
 
-    # File Handler für alle Logs
+    # File Handler for all logs
     file_handler = logging.FileHandler(logs_dir / 'rom_sorter.log', encoding='utf-8')
     file_handler.setLevel(level)
 
-    # File Handler für Fehler
+    # File Handler for Error
     error_handler = logging.FileHandler(logs_dir / 'rom_sorter_errors.log', encoding='utf-8')
     error_handler.setLevel(logging.WARNING)
 
@@ -51,7 +51,7 @@ def setup_logger(name, level=logging.INFO):
     error_handler.setFormatter(formatter)
     console_handler.setFormatter(formatter)
 
-    # Handler hinzufügen
+    # Add handler
     logger.addHandler(file_handler)
     logger.addHandler(error_handler)
     logger.addHandler(console_handler)

@@ -524,7 +524,7 @@ class HighPerformanceScanner:
         Returns:
             ROM-Informationen oder None, wenn nicht im Cache oder veraltet
         """
-# In A Complete implementation, Cache Access Wood Take Place Here
+# In a complete implementation, Cache Access Wood Take Place here
         return None
 
     def _save_to_cache(self, file_path: str, rom_info: Dict):

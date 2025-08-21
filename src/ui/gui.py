@@ -51,7 +51,7 @@ for handler in root_logger.handlers[:]:
 
 logger = logging.getLogger("ROM-Sorter-Pro")
 
-# Stelle sicher, dass das src-Verzeichnis im Pfad ist
+# Make sure that the SRC directory is in the path
 script_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.abspath(os.path.join(script_dir, '..', '..'))
 if project_root not in sys.path:
@@ -682,7 +682,7 @@ class OptimizedDragDropFrame(tk.Frame):
             try:
                 print(f"Initializing Drag & Drop support (Mode: {DND_MODE})...")
 
-                # Create a more appealing Drag & Drop zone
+                # Create a more appealing drag & drop zone
                 self.configure(
                     relief="groove",
                     borderwidth=2,
@@ -889,7 +889,7 @@ class OptimizedDragDropFrame(tk.Frame):
             print(f"Drop-Event Daten: {event.data}")
             print(f"Drop-Event Typ: {type(event.data)}")
 
-            # Especialy for Windows: with Tkdnd 2.x, a format search as "{c:/path/zu/file}" is returned
+            # Especialy for Windows: with Tkdnd 2.x, a format search as "{C:/Path/zu/File}" is returned
             raw_data = event.data
 
             # Treat Windows Explorer specific format with curly brackets

@@ -10,7 +10,7 @@ import sys
 import unittest
 from pathlib import Path
 
-# Definieren der Test-Daten direkt im Test
+# Define the test data directly in the test
 CONSOLE_MAP = {
     '.nes': 'Nintendo_NES',
     '.unf': 'Nintendo_NES',
@@ -86,7 +86,7 @@ class TestConsoleMappings(unittest.TestCase):
     """Testklasse für die Konsolen-Mappings"""
 
     def test_basic_extensions(self):
-        """Testet die grundlegende Funktionalität der Mapping-Funktion"""
+        """Testet die grundlegende Funktionalität der Mapping-Function"""
         self.assertEqual(get_console_for_extension('.nes'), 'Nintendo_NES')
         self.assertEqual(get_console_for_extension('.gba'), 'Nintendo_Game_Boy_Advance')
         self.assertEqual(get_console_for_extension('.n64'), 'Nintendo_64')
@@ -121,13 +121,13 @@ class TestConsoleMappings(unittest.TestCase):
     def test_extension_consistency(self):
         """Testet, ob alle Extensions im CONSOLE_MAP definiert sind"""
         for extension in EXTENSION_PRIORITY_MAP.keys():
-            # Stelle sicher, dass die Extension nicht in CONSOLE_MAP ist
+            # Make sure that the extension is not in console_map
             self.assertNotIn(extension, CONSOLE_MAP)
 
-            # Stelle sicher, dass die Prioritätsliste nicht leer ist
+            # Make sure the priority list is not empty
             self.assertTrue(len(EXTENSION_PRIORITY_MAP[extension]['priority']) > 0)
 
-            # Stelle sicher, dass detection_hints für alle Prioritätseinträge existieren
+            # Make sure that Detection_hints exist for all priority entries
             for console in EXTENSION_PRIORITY_MAP[extension]['priority']:
                 self.assertIn(console, EXTENSION_PRIORITY_MAP[extension]['detection_hints'])
 
@@ -146,7 +146,7 @@ def main():
 
     print(f"Anzahl der unterstützten Konsolentypen: {len(unique_consoles)}")
 
-    # Tests ausführen
+    # Execute tests
     print("\nStarte Tests...")
     unittest.main(argv=['first-arg-is-ignored'], exit=False)
 

@@ -107,7 +107,7 @@ class DependencyManager:
                 for package in pkg_resources.working_set:
                     # Speichere sowohl den key als auch den Projektnamen
                     installed[package.key] = package.version
-                    # For Scikit-Learn, Especialy the name with a hyphen
+                    # For scikit-learn, especialy the name with a hyphen
                     if package.key == "scikit_learn":
                         installed["scikit-learn"] = package.version
             else:
@@ -122,7 +122,7 @@ class DependencyManager:
                     for package in packages:
                         name = package["name"].lower().replace("-", "_")
                         installed[name] = package["version"]
-                        # For Scikit-Learn, Especialy the name with a hyphen
+                        # For scikit-learn, especialy the name with a hyphen
                         if name == "scikit_learn":
                             installed["scikit-learn"] = package["version"]
                 except Exception as e:

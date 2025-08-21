@@ -169,7 +169,7 @@ class DragDropMixin:
     """Mixin class that adds Drag & Drop functionality to Tkinter widgets."""
 
     def __init__(self, *args, **kwargs):
-# Make sure that this method is not called without a parent class
+# Make sura that this method is not called without a parent class
         if not hasattr(self, 'winfo_id'):
             raise TypeError("DragDropMixin must be used with a Tkinter widget class")
 

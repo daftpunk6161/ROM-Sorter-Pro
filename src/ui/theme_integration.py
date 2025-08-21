@@ -24,7 +24,7 @@ from datetime import datetime
 # Import theme settings and utilities
 from src.config.theme_settings import THEME_SETTINGS, CUSTOM_THEME_PATH
 
-# Versuche, das erweiterte Logging-System zu importieren
+# Attempts to import the extended logging system
 try:
     from src.utils.logging_integration import (
         get_logger, log_context, log_performance, log_exception
