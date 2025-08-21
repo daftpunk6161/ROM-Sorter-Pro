@@ -1,46 +1,116 @@
-2025-08-21 09:59:40,027 - src.ui.compat - INFO - Neue UI-Module verfügbar
-2025-08-21 09:59:40,041 - src.ui.compat - INFO - Alte GUI verfügbar
-2025-08-21 09:59:40,051 - logging_integration - INFO - Logging-System initialisiert: Verzeichnis=R:\Code\ROM-Sorter-Pro\logs
-2025-08-21 09:59:40 - logging_integration - INFO - Logging-System initialisiert: Verzeichnis=R:\Code\ROM-Sorter-Pro\logs
-2025-08-21 09:59:40,051 - logging_integration - INFO - Python Version: 3.13.6 (tags/v3.13.6:4e66535, Aug  6 2025, 14:36:00) [MSC v.1944 64 bit (AMD64)]
-2025-08-21 09:59:40 - logging_integration - INFO - Python Version: 3.13.6 (tags/v3.13.6:4e66535, Aug  6 2025, 14:36:00) [MSC v.1944 64 bit (AMD64)]
-2025-08-21 09:59:40,051 - logging_integration - INFO - Plattform: win32
-2025-08-21 09:59:40 - logging_integration - INFO - Plattform: win32
-2025-08-21 09:59:40,052 - src.ui.app - INFO - Erweitertes Logging-System initialisiert
-2025-08-21 09:59:40,052 - src.ui.app - INFO - Erweitertes Logging-System initialisiert
-2025-08-21 09:59:40 - src.ui.app - INFO - Erweitertes Logging-System initialisiert
-2025-08-21 09:59:40 - root - INFO - ROM Sorter main window created
-2025-08-21 09:59:40,122 - src.ui.enhanced_theme - INFO - Theme-System initialisiert
-2025-08-21 09:59:40 - src.ui.enhanced_theme - INFO - Theme-System initialisiert
-2025-08-21 09:59:40 - root - INFO - Theme-System initialisiert mit Theme-Typ: system
-2025-08-21 09:59:40 - root - INFO - DND-Unterstützung verfügbar und aktiviert
-2025-08-21 09:59:40 - root - INFO - ROM Sorter Anwendung gestartet
-2025-08-21 09:59:48 - src.config.enhanced_config - INFO - Konfiguration in R:\Code\ROM-Sorter-Pro\src\config\..\config.json gespeichert
-2025-08-21 09:59:48 - __main__ - ERROR - GUI returned error code: None
-2025-08-21 09:59:48,612 - performance_stats - INFO - === Performance-Statistiken ===
-2025-08-21 09:59:48 - performance_stats - INFO - === Performance-Statistiken ===
-2025-08-21 09:59:48,612 - performance_stats - INFO - app_execution: 1 Aufrufe, Durchschnitt: 8.561298s, Min: 8.561298s, Max: 8.561298s
-2025-08-21 09:59:48 - performance_stats - INFO - app_execution: 1 Aufrufe, Durchschnitt: 8.561298s, Min: 8.561298s, Max: 8.561298s
-2025-08-21 10:09:18,742 - src.ui.compat - INFO - Neue UI-Module verfügbar
-2025-08-21 10:09:18,797 - src.ui.compat - INFO - Alte GUI verfügbar
-2025-08-21 10:09:18,803 - logging_integration - INFO - Logging-System initialisiert: Verzeichnis=R:\Code\ROM-Sorter-Pro\logs
-2025-08-21 10:09:18 - logging_integration - INFO - Logging-System initialisiert: Verzeichnis=R:\Code\ROM-Sorter-Pro\logs
-2025-08-21 10:09:18,803 - logging_integration - INFO - Python Version: 3.13.6 (tags/v3.13.6:4e66535, Aug  6 2025, 14:36:00) [MSC v.1944 64 bit (AMD64)]
-2025-08-21 10:09:18 - logging_integration - INFO - Python Version: 3.13.6 (tags/v3.13.6:4e66535, Aug  6 2025, 14:36:00) [MSC v.1944 64 bit (AMD64)]
-2025-08-21 10:09:18,803 - logging_integration - INFO - Plattform: win32
-2025-08-21 10:09:18 - logging_integration - INFO - Plattform: win32
-2025-08-21 10:09:18,804 - src.ui.app - INFO - Erweitertes Logging-System initialisiert
-2025-08-21 10:09:18,804 - src.ui.app - INFO - Erweitertes Logging-System initialisiert
-2025-08-21 10:09:18 - src.ui.app - INFO - Erweitertes Logging-System initialisiert
-2025-08-21 10:09:18 - root - INFO - ROM Sorter main window created
-2025-08-21 10:09:18,875 - src.ui.enhanced_theme - INFO - Theme-System initialisiert
-2025-08-21 10:09:18 - src.ui.enhanced_theme - INFO - Theme-System initialisiert
-2025-08-21 10:09:18 - root - INFO - Theme-System initialisiert mit Theme-Typ: system
-2025-08-21 10:09:18 - root - INFO - DND-Unterstützung verfügbar und aktiviert
-2025-08-21 10:09:18 - root - INFO - ROM Sorter Anwendung gestartet
-2025-08-21 10:09:59 - src.config.enhanced_config - INFO - Konfiguration in R:\Code\ROM-Sorter-Pro\src\config\..\config.json gespeichert
-2025-08-21 10:09:59 - __main__ - ERROR - GUI returned error code: None
-2025-08-21 10:09:59,184 - performance_stats - INFO - === Performance-Statistiken ===
-2025-08-21 10:09:59 - performance_stats - INFO - === Performance-Statistiken ===
-2025-08-21 10:09:59,184 - performance_stats - INFO - app_execution: 1 Aufrufe, Durchschnitt: 40.380419s, Min: 40.380419s, Max: 40.380419s
-2025-08-21 10:09:59 - performance_stats - INFO - app_execution: 1 Aufrufe, Durchschnitt: 40.380419s, Min: 40.380419s, Max: 40.380419s
+2025-08-21 19:31:59,782 - src.ui.compat - INFO - Neue UI-Module verfügbar
+2025-08-21 19:31:59,825 - src.ui.compat - WARNING - Alte GUI nicht verfügbar: cannot import name 'DND_AVAILABLE' from partially initialized module 'src.ui' (most likely due to a circular import) (r:\Code\ROM-Sorter-Pro\src\ui\__init__.py)
+2025-08-21 19:31:59,851 - src.ui.gui_dnd - WARNING - TkinterDnD2 not available. Drag and drop functionality will be disabled.
+2025-08-21 19:31:59,859 - logging_integration - INFO - Logging-System initialisiert: Verzeichnis=r:\Code\ROM-Sorter-Pro\logs
+2025-08-21 19:31:59 - logging_integration - INFO - Logging-System initialisiert: Verzeichnis=r:\Code\ROM-Sorter-Pro\logs
+2025-08-21 19:31:59,859 - logging_integration - INFO - Python Version: 3.13.6 (tags/v3.13.6:4e66535, Aug  6 2025, 14:36:00) [MSC v.1944 64 bit (AMD64)]
+2025-08-21 19:31:59 - logging_integration - INFO - Python Version: 3.13.6 (tags/v3.13.6:4e66535, Aug  6 2025, 14:36:00) [MSC v.1944 64 bit (AMD64)]
+2025-08-21 19:31:59,860 - logging_integration - INFO - Plattform: win32
+2025-08-21 19:31:59 - logging_integration - INFO - Plattform: win32
+2025-08-21 19:31:59,860 - src.ui.app - INFO - Erweitertes Logging-System initialisiert
+2025-08-21 19:31:59,860 - src.ui.app - INFO - Erweitertes Logging-System initialisiert
+2025-08-21 19:31:59 - src.ui.app - INFO - Erweitertes Logging-System initialisiert
+2025-08-21 19:31:59 - root - INFO - ROM Sorter main window created
+2025-08-21 19:31:59,949 - src.ui.enhanced_theme - INFO - Theme-System initialisiert
+2025-08-21 19:31:59 - src.ui.enhanced_theme - INFO - Theme-System initialisiert
+2025-08-21 19:31:59 - root - INFO - Theme-System initialisiert mit Theme-Typ: system
+2025-08-21 19:31:59 - root - WARNING - TkinterDnD2 nicht verfügbar, einige Drag & Drop Funktionen sind eingeschränkt
+2025-08-21 19:31:59 - root - INFO - ROM Sorter Anwendung gestartet
+2025-08-21 19:32:29 - src.config.enhanced_config - INFO - Konfiguration in r:\Code\ROM-Sorter-Pro\src\config\..\config.json gespeichert
+2025-08-21 19:32:29 - __main__ - ERROR - GUI returned error code: None
+2025-08-21 19:32:29,805 - performance_stats - INFO - === Performance-Statistiken ===
+2025-08-21 19:32:29 - performance_stats - INFO - === Performance-Statistiken ===
+2025-08-21 19:32:29,805 - performance_stats - INFO - app_execution: 1 Aufrufe, Durchschnitt: 29.945809s, Min: 29.945809s, Max: 29.945809s
+2025-08-21 19:32:29 - performance_stats - INFO - app_execution: 1 Aufrufe, Durchschnitt: 29.945809s, Min: 29.945809s, Max: 29.945809s
+2025-08-21 20:20:05,363 - performance_stats - INFO - === Performance-Statistiken ===
+2025-08-21 20:20:05,363 - performance_stats - INFO - app_execution: 1 Aufrufe, Durchschnitt: 0.000008s, Min: 0.000008s, Max: 0.000008s
+2025-08-21 20:20:33,603 - logging_integration - INFO - Logging-System initialisiert: Verzeichnis=R:\Code\ROM-Sorter-Pro\logs
+2025-08-21 20:20:33 - logging_integration - INFO - Logging-System initialisiert: Verzeichnis=R:\Code\ROM-Sorter-Pro\logs
+2025-08-21 20:20:33,603 - logging_integration - INFO - Python Version: 3.13.6 (tags/v3.13.6:4e66535, Aug  6 2025, 14:36:00) [MSC v.1944 64 bit (AMD64)]
+2025-08-21 20:20:33 - logging_integration - INFO - Python Version: 3.13.6 (tags/v3.13.6:4e66535, Aug  6 2025, 14:36:00) [MSC v.1944 64 bit (AMD64)]
+2025-08-21 20:20:33,604 - logging_integration - INFO - Plattform: win32
+2025-08-21 20:20:33 - logging_integration - INFO - Plattform: win32
+2025-08-21 20:20:33,604 - src.ui.app - INFO - Erweitertes Logging-System initialisiert
+2025-08-21 20:20:33,604 - src.ui.app - INFO - Erweitertes Logging-System initialisiert
+2025-08-21 20:20:33 - src.ui.app - INFO - Erweitertes Logging-System initialisiert
+2025-08-21 20:20:33 - src.config.enhanced_config - INFO - Konfiguration aus r:\Code\ROM-Sorter-Pro\src\config\..\config.json geladen
+2025-08-21 20:20:33 - src.config.enhanced_config - INFO - Erweiterte Konfiguration initialisiert
+2025-08-21 20:20:33 - __main__ - ERROR - Error starting the application: 'EnhancedConfig' object has no attribute 'get_all'
+2025-08-21 20:20:33,605 - performance_stats - INFO - === Performance-Statistiken ===
+2025-08-21 20:20:33 - performance_stats - INFO - === Performance-Statistiken ===
+2025-08-21 20:20:33,606 - performance_stats - INFO - app_execution: 1 Aufrufe, Durchschnitt: 0.002408s, Min: 0.002408s, Max: 0.002408s
+2025-08-21 20:20:33 - performance_stats - INFO - app_execution: 1 Aufrufe, Durchschnitt: 0.002408s, Min: 0.002408s, Max: 0.002408s
+2025-08-21 20:21:06,034 - logging_integration - INFO - Logging-System initialisiert: Verzeichnis=R:\Code\ROM-Sorter-Pro\logs
+2025-08-21 20:21:06 - logging_integration - INFO - Logging-System initialisiert: Verzeichnis=R:\Code\ROM-Sorter-Pro\logs
+2025-08-21 20:21:06,034 - logging_integration - INFO - Python Version: 3.13.6 (tags/v3.13.6:4e66535, Aug  6 2025, 14:36:00) [MSC v.1944 64 bit (AMD64)]
+2025-08-21 20:21:06 - logging_integration - INFO - Python Version: 3.13.6 (tags/v3.13.6:4e66535, Aug  6 2025, 14:36:00) [MSC v.1944 64 bit (AMD64)]
+2025-08-21 20:21:06,034 - logging_integration - INFO - Plattform: win32
+2025-08-21 20:21:06 - logging_integration - INFO - Plattform: win32
+2025-08-21 20:21:06,035 - src.ui.app - INFO - Erweitertes Logging-System initialisiert
+2025-08-21 20:21:06,035 - src.ui.app - INFO - Erweitertes Logging-System initialisiert
+2025-08-21 20:21:06 - src.ui.app - INFO - Erweitertes Logging-System initialisiert
+2025-08-21 20:21:06 - src.config.enhanced_config - INFO - Konfiguration aus r:\Code\ROM-Sorter-Pro\src\config\..\config.json geladen
+2025-08-21 20:21:06 - src.config.enhanced_config - INFO - Erweiterte Konfiguration initialisiert
+2025-08-21 20:21:06 - __main__ - ERROR - Error starting the application: 'EnhancedConfig' object has no attribute 'sections'
+2025-08-21 20:21:06,036 - performance_stats - INFO - === Performance-Statistiken ===
+2025-08-21 20:21:06 - performance_stats - INFO - === Performance-Statistiken ===
+2025-08-21 20:21:06,036 - performance_stats - INFO - app_execution: 1 Aufrufe, Durchschnitt: 0.002239s, Min: 0.002239s, Max: 0.002239s
+2025-08-21 20:21:06 - performance_stats - INFO - app_execution: 1 Aufrufe, Durchschnitt: 0.002239s, Min: 0.002239s, Max: 0.002239s
+2025-08-21 20:21:49,623 - logging_integration - INFO - Logging-System initialisiert: Verzeichnis=R:\Code\ROM-Sorter-Pro\logs
+2025-08-21 20:21:49 - logging_integration - INFO - Logging-System initialisiert: Verzeichnis=R:\Code\ROM-Sorter-Pro\logs
+2025-08-21 20:21:49,624 - logging_integration - INFO - Python Version: 3.13.6 (tags/v3.13.6:4e66535, Aug  6 2025, 14:36:00) [MSC v.1944 64 bit (AMD64)]
+2025-08-21 20:21:49 - logging_integration - INFO - Python Version: 3.13.6 (tags/v3.13.6:4e66535, Aug  6 2025, 14:36:00) [MSC v.1944 64 bit (AMD64)]
+2025-08-21 20:21:49,624 - logging_integration - INFO - Plattform: win32
+2025-08-21 20:21:49 - logging_integration - INFO - Plattform: win32
+2025-08-21 20:21:49,624 - src.ui.app - INFO - Erweitertes Logging-System initialisiert
+2025-08-21 20:21:49,624 - src.ui.app - INFO - Erweitertes Logging-System initialisiert
+2025-08-21 20:21:49 - src.ui.app - INFO - Erweitertes Logging-System initialisiert
+2025-08-21 20:21:49 - root - INFO - Konfiguration aus r:\Code\ROM-Sorter-Pro\src\ui\..\config.json geladen
+2025-08-21 20:21:49 - root - INFO - ROM Sorter main window created
+2025-08-21 20:21:49,696 - src.ui.enhanced_theme - INFO - Theme-System initialisiert
+2025-08-21 20:21:49 - src.ui.enhanced_theme - INFO - Theme-System initialisiert
+2025-08-21 20:21:49 - root - INFO - Theme-System initialisiert mit Theme-Typ: system
+2025-08-21 20:22:10 - root - ERROR - Fehler beim Speichern der Konfiguration: ROMSorterApp._load_config.<locals>.<lambda>() takes 0 positional arguments but 1 was given
+2025-08-21 20:22:10 - __main__ - INFO - ROM Sorter Pro terminated.
+2025-08-21 20:22:10,323 - performance_stats - INFO - === Performance-Statistiken ===
+2025-08-21 20:22:10 - performance_stats - INFO - === Performance-Statistiken ===
+2025-08-21 20:22:10,323 - performance_stats - INFO - app_execution: 1 Aufrufe, Durchschnitt: 20.698885s, Min: 20.698885s, Max: 20.698885s
+2025-08-21 20:22:10 - performance_stats - INFO - app_execution: 1 Aufrufe, Durchschnitt: 20.698885s, Min: 20.698885s, Max: 20.698885s
+2025-08-21 20:23:10,303 - logging_integration - INFO - Logging-System initialisiert: Verzeichnis=R:\Code\ROM-Sorter-Pro\logs
+2025-08-21 20:23:10 - logging_integration - INFO - Logging-System initialisiert: Verzeichnis=R:\Code\ROM-Sorter-Pro\logs
+2025-08-21 20:23:10,304 - logging_integration - INFO - Python Version: 3.13.6 (tags/v3.13.6:4e66535, Aug  6 2025, 14:36:00) [MSC v.1944 64 bit (AMD64)]
+2025-08-21 20:23:10 - logging_integration - INFO - Python Version: 3.13.6 (tags/v3.13.6:4e66535, Aug  6 2025, 14:36:00) [MSC v.1944 64 bit (AMD64)]
+2025-08-21 20:23:10,304 - logging_integration - INFO - Plattform: win32
+2025-08-21 20:23:10 - logging_integration - INFO - Plattform: win32
+2025-08-21 20:23:10,304 - src.ui.app - INFO - Erweitertes Logging-System initialisiert
+2025-08-21 20:23:10,304 - src.ui.app - INFO - Erweitertes Logging-System initialisiert
+2025-08-21 20:23:10 - src.ui.app - INFO - Erweitertes Logging-System initialisiert
+2025-08-21 20:23:10 - root - INFO - Konfiguration aus R:\Code\ROM-Sorter-Pro\src\ui\..\config.json geladen
+2025-08-21 20:23:10 - root - INFO - ROM Sorter main window created
+2025-08-21 20:23:10,378 - src.ui.enhanced_theme - INFO - Theme-System initialisiert
+2025-08-21 20:23:10 - src.ui.enhanced_theme - INFO - Theme-System initialisiert
+2025-08-21 20:23:10 - root - INFO - Theme-System initialisiert mit Theme-Typ: system
+2025-08-21 20:23:19 - __main__ - INFO - ROM Sorter Pro terminated.
+2025-08-21 20:23:19,941 - performance_stats - INFO - === Performance-Statistiken ===
+2025-08-21 20:23:19 - performance_stats - INFO - === Performance-Statistiken ===
+2025-08-21 20:23:19,941 - performance_stats - INFO - app_execution: 1 Aufrufe, Durchschnitt: 9.637737s, Min: 9.637737s, Max: 9.637737s
+2025-08-21 20:23:19 - performance_stats - INFO - app_execution: 1 Aufrufe, Durchschnitt: 9.637737s, Min: 9.637737s, Max: 9.637737s
+2025-08-21 20:34:29,040 - logging_integration - INFO - Logging-System initialisiert: Verzeichnis=R:\Code\ROM-Sorter-Pro\logs
+2025-08-21 20:34:29 - logging_integration - INFO - Logging-System initialisiert: Verzeichnis=R:\Code\ROM-Sorter-Pro\logs
+2025-08-21 20:34:29,040 - logging_integration - INFO - Python Version: 3.13.6 (tags/v3.13.6:4e66535, Aug  6 2025, 14:36:00) [MSC v.1944 64 bit (AMD64)]
+2025-08-21 20:34:29 - logging_integration - INFO - Python Version: 3.13.6 (tags/v3.13.6:4e66535, Aug  6 2025, 14:36:00) [MSC v.1944 64 bit (AMD64)]
+2025-08-21 20:34:29,040 - logging_integration - INFO - Plattform: win32
+2025-08-21 20:34:29 - logging_integration - INFO - Plattform: win32
+2025-08-21 20:34:29,041 - src.ui.app - INFO - Erweitertes Logging-System initialisiert
+2025-08-21 20:34:29,041 - src.ui.app - INFO - Erweitertes Logging-System initialisiert
+2025-08-21 20:34:29 - src.ui.app - INFO - Erweitertes Logging-System initialisiert
+2025-08-21 20:34:29 - root - INFO - Konfiguration aus R:\Code\ROM-Sorter-Pro\src\ui\..\config.json geladen
+2025-08-21 20:34:29 - root - INFO - ROM Sorter main window created
+2025-08-21 20:34:29,111 - src.ui.enhanced_theme - INFO - Theme-System initialisiert
+2025-08-21 20:34:29 - src.ui.enhanced_theme - INFO - Theme-System initialisiert
+2025-08-21 20:34:29 - root - INFO - Theme-System initialisiert mit Theme-Typ: system
+2025-08-21 20:43:23 - __main__ - INFO - ROM Sorter Pro terminated.
+2025-08-21 20:43:23,344 - performance_stats - INFO - === Performance-Statistiken ===
+2025-08-21 20:43:23 - performance_stats - INFO - === Performance-Statistiken ===
+2025-08-21 20:43:23,345 - performance_stats - INFO - app_execution: 1 Aufrufe, Durchschnitt: 534.303961s, Min: 534.303961s, Max: 534.303961s
+2025-08-21 20:43:23 - performance_stats - INFO - app_execution: 1 Aufrufe, Durchschnitt: 534.303961s, Min: 534.303961s, Max: 534.303961s

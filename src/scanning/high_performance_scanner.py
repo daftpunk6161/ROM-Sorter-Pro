@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*-coding: utf-8-*-
 """
-ROM Sorter Pro - High-Performance Scanner v2.1.7
+ROM Sorter Pro - High-Performance Scanner v2.1.8
 Phase 1 Implementation: Desktop Optimization
 
 This module implements a high-performance scanner for ROM files with advanced

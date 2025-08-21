@@ -1,15 +1,19 @@
-# ROM-Sorter-Pro v2.1.7
+# ROM-Sorter-Pro v2.1.8
 
 Ein universelles Tool zum Organisieren und Sortieren von ROM-Dateien für verschiedene Spielkonsolen.
+
+✅ **Update August 2025**: UI-System überarbeitet, Konfiguration vereinfacht, Doppelte Code-Elemente entfernt.
 
 ## 🚀 Schnellstart
 
 ### Startoptionen
+
 - **GUI-Version**: `python start_rom_sorter.py` oder `start_rom_sorter.bat`
 - **Vereinfachte Version**: `python simple_rom_sorter.py`
 - **Installation**: `python install_dependencies.py`
 
 ### Systemanforderungen
+
 - Python 3.8+
 - Windows, macOS oder Linux
 - Mindestens 2GB RAM
@@ -82,6 +86,7 @@ rom-sorter-pro/
 ## 🛠️ Entwicklung
 
 ### Für Entwickler
+
 Alle Entwicklungstools befinden sich im `dev/` Verzeichnis:
 
 ```bash
@@ -96,6 +101,7 @@ python dev/tests/test_console_integration.py
 ```
 
 ### Projektstruktur-Richtlinien
+
 - **Produktionscode**: Nur in `src/` Verzeichnis
 - **Entwicklungstools**: In `dev/tools/`
 - **Tests**: In `dev/tests/`
@@ -121,10 +127,11 @@ Dieses Projekt steht unter der MIT-Lizenz. Siehe LICENSE-Datei für Details.
 ## 📞 Support
 
 Bei Fragen oder Problemen:
-- 📧 E-Mail: support@rom-sorter-pro.de
+
+- 📧 E-Mail: <support@rom-sorter-pro.de>
 - 🐛 Issues: GitHub Issues verwenden
 - 📚 Dokumentation: `docs/` Verzeichnis
 
 ---
 
-**ROM-Sorter-Pro v2.1.7** - Organisieren Sie Ihre ROM-Sammlung professionell! 🎮✨
+**ROM-Sorter-Pro v2.1.8** - Organisieren Sie Ihre ROM-Sammlung professionell! 🎮✨

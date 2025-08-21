@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ROM Sorter Pro v2.1.7 - Qt Main Window
+ROM Sorter Pro v2.1.8 - Qt Main Window
 Phase 1 Implementation: Desktop Optimization
 
 This module contains the implementation of the main window with Qt 6.5+

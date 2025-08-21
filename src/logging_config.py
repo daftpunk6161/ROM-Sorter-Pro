@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*-coding: utf-8-*-
 """
-Optimized Logging System for ROM Sorter Pro v2.1.7
+Optimized Logging System for ROM Sorter Pro v2.1.8
 
-OPTIMIZED VERSION 2.1.7:
+OPTIMIZED VERSION 2.1.8:
 - Simplified threading with minimal locks
 - Memory-efficient buffering with smart limits
 - Async I/O for non-blocking operations
@@ -371,7 +371,7 @@ def setup_optimized_logging(
     backup_count: int = 3
 ) -> Dict[str, Any]:
     """
-    Setup optimized logging system for ROM Sorter Pro v2.1.7.
+    Setup optimized logging system for ROM Sorter Pro v2.1.8.
 
     Optimizations:
     - Minimal threading overhead
@@ -469,7 +469,7 @@ def setup_optimized_logging(
     # Log startup info
     main_logger = loggers['main']
     main_logger.info("=" * 60)
-    main_logger.info("ROM Sorter Pro v2.1.7 - Optimized Logging Initialized")
+    main_logger.info("ROM Sorter Pro v2.1.8 - Optimized Logging Initialized")
     main_logger.info(f"Log Level: {log_level} | File Logging: {enable_file_logging}")
     main_logger.info(f"Console: {enable_console_logging} | WebSocket: {enable_websocket_logging}")
     main_logger.info("=" * 60)

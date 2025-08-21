@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 
 """
-ROM Sorter Pro - Consolidated Configuration Module v2.1.7
+ROM Sorter Pro - Consolidated Configuration Module v2.1.8
 
-CONSOLIDATION v2.1.7:
+CONSOLIDATION v2.1.8:
 - ADDED: Validation functions for lists and dictionaries
 - IMPROVED: Enhanced validation functions for complex data types
 - OPTIMIZED: Improved type checking and error handling
@@ -27,7 +27,7 @@ CONSOLIDATION v2.1.7:
 
 Project:        ROM Sorter Pro
 File:           src/config.py (consolidated with config_utils.py)
-Version:        2.2.0 - Consolidated Version
+Version:        2.1.8 - Consolidated Version
 Author:         cemal / daftpunk6161
 Created:        2024
 Updated:        10.08.2025

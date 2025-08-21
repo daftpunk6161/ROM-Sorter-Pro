@@ -15,7 +15,7 @@ import json
 from typing import Dict, Any, Optional, List, Union
 from pathlib import Path
 
-# Importiere die Basisklasse aus __init__
+# Import the base class from __init__
 from . import Config as BaseConfig, ConfigError
 
 # Configure logging
@@ -81,11 +81,11 @@ class EnhancedConfig(BaseConfig):
             config_path: Optionaler Pfad zur Konfigurationsdatei
             *args, **kwargs: Weitere Parameter für die Basisklasse
         """
-        # Initialisierung der Basisklasse
-        # super().__init__() wird vermieden, um zirkuläre Imports zu verhindern
+        # Initialization of the basic class
+        # Super ().__ init __ () is avoided to prevent circular imports
         self.config_path = config_path or os.path.join(os.path.dirname(__file__), '..', 'config.json')
 
-        # Initialisiere die Konfiguration mit Standardwerten
+        # Initialize the configuration with standard values
         self._config = {}
         self._load_config()
 
@@ -318,7 +318,7 @@ class EnhancedConfig(BaseConfig):
         Lädt die Konfiguration aus der Datei oder initialisiert sie mit Standardwerten.
         """
         try:
-            # Prüfen, ob die File existiert
+            # Check whether the file exists
             if os.path.exists(self.config_path):
                 import json
                 with open(self.config_path, 'r', encoding='utf-8') as f:
@@ -327,7 +327,7 @@ class EnhancedConfig(BaseConfig):
                         logger.info(f"Konfiguration aus {self.config_path} geladen")
                     except json.JSONDecodeError as e:
                         logger.error(f"Fehler beim Laden der Konfiguration: {e}")
-                        # Bei Fehler mit Standardwerten initialisieren
+                        # Initialize with standard values ​​for errors
                         self._config = {}
             else:
                 logger.info(f"Konfigurationsdatei {self.config_path} nicht gefunden, verwende Standardwerte")
@@ -344,7 +344,7 @@ class EnhancedConfig(BaseConfig):
             True, wenn erfolgreich, False bei Fehler
         """
         try:
-            # Stelle sicher, dass das Verzeichnis existiert
+            # Make sure the directory exists
             os.makedirs(os.path.dirname(self.config_path), exist_ok=True)
 
             import json
@@ -428,8 +428,8 @@ def get_enhanced_config(config_path: Optional[str] = None) -> EnhancedConfig:
 
     return enhanced_config_instance
 
-# Initialisiere die erweiterte Konfiguration, aber erst bei Bedarf
-# get_enhanced_config() - wird erst aufgerufen, wenn benötigt
+# Initialize the extended configuration, but only if necessary
+# get_enhanced_config () - is only called when needed
 
 # Erstelle eine initiale Instanz
 enhanced_config_instance = EnhancedConfig()

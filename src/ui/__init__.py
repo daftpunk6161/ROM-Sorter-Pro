@@ -1,32 +1,34 @@
 """
-ROM-Sorter UI-Package
+ROM-Sorter UI-Package v2.1.8 - BEREINIGT
 
-This package contains the user interface components for the ROM-Sorter application.
-The UI has been built in a modular way to improve maintainability and extensibility.
+Dieses Paket enthält die Benutzeroberflächen-Komponenten für die ROM-Sorter-Anwendung.
+Die UI wurde modular aufgebaut, um die Wartbarkeit und Erweiterbarkeit zu verbessern.
 
-Modules:
-- app.py: Main application class that connects GUI and logic
-- base.py: Basic UI components and styles
-- custom_widgets.py: Enhanced widgets with additional functions
-- main_window.py: Main window definition
-- panels.py: Tab panels and other panel components
-- widgets.py: Reusable UI widgets
-- dialogs.py: Specialized dialog windows
-- compat.py: Compatibility layer for migration
-- theme_manager.py: Theme management with support for light/dark themes
-- theme_integration.py: Integration of theme management into the GUI
-- gui_dnd.py: Drag and drop functionality for the GUI
-- integrated_dnd.py: Integration of different DND implementations
+Kernmodule:
+- app.py: Hauptanwendungsklasse, die GUI und Logik verbindet
+- base.py: Grundlegende UI-Komponenten und Stile
+- main_window.py: Definition des Hauptfensters
+- widgets.py: Wiederverwendbare UI-Widgets
+- custom_widgets.py: Erweiterte Widgets mit zusätzlichen Funktionen
+- panels.py: Tab-Panels und andere Panel-Komponenten
+- dialogs.py: Spezialisierte Dialogfenster
+- theme_manager.py: Theme-Management mit Unterstützung für helle/dunkle Themes
+- enhanced_theme.py: Vereinfachte Theme-API
 """
 
+# Grundlegende UI-Komponenten
 from .base import STYLE, BaseApp, center_window, create_tooltip
+from .main_window import ROMSorterWindow
+from .app import ROMSorterApp, main
+
+# Widgets und UI-Elemente
 from .widgets import FolderSelector, ToggleSwitch, FileListBox, ProgressDialog
 from .panels import TabPanel, OptionsPanel, StatisticsPanel, LogPanel
 from .custom_widgets import DragDropSupport, CustomTreeview
-from .main_window import ROMSorterWindow
-from .app import ROMSorterApp, main
-from .dialogs import AboutDialog, SettingsDialog, ErrorDialog, show_error_dialog, show_about_dialog, show_settings_dialog
-from .compat import is_ui_available, get_ui_mode
+from .dialogs import (
+    AboutDialog, SettingsDialog, ErrorDialog,
+    show_error_dialog, show_about_dialog, show_settings_dialog
+)
 
 # Theme-System
 try:

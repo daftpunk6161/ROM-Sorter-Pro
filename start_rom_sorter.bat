@@ -1,6 +1,6 @@
 @echo off
 REM ROM Sorter Pro - Startskript für Windows
-REM Version 2.1.7
+REM Version 2.1.8
 REM Copyright (c) 2025
 
 echo ROM Sorter Pro wird gestartet...
@@ -16,12 +16,12 @@ if %ERRORLEVEL% NEQ 0 (
     exit /b 1
 )
 
-REM Projekt bereinigen
-echo Projekt wird bereinigt...
-python "%~dp0\cleanup_project.py"
+REM Clean up project
+echo Cleaning up project...
+python "%~dp0\dev\scripts\cleanup_project.py"
 if %ERRORLEVEL% NEQ 0 (
-    echo Warnung: Bereinigung konnte nicht vollständig durchgeführt werden.
-    echo Das Programm wird trotzdem fortgesetzt...
+    echo Warning: Cleanup could not be completed fully.
+    echo The program will continue anyway...
 )
 
 REM Prüfen, ob virtuelle Umgebung existiert und aktivieren

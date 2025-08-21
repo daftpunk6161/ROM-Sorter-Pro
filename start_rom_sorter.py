@@ -22,9 +22,7 @@ os.makedirs('logs', exist_ok=True)
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
-    filename='logs/rom_sorter_startup.log',
-    filemode='a',
-    # Don't add any handler for stdout/stderr to avoid duplicate logs
+    # Use handlers for file logging, don't specify filename directly
     handlers=[logging.FileHandler('logs/rom_sorter_startup.log', mode='a')]
 )
 logger = logging.getLogger(__name__)
@@ -70,7 +68,7 @@ def main():
     args = parse_arguments()
 
     if args.version:
-        print("ROM Sorter Pro v2.1.7")
+        print("ROM Sorter Pro v2.1.8")
         print("Copyright (c) 2025")
         sys.exit(0)
 

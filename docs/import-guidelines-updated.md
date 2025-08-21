@@ -104,9 +104,9 @@ When creating package `__init__.py` files:
 3. Use conditional imports for optional dependencies
 4. Be careful with imports that might create circular dependencies
 
-## Version 2.1.7 Import Guidelines Update
+## Version 2.1.8 Import Guidelines Update
 
-As of version 2.1.7, we have standardized all imports within the src directory to use relative imports. This helps avoid circular dependency issues and makes the code more maintainable.
+As of version 2.1.8, we have standardized all imports within the src directory to use relative imports. This helps avoid circular dependency issues and makes the code more maintainable.
 
 Example:
 

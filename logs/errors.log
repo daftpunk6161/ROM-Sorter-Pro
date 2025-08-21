@@ -1,2 +1,5 @@
-2025-08-21 09:59:48 - __main__ - ERROR - GUI returned error code: None
-2025-08-21 10:09:59 - __main__ - ERROR - GUI returned error code: None
+2025-08-21 19:31:59 - root - WARNING - TkinterDnD2 nicht verfügbar, einige Drag & Drop Funktionen sind eingeschränkt
+2025-08-21 19:32:29 - __main__ - ERROR - GUI returned error code: None
+2025-08-21 20:20:33 - __main__ - ERROR - Error starting the application: 'EnhancedConfig' object has no attribute 'get_all'
+2025-08-21 20:21:06 - __main__ - ERROR - Error starting the application: 'EnhancedConfig' object has no attribute 'sections'
+2025-08-21 20:22:10 - root - ERROR - Fehler beim Speichern der Konfiguration: ROMSorterApp._load_config.<locals>.<lambda>() takes 0 positional arguments but 1 was given

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ROM Sorter Pro - Simple Starter (Stand-Alone) v2.1.7
+ROM Sorter Pro - Simple Starter (Stand-Alone) v2.1.8
 
 This file serves as a simple entry point for ROM Sorter Pro without
 the complex import dependencies of the full application.
@@ -32,7 +32,7 @@ class SimpleROMSorterGUI:
         """Initializes the GUI."""
         # Create the main window
         self.root = tk.Tk()
-        self.root.title("ROM Sorter Pro v2.1.7")
+        self.root.title("ROM Sorter Pro v2.1.8")
         self.root.geometry("800x600")
         self.root.minsize(800, 600)
 

@@ -1,4 +1,4 @@
-# ROM Sorter Pro - Version 2.1.7
+# ROM Sorter Pro - Version 2.1.8
 
 **Release Date:** August 21, 2025
 

@@ -148,7 +148,7 @@ def handle_duplicates():
         if keep.exists() and remove.exists():
             print(f"Behebe Duplikat: Behalte {keep}, entferne {remove}")
             # Sicherstellen, dass alle Importe aktualisiert werden
-            # This would require more complex logic in a real script
+            # This would require More Complex Logic in A Real Script
             remove.unlink()
         elif not keep.exists() and remove.exists():
             print(f"Warnung: Original {keep} existiert nicht, verschiebe {remove} nach {keep}")

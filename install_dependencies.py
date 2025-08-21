@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*-coding: utf-8-*-
 """
-ROM Sorter Pro v2.1.7 - Installation Script for Dependencies
+ROM Sorter Pro v2.1.8 - Installation Script for Dependencies
 
 This script installs all necessary dependencies for ROM Sorter Pro.
 It is optimized for fast installation and automatic validation.

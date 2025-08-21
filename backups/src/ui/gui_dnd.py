@@ -148,7 +148,7 @@ def on_files_dropped(parent, files):
     """
     logger.info(f"Files dropped: {len(files)} files")
 
-    # If Parent Has a Handler for Droped Files, Call IT
+    # If parent has a Handler for Droped Files, Call IT
     if hasattr(parent, "handlers") and "on_files_dropped" in parent.handlers:
         parent.handlers["on_files_dropped"](files)
 

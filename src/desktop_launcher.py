@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*-coding: utf-8-*-
 """
-ROM Sorter Pro v2.1.7 - Desktop-Integration Startpunkt
+ROM Sorter Pro v2.1.8 - Desktop-Integration Startpunkt
 Phase 1 Implementation: Desktop-Optimierung und Integration
 
 This module serves as the main entry point for the new desktop version

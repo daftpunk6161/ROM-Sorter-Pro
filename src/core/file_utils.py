@@ -21,11 +21,11 @@ logger = logging.getLogger(__name__)
 
 def _calculate_small_file_hash(file_path: Path, algorithm: str) -> str:
     """
-    Effizientere Hashberechnung für kleine Dateien mit Memory-Mapping.
+    More efficient hash calculation for small files using memory mapping.
 
     Args:
-        file_path: Path-Objekt der Datei
-        algorithm: Hashalgorithmus ('md5', 'sha1', 'sha256')
+        file_path: Path object of the file
+        algorithm: Hash algorithm ('md5', 'sha1', 'sha256')
 
     Returns:
         Hashwert als Hex-String

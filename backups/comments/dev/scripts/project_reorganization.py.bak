@@ -12,7 +12,7 @@ import shutil
 import sys
 from pathlib import Path
 
-# Definiere das Wurzelverzeichnis
+# Define the root directory
 ROOT_DIR = Path(r"r:\Code\ROM-Sorter-Pro")
 
 # Verzeichnisstruktur
@@ -20,14 +20,14 @@ DIRS_TO_CREATE = [
     # Hauptverzeichnisse
     ROOT_DIR / "src",
 
-    # Entwicklungstools und -Ressourcen
+    # Development tools and resources
     ROOT_DIR / "dev",
     ROOT_DIR / "dev/tools",
     ROOT_DIR / "dev/scripts",
     ROOT_DIR / "dev/tests",
     ROOT_DIR / "dev/docs",
 
-    # Distribution und Releases
+    # Distribution and releases
     ROOT_DIR / "dist",
 
     # Daten
@@ -39,7 +39,7 @@ DIRS_TO_CREATE = [
     ROOT_DIR / "temp",
 ]
 
-# Dateien, die in "dev/tools" verschoben werden sollten
+# Files that should be moved to "Dev/Tools"
 DEV_TOOLS = [
     "repo_guard.py",
     "diagnose_imports.py",
@@ -47,7 +47,7 @@ DEV_TOOLS = [
     "split_comments.py",
 ]
 
-# Dateien, die in "dev/scripts" verschoben werden sollten
+# Files that should be moved to "dev/scripts"
 DEV_SCRIPTS = [
     "cleanup_git.py",
     "cleanup_project.py",
@@ -55,7 +55,7 @@ DEV_SCRIPTS = [
     "run_cleanup.bat",
 ]
 
-# Dateien, die in "dev/tests" verschoben werden sollten
+# Files that should be moved to "dev/tests"
 DEV_TESTS = [
     "test_console_integration.py",
     "test_console_mappings.py",
@@ -64,7 +64,7 @@ DEV_TESTS = [
     "standalone_test.py",
 ]
 
-# Dateien, die im Root-Verzeichnis bleiben sollten
+# Files that should remain in the root directory
 ROOT_FILES = [
     "start_rom_sorter.py",
     "start_rom_sorter.bat",
@@ -76,9 +76,9 @@ ROOT_FILES = [
     ".gitignore",
 ]
 
-# Module mit Duplikaten (ersten beibehalten, zweiten löschen)
+# Modules with duplicates (keep first, delete second)
 DUPLICATE_MODULES = [
-    # (beibehalten, löschen)
+    # (keep, delete)
     (ROOT_DIR / "src" / "dnd_support.py", ROOT_DIR / "src" / "ui" / "dnd_support.py"),
     (ROOT_DIR / "src" / "web" / "web_interface.py", ROOT_DIR / "src" / "web_interface.py"),
 ]
@@ -127,7 +127,7 @@ def move_files():
     # Dokumentation
     doc_dir = ROOT_DIR / "docs"
     if doc_dir.exists():
-        # Verschiebe alle Dateien von docs nach dev/docs
+        # Show all files from Docs to Dev/Docs
         for item in doc_dir.glob('*'):
             if item.is_file():
                 dst = ROOT_DIR / "dev" / "docs" / item.name
@@ -148,7 +148,7 @@ def handle_duplicates():
         if keep.exists() and remove.exists():
             print(f"Behebe Duplikat: Behalte {keep}, entferne {remove}")
             # Sicherstellen, dass alle Importe aktualisiert werden
-            # Dies würde in einem echten Skript komplexere Logik erfordern
+            # This would require more complex logic in a real script
             remove.unlink()
         elif not keep.exists() and remove.exists():
             print(f"Warnung: Original {keep} existiert nicht, verschiebe {remove} nach {keep}")
@@ -220,7 +220,7 @@ def main():
     # Verschiebe Dateien
     move_files()
 
-    # Löse Duplikate
+    # Solve duplicates
     handle_duplicates()
 
     # Erstelle README

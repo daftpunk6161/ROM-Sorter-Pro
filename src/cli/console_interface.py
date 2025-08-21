@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*-coding: utf-8-*-
 """
-ROM Sorter Pro - CLI Interface v2.1.7
+ROM Sorter Pro - CLI Interface v2.1.8
 Simple command-line interface for ROM Sorter Pro.
 """
 
@@ -24,7 +24,7 @@ def start_cli_mode():
     logger.info("CLI mode started")
     print("=" * 50)
     print("ROM SORTER PRO - COMMAND-LINE MODE")
-    print("Version 2.1.7")
+    print("Version 2.1.8")
     print("=" * 50)
     print("\nThis is a simplified version in CLI mode.")
     print("The full functionality is available in the GUI version.\n")

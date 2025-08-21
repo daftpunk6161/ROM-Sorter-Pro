@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*-coding: utf-8-*-
 """
-ROM Sorter Pro v2.1.7 - Universal console ROM organizer with refactored architecture
+ROM Sorter Pro v2.1.8 - Universal console ROM organizer with refactored architecture
 
-REFACTORED VERSION 2.1.7:
+REFACTORED VERSION 2.1.8:
 - FIXED: God Class complexity reduced with focused components
 - ENHANCED: Better separation of concerns and single responsibility
 - IMPROVED: Error handling and resource management
@@ -898,7 +898,7 @@ class RefactoredROMSorterPro:
             except ValueError as e:
                 logging.warning(f"Signal handling not available: {e}")
 
-        logging.info("Refactored ROM Sorter Pro v2.1.7 initialized with improved architecture")
+        logging.info("Refactored ROM Sorter Pro v2.1.8 initialized with improved architecture")
 
     def _signal_handler(self, signum, frame):
         """Thread-safe signal handler for graceful shutdown."""
@@ -986,7 +986,7 @@ class RefactoredROMSorterPro:
     def sort_by_console_advanced(self, source_dir: str, dest_dir: str) -> Dict[str, Any]:
         """Advanced console-based sorting with refactored architecture."""
         logging.info("="*100)
-        logging.info("STARTING REFACTORED CONSOLE SORTING v2.1.7")
+        logging.info("STARTING REFACTORED CONSOLE SORTING v2.1.8")
         logging.info("="*100)
         logging.info(f"Source: {source_dir}")
         logging.info(f"Destination: {dest_dir}")
@@ -1464,7 +1464,7 @@ EnhancedProcessingStats = ProcessingStatistics # Legacy alias
 def create_argument_parser():
     """Create argument parser for command line interface."""
     parser = argparse.ArgumentParser(
-        description='ROM Sorter Pro v2.1.7 - Refactored ROM Organization Tool',
+        description='ROM Sorter Pro v2.1.8 - Refactored ROM Organization Tool',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog='''
 Examples:

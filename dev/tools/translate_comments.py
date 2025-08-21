@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ROM Sorter Pro - Comment Translation Tool v2.1.7
+ROM Sorter Pro - Comment Translation Tool v2.1.8
 
 This script translates German comments in Python files to English,
 preserving the original files as backups. It uses GoogleTranslator

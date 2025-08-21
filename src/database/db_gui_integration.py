@@ -1,5 +1,5 @@
 """
-ROM Sorter Pro - Database-GUI Integration v2.1.7
+ROM Sorter Pro - Database-GUI Integration v2.1.8
 
 Additional database functions for the GUI class.
 """

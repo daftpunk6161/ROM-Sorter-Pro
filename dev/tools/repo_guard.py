@@ -57,7 +57,7 @@ FIX_VERSIONS = "fix-versions"
 FIX_ALL = "fix-all"
 
 # Current project version (to be updated with each release)
-CURRENT_VERSION = "2.1.7"
+CURRENT_VERSION = "2.1.8"
 VERSION_REGEX = re.compile(r"v?(\d+\.\d+\.\d+)")
 # Patterns that look like versions but should be excluded
 DATE_REGEX = re.compile(r"\d{2}\.\d{2}\.\d{4}")  # Matches dates like 21.08.2025

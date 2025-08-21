@@ -45,7 +45,7 @@ UPDATE_CONFIG_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'config
 VERSION_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'version.txt')
 
 # Current version
-__version__ = '2.1.7'
+__version__ = '2.1.8'
 
 # Path for temporary update files
 TEMP_UPDATE_DIR = os.path.join(tempfile.gettempdir(), "romsorter_updates")

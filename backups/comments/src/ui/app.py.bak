@@ -9,7 +9,7 @@ import os
 import sys
 import time
 
-# Versuche, das erweiterte Logging-System zu importieren
+# Attempts to import the extended logging system
 try:
     from ..utils.logging_integration import (
         initialize_logging, get_logger, log_context,
@@ -68,7 +68,7 @@ except ImportError:
     try:
         from config import EnhancedConfig, get_enhanced_config
     except ImportError:
-        # Fallback zu einer einfachen Konfigurationsklasse, wenn die eigentliche nicht verfügbar ist
+        # Fallback to a simple configuration class if the actual is not available
         class EnhancedConfig:
             def __init__(self, *args, **kwargs):
                 self.config = {}
@@ -86,13 +86,13 @@ class ROMSorterApp:
         self.app_dir = Path(__file__).parent.parent.parent
         self.config_manager = get_enhanced_config(str(self.app_dir / "config.json"))
 
-        # Initialisiere self.config mit Werten aus config_manager
+        # Initialize self.config with values ​​from config_manager
         try:
-            # Für EnhancedConfig
+            # For Enhancedconfig
             if hasattr(self.config_manager, '_config'):
                 self.config = self.config_manager._config
             else:
-                # Fallback für alte Configuration
+                # Fallback for old configuration
                 self.config = {}
         except Exception as e:
             logging.error(f"Fehler beim Initialisieren der Konfiguration: {e}")
@@ -107,7 +107,7 @@ class ROMSorterApp:
 # Expand the main window with the app logic
         self._setup_window()
 
-# Initialisiere erweitertes Theme-System und DND-Unterstützung
+# Initialization expanded theme system and DND support
         self._initialize_enhanced_systems()
 
 # Processed command line arguments
@@ -122,12 +122,12 @@ class ROMSorterApp:
 
         log_file = log_dir / f"rom_sorter_{self._get_date_string()}.log"
 
-        # Zuerst alle bestehenden Handler vom Root-Logger entfernen, um doppelte Ausgaben zu vermeiden
+        # First remove all existing traders from the root logger to avoid double expenses
         root_logger = logging.getLogger()
         for handler in root_logger.handlers[:]:
             root_logger.removeHandler(handler)
 
-        # Erweiterte Logging-Configuration verwenden, wenn verfügbar
+        # Use extended logging configuration if available
         if ENHANCED_LOGGING:
             # Konfiguriere subsystem-spezifische Log-Level basierend auf Konfiguration
             subsystem_levels = {}
@@ -142,7 +142,7 @@ class ROMSorterApp:
             if isinstance(scanner_level, str) and hasattr(logging, scanner_level):
                 subsystem_levels["src.scanning"] = getattr(logging, scanner_level)
 
-            # Initialisiere das erweiterte Logging-System
+            # Initialize the extended logging system
             initialize_logging(
                 log_dir=str(log_dir),
                 level=logging.DEBUG if self.config.get("debug_mode", False) else logging.INFO,
@@ -214,10 +214,10 @@ class ROMSorterApp:
                     # The Optimized Scanner Only Takes Filter_Extensions and Max_Workers as a Parameter
                     self.scanner = Scanner(None, options.max_workers)
 
-                # Verwende den erweiterten Logger, wenn verfügbar
+                # Use the extended logger if available
                 self.logger.debug(f"Scanner initialisiert mit Optionen: {options}")
         else:
-            # Create scanner ohne erweitertes Logging
+            # Create scanner without extended logging
             if self.config.get("use_adaptive_scanner", False):
                 self.scanner = AdaptiveScanner(max_workers=options.max_workers)
             else:
@@ -228,25 +228,25 @@ class ROMSorterApp:
 
     def _initialize_enhanced_systems(self):
         """Initialisiert die erweiterten Systeme wie Themes und DND."""
-        # Initialisiere das Theme-System, wenn verfügbar
+        # Initialize the theme system if available
         try:
             from . import THEME_SUPPORT, initialize_theme_system
             if THEME_SUPPORT:
-                # Hole den Theme-Typ aus der Konfiguration
+                # Get the theme type from the configuration
                 theme_type = self.config.get("ui", {}).get("theme", "system")
 
-                # Bei Tkinter ist das Hauptfenster bereits das root-Attribut
+                # At Tkinter, the main window is already the root attribute
                 root_widget = self.window
                 if hasattr(self.window, 'root'):
                     root_widget = self.window.root
 
                 initialize_theme_system(root_widget)
 
-                # Registriere Theme-Callback für spätere Updates
+                # Register theme callback for later updates
                 from . import register_theme_callback, set_theme
                 register_theme_callback(self._on_theme_changed)
 
-                # Setze das Theme aus der Konfiguration
+                # Set the theme from the configuration
                 if theme_type != "system":
                     set_theme(theme_type)
 
@@ -254,7 +254,7 @@ class ROMSorterApp:
         except ImportError as e:
             logging.warning(f"Theme-System konnte nicht initialisiert werden: {e}")
 
-        # Initialisiere die DND-Unterstützung, wenn verfügbar
+        # Initialize the DND support if available
         try:
             from . import DND_AVAILABLE, DND_MANAGER_AVAILABLE
             if DND_AVAILABLE:
@@ -266,7 +266,7 @@ class ROMSorterApp:
 
     def _on_theme_changed(self, theme):
         """Callback für Theme-Änderungen."""
-        # Aktualisiere die Konfiguration mit dem neuen Theme-Typ
+        # Update the configuration with the new theme type
         if not "ui" in self.config:
             self.config["ui"] = {}
         self.config["ui"]["theme"] = theme.get_type().value
@@ -299,7 +299,7 @@ class ROMSorterApp:
         """Bereinige Ressourcen bei Beendigung."""
 # Saving configuration
         try:
-            # Versuche zuerst save() zu verwenden (EnhancedConfig)
+            # Try to use Save () first (Enhancedconfig)
             if hasattr(self.config_manager, 'save'):
                 self.config_manager.save()
             # Fallback zur alten Methode

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*-coding: utf-8-*-
 """
-ROM Sorter Pro v2.1.7 - Test Module for ML Detection
+ROM Sorter Pro v2.1.8 - Test Module for ML Detection
 
 This module provides a simple interface for testing ML-based
 ROM detection.

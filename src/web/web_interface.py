@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-ROM Sorter Pro - Web Interface v2.1.7
+ROM Sorter Pro - Web Interface v2.1.8
 
 This module implements a web interface for ROM Sorter Pro that enables
 remote access to the application's functions and provides a modern
@@ -94,7 +94,7 @@ API_TOKENS = {}
 TOKEN_EXPIRY = timedelta(hours=24)
 
 # API version
-API_VERSION = "2.1.7"
+API_VERSION = "2.1.8"
 
 
 class WebInterfaceError(Exception):
@@ -432,7 +432,7 @@ class WebInterface:
             </div>
 
             <footer class="footer">
-                <p>ROM Sorter Pro &copy; 2025 | Web Interface Version 2.1.7</p>
+                <p>ROM Sorter Pro &copy; 2025 | Web Interface Version 2.1.8</p>
             </footer>
 
             <script>

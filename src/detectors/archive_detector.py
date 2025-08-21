@@ -161,8 +161,9 @@ def detect_console_from_archive(archive_path: str) -> Tuple[str, float]:
     if archive_type == "ZIP":
         return analyze_zip_archive(archive_path)
 
-# For other archive types (not yet implemented)
-# ToDo: Add support for rare, 7Z etc.
+# For other archive types (RAR, 7Z, etc.)
+# These formats will be handled by specialized detectors when implemented
+# For now we use the fallback method
 
 # Fallback: Attempts to recognize the console from the archive name
     console, confidence = detect_console_fast(os.path.basename(archive_path))

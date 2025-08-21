@@ -1,0 +1,2 @@
+2025-08-21 19:31:59,825 - src.ui.compat - WARNING - Alte GUI nicht verfügbar: cannot import name 'DND_AVAILABLE' from partially initialized module 'src.ui' (most likely due to a circular import) (r:\Code\ROM-Sorter-Pro\src\ui\__init__.py)
+2025-08-21 19:31:59,851 - src.ui.gui_dnd - WARNING - TkinterDnD2 not available. Drag and drop functionality will be disabled.

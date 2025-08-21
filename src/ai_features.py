@@ -1,8 +1,8 @@
 # -*-coding: utf-8-*-
 """
-AI-Enhanced Features for ROM Sorter Pro - Security Optimized Edition v2.1.7
+AI-Enhanced Features for ROM Sorter Pro - Security Optimized Edition v2.1.8
 
-SECURITY FIXES v2.1.7:
+SECURITY FIXES v2.1.8:
 - FIXED: SQL Injection vulnerabilities - all queries now use prepared statements
 - ENHANCED: Input validation for all database operations
 - IMPROVED: Error handling with secure logging
@@ -637,7 +637,7 @@ class OptimizedOnlineMetadataProvider:
 
 # Set Secure Headers
         self._session.headers.update({
-            'User-Agent': 'ROM-Sorter-Pro/2.1.7 (Educational/Personal Use)',
+            'User-Agent': 'ROM-Sorter-Pro/2.1.8 (Educational/Personal Use)',
             'Accept': 'application/json',
             'Accept-Encoding': 'gzip, deflate',
             'Connection': 'keep-alive'

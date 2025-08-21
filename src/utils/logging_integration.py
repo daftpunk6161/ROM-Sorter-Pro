@@ -96,9 +96,9 @@ def initialize_logging(log_dir: Optional[str] = None,
     global _initialized, _log_dir, _subsystem_levels
 
     if _initialized:
-        # Bereits initialisiert, Log-Warnung ausgeben
+        # Already Initialized, Log A Warning
         logger = logging.getLogger("logging_integration")
-        logger.warning("Logging-System wurde bereits initialisiert.")
+        logger.warning("Logging system was already initialized.")
         return False
 
     try:
@@ -217,7 +217,7 @@ def get_logger(name: str) -> logging.Logger:
     if name in _loggers:
         return _loggers[name]
 
-    # Check whether there is a specific level for the subsystem
+    # Check Whether there is a specific level for the subsystem
     level = DEFAULT_LOG_LEVEL
     for subsystem, subsystem_level in _subsystem_levels.items():
         if name.startswith(subsystem):

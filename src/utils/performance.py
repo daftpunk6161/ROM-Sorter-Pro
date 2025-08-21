@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ROM Sorter Pro - Optimiertes Leistungsüberwachungsmodul
+ROM Sorter Pro - Performance Monitoring and Metrics Module
 
-Diese Datei ist eine konsolidierte Version der Performance-Überwachungstools.
-Sie kombiniert die Funktionalität aus src/core/performance.py und src/utils/performance.py
-für bessere Wartbarkeit und reduzierte Redundanz.
+This file is a consolidated version of performance monitoring tools.
+It combines functionality from src/core/performance.py and src/utils/performance.py
+for better maintainability and reduced redundancy.
 
-Verbesserte Features:
-- Optimierte Memory-Nutzung
-- Verbesserte Thread-Sicherheit
-- Erweitertes Metriken-Tracking
-- Vereinheitlichte API für alle Komponenten
-- Automatische Ressourcen-Freigabe
+Enhanced features:
+- Optimized memory usage
+- Improved thread safety
+- Extended metrics tracking
+- Unified API for all components
+- Automatic resource release
 """
 
 import os
@@ -65,7 +65,7 @@ def measure_time(func=None, name=None, log_level=logging.DEBUG):
                 end_time = time.perf_counter()
                 duration = end_time - start_time
                 logger.log(log_level, f"Operation '{operation_name}' dauerte {duration:.4f} Sekunden")
-                
+
                 # Optional: Send to performance monitor if available
                 try:
                     monitor = PerformanceMonitor.get_instance()
@@ -191,11 +191,11 @@ class PerformanceMonitor:
         self.peak_memory = 0
         self.start_time = time.perf_counter()
         self._lock = threading.RLock()
-        
+
         # Memory-Monitoring starten
         self._last_memory_check = 0
         self._memory_check_interval = 5  # Sekunden
-        
+
         # Speichermetriken initialisieren
         self._update_memory_usage()
 
@@ -210,7 +210,7 @@ class PerformanceMonitor:
         with self._lock:
             self.operation_times[operation_name].append(duration)
             self.operation_counts[operation_name] += 1
-            
+
             # Update regular memory use
             current_time = time.perf_counter()
             if current_time - self._last_memory_check > self._memory_check_interval:
@@ -246,7 +246,7 @@ class PerformanceMonitor:
             Dauer in Sekunden
         """
         end_time = time.perf_counter()
-        
+
         with self._lock:
             if operation_name in self.metrics:
                 duration = self.metrics[operation_name].stop()
@@ -255,7 +255,7 @@ class PerformanceMonitor:
                 self.record_operation_time(operation_name, duration)
             else:
                 raise ValueError(f"Operation '{operation_name}' wurde nicht gestartet")
-                
+
         return duration
 
     def _update_memory_usage(self) -> Dict[str, Any]:
@@ -266,39 +266,39 @@ class PerformanceMonitor:
             Speichernutzungsinformationen
         """
         memory_info = {}
-        
+
         # Grundlegende Python-Speichernutzung
         memory_info['python_alloc'] = sys.getsizeof(0)  # Base for measurements
-        
+
         # GC-Informationen sammeln
         gc.collect()  # Optional: Forcierter GC
         memory_info['gc_objects'] = len(gc.get_objects())
-        
+
         # Use psutil for extended system information if available
         if PSUTIL_AVAILABLE:
             process = psutil.Process()
             mem_info = process.memory_info()
             memory_info['rss'] = mem_info.rss  # Resident Set Size
             memory_info['vms'] = mem_info.vms  # Virtual Memory Size
-            
+
             # Aktuelle CPU-Nutzung
             memory_info['cpu_percent'] = process.cpu_percent(interval=0.1)
-            
+
             # Setze Peak-Memory
             if mem_info.rss > self.peak_memory:
                 self.peak_memory = mem_info.rss
-        
+
         # Add snapshot with time stamps
         snapshot = {
             'timestamp': time.time(),
             'memory': memory_info
         }
         self.memory_snapshots.append(snapshot)
-        
+
         # Limit the number of snapshots
         if len(self.memory_snapshots) > 1000:
             self.memory_snapshots = self.memory_snapshots[-1000:]
-            
+
         return memory_info
 
     def get_summary(self) -> Dict[str, Any]:
@@ -310,13 +310,13 @@ class PerformanceMonitor:
         """
         with self._lock:
             total_runtime = time.perf_counter() - self.start_time
-            
+
             # Operation-Statistiken berechnen
             operation_stats = {}
             for op_name, times in self.operation_times.items():
                 if not times:
                     continue
-                    
+
                 operation_stats[op_name] = {
                     'count': self.operation_counts[op_name],
                     'total_time': sum(times),
@@ -324,7 +324,7 @@ class PerformanceMonitor:
                     'min_time': min(times),
                     'max_time': max(times)
                 }
-            
+
             # Memory-Statistiken
             memory_stats = {}
             if self.memory_snapshots:
@@ -333,7 +333,7 @@ class PerformanceMonitor:
                     'current': latest,
                     'peak': {'rss': self.peak_memory} if PSUTIL_AVAILABLE else {}
                 }
-            
+
             return {
                 'total_runtime': total_runtime,
                 'operations': operation_stats,
@@ -353,7 +353,7 @@ def measure_block(name: str, log_level: int = logging.DEBUG):
     """
     monitor = PerformanceMonitor.get_instance()
     start_time = monitor.start_operation(name)
-    
+
     try:
         yield
     finally:

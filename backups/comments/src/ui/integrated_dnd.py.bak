@@ -16,16 +16,16 @@ from typing import List, Union, Callable, Optional, Dict, Any
 # Logger konfigurieren
 logger = logging.getLogger(__name__)
 
-# Importiere Legacy-DND-Unterstützung
+# Importiere Legacy-DND-Unterstuetzung
 from .gui_dnd import DND_AVAILABLE as TKDND_AVAILABLE, OptimizedDragDropFrame
 from ..dnd_support import DragDropManager, FilePath, FileList, DropCallback
 
-# Zentraler DND-Manager für die gesamte Anwendung
+# Central DND manager for the entire application
 _global_dnd_manager = DragDropManager()
 
-# Status der DND-Unterstützung
+# Status of the DND support
 DND_AVAILABLE = TKDND_AVAILABLE
-DND_MANAGER_AVAILABLE = True  # Immer verfügbar, da wir eine eigene Implementierung haben
+DND_MANAGER_AVAILABLE = True  # Always available because we have our own implementation
 
 
 class IntegratedDnDSupport:
@@ -49,7 +49,7 @@ class IntegratedDnDSupport:
         if callback:
             _global_dnd_manager.register_drop_callback(self.widget_id, self._on_files_dropped)
 
-        # TkinterDnD2 Unterstützung, falls verfügbar
+        # Tkinterdnd2 support, if available
         if TKDND_AVAILABLE and hasattr(widget, 'drop_target_register'):
             try:
                 widget.drop_target_register('*')
@@ -65,7 +65,7 @@ class IntegratedDnDSupport:
         try:
             data = event.data
             if data:
-                # Konvertiere die Daten in eine Liste von Dateipfaden
+                # Convert the data into a list of file paths
                 if data.startswith('{') and data.endswith('}'):
                     # Mehrere Dateien im Format {file1} {file2}
                     files = []
@@ -88,7 +88,7 @@ class IntegratedDnDSupport:
         """
         if self.callback:
             try:
-                # Konvertiere alle Pfade zu Strings
+                # Convert all paths to strings
                 file_paths = [str(path) for path in files]
                 self.callback(file_paths)
                 logger.debug(f"DragDropManager Drop-Event für {len(files)} Dateien verarbeitet")
@@ -146,10 +146,10 @@ def create_drop_target(parent: tk.Widget, callback: Callable[[List[str]], None],
         Ein Frame mit DND-Unterstützung
     """
     if TKDND_AVAILABLE:
-        # Verwende die optimierte Version mit TkinterDnD2
+        # Use the optimized version with Tkinterdnd2
         frame = OptimizedDragDropFrame(parent, callback=callback, **kwargs)
     else:
-        # Fallback zur einfachen Version mit unserer eigenen DND-Unterstützung
+        # Fallback for simple version with our own DND support
         frame = tk.Frame(parent, **kwargs)
         IntegratedDnDSupport(frame, callback)
 

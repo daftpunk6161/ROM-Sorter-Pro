@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ROM Sorter Pro v2.1.7 - Main Entry Module
+ROM Sorter Pro v2.1.8 - Main Entry Module
 
 This is the main entry point for the ROM Sorter Pro application.
 The GUI implementation has been refactored into several modules:
@@ -76,7 +76,7 @@ def main():
         config = load_config()
 
         # Create and start the main application
-        app = ROMSorterGUI(title="ROM Sorter Pro v2.1.7")
+        app = ROMSorterGUI(title="ROM Sorter Pro v2.1.8")
 
         # Enable theme support
         theme_integrator = ThemeIntegrator(app)
@@ -2364,7 +2364,7 @@ class OptimizedROMSorterGUI:
             # No drag & drop available
             self.root = tk.Tk()
 
-        self.root.title("ROM Sorter Pro 🎮 - Optimized v2.1.7")
+        self.root.title("ROM Sorter Pro 🎮 - Optimized v2.1.8")
         self.root.geometry("1000x700")
         self.root.minsize(800, 600)
 
@@ -2667,7 +2667,7 @@ class OptimizedROMSorterGUI:
 
     def _show_about(self):
         """Show about dialog with information about ROM Sorter Pro."""
-        about_text = """ROM Sorter Pro v2.1.7 - Theme Edition
+        about_text = """ROM Sorter Pro v2.1.8 - Theme Edition
 
 Ein professionelles Werkzeug zur Organisation von ROM-Sammlungen.
 

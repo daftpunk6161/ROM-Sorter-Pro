@@ -3,7 +3,7 @@ import os
 import shutil
 from pathlib import Path
 
-ROOT = Path(__file__).parent
+ROOT = Path(__file__).parent.parent.parent  # Navigate from dev/scripts to project root
 BACKUP_ROOT = ROOT / "backups" / "comments"
 # Ensure that the backup directory exists
 BACKUP_ROOT.mkdir(parents=True, exist_ok=True)

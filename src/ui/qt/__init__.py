@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ROM Sorter Pro v2.1.7 - Qt Initialization Module
+ROM Sorter Pro v2.1.8 - Qt Initialization Module
 Phase 1 Implementation: Desktop Optimization
 
 This module initializes the Qt UI components and ensures
@@ -14,7 +14,7 @@ import logging
 from pathlib import Path
 
 # Package constants
-__version__ = "2.1.7"
+__version__ = "2.1.8"
 __author__ = "ROM Sorter Pro Team"
 
 # Initialization status

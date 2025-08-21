@@ -327,7 +327,7 @@ class EnhancedConfig(BaseConfig):
                         logger.info(f"Konfiguration aus {self.config_path} geladen")
                     except json.JSONDecodeError as e:
                         logger.error(f"Fehler beim Laden der Konfiguration: {e}")
-                        # Initialize with standard values ​​for errors
+                        # Initialize with Standard Values ​​for Errors
                         self._config = {}
             else:
                 logger.info(f"Konfigurationsdatei {self.config_path} nicht gefunden, verwende Standardwerte")

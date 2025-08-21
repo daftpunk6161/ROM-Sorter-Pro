@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ROM Sorter Pro - Debug Script v2.1.7
+ROM Sorter Pro - Debug Script v2.1.8
 
 This script runs the main application in debug mode for testing purposes.
 """

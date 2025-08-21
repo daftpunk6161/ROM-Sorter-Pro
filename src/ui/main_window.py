@@ -1,24 +1,35 @@
-# Gruppe 1: Standard-Bibliotheken
+#!/usr/bin/env python3
+# -*-coding: utf-8-*-
+"""
+ROM Sorter Pro - Hauptfenster v2.1.8
+"""
+
+# Standard-Bibliotheken
 import logging
 import queue
 import threading
+import os
+import time
+import glob
+import random
+import platform
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Callable, Union, Tuple
 
-# Gruppe 2: Drittanbieterbibliotheken
+# GUI-Bibliotheken
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 
-# Gruppe 4: Relative Imports
+# Relative Imports
 from .base import STYLE, BaseApp, center_window
 
 class ROMSorterWindow(tk.Tk):
-    """Main window of the ROM Sorter application."""
+    """Hauptfenster der ROM Sorter Anwendung."""
 
     def __init__(self):
         """Initialize the main window."""
         super().__init__()
-        self.title("ROM Sorter Pro 🎮 - Optimized v2.1.7")
+        self.title("ROM Sorter Pro 🎮 - v2.1.8")
         self.geometry("1000x700")
         self.minsize(800, 600)
 
@@ -76,16 +87,18 @@ class ROMSorterWindow(tk.Tk):
 
         # File menu
         file_menu = tk.Menu(menubar, tearoff=0)
-        file_menu.add_command(label="Select source folder...", command=lambda: self._select_folder("source"))
-        file_menu.add_command(label="Select destination folder...", command=lambda: self._select_folder("dest"))
+        file_menu.add_command(label="Quellordner wählen...", command=lambda: self._select_folder("source"))
+        file_menu.add_command(label="Zielordner wählen...", command=lambda: self._select_folder("dest"))
         file_menu.add_separator()
-        file_menu.add_command(label="Exit", command=self._on_close)
-        menubar.add_cascade(label="File", menu=file_menu)
+        file_menu.add_command(label="Beenden", command=self._on_close)
+        menubar.add_cascade(label="Datei", menu=file_menu)
 
         # Actions menu
         action_menu = tk.Menu(menubar, tearoff=0)
         action_menu.add_command(label="ROMs sortieren", command=self._on_start_sorting)
         action_menu.add_command(label="Abbrechen", command=self._on_cancel_sorting)
+        action_menu.add_separator()
+        action_menu.add_command(label="Log-Datei öffnen", command=self.open_log_file)
         menubar.add_cascade(label="Aktionen", menu=action_menu)
 
         # Help menu
@@ -145,7 +158,7 @@ class ROMSorterWindow(tk.Tk):
         # Version and info
         version_label = tk.Label(
             header_frame,
-            text="v2.1.7 Optimized",
+            text="v2.1.8",
             font=STYLE.fonts.small,
             bg=STYLE.colors.accent_primary,
             fg="#ffffff"
@@ -154,15 +167,116 @@ class ROMSorterWindow(tk.Tk):
 
     def _create_left_panel(self, parent):
         """Erstelle das linke Panel mit Ordnerauswahl und Optionen."""
-        # This method is expanded in an actual implementation,
-        # To create the folder selection and options
-        pass
+        # Quellordner auswählen
+        source_frame = tk.LabelFrame(parent, text="Quellordner", bg=STYLE.colors.bg_primary)
+        source_frame.pack(fill='x', padx=5, pady=5)
+
+        source_entry = tk.Entry(source_frame, textvariable=self.source_path)
+        source_entry.pack(side='left', fill='x', expand=True, padx=5, pady=5)
+
+        source_button = tk.Button(
+            source_frame,
+            text="Durchsuchen",
+            command=lambda: self._select_folder("source")
+        )
+        source_button.pack(side='right', padx=5, pady=5)
+
+        # Zielordner auswählen
+        dest_frame = tk.LabelFrame(parent, text="Zielordner", bg=STYLE.colors.bg_primary)
+        dest_frame.pack(fill='x', padx=5, pady=5)
+
+        dest_entry = tk.Entry(dest_frame, textvariable=self.dest_path)
+        dest_entry.pack(side='left', fill='x', expand=True, padx=5, pady=5)
+
+        dest_button = tk.Button(
+            dest_frame,
+            text="Durchsuchen",
+            command=lambda: self._select_folder("dest")
+        )
+        dest_button.pack(side='right', padx=5, pady=5)
+
+        # Optionen
+        options_frame = tk.LabelFrame(parent, text="Optionen", bg=STYLE.colors.bg_primary)
+        options_frame.pack(fill='x', padx=5, pady=5)
+
+        # Optionen hinzufügen
+        options = [
+            ("Kopieren statt verschieben", self.copy_mode),
+            ("Unterordner durchsuchen", self.recursive_scan),
+            ("Unterordner pro Konsole erstellen", self.create_subfolders),
+            ("Bestehende Dateien überschreiben", self.overwrite_existing)
+        ]
+
+        for text, var in options:
+            cb = tk.Checkbutton(
+                options_frame,
+                text=text,
+                variable=var,
+                bg=STYLE.colors.bg_primary
+            )
+            cb.pack(anchor='w', padx=5, pady=2)
+
+        # Start-Button
+        start_button = tk.Button(
+            parent,
+            text="ROMs sortieren",
+            command=self._on_start_sorting,
+            bg=STYLE.colors.accent_secondary,
+            fg="white",
+            font=STYLE.fonts.button
+        )
+        start_button.pack(fill='x', padx=5, pady=10)
 
     def _create_right_panel(self, parent):
         """Create the right panel with tabs for statistics and logs."""
-        # This method is expanded in an actual implementation,
-        # To create the tabs and its content
-        pass
+        # Notebook für Tabs erstellen
+        notebook = ttk.Notebook(parent)
+        notebook.pack(fill='both', expand=True)
+
+        # Tab für Dateiliste
+        files_frame = tk.Frame(notebook, bg=STYLE.colors.bg_primary)
+        notebook.add(files_frame, text="Dateien")
+
+        # Einfache Listbox für Dateien
+        file_list = tk.Listbox(
+            files_frame,
+            bg="white",
+            selectbackground=STYLE.colors.accent_primary,
+            selectforeground="white",
+            height=20
+        )
+        file_list.pack(fill='both', expand=True, padx=5, pady=5)
+
+        # Scrollbar für die Listbox
+        scrollbar = tk.Scrollbar(file_list)
+        scrollbar.pack(side='right', fill='y')
+
+        file_list.config(yscrollcommand=scrollbar.set)
+        scrollbar.config(command=file_list.yview)
+
+        self.file_list = file_list  # Save reference
+
+        # Tab für Logs
+        log_frame = tk.Frame(notebook, bg=STYLE.colors.bg_primary)
+        notebook.add(log_frame, text="Logs")
+
+        # Text widget für Logs
+        log_text = tk.Text(
+            log_frame,
+            bg="white",
+            height=20,
+            wrap=tk.WORD
+        )
+        log_text.pack(fill='both', expand=True, padx=5, pady=5)
+
+        # Scrollbar für das Text-Widget
+        log_scrollbar = tk.Scrollbar(log_text)
+        log_scrollbar.pack(side='right', fill='y')
+
+        log_text.config(yscrollcommand=log_scrollbar.set)
+        log_scrollbar.config(command=log_text.yview)
+
+        self.log_text = log_text  # Save reference
 
     def _create_footer(self, parent):
         """Erstelle den Footer-Bereich mit Statusanzeige und Fortschrittsbalken."""
@@ -207,103 +321,209 @@ class ROMSorterWindow(tk.Tk):
                 # Get the next message out of the queue
                 message = self.message_queue.get(timeout=0.1)
 
-                # Process the message based on your type
-                if message['type'] == 'status':
-                    self.status_text.set(message['text'])
-                elif message['type'] == 'progress':
-                    self.progress_value.set(message['value'])
-                elif message['type'] == 'log':
-                    # In a complete implementation, the log would be updated here
-                    pass
+                # Process different message types
+                if isinstance(message, dict):
+                    action = message.get("action", "")
 
-                # Mark the message as processed
+                    # Log message
+                    if action == "log" and "text" in message:
+                        self.log_text.insert(tk.END, message["text"])
+                        self.log_text.see(tk.END)
+
+                    # Progress update
+                    elif action == "progress_update":
+                        if "value" in message:
+                            self.progress_value.set(message["value"])
+                        if "status" in message:
+                            self.status_text.set(message["status"])
+                        if "log" in message:
+                            self.log_text.insert(tk.END, message["log"])
+                            self.log_text.see(tk.END)
+
+                    # Completion message
+                    elif action == "complete":
+                        if "status" in message:
+                            self.status_text.set(message["status"])
+                        if "log" in message:
+                            self.log_text.insert(tk.END, message["log"])
+                            self.log_text.see(tk.END)
+
+                # Mark as done
                 self.message_queue.task_done()
+
             except queue.Empty:
-                # No messages in the queue
+                # No message in queue, just continue
                 pass
+            except Exception as e:
+                logging.error(f"Error processing message: {e}")
 
-            # Short break to avoid CPU load
-            import time
-            time.sleep(0.01)
+            # Check if the window still exists, if not, break the loop
+            try:
+                self.winfo_exists()
+            except tk.TclError:
+                break
 
-    def _select_folder(self, folder_type):
-        """
-        Open a folder selection dialog.
-
-        Args:
-            folder_type: 'source' or 'dest' for the source or destination folder
-        """
-        folder = filedialog.askdirectory(
-            title=f"Select {'source' if folder_type == 'source' else 'destination'} folder",
-            mustexist=True
-        )
+    def _select_folder(self, target):
+        """Dialog zum Auswählen eines Ordners öffnen."""
+        folder = filedialog.askdirectory(title=f"Bitte wählen Sie einen {'Quell' if target == 'source' else 'Ziel'}-Ordner")
 
         if folder:
-            if folder_type == "source":
+            if target == "source":
                 self.source_path.set(folder)
+                self.status_text.set(f"Quellordner gesetzt: {folder}")
             else:
                 self.dest_path.set(folder)
+                self.status_text.set(f"Zielordner gesetzt: {folder}")
 
     def _on_start_sorting(self):
-        """Starte den Sortiervorgang."""
-        # Check whether the source and target folder have been selected
-        if not self.source_path.get() or not self.dest_path.get():
-            messagebox.showwarning(
-                "Missing folders",
-                "Please select a source and destination folder."
-            )
+        """Starte den Sortierprozess."""
+        source = self.source_path.get()
+        dest = self.dest_path.get()
+
+        if not source or not os.path.isdir(source):
+            messagebox.showerror("Fehler", "Bitte wählen Sie einen gültigen Quellordner.")
             return
 
-        # Setze den Status auf "verarbeitend"
+        if not dest or not os.path.isdir(dest):
+            messagebox.showerror("Fehler", "Bitte wählen Sie einen gültigen Zielordner.")
+            return
+
+        # Clear file list
+        self.file_list.delete(0, tk.END)
+
+        # Add dummy files for demonstration
+        files = glob.glob(os.path.join(source, "**/*.*"), recursive=self.recursive_scan.get())
+        rom_extensions = [".gb", ".gbc", ".gba", ".nes", ".snes", ".n64", ".z64", ".v64", ".smd", ".bin", ".iso", ".cue"]
+
+        # Filter to show only ROMs by common extensions (simple demo)
+        rom_files = [f for f in files if any(f.lower().endswith(ext) for ext in rom_extensions)]
+
+        for file in rom_files[:100]:  # Limit to 100 files for performance
+            self.file_list.insert(tk.END, os.path.basename(file))
+
+        # Update UI
         self.is_processing.set()
         self.status_text.set("Sortiere ROMs...")
-        self.progress_value.set(0.0)
+        self.progress_value.set(0)
 
-        # In A Complete implementation, The Sorting Process would be Started here
+        # Mock progress for demonstration
+        self.total_files = len(rom_files)
+
+        # Start a background thread to simulate sorting
+        threading.Thread(
+            target=self._simulate_sorting,
+            args=(source, dest, rom_files),
+            daemon=True,
+            name="Sorting-Thread"
+        ).start()
+
+    def _simulate_sorting(self, source, dest, files):
+        """Simulate the sorting process for demonstration."""
+        self.processed_files = 0
+
+        # Add to log
+        self.message_queue.put({
+            "action": "log",
+            "text": f"Starte Sortierung von {len(files)} Dateien...\n"
+        })
+
+        # Process each file
+        for i, file in enumerate(files):
+            # Simulate processing time
+            time.sleep(0.05)
+
+            # Get a random console for demo
+            consoles = ["NES", "SNES", "GameBoy", "GameBoyColor", "GameBoyAdvance",
+                        "N64", "MasterSystem", "Genesis", "PlayStation"]
+            console = random.choice(consoles)
+
+            # Update progress
+            self.processed_files = i + 1
+
+            # Update UI via queue
+            self.message_queue.put({
+                "action": "progress_update",
+                "value": (i + 1) / len(files) * 100,
+                "status": f"Verarbeite: {os.path.basename(file)}",
+                "log": f"Erkannt als {console}: {os.path.basename(file)}\n"
+            })
+
+        # Complete
+        self.message_queue.put({
+            "action": "complete",
+            "status": f"Fertig! {self.processed_files} ROMs sortiert.",
+            "log": f"\nSortierung abgeschlossen. {self.processed_files} ROMs wurden sortiert.\n"
+        })
+        self.is_processing.clear()
 
     def _on_cancel_sorting(self):
-        """Breche den Sortiervorgang ab."""
+        """Sortierungsprozess abbrechen."""
         if self.is_processing.is_set():
             self.is_processing.clear()
-            self.status_text.set("Abgebrochen")
+            self.status_text.set("Sortierung abgebrochen")
+            self.message_queue.put({
+                "action": "log",
+                "text": "Sortierung wurde vom Benutzer abgebrochen.\n"
+            })
 
     def _show_documentation(self):
         """Zeige die Dokumentation an."""
-        messagebox.showinfo(
-            "Dokumentation",
-            "Die Dokumentation kann auf der Projektwebseite gefunden werden."
-        )
+        messagebox.showinfo("Dokumentation",
+                           "Die Dokumentation für ROM Sorter Pro finden Sie im 'docs' Ordner.")
 
     def _show_about(self):
-        """Show information about the application."""
-        messagebox.showinfo(
-            "About ROM Sorter Pro",
-            "ROM Sorter Pro v2.1.7\n\n"
-            "A tool for sorting and organizing ROM files.\n\n"
-            "© 2025 ROM Sorter Team"
-        )
+        """Zeige Informationen über die Anwendung an."""
+        messagebox.showinfo("Über ROM Sorter Pro",
+                           "ROM Sorter Pro v2.1.8\n\n"
+                           "Ein universeller Organizer für ROM-Dateien.\n\n"
+                           "© 2025")
+
+    def open_log_file(self):
+        """
+        Öffnet die aktuelle Log-Datei.
+        """
+        try:
+            # Go up to the logs from the UI Directory
+            ui_dir = os.path.dirname(os.path.abspath(__file__))
+            app_dir = os.path.dirname(ui_dir)
+            log_path = os.path.join(app_dir, 'logs')
+
+            # Find the latest log file
+            if os.path.exists(log_path):
+                log_files = [f for f in os.listdir(log_path) if f.startswith('rom_sorter_')]
+                if log_files:
+                    log_files.sort(reverse=True)  # Neueste zuerst
+                    latest_log = os.path.join(log_path, log_files[0])
+
+                    # Open the log file
+                    if platform.system() == 'Windows':
+                        os.startfile(latest_log)
+                    elif platform.system() == 'Darwin':  # macOS
+                        os.system(f'open "{latest_log}"')
+                    else:  # Linux and others
+                        os.system(f'xdg-open "{latest_log}"')
+                    return
+
+            messagebox.showinfo("Info", "Keine Log-Datei gefunden.")
+        except Exception as e:
+            messagebox.showerror("Fehler", f"Fehler beim Öffnen der Log-Datei: {e}")
 
     def _on_close(self):
-        """Handle the window closing."""
-        # Stoppe alle laufenden Threads
+        """Handle window close event."""
+        # Cancel any running operations
         self.is_processing.clear()
 
-        # Gib Ressourcen frei
-        import gc
-        gc.collect()
-
-        # Close the window
+        # Destroy the window
         self.destroy()
 
 
 if __name__ == "__main__":
-    # Logging einrichten
+    # Setup logging
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
 
-    # Anwendung starten
+    # Start the application
     app = ROMSorterWindow()
     app.mainloop()
-

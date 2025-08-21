@@ -35,7 +35,7 @@ Die Refaktorierung des ROM-Sorter-Pro-Projekts hat bedeutende Fortschritte gemac
 **Kurzfristige Ziele (aktualisiert am 21. August 2025):**
 
 - [x] Implementierung umfassender Logging-Mechanismen für alle Subsysteme
-- [x] Konsistente Versionen in allen Projektdateien (Version 2.1.7)
+- [x] Konsistente Versionen in allen Projektdateien (Version 2.1.8)
 - [x] Behebung von zirkulären Import-Problemen und DND_AVAILABLE-Behandlung
 - [x] Übersetzen aller deutschen Kommentare in Python-Dateien
 - [ ] Erstellung automatisierter Tests für die neuen Komponenten (nächste Priorität)

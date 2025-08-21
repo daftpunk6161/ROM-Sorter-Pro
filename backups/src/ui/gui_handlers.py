@@ -225,7 +225,7 @@ def on_about_click(parent):
     """
     messagebox.showinfo(
         "About ROM Sorter Pro",
-        "ROM Sorter Pro v2.1.7\n\n"
+        "ROM Sorter Pro v2.1.8\n\n"
         "A tool for organizing ROM files by console type.\n\n"
         "© 2025 ROM Sorter Pro Team"
     )

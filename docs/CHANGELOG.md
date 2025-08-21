@@ -1,6 +1,21 @@
 # Changelog - ROM Sorter Pro
 
-## Version 2.1.7 (August 21, 2025)
+## Version 2.1.8 (August 21, 2025)
+
+### Code Improvements
+
+- **Configuration Modularization**: Split large config.py into modular components for better maintainability
+- **Enhanced Documentation**: Added comprehensive documentation in docs/MASTER.md and specialized topic guides
+- **Code Quality**: Improved docstrings and comments throughout the codebase
+- **Project Structure**: Better organization of source code with clear responsibilities
+
+### Project Infrastructure
+
+- **Central Documentation**: Created comprehensive MASTER.md as central documentation reference
+- **Better Logging**: Enhanced logging system with consistent error messages
+- **Cleanup Scripts**: Improved path handling in cleanup_project.py
+
+## Version 2.1.8 (August 21, 2025)
 
 ### Code Improvements
 
@@ -26,8 +41,6 @@
 - Error in detecting PlayStation 2 vs. PlayStation Portable files (.cso)
 - Conflict between Atari 2600 and PlayStation files (.bin)
 - Issues with detection of SuperGrafx vs. PC-Engine games (.sgx)
-
-## Version 2.1.7 (August 19, 2025)
 
 ### Neue Funktionen
 

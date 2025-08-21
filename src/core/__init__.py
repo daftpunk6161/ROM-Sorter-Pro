@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*-coding: utf-8-*-
 """
-ROM Sorter Pro - Core Paket
+ROM Sorter Pro - Core Package
 
-Dieses Paket enthält Kernfunktionalitäten und Utilities für die Anwendung.
+This package contains core functionality and utilities for the application.
 """
 
 from .file_utils import (

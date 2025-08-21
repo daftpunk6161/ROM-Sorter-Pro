@@ -1,11 +1,11 @@
 # -*-coding: utf-8-*-
 """
-ROM Sorter Pro - DEPRECATED: Optimized File Scanner v2.1.7
+ROM Sorter Pro - DEPRECATED: Optimized File Scanner v2.1.8
 
 CAUTION: This module is deprecated and will be removed in future versions.
 Please use the new scanner modules in src.scanning instead.
 
-PERFORMANCE OPTIMIZATIONS v2.1.7:
+PERFORMANCE OPTIMIZATIONS v2.1.8:
 - High-performance threading for large directory structures
 - Intelligent caching with adaptive adjustment
 - Adaptive batch processing for optimal throughput
@@ -15,7 +15,7 @@ PERFORMANCE OPTIMIZATIONS v2.1.7:
 
 Project:        ROM Sorter Pro
 File:           src/optimized_scanner.py
-Version:        2.1.7
+Version:        2.1.8
 Author:         cemal / daftpunk6161
 License:        MIT License
 Python:         3.8+

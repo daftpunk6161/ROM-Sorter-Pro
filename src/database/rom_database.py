@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*-coding: utf-8-*-
 """
-ROM Sorter Pro - Enhanced Database Module v2.1.7
+ROM Sorter Pro - Enhanced Database Module v2.1.8
 Phase 1 Implementation: Desktop Optimization
 
 This module provides an enhanced database layer for ROM Sorter Pro.
@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 # Constant
 DEFAULT_DB_PATH = 'rom_databases/roms.db'
 DEFAULT_CACHE_PATH = 'rom_databases/cache'
-SCHEMA_VERSION = '2.1.7'  # Current schema version
+SCHEMA_VERSION = '2.1.8'  # Current schema version
 
 class ROMDatabase:
     """Enhanced database implementation for ROM metadata."""

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # -*-coding: utf-8-*-
 """
-ROM Sorter Pro - ROM Dateisystem-Funktionen
+ROM Sorter Pro - ROM Filesystem Functions
 
-Dieses Modul enthält Funktionen zur Verarbeitung von ROM-spezifischen Dateisystem-Operationen,
-einschließlich ROM-spezifischer Dateiendungen und Pfadoperationen.
+This module contains functions for processing ROM-specific filesystem operations,
+including ROM-specific file extensions and path operations.
 """
 
 import os
@@ -17,14 +17,14 @@ logger = logging.getLogger(__name__)
 
 def get_all_rom_extensions(include_dot: bool = False) -> List[str]:
     """
-    Gibt alle unterstützten ROM-Dateierweiterungen zurück.
-    Diese Liste wird für Scanner und Filter verwendet.
+    Returns all supported ROM file extensions.
+    This list is used for scanners and filters.
 
     Args:
-        include_dot: Ob der Punkt am Anfang der Erweiterung enthalten sein soll
+        include_dot: Whether to include the dot at the beginning of the extension
 
     Returns:
-        Liste aller unterstützten Dateierweiterungen
+        List of all supported file extensions
     """
     extensions = [
         # Nintendo

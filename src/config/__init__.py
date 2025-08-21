@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # -*-coding: utf-8-*-
 """
-ROM Sorter Pro - Konfigurationspaket
-Phase 1 Implementation: Desktop-Optimierung und Integration
+ROM Sorter Pro - Configuration Package v2.1.8
 
-Dieses Modul initialisiert das Konfigurationspaket und stellt Hilfsfunktionen bereit.
+This module initializes the configuration package and provides helper functions.
+The package is organized in a modular way to improve maintainability.
 """
 
 from pathlib import Path
@@ -16,18 +16,27 @@ import logging
 # Configure logging
 logger = logging.getLogger(__name__)
 
-# Definiere Basisklassen zur Verwendung in anderen Modulen
+# Import modular components
+from .modules import BaseConfigModule
+from .modules.performance import PerformanceConfig
+from .modules.sorting import SortingConfig
+from .modules.ai import AIConfig
+
+# Import the configuration manager
+from .manager import ConfigManager, default_config
+
+# For backward compatibility
 class Config:
-    """Basis-Konfigurationsklasse"""
+    """Base configuration class for backward compatibility"""
     def __init__(self):
         self.config_data = {}
 
     def load_config(self):
-        """Lädt die Configuration"""
+        """Load configuration"""
         pass
 
     def get(self, key, default=None):
-        """Gibt den Value für einen Key zurück"""
+        """Get value for a key"""
         return default
 
 class ConfigError(Exception):

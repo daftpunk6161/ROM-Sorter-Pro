@@ -127,8 +127,8 @@ def validate_file_operation(file_path: Union[str, Path],
 
 # Make sure the file is in the basic directory
         if not str(file_path).startswith(str(base_dir)):
-            logger.warning(f"Sicherheitswarnung: Dateizugriff außerhalb des Basisverzeichnisses verweigert: {file_path}")
-            raise InvalidPathError(f"Dateizugriff außerhalb des erlaubten Verzeichnisses: {file_path}")
+            logger.warning(f"Security warning: File access outside base directory denied: {file_path}")
+            raise InvalidPathError(f"File access outside allowed directory: {file_path}")
 
 # Check special directories
     sensitive_dirs = ['/etc', '/var/log', '/root', '/boot', '/bin', '/sbin',
@@ -136,32 +136,32 @@ def validate_file_operation(file_path: Union[str, Path],
 
     for sensitive in sensitive_dirs:
         if str(file_path).startswith(sensitive):
-            logger.warning(f"Sicherheitswarnung: Zugriff auf geschütztes Verzeichnis verweigert: {file_path}")
-            raise InvalidPathError(f"Zugriff auf geschütztes Verzeichnis nicht erlaubt: {file_path}")
+            logger.warning(f"Security warning: Access to protected directory denied: {file_path}")
+            raise InvalidPathError(f"Access to protected directory not allowed: {file_path}")
 
 # Check for hidden files (Unix) and system files (Windows)
     if file_path.name.startswith('.') and sys.platform != 'win32':
-        logger.warning(f"Warnung: Zugriff auf versteckte Datei: {file_path}")
+        logger.warning(f"Warning: Access to hidden file: {file_path}")
 
 # Check whether writing access is required, but is not allowed
     if not allow_write and file_path.exists() and os.access(str(file_path), os.W_OK):
-        logger.warning(f"Sicherheitswarnung: Schreibzugriff nicht erlaubt für: {file_path}")
-        raise InvalidPathError(f"Schreibzugriff nicht erlaubt für: {file_path}")
+        logger.warning(f"Security warning: Write access not allowed for: {file_path}")
+        raise InvalidPathError(f"Write access not allowed for: {file_path}")
 
 # Check whether reading access is needed, but is not allowed
     if not allow_read and file_path.exists() and os.access(str(file_path), os.R_OK):
-        logger.warning(f"Sicherheitswarnung: Lesezugriff nicht erlaubt für: {file_path}")
-        raise InvalidPathError(f"Lesezugriff nicht erlaubt für: {file_path}")
+        logger.warning(f"Security warning: Read access not allowed for: {file_path}")
+        raise InvalidPathError(f"Read access not allowed for: {file_path}")
 
     return True
 
 
 def check_environment_security() -> Dict[str, Any]:
     """
-    Überprüft die Sicherheit der Ausführungsumgebung.
+    Checks the security of the execution environment.
 
     Returns:
-        Dict mit Sicherheitsinformationen und -warnungen
+        Dict with security information and warnings
     """
     results = {
         'security_warnings': [],
@@ -175,25 +175,25 @@ def check_environment_security() -> Dict[str, Any]:
 # Current directory permits are okay
             pass
     except Exception as e:
-        results['security_warnings'].append(f"Konnte Berechtigungen nicht prüfen: {e}")
+        results['security_warnings'].append(f"Could not check permissions: {e}")
         results['is_secure'] = False
 
 # Check Python version
     if sys.version_info < (3, 8):
         results['security_warnings'].append(
-            f"Veraltete Python-Version {sys.version}. Version 3.8 oder höher empfohlen."
+            f"Outdated Python version {sys.version}. Version 3.8 or higher recommended."
         )
 
 # Check on uncertain environment variables
     if os.environ.get('PYTHONHTTPSVERIFY') == '0':
         results['security_warnings'].append(
-            "PYTHONHTTPSVERIFY=0 gefunden. SSL-Zertifikatsüberprüfung ist deaktiviert."
+            "PYTHONHTTPSVERIFY=0 found. SSL certificate verification is disabled."
         )
         results['is_secure'] = False
 
     if results['security_warnings']:
         for warning in results['security_warnings']:
-            logger.warning(f"Sicherheitswarnung: {warning}")
+            logger.warning(f"Security warning: {warning}")
 
     return results
 
