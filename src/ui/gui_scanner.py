@@ -12,6 +12,11 @@ from tkinter import ttk, Frame, Text, Scrollbar
 from threading import Thread, Event
 from pathlib import Path
 from datetime import datetime
+import threading
+import queue
+import time
+from concurrent.futures import ThreadPoolExecutor
+import concurrent.futures
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +30,9 @@ def setup_scanner_components(parent):
     # Create scanner components
     create_log_widget(parent)
     create_stats_widget(parent)
+
+    # Create and setup the scanner
+    parent.scanner = FastFileScanner()
 
     # Initialize scanner-related attributes
     parent.scan_stats = {
@@ -181,6 +189,206 @@ def update_scan_stats(parent, **kwargs):
 
         # Add file type breakdown if any
         if parent.scan_stats["file_types"]:
+            lines.append("\nFile types:")
+            for ext, count in parent.scan_stats["file_types"].items():
+                if count > 0:
+                    lines.append(f"  {ext}: {count}")
+
+        # Update the text widget
+        stats_text.insert(tk.END, "\n".join(lines))
+        stats_text.config(state=tk.DISABLED)
+
+
+class FastFileScanner:
+    """High-performance file scanner with optimized memory usage and adaptive performance."""
+
+    # Class-level cache for better memory efficiency
+    _scan_cache = {}
+    _cache_lock = threading.RLock()
+    _cache_hit_count = 0
+    _cache_miss_count = 0
+
+    # Class settings for adaptive performance
+    _settings = {
+        'use_threading': os.cpu_count() and os.cpu_count() > 2,
+        'max_threads': max(1, min(8, (os.cpu_count() or 4) // 2)),
+        'min_files_for_threading': 1000,
+        'batch_size_base': 100,
+        'cache_ttl': 300,  # Seconds, how long cache is valid
+        'max_cache_entries': 10,
+        'skip_hidden_dirs': True,
+        'skip_system_dirs': True,
+        'max_scan_depth': 20,  # Prevents excessively deep recursion
+    }
+
+    def __init__(self):
+        """Initialize the file scanner."""
+        self.stop_event = threading.Event()
+        self.files_queue = queue.Queue()
+        self.active_threads = 0
+        self.thread_pool = None
+        self.scan_thread = None
+
+    def scan_directory(self, directory_path, recursive=True, extensions=None):
+        """Scan a directory for files.
+
+        Args:
+            directory_path: Directory path to scan
+            recursive: Whether to scan subdirectories
+            extensions: List of file extensions to filter for
+
+        Returns:
+            Generator yielding file paths
+        """
+        # Check cache first
+        cache_key = (directory_path, recursive, str(extensions))
+        with self._cache_lock:
+            if cache_key in self._scan_cache:
+                cache_entry = self._scan_cache[cache_key]
+                if time.time() - cache_entry['timestamp'] < self._settings['cache_ttl']:
+                    self._cache_hit_count += 1
+                    for file_path in cache_entry['files']:
+                        yield file_path
+                    return
+
+        # If not in cache, perform the scan
+        self._cache_miss_count += 1
+
+        # Normalize path
+        directory_path = os.path.normpath(directory_path)
+
+        # Prepare file list
+        files_list = []
+
+        try:
+            # Walk through the directory
+            for current_path, dirs, files in os.walk(directory_path):
+                # Skip hidden and system directories if configured
+                if self._settings['skip_hidden_dirs']:
+                    dirs[:] = [d for d in dirs if not d.startswith('.')]
+
+                if self._settings['skip_system_dirs']:
+                    dirs[:] = [d for d in dirs if not d.startswith('$') and d.lower() != 'system volume information']
+
+                # Process files in this directory
+                for file in files:
+                    # Skip hidden files
+                    if self._settings['skip_hidden_dirs'] and file.startswith('.'):
+                        continue
+
+                    # Check extension if filtering is enabled
+                    if extensions:
+                        file_ext = os.path.splitext(file)[1].lower()
+                        if not any(file_ext.endswith(ext.lower()) for ext in extensions):
+                            continue
+
+                    # Create full path
+                    file_path = os.path.join(current_path, file)
+                    files_list.append(file_path)
+                    yield file_path
+
+                # Stop recursion if not enabled
+                if not recursive:
+                    break
+
+        except Exception as e:
+            logger.error(f"Error scanning directory {directory_path}: {e}")
+
+        # Update cache
+        with self._cache_lock:
+            # Check if cache is full and remove oldest entry if needed
+            if len(self._scan_cache) >= self._settings['max_cache_entries']:
+                oldest_key = min(self._scan_cache, key=lambda k: self._scan_cache[k]['timestamp'])
+                del self._scan_cache[oldest_key]
+
+            # Add new entry
+            self._scan_cache[cache_key] = {
+                'timestamp': time.time(),
+                'files': files_list
+            }
+
+    def start_scan(self, directory_path, callback, recursive=True, extensions=None):
+        """Start scanning in a separate thread.
+
+        Args:
+            directory_path: Directory to scan
+            callback: Function to call with results
+            recursive: Whether to scan subdirectories
+            extensions: List of file extensions to filter for
+
+        Returns:
+            True if scan started, False otherwise
+        """
+        if self.scan_thread and self.scan_thread.is_alive():
+            logger.warning("A scan is already in progress")
+            return False
+
+        # Reset stop event
+        self.stop_event.clear()
+
+        # Start scan thread
+        self.scan_thread = threading.Thread(
+            target=self._scan_worker,
+            args=(directory_path, callback, recursive, extensions),
+            daemon=True
+        )
+        self.scan_thread.start()
+
+        return True
+
+    def _scan_worker(self, directory_path, callback, recursive, extensions):
+        """Worker function for scanning.
+
+        Args:
+            directory_path: Directory to scan
+            callback: Function to call with results
+            recursive: Whether to scan subdirectories
+            extensions: List of file extensions to filter for
+        """
+        try:
+            # Initialize thread pool
+            self.thread_pool = ThreadPoolExecutor(max_workers=self._settings['max_threads'])
+            futures = []
+
+            # Process files
+            for file_path in self.scan_directory(directory_path, recursive, extensions):
+                if self.stop_event.is_set():
+                    break
+
+                # Process file in thread pool
+                future = self.thread_pool.submit(callback, file_path)
+                futures.append(future)
+
+            # Wait for all tasks to complete
+            for future in concurrent.futures.as_completed(futures):
+                if self.stop_event.is_set():
+                    break
+                try:
+                    future.result()
+                except Exception as e:
+                    logger.error(f"Error in file processing: {e}")
+
+        except Exception as e:
+            logger.error(f"Error in scan worker: {e}")
+
+        finally:
+            # Clean up thread pool
+            if self.thread_pool:
+                self.thread_pool.shutdown(wait=False)
+                self.thread_pool = None
+
+    def stop_scan(self):
+        """Stop any running scans."""
+        self.stop_event.set()
+
+        # Wait for scan thread to finish
+        if self.scan_thread and self.scan_thread.is_alive():
+            self.scan_thread.join(timeout=1.0)
+
+        # Shutdown thread pool
+        if self.thread_pool:
+            self.thread_pool.shutdown(wait=False)
+            self.thread_pool = None
             lines.append("\nFile types:")
             for ext, count in parent.scan_stats["file_types"].items():
                 lines.append(f"  {ext}: {count}")

@@ -23,10 +23,23 @@ from datetime import datetime
 
 # Import theme settings and utilities
 from src.config.theme_settings import THEME_SETTINGS, CUSTOM_THEME_PATH
-from src.utils.logger import setup_logger
+
+# Versuche, das erweiterte Logging-System zu importieren
+try:
+    from src.utils.logging_integration import (
+        get_logger, log_context, log_performance, log_exception
+    )
+    ENHANCED_LOGGING = True
+except ImportError:
+    ENHANCED_LOGGING = False
+    # Fallback zur alten Logger-Implementierung
+    from src.utils.logger import setup_logger
 
 # Logger konfigurieren
-logger = setup_logger(__name__)
+if ENHANCED_LOGGING:
+    logger = get_logger(__name__)
+else:
+    logger = setup_logger(__name__)
 
 # Import local module with relative imports
 from .theme_manager import ThemeManager, Theme, ThemeType, ColorScheme
@@ -97,6 +110,7 @@ class ThemeIntegrator:
 
         return styles
 
+    @log_performance(operation="apply_theme") if ENHANCED_LOGGING else lambda x: x
     def apply_theme(self) -> bool:
         """
         Wendet das aktuelle Theme auf die GUI an.

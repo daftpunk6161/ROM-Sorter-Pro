@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*-coding: utf-8-*-
 """
-Optimized Logging System for ROM Sorter Pro v2.1.2
+Optimized Logging System for ROM Sorter Pro v2.1.7
 
-OPTIMIZED VERSION 2.1.2:
+OPTIMIZED VERSION 2.1.7:
 - Simplified threading with minimal locks
 - Memory-efficient buffering with smart limits
 - Async I/O for non-blocking operations
@@ -58,14 +58,14 @@ QUEUE_TIMEOUT = 0.1        # Fast queue operations
 
 class FastFormatter(logging.Formatter):
     """High-performance formatter with minimal overhead."""
-    
+
     def __init__(self, enable_colors: bool = False):
         super().__init__()
         self.enable_colors = enable_colors
         self._format_cache = {}
         self._cache_hits = 0
         self._cache_misses = 0
-        
+
         # Pre-compiled format strings
         self._formats = {
             logging.ERROR: "[{asctime}] ERROR   [{name}] {message}",
@@ -73,7 +73,7 @@ class FastFormatter(logging.Formatter):
             logging.INFO: "[{asctime}] INFO    {message}",
             logging.DEBUG: "[{asctime}] DEBUG   {name}:{lineno} - {message}"
         }
-        
+
 # Simple Color Codes
         self.colors = {
             'ERROR': '\033[91m',     # Red
@@ -82,21 +82,21 @@ class FastFormatter(logging.Formatter):
             'DEBUG': '\033[94m',     # Blue
             'RESET': '\033[0m'       # Reset
         } if enable_colors else {}
-    
+
     def format(self, record):
         """Fast formatting with minimal processing."""
         # Use pre-compiled format based on level
         level = record.levelno
         fmt_string = self._formats.get(level, self._formats[logging.INFO])
-        
+
 # Apply Color If Enabled
         if self.enable_colors and record.levelname in self.colors:
             record.levelname = f"{self.colors[record.levelname]}{record.levelname}{self.colors['RESET']}"
-        
+
         # Fast formatting with style parameter
         formatter = logging.Formatter(fmt_string, style='{', datefmt='%H:%M:%S')
         return formatter.format(record)
-    
+
     def get_cache_stats(self) -> Dict[str, int]:
         """Get formatter cache statistics."""
         total = self._cache_hits + self._cache_misses
@@ -113,23 +113,23 @@ class FastFormatter(logging.Formatter):
 
 class SimplePerformanceLogger:
     """Simplified performance logger with minimal overhead."""
-    
+
     def __init__(self, name: str = "performance"):
         self.logger = logging.getLogger(name)
         self.metrics = defaultdict(float)
         self.counts = defaultdict(int)
         self._lock = threading.Lock()  # Single lock for all operations
-        
+
     def log_timing(self, operation: str, duration: float):
         """Log timing with minimal processing."""
         with self._lock:
             self.metrics[operation] += duration
             self.counts[operation] += 1
-        
+
 # ONLY LOG Slow Operations
         if duration > 1.0:
             self.logger.warning(f"SLOW: {operation} took {duration:.2f}s")
-    
+
     def time_operation(self, operation_name: str):
         """Simple timing context manager."""
         class SimpleTimer:
@@ -137,18 +137,18 @@ class SimplePerformanceLogger:
                 self.perf_logger = perf_logger
                 self.op_name = op_name
                 self.start_time = None
-            
+
             def __enter__(self):
                 self.start_time = time.perf_counter()
                 return self
-            
+
             def __exit__(self, exc_type, exc_val, exc_tb):
                 if self.start_time:
                     duration = time.perf_counter() - self.start_time
                     self.perf_logger.log_timing(self.op_name, duration)
-        
+
         return SimpleTimer(self, operation_name)
-    
+
     def get_stats(self) -> Dict[str, Any]:
         """Get performance statistics."""
         with self._lock:
@@ -162,7 +162,7 @@ class SimplePerformanceLogger:
                     'avg_time': total / count if count > 0 else 0
                 }
             return stats
-    
+
     def reset(self):
         """Reset all statistics."""
         with self._lock:
@@ -175,116 +175,116 @@ class SimplePerformanceLogger:
 
 class OptimizedFileHandler(logging.handlers.RotatingFileHandler):
     """Optimized file handler with smart buffering."""
-    
-    def __init__(self, filename, mode='a', maxBytes=0, backupCount=0, 
+
+    def __init__(self, filename, mode='a', maxBytes=0, backupCount=0,
                  encoding=None, delay=False):
         super().__init__(filename, mode, maxBytes, backupCount, encoding, delay)
-        
+
 # Optimized Buffering
         self._buffer = []
         self._buffer_size = 0
         self._max_buffer_size = DEFAULT_BUFFER_SIZE
         self._last_flush = time.time()
-        
+
 # Single Lock for All Operations
         self._buffer_lock = threading.Lock()
-        
+
 # Background Flusher
         self._flush_thread = None
         self._stop_event = threading.Event()
         self._start_flusher()
-        
+
 # Cleanup tab
         atexit.register(self._cleanup)
-    
+
     def emit(self, record):
         """Emit with optimized buffering."""
         try:
             msg = self.format(record) + self.terminator
             msg_bytes = len(msg.encode('utf-8'))
-            
+
             with self._buffer_lock:
                 self._buffer.append(msg)
                 self._buffer_size += msg_bytes
-                
+
 # Immediate Flush for Errors or Lars Buffer
-                if (record.levelno >= logging.ERROR or 
+                if (record.levelno >= logging.ERROR or
                     self._buffer_size >= self._max_buffer_size):
                     self._flush_buffer_unsafe()
-        
+
         except Exception:
             self.handleError(record)
-    
+
     def _flush_buffer_unsafe(self):
         """Flush buffer without acquiring lock (internal use)."""
         if not self._buffer:
             return
-        
+
         try:
 # Check for Rollover
             dummy_record = logging.LogRecord("", 0, "", 0, "", (), None)
             if self.shouldRollover(dummy_record):
                 self.doRollover()
-            
+
             # Write all messages
             if self.stream is None:
                 self.stream = self._open()
-            
+
             if self.stream:
                 for msg in self._buffer:
                     self.stream.write(msg)
                 self.flush()
-            
+
 # Clear Buffer
             self._buffer.clear()
             self._buffer_size = 0
             self._last_flush = time.time()
-            
+
         except Exception:
 # Keep Messages for Retry
             pass
-    
+
     def _start_flusher(self):
         """Start background flush thread."""
         if self._flush_thread is None or not self._flush_thread.is_alive():
             self._flush_thread = threading.Thread(
-                target=self._flush_worker, 
+                target=self._flush_worker,
                 daemon=True,
                 name="LogFlusher"
             )
             self._flush_thread.start()
-    
+
     def _flush_worker(self):
         """Background worker for periodic flushing."""
         while not self._stop_event.is_set():
             try:
                 time.sleep(FLUSH_INTERVAL)
-                
+
                 current_time = time.time()
                 should_flush = False
-                
+
                 with self._buffer_lock:
-                    if (self._buffer and 
+                    if (self._buffer and
                         current_time - self._last_flush > FLUSH_INTERVAL):
                         should_flush = True
-                
+
                 if should_flush:
                     with self._buffer_lock:
                         self._flush_buffer_unsafe()
-                        
+
             except Exception:
                 pass
-    
+
     def _cleanup(self):
         """Cleanup resources."""
         self._stop_event.set()
         if self._flush_thread and self._flush_thread.is_alive():
             self._flush_thread.join(timeout=1.0)
-        
+
 # Final Flush
         with self._buffer_lock:
             self._flush_buffer_unsafe()
-    
+
     def close(self):
         """Close handler and cleanup."""
         self._cleanup()
@@ -296,25 +296,25 @@ class OptimizedFileHandler(logging.handlers.RotatingFileHandler):
 
 class SimpleWebSocketHandler(logging.Handler):
     """Simplified WebSocket handler with minimal overhead."""
-    
+
     def __init__(self, socketio_instance=None, namespace='/logs'):
         super().__init__()
         self.socketio = socketio_instance
         self.namespace = namespace
-        
+
         # Simple message queue
         self.message_queue = queue.Queue(maxsize=100)
         self.stats = {'sent': 0, 'dropped': 0, 'errors': 0}
-        
+
 # Background transmitter
         if socketio_instance:
             self._sender_thread = threading.Thread(
-                target=self._send_worker, 
+                target=self._send_worker,
                 daemon=True,
                 name="WebSocketSender"
             )
             self._sender_thread.start()
-    
+
     def emit(self, record):
         """Emit log record to WebSocket."""
         try:
@@ -324,34 +324,34 @@ class SimpleWebSocketHandler(logging.Handler):
                 'message': self.format(record),
                 'module': record.name
             }
-            
+
             # Non-blocking queue put
             try:
                 self.message_queue.put_nowait(log_entry)
             except queue.Full:
                 self.stats['dropped'] += 1
-                
+
         except Exception:
             self.stats['errors'] += 1
-    
+
     def _send_worker(self):
         """Background worker for sending messages."""
         while True:
             try:
                 # Get message with timeout
                 message = self.message_queue.get(timeout=1.0)
-                
+
                 if self.socketio:
                     self.socketio.emit('log_message', message, namespace=self.namespace)
                     self.stats['sent'] += 1
-                
+
                 self.message_queue.task_done()
-                
+
             except queue.Empty:
                 continue
             except Exception:
                 self.stats['errors'] += 1
-    
+
     def get_stats(self) -> Dict[str, int]:
         """Get handler statistics."""
         return self.stats.copy()
@@ -371,53 +371,53 @@ def setup_optimized_logging(
     backup_count: int = 3
 ) -> Dict[str, Any]:
     """
-    Setup optimized logging system for ROM Sorter Pro v2.1.2.
-    
+    Setup optimized logging system for ROM Sorter Pro v2.1.7.
+
     Optimizations:
     - Minimal threading overhead
     - Smart buffering
     - Fast formatters
     - Efficient handlers
     """
-    
+
 # Convert Log Level
     numeric_level = getattr(logging, log_level.upper(), logging.INFO)
-    
+
 # Setup Log Directory
     if log_dir is None:
         log_dir_path = Path("logs")
     else:
         log_dir_path = Path(log_dir)
-    
+
     log_dir_path.mkdir(exist_ok=True)
-    
+
     # Parse size
     size_bytes = _parse_size_string(max_log_size)
-    
+
     # Configure root logger
     root_logger = logging.getLogger()
     root_logger.setLevel(numeric_level)
-    
+
 # Clear Existing Handlers
     for handler in root_logger.handlers[:]:
         root_logger.removeHandler(handler)
-    
+
     handlers = {}
-    
+
 # Console Handler
     if enable_console_logging:
         console_handler = logging.StreamHandler(sys.stdout)
         console_handler.setLevel(numeric_level)
-        
+
         # Check for color support
-        enable_colors = (hasattr(sys.stdout, 'isatty') and 
-                        sys.stdout.isatty() and 
+        enable_colors = (hasattr(sys.stdout, 'isatty') and
+                        sys.stdout.isatty() and
                         os.environ.get('TERM') != 'dumb')
-        
+
         console_handler.setFormatter(FastFormatter(enable_colors=enable_colors))
         root_logger.addHandler(console_handler)
         handlers['console'] = console_handler
-    
+
 # File Handers
     if enable_file_logging:
 # Main Log File
@@ -432,7 +432,7 @@ def setup_optimized_logging(
         main_handler.setFormatter(FastFormatter())
         root_logger.addHandler(main_handler)
         handlers['main_file'] = main_handler
-        
+
         # Error log file
         error_log_file = log_dir_path / "errors.log"
         error_handler = OptimizedFileHandler(
@@ -445,18 +445,18 @@ def setup_optimized_logging(
         error_handler.setFormatter(FastFormatter())
         root_logger.addHandler(error_handler)
         handlers['error_file'] = error_handler
-    
+
 # Websocket Handler
     if enable_websocket_logging and socketio_instance:
         websocket_handler = SimpleWebSocketHandler(
-            socketio_instance, 
+            socketio_instance,
             namespace='/logs'
         )
         websocket_handler.setLevel(logging.INFO)
         websocket_handler.setFormatter(FastFormatter())
         root_logger.addHandler(websocket_handler)
         handlers['websocket'] = websocket_handler
-    
+
 # Setup Specialized Loggers
     loggers = {
         'main': logging.getLogger('rom_sorter'),
@@ -465,15 +465,15 @@ def setup_optimized_logging(
         'web': logging.getLogger('rom_sorter.web'),
         'performance': SimplePerformanceLogger('rom_sorter.performance')
     }
-    
+
     # Log startup info
     main_logger = loggers['main']
     main_logger.info("=" * 60)
-    main_logger.info("ROM Sorter Pro v2.1.2 - Optimized Logging Initialized")
+    main_logger.info("ROM Sorter Pro v2.1.7 - Optimized Logging Initialized")
     main_logger.info(f"Log Level: {log_level} | File Logging: {enable_file_logging}")
     main_logger.info(f"Console: {enable_console_logging} | WebSocket: {enable_websocket_logging}")
     main_logger.info("=" * 60)
-    
+
     return {
         'loggers': loggers,
         'handlers': handlers,
@@ -487,14 +487,14 @@ def setup_optimized_logging(
 def _parse_size_string(size_str: str) -> int:
     """Parse size string into bytes."""
     size_str = size_str.upper().strip()
-    
+
     multipliers = {
         'B': 1,
         'KB': 1024,
         'MB': 1024 ** 2,
         'GB': 1024 ** 3
     }
-    
+
     for suffix, multiplier in multipliers.items():
         if size_str.endswith(suffix):
             try:
@@ -503,13 +503,13 @@ def _parse_size_string(size_str: str) -> int:
                 return int(number * multiplier)
             except ValueError:
                 continue
-    
+
 # Try Parsing as Plain Number (Assume bytes)
     try:
         return int(float(size_str))
     except ValueError:
         pass
-    
+
     return 10 * 1024 * 1024  # Default 10MB
 
 @lru_cache(maxsize=32)
@@ -524,7 +524,7 @@ def get_performance_logger() -> SimplePerformanceLogger:
 def cleanup_logging():
     """Cleanup logging resources."""
     root_logger = logging.getLogger()
-    
+
 # Close All Handers
     for handler in root_logger.handlers[:]:
         try:
@@ -533,7 +533,7 @@ def cleanup_logging():
             root_logger.removeHandler(handler)
         except Exception:
             pass
-    
+
 # Clear Cache
     get_logger.cache_clear()
 
@@ -561,15 +561,15 @@ def get_performance_stats() -> Dict[str, Any]:
 
 class LoggingTimer:
     """Simple timing context manager."""
-    
+
     def __init__(self, operation_name: str):
         self.operation_name = operation_name
         self.start_time = None
-    
+
     def __enter__(self):
         self.start_time = time.perf_counter()
         return self
-    
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self.start_time:
             duration = time.perf_counter() - self.start_time

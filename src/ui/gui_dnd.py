@@ -3,17 +3,22 @@
 ROM Sorter Pro - GUI Drag and Drop Module
 
 This module contains drag and drop functionality for the ROM Sorter Pro GUI.
+It provides a simplified DND interface that works with or without tkinterdnd2.
 """
 
 import logging
 import os
 import tkinter as tk
 from pathlib import Path
-from typing import List, Union, Callable
+from typing import List, Union, Callable, Optional, Dict, Any
 
 logger = logging.getLogger(__name__)
 
 # Try to import the drag and drop dependencies
+# Define variable first to avoid reference-before-assignment in circular imports
+DND_AVAILABLE = False
+
+# Then safely try to import
 try:
     import tkinterdnd2
     DND_AVAILABLE = True
@@ -28,6 +33,164 @@ def setup_dnd_support(parent):
     Args:
         parent: Parent GUI instance
     """
+    # Create a drop zone in the parent
+    drop_frame = OptimizedDragDropFrame(parent, callback=lambda files: on_files_dropped(parent, files))
+    drop_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+    # Store reference in parent
+    parent.components["drop_frame"] = drop_frame
+
+
+class OptimizedDragDropFrame(tk.Frame):
+    """Memory-optimized drag & drop frame."""
+
+    def __init__(self, parent, callback: Optional[Callable] = None, **kwargs):
+        super().__init__(parent, **kwargs)
+        self.callback = callback
+        self._setup_appearance()
+        self._create_content()
+        self._setup_events()
+        self._setup_drag_drop()
+
+    def _setup_appearance(self):
+        """Setup frame appearance."""
+        self.configure(
+            relief=tk.GROOVE,
+            borderwidth=3,
+            background="#f0f0f0"
+        )
+
+    def _create_content(self):
+        """Create the content of the drop zone."""
+        # Create a label to indicate drop zone
+        self.label = tk.Label(
+            self,
+            text="Drag and drop ROM files or folders here",
+            font=("Arial", 14),
+            background="#f0f0f0"
+        )
+        self.label.pack(expand=True, pady=20)
+
+    def _setup_events(self):
+        """Setup mouse events."""
+        self.bind("<Enter>", self._on_enter)
+        self.bind("<Leave>", self._on_leave)
+        self.bind("<Button-1>", self._on_click)
+
+    def _setup_drag_drop(self):
+        """Setup drag and drop capabilities."""
+        if DND_AVAILABLE:
+            # Try to set up TkinterDnD2 for drag and drop
+            try:
+                self.drop_target_register(tkinterdnd2.DND_FILES)
+                self.dnd_bind("<<Drop>>", self._on_drop)
+                logger.info("Drag and drop support enabled")
+            except Exception as e:
+                logger.warning(f"Failed to enable drag and drop: {e}")
+        else:
+            logger.warning("TkinterDnD2 not available. Click to select files.")
+
+    def _on_enter(self, event):
+        """Handle mouse enter event."""
+        self.configure(relief=tk.SUNKEN, background="#e0e0e0")
+        self.label.configure(background="#e0e0e0")
+
+    def _on_leave(self, event):
+        """Handle mouse leave event."""
+        self.configure(relief=tk.GROOVE, background="#f0f0f0")
+        self.label.configure(background="#f0f0f0")
+
+    def _on_click(self, event):
+        """Handle mouse click event."""
+        # When clicked, open file dialog
+        files = open_file_dialog(multiple=True)
+        if files and self.callback:
+            self.callback(files)
+
+    def _on_drop(self, event):
+        """Handle file drop event."""
+        # Process the dropped files
+        if not event.data:
+            return
+
+        # Parse the data (different formats on different OS)
+        file_paths = []
+
+        # Handle different path formats
+        data = event.data
+        if data.startswith("{") and data.endswith("}"):
+            # Windows format
+            data = data[1:-1]
+
+        # Split paths (handle spaces in paths)
+        if os.name == 'nt':  # Windows
+            paths = event.data.split("} {")
+            paths = [p.strip("{}") for p in paths]
+        else:
+            paths = event.data.split()
+
+        # Process each path
+        for path in paths:
+            if os.path.exists(path):
+                file_paths.append(path)
+
+        # Call the callback with the file paths
+        if file_paths and self.callback:
+            self.callback(file_paths)
+
+
+def on_files_dropped(parent, files):
+    """Handle dropped files in the parent application.
+
+    Args:
+        parent: Parent GUI instance
+        files: List of file paths that were dropped
+    """
+    logger.info(f"Files dropped: {len(files)} files")
+
+    # If parent has a handler for dropped files, call it
+    if hasattr(parent, "handlers") and "on_files_dropped" in parent.handlers:
+        parent.handlers["on_files_dropped"](files)
+
+
+def open_file_dialog(multiple=False, file_types=None, initial_dir=None):
+    """Open a file dialog and return selected files.
+
+    Args:
+        multiple: Whether to allow multiple file selection
+        file_types: List of file types to filter by
+        initial_dir: Initial directory to open
+
+    Returns:
+        List of selected file paths or None if cancelled
+    """
+    if file_types is None:
+        file_types = [
+            ("ROM Files", "*.rom *.bin *.iso *.zip *.7z *.rar *.gz"),
+            ("All Files", "*.*")
+        ]
+
+    if initial_dir is None:
+        initial_dir = os.path.expanduser("~")
+
+    try:
+        if multiple:
+            files = tk.filedialog.askopenfilenames(
+                filetypes=file_types,
+                initialdir=initial_dir,
+                title="Select ROM Files"
+            )
+            return files if files else None
+        else:
+            file = tk.filedialog.askopenfilename(
+                filetypes=file_types,
+                initialdir=initial_dir,
+                title="Select ROM File"
+            )
+            return [file] if file else None
+    except Exception as e:
+        logger.error(f"Error opening file dialog: {e}")
+        return None
     if not DND_AVAILABLE:
         logger.warning("Drag and drop support is not available.")
         update_drop_zone_status(parent, enabled=False)

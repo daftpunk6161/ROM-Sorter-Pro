@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 # -*-coding: utf-8-*-
 """
-ROM Sorter Pro - Desktop-Integration Startpunkt
+ROM Sorter Pro v2.1.7 - Desktop-Integration Startpunkt
 Phase 1 Implementation: Desktop-Optimierung und Integration
 
-Dieses Modul dient als Haupteinstiegspunkt für die neue Desktop-Version
-mit Qt-UI und integriertem High-Performance-Scanner.
+This module serves as the main entry point for the new desktop version
+with Qt-UI and integrated high-performance scanner.
 """
 
 import os
@@ -27,7 +27,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 def ensure_dependencies():
-    """Stellt sicher, dass alle notwendigen Abhängigkeiten installiert sind."""
+    """Ensures that all necessary dependencies are installed."""
     qt_available = False
 
 # Try to import PYQT6 first
@@ -107,12 +107,12 @@ def main():
 # Start the application according to the chosen mode
         if args.cli:
 # Cli mode: Start the console version
-            from src.cli.console_interface import start_cli_mode
+            from .cli.console_interface import start_cli_mode
             logger.info("Starte ROM Sorter Pro CLI-Edition...")
             start_cli_mode()
         else:
 # GUI mode: Start the desktop UI
-            from src.ui.qt.integrated_window import start_integrated_ui
+            from .ui.qt.integrated_window import start_integrated_ui
             logger.info("Starte ROM Sorter Pro Desktop-Edition...")
             start_integrated_ui()
 

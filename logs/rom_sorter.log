@@ -1,0 +1,46 @@
+2025-08-21 09:59:40,027 - src.ui.compat - INFO - Neue UI-Module verfügbar
+2025-08-21 09:59:40,041 - src.ui.compat - INFO - Alte GUI verfügbar
+2025-08-21 09:59:40,051 - logging_integration - INFO - Logging-System initialisiert: Verzeichnis=R:\Code\ROM-Sorter-Pro\logs
+2025-08-21 09:59:40 - logging_integration - INFO - Logging-System initialisiert: Verzeichnis=R:\Code\ROM-Sorter-Pro\logs
+2025-08-21 09:59:40,051 - logging_integration - INFO - Python Version: 3.13.6 (tags/v3.13.6:4e66535, Aug  6 2025, 14:36:00) [MSC v.1944 64 bit (AMD64)]
+2025-08-21 09:59:40 - logging_integration - INFO - Python Version: 3.13.6 (tags/v3.13.6:4e66535, Aug  6 2025, 14:36:00) [MSC v.1944 64 bit (AMD64)]
+2025-08-21 09:59:40,051 - logging_integration - INFO - Plattform: win32
+2025-08-21 09:59:40 - logging_integration - INFO - Plattform: win32
+2025-08-21 09:59:40,052 - src.ui.app - INFO - Erweitertes Logging-System initialisiert
+2025-08-21 09:59:40,052 - src.ui.app - INFO - Erweitertes Logging-System initialisiert
+2025-08-21 09:59:40 - src.ui.app - INFO - Erweitertes Logging-System initialisiert
+2025-08-21 09:59:40 - root - INFO - ROM Sorter main window created
+2025-08-21 09:59:40,122 - src.ui.enhanced_theme - INFO - Theme-System initialisiert
+2025-08-21 09:59:40 - src.ui.enhanced_theme - INFO - Theme-System initialisiert
+2025-08-21 09:59:40 - root - INFO - Theme-System initialisiert mit Theme-Typ: system
+2025-08-21 09:59:40 - root - INFO - DND-Unterstützung verfügbar und aktiviert
+2025-08-21 09:59:40 - root - INFO - ROM Sorter Anwendung gestartet
+2025-08-21 09:59:48 - src.config.enhanced_config - INFO - Konfiguration in R:\Code\ROM-Sorter-Pro\src\config\..\config.json gespeichert
+2025-08-21 09:59:48 - __main__ - ERROR - GUI returned error code: None
+2025-08-21 09:59:48,612 - performance_stats - INFO - === Performance-Statistiken ===
+2025-08-21 09:59:48 - performance_stats - INFO - === Performance-Statistiken ===
+2025-08-21 09:59:48,612 - performance_stats - INFO - app_execution: 1 Aufrufe, Durchschnitt: 8.561298s, Min: 8.561298s, Max: 8.561298s
+2025-08-21 09:59:48 - performance_stats - INFO - app_execution: 1 Aufrufe, Durchschnitt: 8.561298s, Min: 8.561298s, Max: 8.561298s
+2025-08-21 10:09:18,742 - src.ui.compat - INFO - Neue UI-Module verfügbar
+2025-08-21 10:09:18,797 - src.ui.compat - INFO - Alte GUI verfügbar
+2025-08-21 10:09:18,803 - logging_integration - INFO - Logging-System initialisiert: Verzeichnis=R:\Code\ROM-Sorter-Pro\logs
+2025-08-21 10:09:18 - logging_integration - INFO - Logging-System initialisiert: Verzeichnis=R:\Code\ROM-Sorter-Pro\logs
+2025-08-21 10:09:18,803 - logging_integration - INFO - Python Version: 3.13.6 (tags/v3.13.6:4e66535, Aug  6 2025, 14:36:00) [MSC v.1944 64 bit (AMD64)]
+2025-08-21 10:09:18 - logging_integration - INFO - Python Version: 3.13.6 (tags/v3.13.6:4e66535, Aug  6 2025, 14:36:00) [MSC v.1944 64 bit (AMD64)]
+2025-08-21 10:09:18,803 - logging_integration - INFO - Plattform: win32
+2025-08-21 10:09:18 - logging_integration - INFO - Plattform: win32
+2025-08-21 10:09:18,804 - src.ui.app - INFO - Erweitertes Logging-System initialisiert
+2025-08-21 10:09:18,804 - src.ui.app - INFO - Erweitertes Logging-System initialisiert
+2025-08-21 10:09:18 - src.ui.app - INFO - Erweitertes Logging-System initialisiert
+2025-08-21 10:09:18 - root - INFO - ROM Sorter main window created
+2025-08-21 10:09:18,875 - src.ui.enhanced_theme - INFO - Theme-System initialisiert
+2025-08-21 10:09:18 - src.ui.enhanced_theme - INFO - Theme-System initialisiert
+2025-08-21 10:09:18 - root - INFO - Theme-System initialisiert mit Theme-Typ: system
+2025-08-21 10:09:18 - root - INFO - DND-Unterstützung verfügbar und aktiviert
+2025-08-21 10:09:18 - root - INFO - ROM Sorter Anwendung gestartet
+2025-08-21 10:09:59 - src.config.enhanced_config - INFO - Konfiguration in R:\Code\ROM-Sorter-Pro\src\config\..\config.json gespeichert
+2025-08-21 10:09:59 - __main__ - ERROR - GUI returned error code: None
+2025-08-21 10:09:59,184 - performance_stats - INFO - === Performance-Statistiken ===
+2025-08-21 10:09:59 - performance_stats - INFO - === Performance-Statistiken ===
+2025-08-21 10:09:59,184 - performance_stats - INFO - app_execution: 1 Aufrufe, Durchschnitt: 40.380419s, Min: 40.380419s, Max: 40.380419s
+2025-08-21 10:09:59 - performance_stats - INFO - app_execution: 1 Aufrufe, Durchschnitt: 40.380419s, Min: 40.380419s, Max: 40.380419s

@@ -97,16 +97,16 @@ def detect_console_fast(filename: str, file_path: Optional[str] = None) -> Tuple
 
 def is_chd_file(file_path: str) -> bool:
     """
-    Überprüft, ob eine Datei im CHD-Format vorliegt.
+    Checks if a file is in CHD format.
 
-    Diese Funktion ist ein Wrapper zur Funktion in chd_detector.py und ermöglicht eine
-    konsistente Importstruktur über das gesamte Projekt.
+    This function is a wrapper for the function in chd_detector.py and enables a
+    consistent import structure throughout the project.
 
     Args:
-        file_path: Pfad zur zu prüfenden Datei
+        file_path: Path to the file to check
 
     Returns:
-        True wenn es sich um eine CHD-Datei handelt, sonst False
+        True if it's a CHD file, otherwise False
     """
     from src.detectors.chd_detector import is_chd_file as _is_chd_file
     return _is_chd_file(file_path)
@@ -129,13 +129,13 @@ def detect_console_from_chd(file_path: str) -> Tuple[str, float]:
 
 def is_archive_file(file_path: str) -> bool:
     """
-    Überprüft, ob eine Datei ein Archiv ist.
+    Checks if a file is an archive.
 
-    Diese Funktion ist ein Wrapper zur Funktion in archive_detector.py und ermöglicht eine
-    konsistente Importstruktur über das gesamte Projekt.
+    This function is a wrapper for the function in archive_detector.py and enables a
+    consistent import structure throughout the project.
 
     Args:
-        file_path: Pfad zur zu prüfenden Datei
+        file_path: Path to the file to check
 
     Returns:
         True wenn es sich um ein Archiv handelt, sonst False

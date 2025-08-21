@@ -1,0 +1,154 @@
+2025-08-20 23:10:00,116 - INFO - Starting ROM Sorter Pro...
+2025-08-20 23:10:00,196 - INFO - Operating system: Windows 10.0.26100
+2025-08-20 23:10:00,204 - INFO - Starting in GUI mode with refactored UI...
+2025-08-20 23:10:00,311 - INFO - Utils-Modul mit Wrapper-Funktionen geladen
+2025-08-20 23:10:00,469 - INFO - Konfiguration aus R:\Code\ROM-Sorter-Pro\src\config\..\config.json geladen
+2025-08-20 23:10:00,469 - INFO - Erweiterte Konfiguration initialisiert
+2025-08-20 23:10:00,472 - INFO - Neue UI-Module verfügbar
+2025-08-20 23:10:00,481 - INFO - Überprüfe Datenbank: R:\Code\ROM-Sorter-Pro\src\rom_databases\rom_database.sqlite
+2025-08-20 23:10:00,482 - INFO - Vorhandene Tabellen: [('roms',), ('sqlite_sequence',)]
+2025-08-20 23:10:00,482 - INFO - Tabelle 'roms' existiert.
+2025-08-20 23:10:00,482 - INFO - Spalten in der Tabelle 'roms': [(0, 'id', 'INTEGER', 0, None, 1), (1, 'name', 'TEXT', 1, None, 0), (2, 'console', 'TEXT', 1, None, 0), (3, 'filename', 'TEXT', 0, None, 0), (4, 'crc', 'TEXT', 0, None, 0), (5, 'md5', 'TEXT', 0, None, 0), (6, 'sha1', 'TEXT', 0, None, 0), (7, 'size', 'INTEGER', 0, None, 0), (8, 'metadata', 'TEXT', 0, None, 0), (9, 'source', 'TEXT', 0, None, 0), (10, 'confidence', 'REAL', 0, '1.0', 0), (11, 'updated_at', 'DATETIME', 0, 'CURRENT_TIMESTAMP', 0)]
+2025-08-20 23:10:00,482 - INFO - Anzahl der Einträge in 'roms': 0
+2025-08-20 23:10:00,483 - INFO - Alte GUI verfügbar
+2025-08-21 09:30:12,652 - INFO - Starting ROM Sorter Pro...
+2025-08-21 09:30:12,786 - INFO - Operating system: Windows 10.0.26100
+2025-08-21 09:30:12,840 - INFO - Starting in GUI mode with refactored UI...
+2025-08-21 09:30:13,409 - INFO - Utils-Modul mit Wrapper-Funktionen geladen
+2025-08-21 09:30:13,708 - INFO - Konfiguration aus R:\Code\ROM-Sorter-Pro\src\config\..\config.json geladen
+2025-08-21 09:30:13,708 - INFO - Erweiterte Konfiguration initialisiert
+2025-08-21 09:30:13,711 - INFO - Neue UI-Module verfügbar
+2025-08-21 09:30:13,721 - INFO - Überprüfe Datenbank: R:\Code\ROM-Sorter-Pro\src\rom_databases\rom_database.sqlite
+2025-08-21 09:30:13,722 - INFO - Vorhandene Tabellen: [('roms',), ('sqlite_sequence',)]
+2025-08-21 09:30:13,722 - INFO - Tabelle 'roms' existiert.
+2025-08-21 09:30:13,722 - INFO - Spalten in der Tabelle 'roms': [(0, 'id', 'INTEGER', 0, None, 1), (1, 'name', 'TEXT', 1, None, 0), (2, 'console', 'TEXT', 1, None, 0), (3, 'filename', 'TEXT', 0, None, 0), (4, 'crc', 'TEXT', 0, None, 0), (5, 'md5', 'TEXT', 0, None, 0), (6, 'sha1', 'TEXT', 0, None, 0), (7, 'size', 'INTEGER', 0, None, 0), (8, 'metadata', 'TEXT', 0, None, 0), (9, 'source', 'TEXT', 0, None, 0), (10, 'confidence', 'REAL', 0, '1.0', 0), (11, 'updated_at', 'DATETIME', 0, 'CURRENT_TIMESTAMP', 0)]
+2025-08-21 09:30:13,722 - INFO - Anzahl der Einträge in 'roms': 0
+2025-08-21 09:30:13,723 - INFO - Alte GUI verfügbar
+2025-08-21 09:32:41,584 - INFO - Starting ROM Sorter Pro...
+2025-08-21 09:32:41,667 - INFO - Operating system: Windows 10.0.26100
+2025-08-21 09:32:41,673 - INFO - Starting in GUI mode with refactored UI...
+2025-08-21 09:32:41,790 - INFO - Utils-Modul mit Wrapper-Funktionen geladen
+2025-08-21 09:32:41,949 - INFO - Konfiguration aus R:\Code\ROM-Sorter-Pro\src\config\..\config.json geladen
+2025-08-21 09:32:41,949 - INFO - Erweiterte Konfiguration initialisiert
+2025-08-21 09:32:41,951 - INFO - Neue UI-Module verfügbar
+2025-08-21 09:32:42,002 - INFO - Überprüfe Datenbank: R:\Code\ROM-Sorter-Pro\src\rom_databases\rom_database.sqlite
+2025-08-21 09:32:42,003 - INFO - Vorhandene Tabellen: [('roms',), ('sqlite_sequence',)]
+2025-08-21 09:32:42,003 - INFO - Tabelle 'roms' existiert.
+2025-08-21 09:32:42,003 - INFO - Spalten in der Tabelle 'roms': [(0, 'id', 'INTEGER', 0, None, 1), (1, 'name', 'TEXT', 1, None, 0), (2, 'console', 'TEXT', 1, None, 0), (3, 'filename', 'TEXT', 0, None, 0), (4, 'crc', 'TEXT', 0, None, 0), (5, 'md5', 'TEXT', 0, None, 0), (6, 'sha1', 'TEXT', 0, None, 0), (7, 'size', 'INTEGER', 0, None, 0), (8, 'metadata', 'TEXT', 0, None, 0), (9, 'source', 'TEXT', 0, None, 0), (10, 'confidence', 'REAL', 0, '1.0', 0), (11, 'updated_at', 'DATETIME', 0, 'CURRENT_TIMESTAMP', 0)]
+2025-08-21 09:32:42,003 - INFO - Anzahl der Einträge in 'roms': 0
+2025-08-21 09:32:42,004 - INFO - Alte GUI verfügbar
+2025-08-21 09:32:42,094 - INFO - ROM Sorter main window created
+2025-08-21 09:32:42,094 - INFO - ROM Sorter Anwendung gestartet
+2025-08-21 09:36:44,778 - ERROR - Error starting the application: 'EnhancedConfig' object has no attribute 'save_config'
+2025-08-21 09:38:35,957 - INFO - Starting ROM Sorter Pro...
+2025-08-21 09:38:35,999 - INFO - Operating system: Windows 10.0.26100
+2025-08-21 09:38:36,007 - INFO - Starting in GUI mode with refactored UI...
+2025-08-21 09:38:36,126 - INFO - Utils-Modul mit Wrapper-Funktionen geladen
+2025-08-21 09:38:36,286 - INFO - Konfiguration aus R:\Code\ROM-Sorter-Pro\src\config\..\config.json geladen
+2025-08-21 09:38:36,286 - INFO - Erweiterte Konfiguration initialisiert
+2025-08-21 09:38:36,288 - INFO - Neue UI-Module verfügbar
+2025-08-21 09:38:36,297 - INFO - Überprüfe Datenbank: R:\Code\ROM-Sorter-Pro\src\rom_databases\rom_database.sqlite
+2025-08-21 09:38:36,298 - INFO - Vorhandene Tabellen: [('roms',), ('sqlite_sequence',)]
+2025-08-21 09:38:36,298 - INFO - Tabelle 'roms' existiert.
+2025-08-21 09:38:36,298 - INFO - Spalten in der Tabelle 'roms': [(0, 'id', 'INTEGER', 0, None, 1), (1, 'name', 'TEXT', 1, None, 0), (2, 'console', 'TEXT', 1, None, 0), (3, 'filename', 'TEXT', 0, None, 0), (4, 'crc', 'TEXT', 0, None, 0), (5, 'md5', 'TEXT', 0, None, 0), (6, 'sha1', 'TEXT', 0, None, 0), (7, 'size', 'INTEGER', 0, None, 0), (8, 'metadata', 'TEXT', 0, None, 0), (9, 'source', 'TEXT', 0, None, 0), (10, 'confidence', 'REAL', 0, '1.0', 0), (11, 'updated_at', 'DATETIME', 0, 'CURRENT_TIMESTAMP', 0)]
+2025-08-21 09:38:36,298 - INFO - Anzahl der Einträge in 'roms': 0
+2025-08-21 09:38:36,299 - INFO - Alte GUI verfügbar
+2025-08-21 09:38:36,368 - INFO - ROM Sorter main window created
+2025-08-21 09:38:36,368 - INFO - ROM Sorter Anwendung gestartet
+2025-08-21 09:38:41,295 - INFO - Konfiguration in R:\Code\ROM-Sorter-Pro\src\config\..\config.json gespeichert
+2025-08-21 09:38:41,295 - ERROR - Error starting the application: 'OptimizedScanner' object has no attribute 'cleanup'
+2025-08-21 09:38:57,746 - INFO - Starting ROM Sorter Pro...
+2025-08-21 09:38:57,785 - INFO - Operating system: Windows 10.0.26100
+2025-08-21 09:38:57,792 - INFO - Starting in GUI mode with refactored UI...
+2025-08-21 09:38:57,909 - INFO - Utils-Modul mit Wrapper-Funktionen geladen
+2025-08-21 09:38:58,066 - INFO - Konfiguration aus R:\Code\ROM-Sorter-Pro\src\config\..\config.json geladen
+2025-08-21 09:38:58,066 - INFO - Erweiterte Konfiguration initialisiert
+2025-08-21 09:38:58,068 - INFO - Neue UI-Module verfügbar
+2025-08-21 09:38:58,077 - INFO - Überprüfe Datenbank: R:\Code\ROM-Sorter-Pro\src\rom_databases\rom_database.sqlite
+2025-08-21 09:38:58,078 - INFO - Vorhandene Tabellen: [('roms',), ('sqlite_sequence',)]
+2025-08-21 09:38:58,078 - INFO - Tabelle 'roms' existiert.
+2025-08-21 09:38:58,078 - INFO - Spalten in der Tabelle 'roms': [(0, 'id', 'INTEGER', 0, None, 1), (1, 'name', 'TEXT', 1, None, 0), (2, 'console', 'TEXT', 1, None, 0), (3, 'filename', 'TEXT', 0, None, 0), (4, 'crc', 'TEXT', 0, None, 0), (5, 'md5', 'TEXT', 0, None, 0), (6, 'sha1', 'TEXT', 0, None, 0), (7, 'size', 'INTEGER', 0, None, 0), (8, 'metadata', 'TEXT', 0, None, 0), (9, 'source', 'TEXT', 0, None, 0), (10, 'confidence', 'REAL', 0, '1.0', 0), (11, 'updated_at', 'DATETIME', 0, 'CURRENT_TIMESTAMP', 0)]
+2025-08-21 09:38:58,078 - INFO - Anzahl der Einträge in 'roms': 0
+2025-08-21 09:38:58,079 - INFO - Alte GUI verfügbar
+2025-08-21 09:38:58,156 - INFO - ROM Sorter main window created
+2025-08-21 09:38:58,156 - INFO - ROM Sorter Anwendung gestartet
+2025-08-21 09:39:04,181 - INFO - Konfiguration in R:\Code\ROM-Sorter-Pro\src\config\..\config.json gespeichert
+2025-08-21 09:39:04,182 - ERROR - GUI returned error code: None
+2025-08-21 09:39:32,611 - INFO - Starting ROM Sorter Pro...
+2025-08-21 09:39:32,650 - INFO - Operating system: Windows 10.0.26100
+2025-08-21 09:39:32,657 - INFO - Starting in GUI mode with refactored UI...
+2025-08-21 09:39:33,015 - INFO - Utils-Modul mit Wrapper-Funktionen geladen
+2025-08-21 09:39:33,178 - INFO - Konfiguration aus R:\Code\ROM-Sorter-Pro\src\config\..\config.json geladen
+2025-08-21 09:39:33,178 - INFO - Erweiterte Konfiguration initialisiert
+2025-08-21 09:39:33,180 - INFO - Neue UI-Module verfügbar
+2025-08-21 09:39:33,189 - INFO - Überprüfe Datenbank: R:\Code\ROM-Sorter-Pro\src\rom_databases\rom_database.sqlite
+2025-08-21 09:39:33,190 - INFO - Vorhandene Tabellen: [('roms',), ('sqlite_sequence',)]
+2025-08-21 09:39:33,190 - INFO - Tabelle 'roms' existiert.
+2025-08-21 09:39:33,190 - INFO - Spalten in der Tabelle 'roms': [(0, 'id', 'INTEGER', 0, None, 1), (1, 'name', 'TEXT', 1, None, 0), (2, 'console', 'TEXT', 1, None, 0), (3, 'filename', 'TEXT', 0, None, 0), (4, 'crc', 'TEXT', 0, None, 0), (5, 'md5', 'TEXT', 0, None, 0), (6, 'sha1', 'TEXT', 0, None, 0), (7, 'size', 'INTEGER', 0, None, 0), (8, 'metadata', 'TEXT', 0, None, 0), (9, 'source', 'TEXT', 0, None, 0), (10, 'confidence', 'REAL', 0, '1.0', 0), (11, 'updated_at', 'DATETIME', 0, 'CURRENT_TIMESTAMP', 0)]
+2025-08-21 09:39:33,190 - INFO - Anzahl der Einträge in 'roms': 0
+2025-08-21 09:39:33,190 - INFO - Alte GUI verfügbar
+2025-08-21 09:39:33,261 - INFO - ROM Sorter main window created
+2025-08-21 09:39:33,261 - INFO - ROM Sorter Anwendung gestartet
+2025-08-21 09:39:48,166 - INFO - Konfiguration in R:\Code\ROM-Sorter-Pro\src\config\..\config.json gespeichert
+2025-08-21 09:39:48,167 - ERROR - GUI returned error code: None
+2025-08-21 09:51:05,620 - INFO - Starting ROM Sorter Pro...
+2025-08-21 09:51:05,703 - INFO - Operating system: Windows 10.0.26100
+2025-08-21 09:51:05,710 - INFO - Starting in GUI mode with refactored UI...
+2025-08-21 09:51:05,846 - INFO - Utils-Modul mit Wrapper-Funktionen geladen
+2025-08-21 09:51:06,007 - INFO - Konfiguration aus R:\Code\ROM-Sorter-Pro\src\config\..\config.json geladen
+2025-08-21 09:51:06,008 - INFO - Erweiterte Konfiguration initialisiert
+2025-08-21 09:51:06,011 - INFO - Neue UI-Module verfügbar
+2025-08-21 09:51:06,062 - INFO - Überprüfe Datenbank: R:\Code\ROM-Sorter-Pro\src\rom_databases\rom_database.sqlite
+2025-08-21 09:51:06,063 - INFO - Vorhandene Tabellen: [('roms',), ('sqlite_sequence',)]
+2025-08-21 09:51:06,063 - INFO - Tabelle 'roms' existiert.
+2025-08-21 09:51:06,063 - INFO - Spalten in der Tabelle 'roms': [(0, 'id', 'INTEGER', 0, None, 1), (1, 'name', 'TEXT', 1, None, 0), (2, 'console', 'TEXT', 1, None, 0), (3, 'filename', 'TEXT', 0, None, 0), (4, 'crc', 'TEXT', 0, None, 0), (5, 'md5', 'TEXT', 0, None, 0), (6, 'sha1', 'TEXT', 0, None, 0), (7, 'size', 'INTEGER', 0, None, 0), (8, 'metadata', 'TEXT', 0, None, 0), (9, 'source', 'TEXT', 0, None, 0), (10, 'confidence', 'REAL', 0, '1.0', 0), (11, 'updated_at', 'DATETIME', 0, 'CURRENT_TIMESTAMP', 0)]
+2025-08-21 09:51:06,063 - INFO - Anzahl der Einträge in 'roms': 0
+2025-08-21 09:51:06,064 - INFO - Alte GUI verfügbar
+2025-08-21 09:51:06,144 - INFO - ROM Sorter main window created
+2025-08-21 09:51:06,144 - ERROR - Error starting the application: '_tkinter.tkapp' object has no attribute 'root'
+2025-08-21 09:52:12,531 - INFO - Starting ROM Sorter Pro...
+2025-08-21 09:52:12,579 - INFO - Operating system: Windows 10.0.26100
+2025-08-21 09:52:12,586 - INFO - Starting in GUI mode with refactored UI...
+2025-08-21 09:52:12,722 - INFO - Utils-Modul mit Wrapper-Funktionen geladen
+2025-08-21 09:52:12,883 - INFO - Konfiguration aus R:\Code\ROM-Sorter-Pro\src\config\..\config.json geladen
+2025-08-21 09:52:12,883 - INFO - Erweiterte Konfiguration initialisiert
+2025-08-21 09:52:12,885 - INFO - Neue UI-Module verfügbar
+2025-08-21 09:52:12,894 - INFO - Überprüfe Datenbank: R:\Code\ROM-Sorter-Pro\src\rom_databases\rom_database.sqlite
+2025-08-21 09:52:12,895 - INFO - Vorhandene Tabellen: [('roms',), ('sqlite_sequence',)]
+2025-08-21 09:52:12,895 - INFO - Tabelle 'roms' existiert.
+2025-08-21 09:52:12,895 - INFO - Spalten in der Tabelle 'roms': [(0, 'id', 'INTEGER', 0, None, 1), (1, 'name', 'TEXT', 1, None, 0), (2, 'console', 'TEXT', 1, None, 0), (3, 'filename', 'TEXT', 0, None, 0), (4, 'crc', 'TEXT', 0, None, 0), (5, 'md5', 'TEXT', 0, None, 0), (6, 'sha1', 'TEXT', 0, None, 0), (7, 'size', 'INTEGER', 0, None, 0), (8, 'metadata', 'TEXT', 0, None, 0), (9, 'source', 'TEXT', 0, None, 0), (10, 'confidence', 'REAL', 0, '1.0', 0), (11, 'updated_at', 'DATETIME', 0, 'CURRENT_TIMESTAMP', 0)]
+2025-08-21 09:52:12,895 - INFO - Anzahl der Einträge in 'roms': 0
+2025-08-21 09:52:12,895 - INFO - Alte GUI verfügbar
+2025-08-21 09:52:12,971 - INFO - ROM Sorter main window created
+2025-08-21 09:52:12,971 - INFO - Theme-System initialisiert
+2025-08-21 09:52:12,971 - INFO - Theme-System initialisiert mit Theme-Typ: system
+2025-08-21 09:52:12,971 - INFO - DND-Unterstützung verfügbar und aktiviert
+2025-08-21 09:52:12,971 - INFO - ROM Sorter Anwendung gestartet
+2025-08-21 09:52:20,332 - INFO - Konfiguration in R:\Code\ROM-Sorter-Pro\src\config\..\config.json gespeichert
+2025-08-21 09:52:20,332 - ERROR - GUI returned error code: None
+2025-08-21 09:59:39,618 - INFO - Starting ROM Sorter Pro...
+2025-08-21 09:59:39,708 - INFO - Operating system: Windows 10.0.26100
+2025-08-21 09:59:39,714 - INFO - Starting in GUI mode with refactored UI...
+2025-08-21 09:59:39,848 - INFO - Utils-Modul mit Wrapper-Funktionen geladen
+2025-08-21 09:59:40,023 - INFO - Konfiguration aus R:\Code\ROM-Sorter-Pro\src\config\..\config.json geladen
+2025-08-21 09:59:40,024 - INFO - Erweiterte Konfiguration initialisiert
+2025-08-21 09:59:40,027 - INFO - Neue UI-Module verfügbar
+2025-08-21 09:59:40,040 - INFO - Überprüfe Datenbank: R:\Code\ROM-Sorter-Pro\src\rom_databases\rom_database.sqlite
+2025-08-21 09:59:40,041 - INFO - Vorhandene Tabellen: [('roms',), ('sqlite_sequence',)]
+2025-08-21 09:59:40,041 - INFO - Tabelle 'roms' existiert.
+2025-08-21 09:59:40,041 - INFO - Spalten in der Tabelle 'roms': [(0, 'id', 'INTEGER', 0, None, 1), (1, 'name', 'TEXT', 1, None, 0), (2, 'console', 'TEXT', 1, None, 0), (3, 'filename', 'TEXT', 0, None, 0), (4, 'crc', 'TEXT', 0, None, 0), (5, 'md5', 'TEXT', 0, None, 0), (6, 'sha1', 'TEXT', 0, None, 0), (7, 'size', 'INTEGER', 0, None, 0), (8, 'metadata', 'TEXT', 0, None, 0), (9, 'source', 'TEXT', 0, None, 0), (10, 'confidence', 'REAL', 0, '1.0', 0), (11, 'updated_at', 'DATETIME', 0, 'CURRENT_TIMESTAMP', 0)]
+2025-08-21 09:59:40,041 - INFO - Anzahl der Einträge in 'roms': 0
+2025-08-21 09:59:40,041 - INFO - Alte GUI verfügbar
+2025-08-21 10:09:18,378 - INFO - Starting ROM Sorter Pro...
+2025-08-21 10:09:18,428 - INFO - Operating system: Windows 10.0.26100
+2025-08-21 10:09:18,435 - INFO - Starting in GUI mode with refactored UI...
+2025-08-21 10:09:18,567 - INFO - Utils-Modul mit Wrapper-Funktionen geladen
+2025-08-21 10:09:18,738 - INFO - Konfiguration aus R:\Code\ROM-Sorter-Pro\src\config\..\config.json geladen
+2025-08-21 10:09:18,739 - INFO - Erweiterte Konfiguration initialisiert
+2025-08-21 10:09:18,742 - INFO - Neue UI-Module verfügbar
+2025-08-21 10:09:18,795 - INFO - Überprüfe Datenbank: R:\Code\ROM-Sorter-Pro\src\rom_databases\rom_database.sqlite
+2025-08-21 10:09:18,796 - INFO - Vorhandene Tabellen: [('roms',), ('sqlite_sequence',)]
+2025-08-21 10:09:18,796 - INFO - Tabelle 'roms' existiert.
+2025-08-21 10:09:18,797 - INFO - Spalten in der Tabelle 'roms': [(0, 'id', 'INTEGER', 0, None, 1), (1, 'name', 'TEXT', 1, None, 0), (2, 'console', 'TEXT', 1, None, 0), (3, 'filename', 'TEXT', 0, None, 0), (4, 'crc', 'TEXT', 0, None, 0), (5, 'md5', 'TEXT', 0, None, 0), (6, 'sha1', 'TEXT', 0, None, 0), (7, 'size', 'INTEGER', 0, None, 0), (8, 'metadata', 'TEXT', 0, None, 0), (9, 'source', 'TEXT', 0, None, 0), (10, 'confidence', 'REAL', 0, '1.0', 0), (11, 'updated_at', 'DATETIME', 0, 'CURRENT_TIMESTAMP', 0)]
+2025-08-21 10:09:18,797 - INFO - Anzahl der Einträge in 'roms': 0
+2025-08-21 10:09:18,797 - INFO - Alte GUI verfügbar

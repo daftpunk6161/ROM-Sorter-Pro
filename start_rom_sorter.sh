@@ -1,6 +1,6 @@
 #!/bin/bash
 # ROM Sorter Pro - Startup script for Linux/macOS
-# Version 2.1.5
+# Version 2.1.7
 # Copyright (c) 2025
 
 echo "Starting ROM Sorter Pro..."

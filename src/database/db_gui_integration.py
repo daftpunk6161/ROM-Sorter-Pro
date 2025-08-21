@@ -1,5 +1,7 @@
 """
-Zusätzliche Datenbank-Funktionen für die GUI-Klasse.
+ROM Sorter Pro - Database-GUI Integration v2.1.7
+
+Additional database functions for the GUI class.
 """
 
 import os

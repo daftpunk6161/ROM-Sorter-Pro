@@ -1,0 +1,254 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+ROM Sorter Pro - Comment Translation Tool v2.1.7
+
+This script translates German comments in Python files to English,
+preserving the original files as backups. It uses GoogleTranslator
+or MyMemoryTranslator as fallback and maintains a translation cache
+to avoid repeated translations of the same text.
+"""
+import io
+import re
+import sys
+import json
+from pathlib import Path
+from typing import Dict
+import tokenize
+import shutil
+
+try:
+    from deep_translator import GoogleTranslator, MyMemoryTranslator
+except Exception as e:
+    print("[INFO] Missing dependency deep-translator. Install with: pip install deep-translator", file=sys.stderr)
+    raise
+
+ROOT = Path(__file__).parent
+CACHE_FILE = ROOT / "comment-translation-cache.json"
+BACKUP_ROOT = ROOT / "backups" / "comments"   # Central backup folder
+
+EXCLUDE_DIRS = {".git", ".venv", "venv", "__pycache__", "node_modules"}
+EXCLUDE_SUFFIXES = {".bak"}
+
+# Improved German detection with common German words and special characters
+# Note: These are German words intentionally used as detection patterns
+# and should NOT be translated themselves
+GERMAN_HINTS = {
+    " der ", " die ", " das ", " mit ", " ohne ", " nicht ", " und ", " oder ",
+    " fur ", " von ", " zu ", " bei ", " nach ", " aus ", " vor ", " uber ",
+    " Datei ", " Pfad ", " Fenster ", " Grosse ", " Menu ", " Eingabe ",
+    " a ", " o ", " u ", " ss ", " A ", " O ", " U "
+}
+
+def load_cache() -> Dict[str, str]:
+    if CACHE_FILE.exists():
+        try:
+            return json.loads(CACHE_FILE.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    return {}
+
+def save_cache(cache: Dict[str, str]) -> None:
+    try:
+        CACHE_FILE.write_text(json.dumps(cache, indent=2, ensure_ascii=False), encoding="utf-8")
+    except Exception:
+        pass
+
+def normalize_ascii(text: str) -> str:
+    repl = {"ä":"ae","ö":"oe","ü":"ue","Ä":"Ae","Ö":"Oe","Ü":"Ue","ß":"ss"}
+    for k,v in repl.items():
+        text = text.replace(k,v)
+    return text
+
+def is_probably_german(s: str) -> bool:
+    """
+    Improved detection of German text in comments.
+
+    Args:
+        s: The string to check
+
+    Returns:
+        bool: True if the text is likely German
+    """
+    if not s or len(s) < 5:  # Skip very short comments
+        return False
+
+    # Check for non-ASCII characters (umlauts, etc.)
+    if any(ord(ch) > 127 for ch in s):
+        return True
+
+    # Check for German word patterns
+    sl = " " + s.lower() + " "
+
+    # Quick test for common German words
+    if any(hint in sl for hint in GERMAN_HINTS):
+        return True
+
+    # More complex pattern matching for German sentence structures
+    # Note: These are German regex patterns intentionally used as detection patterns
+    german_patterns = [
+        r'\bist\s+(ein|eine|der|die|das)\b',  # 'Is one/one/that'
+        r'\b(der|die|das)\s+[A-Za-z]+\s+(ist|sind)\b',  # 'The x is/are' '
+        r'\bmit\s+dem\b',  # 'with the'
+        r'\bfur\s+die\b',  # 'for the'
+        r'\bund\s+dann\b',  # 'And then'
+        r'\bwenn\s+[A-Za-z]+\s+(ist|sind)\b'  # 'if x is/are' '
+    ]
+
+    for pattern in german_patterns:
+        if re.search(pattern, sl):
+            return True
+
+    return False
+
+def translate_text_de_to_en(s: str, cache: Dict[str, str]) -> str:
+    """
+    Translate German text to English with improved error handling and caching.
+
+    Args:
+        s: The German text to translate
+        cache: Translation cache dictionary
+
+    Returns:
+        str: The translated English text or normalized original
+    """
+    s = s.strip()
+    if not s:
+        return s
+
+    # Return cached translation if available
+    if s in cache:
+        return cache[s]
+
+    # Special case for code-like comments - don't translate
+    if s.startswith(('import ', 'from ', 'class ', 'def ', 'return ', 'self.')):
+        cache[s] = s
+        return s
+
+    # Try Google Translator first
+    translated = None
+    try:
+        translated = GoogleTranslator(source="de", target="en").translate(s)
+    except Exception as e:
+        print(f"[DEBUG] Google translation failed: {str(e)[:50]}...")
+
+    # Fall back to MyMemoryTranslator if needed
+    if not translated:
+        try:
+            translated = MyMemoryTranslator(source="de", target="en").translate(s)
+        except Exception as e:
+            print(f"[DEBUG] MyMemory translation failed: {str(e)[:50]}...")
+
+    # If both failed, normalize the original text
+    if not translated:
+        print(f"[WARN] Translation failed, keeping ASCII-normalized original: '{s}'")
+        translated = normalize_ascii(s)
+    else:
+        # Clean up the translation
+        translated = translated.replace(" .", ".").replace(" ,", ",")
+        translated = re.sub(r'\s+', ' ', translated).strip()
+
+    # Cache the result
+    cache[s] = translated
+    return translated
+
+def backup_file(original: Path) -> Path:
+    """Backup file to backups/comments/, preserving relative structure"""
+    rel = original.relative_to(ROOT)
+    backup_path = BACKUP_ROOT / rel
+    backup_path.parent.mkdir(parents=True, exist_ok=True)
+    return backup_path.with_suffix(backup_path.suffix + ".bak")
+
+def process_python_file(path: Path, cache: Dict[str, str]) -> bool:
+    """
+    Process a Python file to translate German comments to English.
+
+    Args:
+        path: The path to the Python file
+        cache: Translation cache dictionary
+
+    Returns:
+        True if the file was changed, False otherwise
+    """
+    if path.suffix.lower() != ".py":
+        return False
+
+    original = path.read_bytes()
+    changed = False
+    out_tokens = []
+
+    try:
+        tokens = list(tokenize.tokenize(io.BytesIO(original).readline))
+    except Exception as e:
+        print(f"[WARN] Could not tokenize {path}: {e}")
+        return False
+
+    for tok in tokens:
+        if tok.type == tokenize.COMMENT:
+            comment_text = tok.string.lstrip("#").strip()
+            if comment_text and is_probably_german(comment_text):
+                new_text = translate_text_de_to_en(comment_text, cache)
+                new_tok_str = "# " + new_text
+                if new_tok_str != tok.string:
+                    changed = True
+                    tok = tok._replace(string=new_tok_str)
+        out_tokens.append(tok)
+
+    if changed:
+        new_bytes = tokenize.untokenize(out_tokens)
+        backup = backup_file(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        # Move Original → Backup
+        backup.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(path), str(backup))
+        path.write_bytes(new_bytes)
+        print(f"[OK] Translated comments in {path}, backup -> {backup}")
+        return True
+
+    return False
+
+def walk_and_translate(root: Path) -> None:
+    """
+    Walk through the project and translate German comments in Python files.
+
+    Args:
+        root: The root directory to start from
+    """
+    print(f"[INFO] Starting translation of German comments in Python files...")
+    print(f"[INFO] Backup folder: {BACKUP_ROOT}")
+
+    # Load the translation cache
+    cache = load_cache()
+    files_processed = 0
+    files_changed = 0
+
+    # Process all Python files
+    for p in root.rglob("*.py"):
+        # Skip excluded directories and file types
+        if any(part in EXCLUDE_DIRS for part in p.parts):
+            continue
+        if p.suffix in EXCLUDE_SUFFIXES:
+            continue
+
+        files_processed += 1
+        if files_processed % 10 == 0:
+            print(f"[INFO] Processed {files_processed} files so far...")
+
+        # Process the file and track changes
+        changed = process_python_file(p, cache)
+        if changed:
+            files_changed += 1
+
+    # Save the updated cache
+    save_cache(cache)
+
+    # Report results
+    print(f"[INFO] Translation complete.")
+    print(f"[INFO] Files processed: {files_processed}")
+    print(f"[INFO] Files changed: {files_changed}")
+
+    if files_changed == 0:
+        print("[INFO] No files changed. All comments look fine.")
+
+if __name__ == "__main__":
+    walk_and_translate(ROOT)

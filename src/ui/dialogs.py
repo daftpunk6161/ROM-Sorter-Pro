@@ -1,7 +1,7 @@
 """
-ROM Sorter UI - Dialog-Module
+ROM Sorter Pro v2.1.7 - Dialog Modules
 
-Dieses Modul stellt spezialisierte Dialogklassen für die ROM-Sorter-Anwendung bereit.
+This module provides specialized dialog classes for the ROM Sorter application.
 """
 
 import tkinter as tk
@@ -16,16 +16,16 @@ from .widgets import ProgressDialog, FileListBox
 
 
 class AboutDialog(tk.Toplevel):
-    """Dialog zum Anzeigen von Informationen über die Anwendung."""
+    """Dialog for displaying information about the application."""
 
-    def __init__(self, parent, app_version="2.1.5", app_year="2025"):
+    def __init__(self, parent, app_version="2.1.7", app_year="2025"):
         """
-        Initialisiere den About-Dialog.
+        Initialize the About dialog.
 
         Args:
-            parent: Das übergeordnete Fenster
-            app_version: Die Versionsnummer der Anwendung
-            app_year: Das Erstellungsjahr der Anwendung
+            parent: The parent window
+            app_version: The version number of the application
+            app_year: The creation year of the application
         """
         super().__init__(parent)
         self.title("Über ROM Sorter Pro")

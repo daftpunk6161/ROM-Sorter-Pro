@@ -27,6 +27,21 @@ def setup_event_handlers(parent):
     parent.handlers["on_stop_click"] = lambda: on_stop_click(parent)
     parent.handlers["on_drop_zone_click"] = lambda: on_drop_zone_click(parent)
     parent.handlers["on_exit"] = lambda: on_exit(parent)
+    parent.handlers["on_files_dropped"] = lambda files: on_files_dropped(parent, files)
+    parent.handlers["on_source_select"] = lambda: on_source_select(parent)
+    parent.handlers["on_target_select"] = lambda: on_target_select(parent)
+    parent.handlers["on_settings_click"] = lambda: on_settings_click(parent)
+    parent.handlers["on_about_click"] = lambda: on_about_click(parent)
+
+    # Setup button command bindings
+    if "scan_button" in parent.components:
+        parent.components["scan_button"].config(command=parent.handlers["on_scan_click"])
+
+    if "start_button" in parent.components:
+        parent.components["start_button"].config(command=parent.handlers["on_start_click"])
+
+    if "stop_button" in parent.components:
+        parent.components["stop_button"].config(command=parent.handlers["on_stop_click"])
 
     # Connect handlers to components
     if "scan_button" in parent.components:
@@ -160,6 +175,82 @@ def on_exit(parent):
         parent.destroy()
 
 
+def on_source_select(parent):
+    """Handle source directory selection.
+
+    Args:
+        parent: Parent GUI instance
+    """
+    directory = filedialog.askdirectory(
+        title="Select Source Directory",
+        initialdir=os.path.expanduser("~")
+    )
+
+    if directory:
+        parent.source_path.set(directory)
+        logger.info(f"Source directory set to: {directory}")
+
+
+def on_target_select(parent):
+    """Handle target directory selection.
+
+    Args:
+        parent: Parent GUI instance
+    """
+    directory = filedialog.askdirectory(
+        title="Select Target Directory",
+        initialdir=os.path.expanduser("~")
+    )
+
+    if directory:
+        parent.dest_path.set(directory)
+        logger.info(f"Target directory set to: {directory}")
+
+
+def on_settings_click(parent):
+    """Open settings dialog.
+
+    Args:
+        parent: Parent GUI instance
+    """
+    # Implementation of settings dialog would go here
+    messagebox.showinfo("Settings", "Settings dialog would open here.")
+
+
+def on_about_click(parent):
+    """Show about dialog.
+
+    Args:
+        parent: Parent GUI instance
+    """
+    messagebox.showinfo(
+        "About ROM Sorter Pro",
+        "ROM Sorter Pro v2.1.7\n\n"
+        "A tool for organizing ROM files by console type.\n\n"
+        "© 2025 ROM Sorter Pro Team"
+    )
+
+
+def on_files_dropped(parent, files):
+    """Process dropped files.
+
+    Args:
+        parent: Parent GUI instance
+        files: List of file paths
+    """
+    if not files:
+        return
+
+    logger.info(f"Processing {len(files)} dropped files")
+
+    # If files contains directories, use the first one as source
+    for file_path in files:
+        if os.path.isdir(file_path):
+            parent.source_path.set(file_path)
+            logger.info(f"Source directory set to: {file_path}")
+            break
+
+
 def process_files(parent, source_dir, dest_dir, stop_event):
     """Process files in a separate thread.
 
@@ -169,22 +260,75 @@ def process_files(parent, source_dir, dest_dir, stop_event):
         dest_dir: Destination directory path
         stop_event: Event to signal thread termination
     """
+    from datetime import datetime
+
     try:
-        # This is a placeholder for the actual processing logic
-        import time
-        total_files = 100  # This would be determined by scanning source_dir
+        # Set up scan statistics
+        parent.scan_stats["start_time"] = datetime.now()
+        parent.scan_stats["end_time"] = None
+        parent.scan_stats["total_files"] = 0
+        parent.scan_stats["processed_files"] = 0
+        parent.scan_stats["success_count"] = 0
+        parent.scan_stats["error_count"] = 0
+        parent.scan_stats["skipped_count"] = 0
+        parent.scan_stats["file_types"] = {}
 
-        for i in range(total_files):
+        # Function to process each file
+        def process_file(file_path):
             if stop_event.is_set():
+                return
+
+            try:
+                # Update stats
+                parent.scan_stats["processed_files"] += 1
+
+                # Update file type stats
+                ext = os.path.splitext(file_path)[1].lower()
+                if ext not in parent.scan_stats["file_types"]:
+                    parent.scan_stats["file_types"][ext] = 0
+                parent.scan_stats["file_types"][ext] += 1
+
+                # Here would be the actual file processing logic
+                # For now, just simulate success
+                parent.scan_stats["success_count"] += 1
+
+                # Update UI periodically
+                if parent.scan_stats["processed_files"] % 10 == 0:
+                    progress = parent.scan_stats["processed_files"] / max(1, parent.scan_stats["total_files"])
+                    parent.status_text.set(f"Processing file {parent.scan_stats['processed_files']} of {parent.scan_stats['total_files']}")
+                    parent.progress_value.set(progress * 100)
+
+                    # Update stats display
+                    from .gui_scanner import update_scan_stats
+                    update_scan_stats(parent)
+
+            except Exception as e:
+                logger.error(f"Error processing file {file_path}: {e}")
+                parent.scan_stats["error_count"] += 1
+
+        # Start scanning the source directory
+        logger.info(f"Starting scan of {source_dir}")
+
+        # Get total file count first (rough estimate)
+        file_count = 0
+        for _ in parent.scanner.scan_directory(source_dir, recursive=True):
+            file_count += 1
+        parent.scan_stats["total_files"] = file_count
+
+        # Start actual processing
+        parent.scanner.start_scan(source_dir, process_file, recursive=True)
+
+        # Wait for scan to complete or be stopped
+        while parent.scanner.scan_thread and parent.scanner.scan_thread.is_alive():
+            if stop_event.is_set():
+                parent.scanner.stop_scan()
                 break
+            time.sleep(0.1)
 
-            # Update progress
-            progress = (i + 1) / total_files
-            parent.progress_value.set(progress * 100)
-            parent.status_text.set(f"Processing file {i+1} of {total_files}")
-
-            # Simulate processing time
-            time.sleep(0.05)
+        # Final update
+        parent.scan_stats["end_time"] = datetime.now()
+        from .gui_scanner import update_scan_stats
+        update_scan_stats(parent)
 
         if not stop_event.is_set():
             parent.status_text.set("Processing complete!")

@@ -2,17 +2,48 @@
 # -*- coding: utf-8 -*-
 
 """
-ROM Sorter Pro - Web-Interface
+ROM Sorter Pro - Web Interface v2.1.7
 
-Dieses Modul implementiert ein Web-Interface für ROM Sorter Pro, das einen
-Remote-Zugriff auf die Funktionen der Anwendung ermöglicht und ein modernes
-Dashboard für die ROM-Verwaltung bietet.
+This module implements a web interface for ROM Sorter Pro that enables
+remote access to the application's functions and provides a modern
+dashboard for ROM management.
 
 Features:
-- RESTful API für ROM-Verwaltung
-- Web-basiertes Dashboard
-- Remotezugriff auf ROM-Datenbank
-- Unterstützung für Datei-Upload und -Download
+- RESTful API for ROM management
+- Web-based dashboard
+- Remote access to ROM database
+- Support for file upload and download
+- WebSocket for real-time updates
+
+NOTE: This is a simplified version of the web interface.
+The main implementation is in src/web_interface.py.
+This module provides backward compatibility for old imports.
+"""
+
+# Compatibility imports
+import sys
+import logging
+from importlib import import_module
+from pathlib import Path
+
+logger = logging.getLogger(__name__)
+
+# Add parent directory to path to allow importing src.web_interface
+parent_dir = str(Path(__file__).parent.parent)
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
+
+# Import the main web interface implementation
+try:
+    web_interface_module = import_module('src.web_interface')
+    # Re-export all symbols from the main module
+    for attr in dir(web_interface_module):
+        if not attr.startswith('_'):  # Skip private attributes
+            globals()[attr] = getattr(web_interface_module, attr)
+    logger.debug("Successfully imported web_interface from src")
+except ImportError as e:
+    logger.error(f"Failed to import web_interface: {e}")
+    # If import fails, keep the simplified version
 """
 
 import os
@@ -63,7 +94,7 @@ API_TOKENS = {}
 TOKEN_EXPIRY = timedelta(hours=24)
 
 # API version
-API_VERSION = "1.0.0"
+API_VERSION = "2.1.7"
 
 
 class WebInterfaceError(Exception):
@@ -99,7 +130,7 @@ class WebInterface:
 
     def _create_app(self) -> Flask:
         """
-        Erstellt die Flask-Anwendung für das Web-Interface.
+        Creates the Flask application for the web interface.
 
         Returns:
             Flask application
@@ -403,7 +434,7 @@ class WebInterface:
             </div>
 
             <footer class="footer">
-                <p>ROM Sorter Pro &copy; 2023 | Web-Interface Version 1.0.0</p>
+                <p>ROM Sorter Pro &copy; 2025 | Web-Interface Version 2.1.7</p>
             </footer>
 
             <script>

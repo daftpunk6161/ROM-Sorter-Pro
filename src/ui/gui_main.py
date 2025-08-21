@@ -42,7 +42,7 @@ def main():
     """Main function to start the ROM Sorter Pro GUI."""
     try:
         # Create and run the GUI
-        app = ROMSorterGUI(title="ROM Sorter Pro 🎮 - Optimized v2.1.6")
+        app = ROMSorterGUI(title="ROM Sorter Pro 🎮 - Optimized v2.1.7")
         app.mainloop()
     except Exception as e:
         logger.error(f"Application crashed: {e}")

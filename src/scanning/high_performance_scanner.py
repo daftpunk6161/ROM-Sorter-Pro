@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 # -*-coding: utf-8-*-
 """
-ROM Sorter Pro - Hochleistungs-Scanner v3.0.0
-Phase 1 Implementation: Desktop-Optimierung
+ROM Sorter Pro - High-Performance Scanner v2.1.7
+Phase 1 Implementation: Desktop Optimization
 
-Dieses Modul implementiert einen hochleistungsfähigen Scanner für ROM-Dateien mit fortschrittlichem
-Thread-Management, optimierter Speichernutzung und erweiterter Fehlerbehandlung.
+This module implements a high-performance scanner for ROM files with advanced
+thread management, optimized memory usage, and enhanced error handling.
 
-LEISTUNGSMERKMALE:
-- Multi-Threading für maximale CPU-Auslastung
-- Fortschrittliche Parallelverarbeitung für optimale Leistung
-- Intelligentes Chunking großer Dateien für reduzierte Speichernutzung
-- Robuste Fehlerbehandlung mit Wiederherstellungsmöglichkeit
-- Anpassungsfähiges Scanning für verschiedene Systeme
-- Unterstützung für verzögerte und inkrementelle Verarbeitung
+FEATURES:
+- Multi-threading for maximum CPU utilization
+- Advanced parallel processing for optimal performance
+- Intelligent chunking of large files for reduced memory usage
+- Robust error handling with recovery capabilities
+- Adaptive scanning for different systems
+- Support for delayed and incremental processing
 """
 
 import os

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ROM Sorter Pro - Qt Initialisierungsmodul
-Phase 1 Implementation: Desktop-Optimierung
+ROM Sorter Pro v2.1.7 - Qt Initialization Module
+Phase 1 Implementation: Desktop Optimization
 
-Dieses Modul initialisiert die Qt-UI-Komponenten und stellt sicher,
-dass die notwendigen Abhängigkeiten vorhanden sind.
+This module initializes the Qt UI components and ensures
+that the necessary dependencies are present.
 """
 
 import os
@@ -13,11 +13,11 @@ import sys
 import logging
 from pathlib import Path
 
-# Package-Konstanten
-__version__ = "3.0.0"
+# Package constants
+__version__ = "2.1.7"
 __author__ = "ROM Sorter Pro Team"
 
-# Initialisierungsstatus
+# Initialization status
 qt_available = False
 qt_version = None
 
@@ -26,7 +26,7 @@ try:
     from PyQt6 import QtCore
     qt_available = True
     qt_version = 6
-    logging.info("PyQt6 erfolgreich geladen.")
+    logging.info("PyQt6 successfully loaded.")
 except ImportError:
     try:
         from PyQt5 import QtCore

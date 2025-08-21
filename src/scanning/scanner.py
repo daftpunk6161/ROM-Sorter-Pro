@@ -8,6 +8,7 @@ Dieses Modul enthält Klassen und Funktionen zum effizienten Scannen und Erkenne
 
 # Standard libraries
 import os
+from typing import Dict, List, Set, Tuple, Optional, Any, Callable, Union
 import time
 import logging
 import threading

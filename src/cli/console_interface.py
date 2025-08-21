@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*-coding: utf-8-*-
 """
-ROM Sorter Pro - CLI-Interface
-Einfache Kommandozeilenschnittstelle für ROM Sorter Pro.
+ROM Sorter Pro - CLI Interface v2.1.7
+Simple command-line interface for ROM Sorter Pro.
 """
 
 import os
@@ -16,18 +16,18 @@ logger = logging.getLogger(__name__)
 
 def start_cli_mode():
     """
-    Startet den ROM Sorter im CLI-Modus.
+    Starts the ROM Sorter in CLI mode.
 
-    Diese Funktion bietet eine einfache Befehlszeilen-Schnittstelle für grundlegende
-    Operationen mit dem ROM Sorter Pro, ohne eine grafische Oberfläche zu benötigen.
+    This function provides a simple command-line interface for basic
+    operations with ROM Sorter Pro, without requiring a graphical interface.
     """
-    logger.info("CLI-Modus wurde gestartet")
+    logger.info("CLI mode started")
     print("=" * 50)
-    print("ROM SORTER PRO - KOMMANDOZEILEN-MODUS")
-    print("Version 3.0.0")
+    print("ROM SORTER PRO - COMMAND-LINE MODE")
+    print("Version 2.1.7")
     print("=" * 50)
-    print("\nDies ist eine vereinfachte Version im CLI-Modus.")
-    print("Die vollständige Funktionalität ist in der GUI-Version verfügbar.\n")
+    print("\nThis is a simplified version in CLI mode.")
+    print("The full functionality is available in the GUI version.\n")
 
 # Show options
     print("Verfügbare Befehle:")

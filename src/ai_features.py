@@ -1,8 +1,8 @@
 # -*-coding: utf-8-*-
 """
-AI-Enhanced Features for ROM Sorter Pro - Security Optimized Edition
+AI-Enhanced Features for ROM Sorter Pro - Security Optimized Edition v2.1.7
 
-SECURITY FIXES v2.1.2:
+SECURITY FIXES v2.1.7:
 - FIXED: SQL Injection vulnerabilities - all queries now use prepared statements
 - ENHANCED: Input validation for all database operations
 - IMPROVED: Error handling with secure logging
@@ -68,13 +68,15 @@ def validate_path(path):
     if not path:
         raise InvalidPathError("Path cannot be empty")
     return path
-from src.exceptions import SecurityError, PathTraversalError, InvalidPathError
+
+# Import exceptions from relative path
+from .exceptions import SecurityError, PathTraversalError, InvalidPathError
 
 # Fallback for downward compatibility
 def validate_path_legacy(path: Union[str, Path]) -> Path:
     """
-    Abwärtskompatible Pfadvalidierung für bestehenden Code.
-    Delegiert an die konsolidierte validate_path-Funktion.
+    Backward compatible path validation for existing code.
+    Delegates to the consolidated validate_path function.
     """
     try:
         return validate_path(path)
@@ -635,7 +637,7 @@ class OptimizedOnlineMetadataProvider:
 
 # Set Secure Headers
         self._session.headers.update({
-            'User-Agent': 'ROM-Sorter-Pro/2.1.2 (Educational/Personal Use)',
+            'User-Agent': 'ROM-Sorter-Pro/2.1.7 (Educational/Personal Use)',
             'Accept': 'application/json',
             'Accept-Encoding': 'gzip, deflate',
             'Connection': 'keep-alive'

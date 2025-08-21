@@ -2,17 +2,17 @@
 # -*- coding: utf-8 -*-
 
 """
-ROM Sorter Pro - Automatische Update Manager
+ROM Sorter Pro - Automatic Update Manager
 
-Dieses Modul implementiert einen automatischen Update-Manager, der nach Updates
-sucht, diese herunterlädt und installiert. Es unterstützt die Aktualisierung von
-Programmdateien, Datenbanken und anderen Ressourcen.
+This module implements an automatic update manager that searches for updates,
+downloads and installs them. It supports updating program files, databases,
+and other resources.
 
 Features:
-- Automatische Überprüfung auf Updates
-- Sicheres Herunterladen und Verifizieren von Updates
-- Wiederherstellungsmechanismen bei fehlgeschlagenen Updates
-- Inkrementelle Updates zur Bandbreitenoptimierung
+- Automatic update checking
+- Secure downloading and verification of updates
+- Recovery mechanisms for failed updates
+- Incremental updates for bandwidth optimization
 """
 
 import os
@@ -32,39 +32,42 @@ from typing import Dict, List, Any, Tuple, Optional, Union, Set, Callable
 from datetime import datetime, timedelta
 from pathlib import Path
 
-# Logger konfigurieren
+# Configure logger
 logger = logging.getLogger(__name__)
 
-# Update-Server-URL
+# Update server URL
 UPDATE_SERVER = "https://romsorter.example.com/updates"
 
-# Update-Konfigurationsdatei
+# Update configuration file
 UPDATE_CONFIG_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'config', 'update.json')
 
-# Version des Programms
+# Version of the program
 VERSION_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'version.txt')
+
+# Current version
+__version__ = '2.1.7'
 
 # Path for temporary update files
 TEMP_UPDATE_DIR = os.path.join(tempfile.gettempdir(), "romsorter_updates")
 
 
 class UpdateError(Exception):
-    """Basisklasse für Update-Fehler."""
+    """Base class for update errors."""
     pass
 
 
 class UpdateManager:
     """
-    Verwaltet den Update-Prozess für ROM Sorter Pro.
+    Manages the update process for ROM Sorter Pro.
     """
 
     def __init__(self, auto_check: bool = True, check_interval: int = 24):
         """
-        Initialisiert den Update-Manager.
+        Initializes the update manager.
 
         Args:
-            auto_check: Automatische Update-Prüfung aktivieren
-            check_interval: Prüfintervall in Stunden
+            auto_check: Enable automatic update checking
+            check_interval: Check interval in hours
         """
         self.auto_check = auto_check
         self.check_interval = check_interval
@@ -87,7 +90,7 @@ class UpdateManager:
 
     def _get_current_version(self) -> str:
         """
-        Ermittelt die aktuelle Version des Programms.
+        Determines the current version of the program.
 
         Returns:
             Aktuelle Version als String
@@ -106,10 +109,10 @@ class UpdateManager:
 
     def _load_update_config(self) -> Dict[str, Any]:
         """
-        Lädt die Update-Konfiguration aus der Datei.
+        Loads the update configuration from the file.
 
         Returns:
-            Update-Konfiguration als Dictionary
+            Update configuration as a dictionary
         """
         default_config = {
             "auto_check": self.auto_check,
@@ -268,10 +271,10 @@ class UpdateManager:
 
     def download_update(self) -> Optional[str]:
         """
-        Lädt das Update herunter.
+        Downloads the update.
 
         Returns:
-            Pfad zur heruntergeladenen Update-Datei oder None bei Fehler
+            Path to the downloaded update file or None if error
         """
         if not self.update_available or not self.update_info:
             logger.warning("Kein Update verfügbar")
@@ -350,12 +353,12 @@ class UpdateManager:
     def _verify_checksum(self, file_path: str, expected_checksum: str,
                         checksum_type: str = "sha256") -> bool:
         """
-        Überprüft die Integrität einer Datei mittels Checksum.
+        Verifies the integrity of a file using checksum.
 
         Args:
-            file_path: Pfad zur zu prüfenden Datei
-            expected_checksum: Erwartete Checksum
-            checksum_type: Typ der Checksum (md5, sha1, sha256, sha512)
+            file_path: Path to the file to verify
+            expected_checksum: Expected checksum
+            checksum_type: Type of checksum (md5, sha1, sha256, sha512)
 
         Returns:
             True, wenn die Checksum übereinstimmt, sonst False
@@ -486,11 +489,11 @@ class UpdateManager:
 
     def _create_backup(self, source_dir: str, backup_dir: str) -> None:
         """
-        Erstellt ein Backup des Programmverzeichnisses.
+        Creates a backup of the program directory.
 
         Args:
-            source_dir: Quellverzeichnis
-            backup_dir: Zielverzeichnis für das Backup
+            source_dir: Source directory
+            backup_dir: Target directory for the backup
         """
         # Create the backup directory if it does not exist
         os.makedirs(backup_dir, exist_ok=True)

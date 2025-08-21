@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 # -*-coding: utf-8-*-
 """
-ROM Sorter Pro v2.1.5 - Universal console ROM organizer with refactored architecture
+ROM Sorter Pro v2.1.7 - Universal console ROM organizer with refactored architecture
 
-REFACTORED VERSION 2.1.5:
+REFACTORED VERSION 2.1.7:
 - FIXED: God Class complexity reduced with focused components
 - ENHANCED: Better separation of concerns and single responsibility
 - IMPROVED: Error handling and resource management
 - ADDED: Dependency injection pattern for better testability
 - OPTIMIZED: Memory management and performance monitoring
 - STRENGTHENED: Security validation throughout
+- UPDATED: Consistent version numbers across all files
+- RESOLVED: Multiple import and DND_AVAILABLE issues
 """
 
 import os
@@ -35,19 +37,19 @@ import multiprocessing
 from queue import Queue, Empty
 
 # Import from the specialized modules
-from src.core.file_utils import (
+from .core.file_utils import (
     normalize_filename
 )
 
-from src.database.console_db import (
+from .database.console_db import (
     get_all_rom_extensions
 )
 
-from src.utils.performance_enhanced import (
+from .utils.performance_enhanced import (
     PerformanceMonitor as performance_monitor
 )
 
-from src.security.security_utils import (
+from .security.security_utils import (
     sanitize_path as validate_path
 )
 
@@ -66,8 +68,8 @@ def validate_config(config: dict) -> bool:
     return config is not None and isinstance(config, dict)
 
 # Import Exceptions for Centralized Error Handling
-from src.exceptions import (ConfigurationError, ValidationError,
-                          ProcessingError, ConsoleDetectionError, FileOperationError)
+from .exceptions import (ConfigurationError, ValidationError,
+                         ProcessingError, ConsoleDetectionError, FileOperationError)
 
 # Configure Main Logger
 logger = logging.getLogger(__name__)
@@ -102,24 +104,24 @@ except ImportError as e:
 GUI_AVAILABLE = False
 try:
 # Check First for the New Modular UI
-    spec = importlib.util.find_spec("src.ui")
+    spec = importlib.util.find_spec(".ui", package=__package__)
     if spec is not None:
 # Check IF New Modular Ui is Available
         try:
-            from src.ui.compat import is_ui_available, get_ui_mode
+            from .ui.compat import is_ui_available, get_ui_mode
             GUI_AVAILABLE = is_ui_available()
             UI_MODE = get_ui_mode()
             logger.info(f"GUI module available (Mode: {UI_MODE})")
         except ImportError:
 # Fallback to Direct Check of Old Gui
-            spec = importlib.util.find_spec("gui")
+            spec = importlib.util.find_spec(".gui", package=__package__)
             if spec is not None:
                 GUI_AVAILABLE = True
                 UI_MODE = "legacy"
                 logger.info("GUI module available (Legacy)")
     else:
 # Fallback to Direct Check of Old Gui
-        spec = importlib.util.find_spec("gui")
+        spec = importlib.util.find_spec(".gui", package=__package__)
         if spec is not None:
             GUI_AVAILABLE = True
             UI_MODE = "legacy"
@@ -131,7 +133,7 @@ except ImportError as e:
 # Web Interface Availability
 try:
     import importlib.util
-    spec = importlib.util.find_spec("web_interface")
+    spec = importlib.util.find_spec(".web_interface", package=__package__)
     WEB_INTERFACE_AVAILABLE = spec is not None
     if WEB_INTERFACE_AVAILABLE:
         logger.info("Web interface available")
@@ -896,7 +898,7 @@ class RefactoredROMSorterPro:
             except ValueError as e:
                 logging.warning(f"Signal handling not available: {e}")
 
-        logging.info("Refactored ROM Sorter Pro v2.1.5 initialized with improved architecture")
+        logging.info("Refactored ROM Sorter Pro v2.1.7 initialized with improved architecture")
 
     def _signal_handler(self, signum, frame):
         """Thread-safe signal handler for graceful shutdown."""
@@ -984,7 +986,7 @@ class RefactoredROMSorterPro:
     def sort_by_console_advanced(self, source_dir: str, dest_dir: str) -> Dict[str, Any]:
         """Advanced console-based sorting with refactored architecture."""
         logging.info("="*100)
-        logging.info("STARTING REFACTORED CONSOLE SORTING v2.1.5")
+        logging.info("STARTING REFACTORED CONSOLE SORTING v2.1.7")
         logging.info("="*100)
         logging.info(f"Source: {source_dir}")
         logging.info(f"Destination: {dest_dir}")
@@ -1082,8 +1084,8 @@ class RefactoredROMSorterPro:
                 raise FileOperationError(f"Invalid source path: {e}", file_path=source_dir, operation="validate")
 
 # Import Optimized Module
-            from src.detectors.console_detector import ConsoleDetector, CACHE_SIZE
-            from src.scanning.optimized_scanner import OptimizedFileScanner
+            from .detectors.console_detector import ConsoleDetector, CACHE_SIZE
+            from .scanning.optimized_scanner import OptimizedFileScanner
 
 # Singleton instance for optimized processing
             console_detector = ConsoleDetector()
@@ -1410,7 +1412,7 @@ class RefactoredROMSorterPro:
         try:
 # Close All Database Connections
             try:
-                from src.database.connection_pool import DatabaseConnectionPool
+                from .database.connection_pool import DatabaseConnectionPool
 # Close All Connections in the pool
                 pool = DatabaseConnectionPool.get_instance()
                 pool.close_all()
@@ -1462,7 +1464,7 @@ EnhancedProcessingStats = ProcessingStatistics # Legacy alias
 def create_argument_parser():
     """Create argument parser for command line interface."""
     parser = argparse.ArgumentParser(
-        description='ROM Sorter Pro v2.1.5 - Refactored ROM Organization Tool',
+        description='ROM Sorter Pro v2.1.7 - Refactored ROM Organization Tool',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog='''
 Examples:
@@ -1564,22 +1566,22 @@ def main():
                 try:
                     if UI_MODE == "new":
 # Use the new modular ui
-                        from src.ui.compat import launch_gui
+                        from .ui.compat import launch_gui
                         logger.info("Starting modular GUI...")
                         launch_gui()
                     elif UI_MODE == "legacy":
 # Use the old gui
-                        from src.ui.gui import launch_gui
+                        from .ui.gui import launch_gui
                         logger.info("Starting legacy GUI...")
                         launch_gui()
                     else:
 # Direct import Attempts as Fallback
                         try:
-                            from src.ui import main as ui_main
+                            from .ui import main as ui_main
                             logger.info("Starting GUI (direct import)...")
                             ui_main()
                         except ImportError:
-                            from src.ui.gui import launch_gui
+                            from .ui.gui import launch_gui
                             logger.info("Starting legacy GUI (direct import)...")
                             launch_gui()
                 except ImportError as e:

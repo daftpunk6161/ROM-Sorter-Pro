@@ -1,176 +1,107 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ROM Sorter GUI - Optimized interface for ROM organization v2.2.0
+ROM Sorter Pro v2.1.7 - Main Entry Module
 
-OPTIMIZED VERSION 2.2.0:
-- Theming System: Support for light and dark themes
-- Customizable user interface with custom color schemes
-- Improved usability through consistent design
-- Accessibility support with contrasting colors
-- Eliminated memory leaks with proper widget cleanup
-- Optimized threading with coordinated worker management
-- Streamlined UI updates with smart batching
-- Enhanced resource management with automatic cleanup
-- Improved performance with efficient event handling
-- Reduced memory footprint through smart caching
-- Better error recovery with graceful degradation
-- FIXED: Git merge conflicts resolved
-- FIXED: Removed dangerous signal monkey-patching
+This is the main entry point for the ROM Sorter Pro application.
+The GUI implementation has been refactored into several modules:
+- gui_core.py: Core functionality and main window
+- gui_components.py: Reusable UI components
+- gui_scanner.py: Scanner functionality
+- gui_dnd.py: Drag and drop functionality
+- gui_handlers.py: Event handlers
 """
 
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox, scrolledtext
+from tkinter import ttk
+from collections import deque
 import threading
-import queue
-import os
-import sys
 import time
 import weakref
-import gc
-import atexit
-import re
+import os
+import sys
 import platform
-from functools import lru_cache
-from typing import Dict, List, Optional, Any, Callable
-from datetime import datetime
-from concurrent.futures import ThreadPoolExecutor
-import concurrent.futures
-from pathlib import Path
-from collections import Counter, deque
-import random
+import queue
 import logging
-import shutil
-import traceback
+from typing import Dict, List, Optional, Any, Callable, Union
 
-# Add the main project directory to the Python search path
+# Import DND_AVAILABLE from the package __init__
+# This avoids circular import issues
+from . import DND_AVAILABLE
+
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+ROM Sorter Pro - Hauptzugangspunkt für die GUI
+Diese Datei dient als Einstiegspunkt für die refaktorierte GUI-Anwendung.
+"""
+
+import os
+import sys
+import logging
+import traceback
+from pathlib import Path
+
+# Configure logging only for this module (no stdout handlers)
+# Remove all existing handlers from the root logger to prevent duplicate output
+root_logger = logging.getLogger()
+for handler in root_logger.handlers[:]:
+    if isinstance(handler, logging.StreamHandler) and handler.stream == sys.stdout:
+        root_logger.removeHandler(handler)
+
+logger = logging.getLogger("ROM-Sorter-Pro")
+
+# Stelle sicher, dass das src-Verzeichnis im Pfad ist
 script_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.abspath(os.path.join(script_dir, '..', '..'))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
-    print(f"Project directory added to Python path: {project_root}")
+    logger.info(f"Project directory added to Python path: {project_root}")
 
-# Import theme system
+# Importiere refaktorierte Module
 try:
-    from src.ui.theme_integration import ThemeIntegrator
-    THEME_SUPPORT = True
-    print("Theme support loaded")
-except ImportError:
-    THEME_SUPPORT = False
-    print("Theme support could not be loaded")
+    from .gui_core import ROMSorterGUI
+    from .theme_integration import ThemeIntegrator
+    from ..config import load_config
+except ImportError as e:
+    logger.error(f"Fehler beim Importieren der refaktorierten Module: {e}")
+    raise
 
-# Get absolute path to script
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-APP_DIR = os.path.dirname(SCRIPT_DIR)
-EXTERNAL_LIBS_DIR = os.path.join(APP_DIR, "external_libs")
-
-# Debug output for import process
-print(f"Initializing Drag & Drop support... (Script: {SCRIPT_DIR})")
-
-# Try to import the new DnD support
-try:
-    # Try our own DnD implementation first
-    from src.dnd_support import init_drag_drop, get_dnd_mode
-    DND_AVAILABLE = init_drag_drop()
-    DND_MODE = get_dnd_mode()
-    print(f"New Drag & Drop support loaded, mode: {DND_MODE}")
-except ImportError:
-    # Fallback to direct import of tkinterdnd2
-    DND_AVAILABLE = False
-    DND_MODE = "none"
-
+def main():
+    """
+    Startet die ROM Sorter Pro Anwendung mit der refaktorierten Struktur
+    """
     try:
-        from tkinterdnd2 import DND_FILES
-        DND_AVAILABLE = True
-        DND_MODE = "tkdnd"
-        print("Info: tkinterdnd2 successfully imported, Drag & Drop enabled")
-    except ImportError:
-        print("No Drag & Drop support available - standard file dialogs will be used")
+        # Load configuration
+        config = load_config()
 
-# Dynamic module imports with error handling
-MODULES_AVAILABLE = False
-try:
-    # Add src to path if needed
-    current_dir = Path(__file__).parent
-    src_dir = current_dir / "src" if (current_dir / "src").exists() else current_dir
-    parent_dir = current_dir.parent
-    if str(src_dir) not in sys.path:
-        sys.path.insert(0, str(src_dir))
-    if str(parent_dir) not in sys.path:
-        sys.path.insert(0, str(parent_dir))
+        # Create and start the main application
+        app = ROMSorterGUI(title="ROM Sorter Pro v2.1.7")
 
-    # Try different import strategies
-    try:
-        # Strategy 1: Direct import
-        from main import SortingOptions
-        from utils import performance_monitor
-        MODULES_AVAILABLE = True
-        print("✅ ROM Sorter modules loaded successfully (direct)")
-    except ImportError:
+        # Enable theme support
+        theme_integrator = ThemeIntegrator(app)
+        theme_integrator.apply_theme(config.get("theme", "system"))
+
+        # Start application
+        app.mainloop()
+
+        return 0  # Erfolgreicher Exit-Code
+
+    except Exception as e:
+        logger.error(f"Error starting the application: {e}")
+        logger.error(traceback.format_exc())
+
+        # Show error message if possible
         try:
-            # Strategy 2: Import from src
-            from src.main import SortingOptions
-            from src.utils import performance_monitor
-            MODULES_AVAILABLE = True
-            print("✅ ROM Sorter modules loaded successfully (from src)")
-        except ImportError:
-            try:
-                # Strategy 3: Relative import
-                from ..main import SortingOptions
-                from ..utils import performance_monitor
-                MODULES_AVAILABLE = True
-                print("✅ ROM Sorter modules loaded successfully (relative)")
-            except ImportError:
-                # Modules not available, but GUI still works
-                MODULES_AVAILABLE = False
-                print("⚠️ Module nicht geladen, aber GUI wird trotzdem funktionieren")
+            import tkinter.messagebox as messagebox
+            messagebox.showerror("Error", f"The application could not be started:\n{e}")
+        except:
+            pass
 
-except (ImportError, ModuleNotFoundError) as e:
-    print(f"Info: Using demo mode - modules not available: {e}")
+        return 1  # Fehler Exit-Code
 
-    # Lightweight demo classes
-    class OptimizedROMSorterPro:
-        def __init__(self, *args, **kwargs):
-            self._shutdown_event = threading.Event()
-
-        def sort_by_console_advanced(self, source_dir, dest_dir):
-            # Demo implementation that doesn't use signals
-            time.sleep(1)
-            return {'files_processed': 42, 'duration': 5.0}
-
-        def sort_roms(self, *args):
-            return {}
-
-    class SortingOptions:
-        def __init__(self, **kwargs):
-            for k, v in kwargs.items(): setattr(self, k, v)
-
-    def get_console_statistics(rom_files):
-        return {"Test Console": 10, "Another Console": 5}
-
-    def batch_process_roms(directory, batch_size=200):
-        return [{"name": "test1.rom"}, {"name": "test2.rom"}]
-
-    class performance_monitor:
-        @staticmethod
-        def get_comprehensive_stats():
-            return {'duration': 1.5, 'files_per_second': 10.5}
-        @staticmethod
-        def start(): pass
-        @staticmethod
-        def stop(): return 1.5
-
-# ============================================================================
-# OPTIMIZED STYLING SYSTEM
-# ============================================================================
-
-class OptimizedStyleManager:
-    """Memory-efficient style manager with caching and theme support."""
-
-    _instance = None
-    _colors = None
-    _fonts = None
-    _theme_cache = {}
+if __name__ == "__main__":
+    sys.exit(main())
 
     def __new__(cls):
         if cls._instance is None:
@@ -306,6 +237,38 @@ class OptimizedStyleManager:
 
         # Fallback zur ersten Option
         return font_list[0]
+
+# ============================================================================
+# Simplified Style Manager for Compatibility
+# ============================================================================
+
+class OptimizedStyleManager:
+    """Simplified version of the style manager for compatibility with old code."""
+
+    def __init__(self):
+        # Define the basic colors for light and dark theme
+        self.colors = {
+            'bg_primary': '#2b2b2b',
+            'bg_secondary': '#3c3c3c',
+            'bg_accent': '#4a4a4a',
+            'text_primary': '#ffffff',
+            'text_secondary': '#cccccc',
+            'accent': '#007acc',
+            'accent_hover': '#1e90ff',
+            'success': '#28a745',
+            'warning': '#ffc107',
+            'error': '#dc3545',
+            'border': '#555555'
+        }
+
+        # Add fonts
+        self.fonts = {
+            'header': ('Segoe UI', 16, 'bold'),
+            'subheader': ('Segoe UI', 14, 'bold'),
+            'body': ('Segoe UI', 11),
+            'small': ('Segoe UI', 9),
+            'default': ('Segoe UI', 10)
+        }
 
 # Global style instance
 STYLE = OptimizedStyleManager()
@@ -719,7 +682,7 @@ class OptimizedDragDropFrame(tk.Frame):
             try:
                 print(f"Initializing Drag & Drop support (Mode: {DND_MODE})...")
 
-                # Erstelle eine ansprechendere Drag & Drop-Zone
+                # Create a more appealing Drag & Drop zone
                 self.configure(
                     relief="groove",
                     borderwidth=2,
@@ -728,10 +691,10 @@ class OptimizedDragDropFrame(tk.Frame):
                 )
 
                 if DND_MODE == "native":
-                    # Verwende unsere eigene DnD-Implementierung
-                    from src.dnd_support import DropFrame
+                    # Use our own DnD implementation
+                    from ...dnd_support import DropFrame
 
-                    # Erstelle ein Drop-Frame innerhalb dieses Frames
+                    # Create a drop frame within this frame
                     self.drop_frame = DropFrame(self, drop_callback=self._handle_native_drop)
                     self.drop_frame.pack(fill=tk.BOTH, expand=True)
 
@@ -745,7 +708,7 @@ class OptimizedDragDropFrame(tk.Frame):
                     print("Native Drag & Drop support successfully registered")
 
                 elif DND_MODE == "tkdnd":
-                    # Verwende tkinterdnd2-Implementierung
+                    # Use tkinterdnd2 implementation
 
                     # Check whether the root class supports Tkinterdnd
                     if not hasattr(self.winfo_toplevel(), 'TkdndVersion'):
@@ -2349,178 +2312,6 @@ class FastFileScanner:
 class OptimizedROMSorterGUI:
     """Optimized main GUI class with memory management."""
 
-    # Console detection lookup table
-    CONSOLE_MAP = {
-        # Nintendo Handhelds
-        '.gb': 'Nintendo_Game_Boy', '.sgb': 'Nintendo_Game_Boy', '.dmg': 'Nintendo_Game_Boy',
-        '.gbc': 'Nintendo_Game_Boy_Color',
-        '.gba': 'Nintendo_Game_Boy_Advance', '.agb': 'Nintendo_Game_Boy_Advance', '.mb': 'Nintendo_Game_Boy_Advance',
-        '.nds': 'Nintendo_DS', '.dsi': 'Nintendo_DS',
-        '.3ds': 'Nintendo_3DS', '.cia': 'Nintendo_3DS', '.3dsx': 'Nintendo_3DS', '.cci': 'Nintendo_3DS', '.cxi': 'Nintendo_3DS', '.app': 'Nintendo_3DS',
-
-        # Nintendo Home Consoles
-        '.nes': 'Nintendo_NES', '.unf': 'Nintendo_NES', '.unif': 'Nintendo_NES', '.fds': 'Nintendo_NES', '.nsf': 'Nintendo_NES', '.qd': 'Nintendo_NES',
-        '.snes': 'Super_Nintendo', '.smc': 'Super_Nintendo', '.sfc': 'Super_Nintendo', '.fig': 'Super_Nintendo', '.swc': 'Super_Nintendo', '.st': 'Super_Nintendo', '.bs': 'Super_Nintendo',
-        '.n64': 'Nintendo_64', '.v64': 'Nintendo_64', '.z64': 'Nintendo_64', '.u64': 'Nintendo_64', '.jst': 'Nintendo_64', '.mpk': 'Nintendo_64', '.fla': 'Nintendo_64',
-        '.gcm': 'Nintendo_GameCube', '.gcz': 'Nintendo_GameCube', '.rvz': 'Nintendo_GameCube', '.wia': 'Nintendo_GameCube', '.ciso': 'Nintendo_GameCube', '.dol': 'Nintendo_GameCube', '.elf': 'Nintendo_GameCube',
-        '.wbfs': 'Nintendo_Wii', '.wad': 'Nintendo_Wii', '.u8': 'Nintendo_Wii', '.tmd': 'Nintendo_Wii', '.tik': 'Nintendo_Wii',
-        '.wud': 'Nintendo_Wii_U', '.wux': 'Nintendo_Wii_U', '.rpx': 'Nintendo_Wii_U', '.rpl': 'Nintendo_Wii_U', '.wua': 'Nintendo_Wii_U',
-        '.xci': 'Nintendo_Switch', '.nsp': 'Nintendo_Switch', '.nsz': 'Nintendo_Switch', '.kip': 'Nintendo_Switch', '.nca': 'Nintendo_Switch', '.cert': 'Nintendo_Switch',
-
-        # Sony Consoles
-        '.iso': 'PlayStation', '.bin': 'PlayStation', '.img': 'PlayStation', '.mdf': 'PlayStation', '.cue': 'PlayStation', '.ecm': 'PlayStation',
-        '.mds': 'PlayStation_2', '.nrg': 'PlayStation_2', '.chd': 'PlayStation_2', '.cso': 'PlayStation_2',
-        '.pkg': 'PlayStation_3', '.psn': 'PlayStation_3', '.p3t': 'PlayStation_3',
-        '.pup': 'PlayStation_4', '.gp4': 'PlayStation_4',
-        '.psp': 'PlayStation_Portable', '.pbp': 'PlayStation_Portable', '.cso': 'PlayStation_Portable',
-        '.vpk': 'PlayStation_Vita', '.psvgz': 'PlayStation_Vita',
-
-        # Sega Consoles
-        '.sms': 'Sega_Master_System', '.sg': 'Sega_Master_System', '.sc': 'Sega_Master_System', '.mv': 'Sega_Master_System',
-        '.gg': 'Sega_Game_Gear',
-        '.md': 'Sega_Genesis', '.gen': 'Sega_Genesis', '.smd': 'Sega_Genesis', '.sgd': 'Sega_Genesis', '.68k': 'Sega_Genesis',
-        '.32x': 'Sega_32X',
-        '.scd': 'Sega_CD',
-        '.gdi': 'Sega_Dreamcast', '.cdi': 'Sega_Dreamcast', '.chd': 'Sega_Dreamcast',
-        '.sat': 'Sega_Saturn',
-        '.naomi': 'Sega_NAOMI',
-
-        # Microsoft Consoles
-        '.xbe': 'Xbox',
-        '.xex': 'Xbox_360',
-        '.xvd': 'Xbox_One',
-        '.xvc': 'Xbox_Series',
-
-        # Atari Consoles
-        '.a26': 'Atari_2600', '.bin': 'Atari_2600',
-        '.a52': 'Atari_5200',
-        '.a78': 'Atari_7800',
-        '.lnx': 'Atari_Lynx', '.lyx': 'Atari_Lynx', '.o': 'Atari_Lynx',
-        '.jag': 'Atari_Jaguar', '.j64': 'Atari_Jaguar',
-        '.ate': 'Atari_8bit',
-        '.ast': 'Atari_ST',
-
-        # NEC Consoles
-        '.pce': 'PC_Engine', '.sgx': 'PC_Engine',
-        '.pc98': 'NEC_PC98',
-        '.pc88': 'NEC_PC88',
-        '.sgx': 'SuperGrafx',
-
-        # SNK Consoles
-        '.neo': 'Neo_Geo',
-        '.ngp': 'Neo_Geo_Pocket',
-        '.ngc': 'Neo_Geo_Pocket_Color',
-        '.mvs': 'Neo_Geo_MVS',
-        '.aes': 'Neo_Geo_AES',
-
-        # Computer Systems
-        '.adf': 'Amiga', '.adz': 'Amiga', '.dms': 'Amiga', '.ipf': 'Amiga', '.hdf': 'Amiga',
-        '.d64': 'Commodore_64', '.t64': 'Commodore_64', '.tap': 'Commodore_64', '.prg': 'Commodore_64', '.p00': 'Commodore_64', '.crt': 'Commodore_64',
-        '.d71': 'Commodore_128', '.d81': 'Commodore_128',
-        '.dsk': 'Apple_II', '.nib': 'Apple_II', '.po': 'Apple_II', '.do': 'Apple_II',
-        '.st': 'Atari_ST', '.msa': 'Atari_ST', '.stx': 'Atari_ST',
-        '.tap': 'ZX_Spectrum', '.tzx': 'ZX_Spectrum', '.z80': 'ZX_Spectrum', '.sna': 'ZX_Spectrum',
-        '.mgt': 'MSX', '.rom': 'MSX', '.mx1': 'MSX', '.mx2': 'MSX', '.cas': 'MSX_Cassette',
-        '.bas': 'BBC_Micro', '.uef': 'BBC_Micro', '.ssd': 'BBC_Micro', '.dsd': 'BBC_Micro',
-        '.cpc': 'Amstrad_CPC', '.dsk': 'Amstrad_CPC', '.cdt': 'Amstrad_CPC',
-        '.atr': 'Atari_8bit', '.xex': 'Atari_8bit', '.dcm': 'Atari_8bit',
-
-        # Additional Modern Consoles
-        '.3dsx': '3DS_Homebrew',
-        '.nacp': 'Nintendo_Switch',
-        '.psarc': 'PlayStation_Library',
-
-        # Arcade Systems - Deutlich erweitert
-        '.zip': 'MAME_Arcade',
-        '.chd': 'MAME_Arcade',
-        '.7z': 'MAME_Arcade',  # Mame also supports 7Z archives
-
-        # Spezielle Arcade-Systeme
-        '.capcom': 'Capcom_CPS1',
-        '.cps1': 'Capcom_CPS1',
-        '.cps2': 'Capcom_CPS2',
-        '.cps3': 'Capcom_CPS3',
-        '.neogeo': 'Neo_Geo_MVS',
-        '.pgm': 'IGS_PGM',
-        '.cave': 'Cave',
-        '.taito': 'Taito',
-        '.konami': 'Konami',
-        '.irem': 'Irem',
-        '.sega': 'Sega_Arcade',
-        '.naomi': 'Sega_NAOMI',
-        '.atomiswave': 'Sammy_Atomiswave',
-        '.model1': 'Sega_Model1',
-        '.model2': 'Sega_Model2',
-        '.model3': 'Sega_Model3',
-        '.namco': 'Namco',
-        '.system22': 'Namco_System22',
-        '.system246': 'Namco_System246',
-        '.triforce': 'Triforce',
-        '.type_x': 'Taito_TypeX',
-
-        # Additional formats and Handhelds
-        '.col': 'ColecoVision',
-        '.int': 'Intellivision',
-        '.vb': 'Virtual_Boy',
-        '.vec': 'Vectrex',
-        '.ws': 'WonderSwan',
-        '.wsc': 'WonderSwan_Color',
-        '.pce': 'PC_Engine',
-        '.sgx': 'SuperGrafx',
-        '.gcce': 'Tiger_Game_Com',
-        '.lnx': 'Atari_Lynx',
-        '.ngp': 'Neo_Geo_Pocket',
-        '.ngc': 'Neo_Geo_Pocket_Color',
-        '.srm': 'Supervision',
-        '.bin': 'Binary',
-        '.rom': 'ROM_File',
-        '.img': 'Disk_Image',
-
-        # FM Towns and similar systems
-        '.fdi': 'FM_Towns',
-        '.mfi': 'FM_Towns',
-        '.mdx': 'Sharp_X68000',
-        '.dim': 'Sharp_X68000',
-        '.hdm': 'Sharp_X68000',
-        '.xdf': 'Sharp_X68000',
-
-        # PC-Formate
-        '.exe': 'PC_DOS',
-        '.com': 'PC_DOS',
-        '.ima': 'PC_DOS',
-        '.img': 'PC_DOS',
-        '.vhd': 'PC_Windows',
-        '.gog': 'PC_GOG',
-
-        # Sharp, NEC and other Japanese computers
-        '.2mg': 'Apple_Macintosh',
-        '.pc98': 'NEC_PC98',
-        '.hdi': 'NEC_PC98',
-        '.thd': 'NEC_PC98',
-        '.nhd': 'NEC_PC98',
-        '.hdd': 'NEC_PC98',
-        '.pc88': 'NEC_PC88',
-        '.d88': 'NEC_PC88',
-        '.fdi': 'NEC_PC88',
-        '.hdm': 'Sharp_X68000',
-        '.xdf': 'Sharp_X68000',
-        '.2hd': 'Sharp_X68000',
-        '.cmd': 'MSX_DOS',
-
-        # Modern arcade and flash
-        '.jamma': 'JAMMA',
-        '.swf': 'Adobe_Flash',
-        '.fla': 'Adobe_Flash',
-        '.air': 'Adobe_AIR',
-
-        # General archives (lowest priority)
-        '.zip': 'Archive',
-        '.7z': 'Archive',
-        '.rar': 'Archive',
-        '.tar': 'Archive',
-        '.gz': 'Archive'
-    }
-
     def __init__(self):
         self._initialize_window()
         self._initialize_variables()
@@ -2541,7 +2332,7 @@ class OptimizedROMSorterGUI:
                 print(f"Create root window with Drag & Drop support (Mode: {DND_MODE})...")
 
                 if DND_MODE == "tkdnd":
-                    # Verwende TkinterDnD
+                    # Use TkinterDnD
                     from tkinterdnd2 import TkinterDnD
                     self.root = TkinterDnD.Tk()
 
@@ -2555,7 +2346,7 @@ class OptimizedROMSorterGUI:
                     self.root = tk.Tk()
 
                     # Patch the window for cross-platform drag & drop support
-                    from src.dnd_support import patch_tkinter_root
+                    from ...dnd_support import patch_tkinter_root
                     patch_tkinter_root(self.root)
                     print("Root window patched for native Drag & Drop")
 
@@ -2573,7 +2364,7 @@ class OptimizedROMSorterGUI:
             # No drag & drop available
             self.root = tk.Tk()
 
-        self.root.title("ROM Sorter Pro 🎮 - Optimized v2.1.4")
+        self.root.title("ROM Sorter Pro 🎮 - Optimized v2.1.7")
         self.root.geometry("1000x700")
         self.root.minsize(800, 600)
 
@@ -2853,7 +2644,7 @@ class OptimizedROMSorterGUI:
             self.theme_integrator._change_theme(theme_name)
 
     def _customize_theme(self):
-        """Öffnet den Dialog zur Theme-Anpassung."""
+        """Opens the theme customization dialog."""
         if THEME_SUPPORT and self.theme_integrator:
             self.theme_integrator._show_theme_customizer()
 
@@ -2876,7 +2667,7 @@ class OptimizedROMSorterGUI:
 
     def _show_about(self):
         """Show about dialog with information about ROM Sorter Pro."""
-        about_text = """ROM Sorter Pro v2.2.0 - Theme Edition
+        about_text = """ROM Sorter Pro v2.1.7 - Theme Edition
 
 Ein professionelles Werkzeug zur Organisation von ROM-Sammlungen.
 
@@ -3144,7 +2935,7 @@ Features:
         self._cleanup_callbacks.append(lambda: self.thread_pool.shutdown(wait=True, cancel_futures=True))
 
         # File scanner with ROM extensions from the console map
-        self.file_scanner = FastFileScanner(extensions=self.CONSOLE_MAP.keys())
+        self.file_scanner = FastFileScanner(extensions=CONSOLE_MAP.keys())
 
     def _thread_initializer(self):
         """Initialize worker thread with proper settings."""
@@ -3330,7 +3121,7 @@ Features:
 
                 # If no specific console has been recognized, we use the standard assignment
                 if console == 'Unknown':
-                    console = self.CONSOLE_MAP.get(ext, 'Unknown')
+                    console = get_console_for_extension(ext)
 
                 console_counts[console] += 1
 
@@ -3354,7 +3145,7 @@ Features:
             for file_path in batch:
                 try:
                     ext = file_path.suffix.lower()
-                    console = self.CONSOLE_MAP.get(ext, 'Unknown')
+                    console = get_console_for_extension(ext)
                     batch_counts[console] += 1
 
                     # Extract additional metadata if needed
@@ -3616,7 +3407,7 @@ Features:
                             ext = file_path.suffix.lower()
 
                             # Check Whether it is a supported file extension
-                            if ext in self.CONSOLE_MAP:
+                            if ext in CONSOLE_MAP:
                                 all_files.append(file_path)
 
                     # Set the total number of files
@@ -3638,8 +3429,8 @@ Features:
                         console_type = "Unknown"
 
                         # Priorisierte Konsolenerkennung basierend auf Dateierweiterung
-                        if ext in self.CONSOLE_MAP:
-                            console_type = self.CONSOLE_MAP.get(ext)
+                        if ext in CONSOLE_MAP:
+                            console_type = get_console_for_extension(ext)
 
                         # Improved console detection for generic file types such as archives, binary, etc.
                         try:
@@ -3649,8 +3440,8 @@ Features:
 
                                 # 0. Experiments advanced archive detection for archives
                                 try:
-                                    # Importiere den Archiv-Detektor
-                                    from src.detectors.archive_detector import (
+                                    # Import the archive detector
+                                    from ...detectors.archive_detector import (
                                         is_archive_file, detect_console_from_archive,
                                         improve_generic_type_detection
                                     )
@@ -3675,7 +3466,7 @@ Features:
 
                                 # 1. Versuche CHD-Dateierkennung
                                 try:
-                                    from src.detectors.chd_detector import (
+                                    from ...detectors.chd_detector import (
                                         is_chd_file, detect_console_from_chd
                                     )
 
@@ -3696,7 +3487,7 @@ Features:
 
                                     # Experiments console recognition from directory names
                                     if parent_dir.lower() not in ["roms", "games", "emulation"]:
-                                        for console in self.CONSOLE_MAP.values():
+                                        for console in CONSOLE_MAP.values():
                                             if console in ["Binary", "ROM_File", "Disk_Image", "Archive"]:
                                                 continue
                                             console_name = console.lower().replace('_', ' ')
@@ -3772,7 +3563,7 @@ Features:
                                 if console_type in ["Binary", "ROM_File", "Disk_Image", "Archive"]:
                                     try:
                                         # Use the improved detection code for ROMS
-                                        from src.utils import detect_console_fast, is_chd_file, detect_console_from_chd, is_archive_file, detect_console_from_archive
+                                        from ...utils import detect_console_fast, is_chd_file, detect_console_from_chd, is_archive_file, detect_console_from_archive
 
                                         # CHD-Datei-Erkennung
                                         if is_chd_file(str(file_path)):
@@ -3818,8 +3609,8 @@ Features:
                                                     continue
 
                                                 # Recognize console from file in the archive
-                                                if zipped_ext in self.CONSOLE_MAP:
-                                                    detected_console = self.CONSOLE_MAP.get(zipped_ext)
+                                                if zipped_ext in CONSOLE_MAP:
+                                                    detected_console = get_console_for_extension(zipped_ext)
                                                     # Ignoriere generische Typen
                                                     if detected_console not in ["Binary", "ROM_File", "Disk_Image", "Archive"]:
                                                         console_counts[detected_console] = console_counts.get(detected_console, 0) + 1
@@ -3908,7 +3699,7 @@ Features:
                 else:
                     # Demo mode with realistic simulation
                     total_steps = 100
-                    consoles = list(self.CONSOLE_MAP.values())
+                    consoles = list(CONSOLE_MAP.values())
 
                     for i in range(total_steps):
                         if stop_event.is_set() or (self.worker_thread and self.worker_thread.should_stop()):
@@ -4121,7 +3912,7 @@ Features:
                     file_count = 0
 
                     # Cute all files with supported extensions
-                    for ext in self.CONSOLE_MAP.keys():
+                    for ext in CONSOLE_MAP.keys():
                         # Normalize the expansion
                         ext_norm = ext.lower()
                         if not ext_norm.startswith('.'):
@@ -4171,7 +3962,7 @@ Features:
         # Reset UI state
         self._set_running_state(False)
 
-        # Erstelle Fehlermeldungstext
+        # Create error message text
         error_lines = [f"Sortierung fehlgeschlagen: {error_msg}"]
 
         # Add details if available
@@ -4541,22 +4332,22 @@ Features:
 
 # Integrate the database functionality into the GUI class
 try:
-    from src.database.db_gui_integration import add_database_methods_to_gui
+    from ...database.db_gui_integration import add_database_methods_to_gui
     OptimizedROMSorterGUI = add_database_methods_to_gui(OptimizedROMSorterGUI)
 except Exception as e:
-    print(f"Warnung: Datenbank-Integration konnte nicht geladen werden: {e}")
+    print(f"Warning: Database integration could not be loaded: {e}")
 
     # If the database integration cannot be loaded, the missing methods implement
     def _display_database_status(self):
-        """Fallback-Implementierung für die Anzeige des Datenbankstatus."""
-        self.status_bar.config(text="Datenbankstatus: Datenbank nicht verfügbar")
+        """Fallback implementation for displaying the database status."""
+        self.status_bar.config(text="Database status: Database not available")
 
     def _show_database_manager(self):
-        """Fallback-Implementierung für den Datenbank-Manager."""
-        messagebox.showinfo("Datenbank-Manager", "Die Datenbank-Funktionen sind nicht verfügbar.")
+        """Fallback implementation for the database manager."""
+        messagebox.showinfo("Database Manager", "The database functions are not available.")
 
     def _show_database_docs(self):
-        """Fallback-Implementierung für die Dokumentation."""
+        """Fallback implementation for documentation."""
         messagebox.showinfo("Dokumentation", "Die Datenbank-Dokumentation ist nicht verfügbar.")
 
     # Add the fallback methods to the class
@@ -4566,7 +4357,7 @@ except Exception as e:
 
 # Add the missing method _open_log_file directly to the GUI class
 def _open_log_file(self):
-    """Öffnet die aktuelle Log-Datei."""
+    """Opens the current log file."""
     try:
         # Go up to the logs from the Ui Directory a Directory for the Logs
         ui_dir = os.path.dirname(os.path.abspath(__file__))

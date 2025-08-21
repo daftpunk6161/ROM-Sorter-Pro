@@ -30,10 +30,12 @@ except ImportError as e:
 OLD_GUI_AVAILABLE = False
 try:
     from .gui import OptimizedROMSorterGUI, launch_gui as old_launch_gui
+    from .gui_dnd import DND_AVAILABLE
     OLD_GUI_AVAILABLE = True
     logger.info("Alte GUI verfügbar")
 except ImportError as e:
     logger.warning(f"Alte GUI nicht verfügbar: {e}")
+    DND_AVAILABLE = False  # Fallback, falls der Import fehlschlägt
 
 # Aliases for downward compatibility
 if UI_MODULES_AVAILABLE:

@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 # -*-coding: utf-8-*-
 """
-ROM Sorter Pro - Konsolidierte Ausnahmeklassen
+ROM Sorter Pro - Consolidated Exception Classes
 
-Dieses Modul enthält alle Ausnahmeklassen, die im Projekt verwendet werden,
-zentral an einem Ort zusammengefasst, um Duplizierungen zu vermeiden und
-die Konsistenz zu verbessern.
+This module contains all exception classes used in the project,
+centralized in one place to avoid duplication and improve consistency.
 """
 
 from datetime import datetime
@@ -13,7 +12,7 @@ from typing import Dict, Any, Optional
 
 
 class BaseError(Exception):
-    """Basisklasse für alle projektspezifischen Fehler."""
+    """Base class for all project-specific errors."""
 
     def __init__(self, message: str, error_code: Optional[str] = None,
                  details: Optional[Dict[str, Any]] = None):
@@ -23,7 +22,7 @@ class BaseError(Exception):
         self.timestamp = datetime.now()
 
     def to_dict(self) -> Dict[str, Any]:
-        """Konvertiert die Ausnahme in ein Dictionary für strukturiertes Logging."""
+        """Converts the exception to a dictionary for structured logging."""
         return {
             'error_code': self.error_code,
             'message': str(self),
@@ -37,7 +36,7 @@ class BaseError(Exception):
 # =====================================================================================================
 
 class SecurityError(BaseError):
-    """Basisklasse für sicherheitsbezogene Fehler."""
+    """Base class for security-related errors."""
 
     def __init__(self, message: str, error_code: Optional[str] = None,
                  details: Optional[Dict[str, Any]] = None):
@@ -45,7 +44,7 @@ class SecurityError(BaseError):
 
 
 class PathTraversalError(SecurityError):
-    """Wird ausgelöst, wenn ein Path-Traversal-Angriff erkannt wird."""
+    """Raised when a path traversal attack is detected."""
 
     def __init__(self, message: str, path: Optional[str] = None,
                  details: Optional[Dict[str, Any]] = None):
@@ -56,7 +55,7 @@ class PathTraversalError(SecurityError):
 
 
 class InvalidPathError(SecurityError):
-    """Wird ausgelöst, wenn die Pfadvalidierung fehlschlägt."""
+    """Raised when path validation fails."""
 
     def __init__(self, message: str, path: Optional[str] = None,
                  details: Optional[Dict[str, Any]] = None):
@@ -71,7 +70,7 @@ class InvalidPathError(SecurityError):
 # =====================================================================================================
 
 class ConfigurationError(BaseError):
-    """Basisklasse für Konfigurationsfehler."""
+    """Base class for configuration errors."""
 
     def __init__(self, message: str, error_code: Optional[str] = None,
                  file_path: Optional[str] = None,
@@ -83,7 +82,7 @@ class ConfigurationError(BaseError):
 
 
 class ValidationError(ConfigurationError):
-    """Wird ausgelöst, wenn die Konfigurationsvalidierung fehlschlägt."""
+    """Raised when configuration validation fails."""
 
     def __init__(self, message: str, field_name: Optional[str] = None,
                  expected_type: Optional[str] = None,
@@ -101,7 +100,7 @@ class ValidationError(ConfigurationError):
 # =====================================================================================================
 
 class DataError(BaseError):
-    """Basisklasse für datenbezogene Fehler."""
+    """Base class for data-related errors."""
 
     def __init__(self, message: str, error_code: Optional[str] = None,
                  details: Optional[Dict[str, Any]] = None):
@@ -109,7 +108,7 @@ class DataError(BaseError):
 
 
 class DatabaseError(DataError):
-    """Wird ausgelöst bei Datenbankfehlern."""
+    """Raised when database errors occur."""
 
     def __init__(self, message: str, query: Optional[str] = None,
                  details: Optional[Dict[str, Any]] = None):
@@ -121,7 +120,7 @@ class DatabaseError(DataError):
 
 
 class FileOperationError(DataError):
-    """Wird ausgelöst bei Dateioperationsfehlern."""
+    """Raised when file operation errors occur."""
 
     def __init__(self, message: str, file_path: Optional[str] = None,
                  operation: Optional[str] = None,
@@ -139,7 +138,7 @@ class FileOperationError(DataError):
 # =====================================================================================================
 
 class ProcessingError(BaseError):
-    """Basisklasse für Fehler während der Verarbeitung von ROMs."""
+    """Base class for errors during ROM processing."""
 
     def __init__(self, message: str, error_code: Optional[str] = None,
                  rom_path: Optional[str] = None,
@@ -154,7 +153,7 @@ class ProcessingError(BaseError):
 
 
 class ConsoleDetectionError(ProcessingError):
-    """Wird ausgelöst, wenn die Konsolenerkennung fehlschlägt."""
+    """Raised when console detection fails."""
 
     def __init__(self, message: str, rom_path: Optional[str] = None,
                  details: Optional[Dict[str, Any]] = None):
@@ -162,7 +161,7 @@ class ConsoleDetectionError(ProcessingError):
 
 
 class DuplicateHandlingError(ProcessingError):
-    """Wird ausgelöst bei Fehlern während der Duplikatbehandlung."""
+    """Raised during errors in duplicate handling."""
 
     def __init__(self, message: str, rom_path: Optional[str] = None,
                  details: Optional[Dict[str, Any]] = None):

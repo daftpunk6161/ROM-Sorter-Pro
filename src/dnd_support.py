@@ -1,10 +1,10 @@
 """
-Native Drag & Drop Support für ROM Sorter
+Native Drag & Drop Support for ROM Sorter
 -----------------------------------------
 
-Dieses Modul implementiert eine betriebssystemübergreifende Drag & Drop-Unterstützung
-für Tkinter ohne externe Abhängigkeiten. Auf Windows wird die Win32-API über ctypes verwendet,
-während auf anderen Betriebssystemen alternative Mechanismen eingesetzt werden.
+This module implements a cross-platform Drag & Drop support for Tkinter
+without external dependencies. On Windows, it uses the Win32-API via ctypes,
+while on other operating systems, alternative mechanisms are employed.
 """
 
 import os
@@ -166,12 +166,12 @@ def _setup_tkinterdnd() -> bool:
 
 
 class DragDropMixin:
-    """Mixin-Klasse, die Drag & Drop-Funktionalität zu Tkinter-Widgets hinzufügt."""
+    """Mixin class that adds Drag & Drop functionality to Tkinter widgets."""
 
     def __init__(self, *args, **kwargs):
-# Make sura that this method is not called without a parent class
+# Make sure that this method is not called without a parent class
         if not hasattr(self, 'winfo_id'):
-            raise TypeError("DragDropMixin muss mit einer Tkinter-Widget-Klasse verwendet werden")
+            raise TypeError("DragDropMixin must be used with a Tkinter widget class")
 
 # Save drop callback
         self._drop_callback = None
@@ -506,16 +506,16 @@ def _extract_drop_file_paths(hdrop) -> List[str]:
         return [os.path.normpath(p) for p in paths]
 
     def set_drop_enter_callback(self, callback: Callable[[], None]):
-        """Setzt den Callback für DragEnter-Events."""
+        """Sets the callback for DragEnter events."""
         self._drop_enter_callback = callback
 
     def set_drop_leave_callback(self, callback: Callable[[], None]):
-        """Setzt den Callback für DragLeave-Events."""
+        """Sets the callback for DragLeave events."""
         self._drop_leave_callback = callback
 
 
 class DropFrame(tk.Frame, DragDropMixin):
-    """Ein Tkinter Frame mit Drag & Drop-Unterstützung."""
+    """A Tkinter Frame with Drag & Drop support."""
 
     def __init__(self, master=None, drop_callback=None, on_drop=None, **kwargs):
         tk.Frame.__init__(self, master, **kwargs)

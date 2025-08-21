@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ROM Sorter Pro - Qt Hauptfenster
-Phase 1 Implementation: Desktop-Optimierung
+ROM Sorter Pro v2.1.7 - Qt Main Window
+Phase 1 Implementation: Desktop Optimization
 
-Dieses Modul enthält die Implementierung des Hauptfensters mit Qt 6.5+
-für verbesserte Performance, modernes Design und plattformübergreifende Unterstützung.
+This module contains the implementation of the main window with Qt 6.5+
+for improved performance, modern design and cross-platform support.
 """
 
 from typing import Dict, List, Optional, Any, Callable, Union, Tuple

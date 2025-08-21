@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 # -*-coding: utf-8-*-
 """
-ROM Sorter Pro - Hauptpaket
+ROM Sorter Pro - Main Package
 ===========================
 
-Dieses Paket enthält die Module und Komponenten für den ROM Sorter Pro.
+This package contains the modules and components for ROM Sorter Pro.
 """
 
-__version__ = "3.0.0"
+__version__ = "2.1.7"
 __author__ = "ROM Sorter Team"

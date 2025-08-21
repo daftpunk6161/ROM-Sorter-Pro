@@ -296,7 +296,7 @@ class AdaptiveThreadPool:
                 logger.debug(traceback.format_exc())
 
     def _check_worker_count(self):
-        """Überprüft, ob die Anzahl der Worker angepasst werden muss."""
+        """Checks if the number of workers needs to be adjusted."""
         now = time.time()
 
         # Do not adapt too often
@@ -394,8 +394,8 @@ class AdaptiveThreadPool:
 
 class BatchProcessor:
     """
-    Verarbeitet Batches von Aufgaben mit einem AdaptiveThreadPool
-    und bietet verbesserte Funktionen für Batch-Verarbeitung.
+    Processes batches of tasks with an AdaptiveThreadPool
+    and provides enhanced functions for batch processing.
     """
 
     def __init__(self, min_workers: int = 2, max_workers: int = None):
@@ -444,10 +444,10 @@ class BatchProcessor:
 
     def create_batch(self, name: str = None) -> str:
         """
-        Erstellt einen neuen Batch und gibt dessen ID zurück.
+        Creates a new batch and returns its ID.
 
         Args:
-            name: Optionaler Name für den Batch
+            name: Optional name for the batch
 
         Returns:
             Die Batch-ID

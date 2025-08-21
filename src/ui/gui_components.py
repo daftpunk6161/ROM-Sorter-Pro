@@ -7,7 +7,11 @@ This module contains reusable UI components for the ROM Sorter Pro GUI.
 
 import logging
 import tkinter as tk
-from tkinter import ttk, Frame, Label, Button
+import threading
+import time
+from tkinter import ttk, Frame, Label, Button, scrolledtext
+from collections import deque
+from typing import Dict, List, Optional, Any, Callable
 
 logger = logging.getLogger(__name__)
 
@@ -103,4 +107,199 @@ def create_button_panel(parent):
     parent.components["start_button"] = start_btn
     parent.components["stop_button"] = stop_btn
 
-    return frame
+
+class MemoryEfficientProgressBar(ttk.Progressbar):
+    """Memory-efficient progress bar with throttled updates and adaptive behavior."""
+
+    # Class variable for shared optimization settings
+    _adaptive_settings = {
+        'min_update_threshold': 0.05,  # Minimum update threshold in seconds
+        'max_update_threshold': 0.5,   # Maximum update threshold in seconds
+        'current_batch_size': 5,       # Current batch size is adaptively adjusted
+        'frame_rate_history': deque(maxlen=10),  # History of refresh rates
+        'last_performance_check': 0,   # Time of the last performance check
+        'ui_congestion_detected': False  # Flag for recognized UI overload
+    }
+
+    def __init__(self, parent, **kwargs):
+        super().__init__(parent, **kwargs)
+        self._last_update = 0
+        self._last_value = 0
+        self._update_threshold = 0.1  # seconds
+        self._animation_active = False
+        self._update_queue = []
+        self._lock = threading.Lock()
+
+    def smart_update(self, value):
+        """Update progress bar with throttling for efficiency.
+
+        Args:
+            value: New progress value (0-100)
+        """
+        with self._lock:
+            current_time = time.time()
+            time_since_last_update = current_time - self._last_update
+
+            # Check if we need to update
+            if time_since_last_update >= self._update_threshold or value >= 100 or value <= 0:
+                try:
+                    self["value"] = value
+                    self._last_value = value
+                    self._last_update = current_time
+                    self.update_idletasks()
+                except Exception:
+                    # Handle destroyed widgets
+                    pass
+
+    def start_indeterminate_animation(self):
+        """Start indeterminate progress animation."""
+        if not self._animation_active:
+            self._animation_active = True
+            self.configure(mode="indeterminate")
+            self.start(10)
+
+    def stop_animation(self):
+        """Stop any running animation."""
+        if self._animation_active:
+            self.stop()
+            self.configure(mode="determinate")
+            self._animation_active = False
+
+
+class EfficientLogWidget(tk.Frame):
+    """Efficient log widget with memory management."""
+
+    def __init__(self, parent, **kwargs):
+        super().__init__(parent, **kwargs)
+
+        # Create and configure the text widget
+        self.text = scrolledtext.ScrolledText(self, wrap=tk.WORD)
+        self.text.pack(fill=tk.BOTH, expand=True)
+        self.text.config(state=tk.DISABLED)
+
+        # Configure tags for different message types
+        self.text.tag_config("INFO", foreground="black")
+        self.text.tag_config("WARNING", foreground="orange")
+        self.text.tag_config("ERROR", foreground="red")
+        self.text.tag_config("SUCCESS", foreground="green")
+
+        # Log buffer for efficient batch updates
+        self.log_buffer = []
+        self.buffer_size = 10
+        self.max_lines = 1000
+        self.buffer_lock = threading.Lock()
+        self._scheduled_update = None
+
+    def log(self, message, level="INFO"):
+        """Add a message to the log.
+
+        Args:
+            message: The message to log
+            level: Log level (INFO, WARNING, ERROR, SUCCESS)
+        """
+        with self.buffer_lock:
+            timestamp = time.strftime("%H:%M:%S", time.localtime())
+            entry = f"[{timestamp}] {message}"
+            self.log_buffer.append((entry, level))
+
+            # If buffer is full or level is ERROR, update immediately
+            if len(self.log_buffer) >= self.buffer_size or level == "ERROR":
+                self._flush_buffer()
+            elif self._scheduled_update is None:
+                # Schedule update for later
+                self._scheduled_update = self.after(100, self._flush_buffer)
+
+    def _flush_buffer(self):
+        """Flush the log buffer and update the display."""
+        with self.buffer_lock:
+            if not self.log_buffer:
+                self._scheduled_update = None
+                return
+
+            self.text.config(state=tk.NORMAL)
+
+            for message, level in self.log_buffer:
+                self.text.insert(tk.END, f"{message}\n", level)
+
+            # Keep log size manageable
+            line_count = int(self.text.index(tk.END).split(".")[0]) - 1
+            if line_count > self.max_lines * 1.5:
+                self.text.delete("1.0", f"{int(self.max_lines * 0.5)}.0")
+
+            self.text.see(tk.END)
+            self.text.config(state=tk.DISABLED)
+
+            self.log_buffer = []
+            self._scheduled_update = None
+
+    def clear(self):
+        """Clear the log widget."""
+        with self.buffer_lock:
+            self.log_buffer = []
+            if self._scheduled_update:
+                self.after_cancel(self._scheduled_update)
+                self._scheduled_update = None
+
+            self.text.config(state=tk.NORMAL)
+            self.text.delete("1.0", tk.END)
+            self.text.config(state=tk.DISABLED)
+
+
+class OptimizedStatsWidget(tk.Frame):
+    """Efficient statistics display widget."""
+
+    def __init__(self, parent, **kwargs):
+        super().__init__(parent, **kwargs)
+
+        # Create and configure the treeview for stats
+        self.tree = ttk.Treeview(self, columns=("value",), show="headings")
+        self.tree.heading("value", text="Value")
+        self.tree.column("value", width=150)
+
+        # Add scrollbar
+        scrollbar = ttk.Scrollbar(self, orient=tk.VERTICAL, command=self.tree.yview)
+        self.tree.configure(yscrollcommand=scrollbar.set)
+
+        # Pack components
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        # Store current stats and update lock
+        self.current_stats = {}
+        self.update_lock = threading.Lock()
+        self._scheduled_update = None
+
+    def update_stats(self, stats_dict):
+        """Update displayed statistics.
+
+        Args:
+            stats_dict: Dictionary of statistics to display
+        """
+        with self.update_lock:
+            # Check if stats have changed
+            changed = False
+            for key, value in stats_dict.items():
+                if key not in self.current_stats or self.current_stats[key] != value:
+                    self.current_stats[key] = value
+                    changed = True
+
+            if changed:
+                # Cancel existing scheduled update
+                if self._scheduled_update:
+                    self.after_cancel(self._scheduled_update)
+
+                # Schedule a new update
+                self._scheduled_update = self.after(100, self._perform_update)
+
+    def _perform_update(self):
+        """Perform the actual update of the treeview."""
+        with self.update_lock:
+            # Clear current items
+            for item in self.tree.get_children():
+                self.tree.delete(item)
+
+            # Add new items
+            for key, value in sorted(self.current_stats.items()):
+                self.tree.insert("", tk.END, values=(key, value))
+
+            self._scheduled_update = None

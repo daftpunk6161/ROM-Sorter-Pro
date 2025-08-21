@@ -10,11 +10,13 @@ Unterstützung der neuen Features der Phase 1.
 
 import os
 import logging
+import sys
+import json
 from typing import Dict, Any, Optional, List, Union
 from pathlib import Path
 
-# Import the existing configuration
-from ..config import Config as BaseConfig, ConfigError, config_instance
+# Importiere die Basisklasse aus __init__
+from . import Config as BaseConfig, ConfigError
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -79,8 +81,13 @@ class EnhancedConfig(BaseConfig):
             config_path: Optionaler Pfad zur Konfigurationsdatei
             *args, **kwargs: Weitere Parameter für die Basisklasse
         """
-# Call initialization method of the basic class
-        super().__init__(config_path=config_path, *args, **kwargs)
+        # Initialisierung der Basisklasse
+        # super().__init__() wird vermieden, um zirkuläre Imports zu verhindern
+        self.config_path = config_path or os.path.join(os.path.dirname(__file__), '..', 'config.json')
+
+        # Initialisiere die Konfiguration mit Standardwerten
+        self._config = {}
+        self._load_config()
 
 # Make sure that the extensions are available in the configuration
         self._ensure_extensions()
@@ -306,6 +313,100 @@ class EnhancedConfig(BaseConfig):
 
         return errors
 
+    def _load_config(self) -> None:
+        """
+        Lädt die Konfiguration aus der Datei oder initialisiert sie mit Standardwerten.
+        """
+        try:
+            # Prüfen, ob die Datei existiert
+            if os.path.exists(self.config_path):
+                import json
+                with open(self.config_path, 'r', encoding='utf-8') as f:
+                    try:
+                        self._config = json.load(f)
+                        logger.info(f"Konfiguration aus {self.config_path} geladen")
+                    except json.JSONDecodeError as e:
+                        logger.error(f"Fehler beim Laden der Konfiguration: {e}")
+                        # Bei Fehler mit Standardwerten initialisieren
+                        self._config = {}
+            else:
+                logger.info(f"Konfigurationsdatei {self.config_path} nicht gefunden, verwende Standardwerte")
+                self._config = {}
+        except Exception as e:
+            logger.error(f"Unerwarteter Fehler beim Laden der Konfiguration: {e}")
+            self._config = {}
+
+    def save(self) -> bool:
+        """
+        Speichert die Konfiguration in der Datei.
+
+        Returns:
+            True, wenn erfolgreich, False bei Fehler
+        """
+        try:
+            # Stelle sicher, dass das Verzeichnis existiert
+            os.makedirs(os.path.dirname(self.config_path), exist_ok=True)
+
+            import json
+            with open(self.config_path, 'w', encoding='utf-8') as f:
+                json.dump(self._config, f, indent=4)
+
+            logger.info(f"Konfiguration in {self.config_path} gespeichert")
+            return True
+        except Exception as e:
+            logger.error(f"Fehler beim Speichern der Konfiguration: {e}")
+            return False
+
+    def get(self, key: str, default: Any = None) -> Any:
+        """
+        Gibt den Wert für einen Schlüssel zurück.
+
+        Args:
+            key: Schlüssel (kann Punktnotation für verschachtelte Schlüssel verwenden)
+            default: Standardwert, wenn der Schlüssel nicht gefunden wurde
+
+        Returns:
+            Wert oder default, wenn nicht gefunden
+        """
+        parts = key.split('.')
+        current = self._config
+
+        for part in parts:
+            if part not in current:
+                return default
+            current = current[part]
+
+        return current
+
+    def set(self, key: str, value: Any) -> bool:
+        """
+        Setzt den Wert für einen Schlüssel.
+
+        Args:
+            key: Schlüssel (kann Punktnotation für verschachtelte Schlüssel verwenden)
+            value: Zu setzender Wert
+
+        Returns:
+            True, wenn erfolgreich, False bei Fehler
+        """
+        try:
+            parts = key.split('.')
+            current = self._config
+
+            # Navigiere zur letzten Ebene
+            for i, part in enumerate(parts[:-1]):
+                if part not in current:
+                    current[part] = {}
+                current = current[part]
+
+            # Setze den Wert
+            current[parts[-1]] = value
+
+            return True
+        except Exception as e:
+            logger.error(f"Fehler beim Setzen der Konfiguration: {e}")
+            return False
+
 # Create a global instance of the extended configuration
 enhanced_config_instance = None
 
@@ -327,5 +428,8 @@ def get_enhanced_config(config_path: Optional[str] = None) -> EnhancedConfig:
 
     return enhanced_config_instance
 
-# Initialize the extended configuration when importing the module
-get_enhanced_config()
+# Initialisiere die erweiterte Konfiguration, aber erst bei Bedarf
+# get_enhanced_config() - wird erst aufgerufen, wenn benötigt
+
+# Erstelle eine initiale Instanz
+enhanced_config_instance = EnhancedConfig()

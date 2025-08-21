@@ -1,6 +1,6 @@
 @echo off
 REM ROM Sorter Pro - Startskript für Windows
-REM Version 2.1.5
+REM Version 2.1.7
 REM Copyright (c) 2025
 
 echo ROM Sorter Pro wird gestartet...

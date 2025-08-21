@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # -*-coding: utf-8-*-
 """
-ROM Sorter Pro - Test-Module für die ML-Detection
+ROM Sorter Pro v2.1.7 - Test Module for ML Detection
 
-Dieses Modul stellt eine einfache Schnittstelle zum Testen der ML-basierten
-ROM-Erkennung bereit.
+This module provides a simple interface for testing ML-based
+ROM detection.
 """
 
 import os
@@ -17,15 +17,15 @@ import os
 # Add the main directory to the path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.detectors.detection_handler import DetectionManager, DetectionResult
-from src.detectors.ml_detector import detect_console_with_ml
+from .detectors.detection_handler import DetectionManager, DetectionResult
+from .detectors.ml_detector import detect_console_with_ml
 
 # Aliases for downward compatibility
 DetectionHandler = DetectionManager
 
 def test_detection_pipeline(rom_path: str) -> Tuple[str, float]:
     """
-    Testet die Detection-Pipeline mit einem ROM-Pfad.
+    Tests the detection pipeline with a ROM path.
 
     Args:
         rom_path: Pfad zur ROM-Datei

@@ -1,42 +1,137 @@
 {
     "_metadata": {
-        "version": "2.1.1",
-        "description": "ROM Sorter Pro v2.1.1 - Optimized Configuration for Maximum Performance",
+        "version": "2.1.7",
+        "description": "ROM Sorter Pro v2.1.7 - Optimized Configuration for Maximum Performance",
         "last_updated": "2024-01-15",
         "encoding": "utf-8",
         "config_version": 2,
         "author": "ROM Sorter Pro Team",
         "compatibility": "2.1.x"
     },
-    
     "file_detection": {
         "rom_extensions": [
-            ".zip", ".7z", ".rar", ".tar.gz", ".tar.bz2", ".xz", ".lzma",
-            ".iso", ".bin", ".cue", ".img", ".mdf", ".nrg", ".chd", ".ccd", ".sub",
-            ".gb", ".gbc", ".gba", ".sgb", ".dmg",
-            ".nes", ".unf", ".unif", ".fds", ".nsf",
-            ".snes", ".smc", ".sfc", ".fig", ".swc", ".st",
-            ".n64", ".v64", ".z64", ".rom", ".u64", ".jst", ".mpk",
-            ".gcm", ".gcz", ".rvz", ".wia", ".ciso",
-            ".wbfs", ".wad", ".dol", ".elf", ".u8", ".app",
-            ".nds", ".3ds", ".cia", ".3dsx", ".cci", ".cxi",
-            ".xci", ".nsp", ".nsz", ".kip", ".nca", ".tik",
-            ".mgw", ".vb", ".vboy", ".int",
-            ".sms", ".gg", ".md", ".gen", ".smd", ".sgd",
-            ".32x", ".scd", ".mds",
-            ".cdi", ".gdi", ".lst", ".dat",
-            ".pbp", ".prx", ".cso", ".dax", ".jso",
-            ".xbe", ".xex", ".god", ".xbla", ".xcp",
-            ".mx1", ".mx2", ".dsk", ".cas", ".wav", ".tap",
-            ".a26", ".a52", ".a78", ".lnx",
-            ".d64", ".t64", ".prg", ".p00", ".g64", ".x64",
-            ".adf", ".adz", ".dms", ".fdi", ".ipf", ".hdf",
-            ".msa", ".dim", ".stx", ".pasti",
-            ".tzx", ".z80", ".sna"
+            ".zip",
+            ".7z",
+            ".rar",
+            ".tar.gz",
+            ".tar.bz2",
+            ".xz",
+            ".lzma",
+            ".iso",
+            ".bin",
+            ".cue",
+            ".img",
+            ".mdf",
+            ".nrg",
+            ".chd",
+            ".ccd",
+            ".sub",
+            ".gb",
+            ".gbc",
+            ".gba",
+            ".sgb",
+            ".dmg",
+            ".nes",
+            ".unf",
+            ".unif",
+            ".fds",
+            ".nsf",
+            ".snes",
+            ".smc",
+            ".sfc",
+            ".fig",
+            ".swc",
+            ".st",
+            ".n64",
+            ".v64",
+            ".z64",
+            ".rom",
+            ".u64",
+            ".jst",
+            ".mpk",
+            ".gcm",
+            ".gcz",
+            ".rvz",
+            ".wia",
+            ".ciso",
+            ".wbfs",
+            ".wad",
+            ".dol",
+            ".elf",
+            ".u8",
+            ".app",
+            ".nds",
+            ".3ds",
+            ".cia",
+            ".3dsx",
+            ".cci",
+            ".cxi",
+            ".xci",
+            ".nsp",
+            ".nsz",
+            ".kip",
+            ".nca",
+            ".tik",
+            ".mgw",
+            ".vb",
+            ".vboy",
+            ".int",
+            ".sms",
+            ".gg",
+            ".md",
+            ".gen",
+            ".smd",
+            ".sgd",
+            ".32x",
+            ".scd",
+            ".mds",
+            ".cdi",
+            ".gdi",
+            ".lst",
+            ".dat",
+            ".pbp",
+            ".prx",
+            ".cso",
+            ".dax",
+            ".jso",
+            ".xbe",
+            ".xex",
+            ".god",
+            ".xbla",
+            ".xcp",
+            ".mx1",
+            ".mx2",
+            ".dsk",
+            ".cas",
+            ".wav",
+            ".tap",
+            ".a26",
+            ".a52",
+            ".a78",
+            ".lnx",
+            ".d64",
+            ".t64",
+            ".prg",
+            ".p00",
+            ".g64",
+            ".x64",
+            ".adf",
+            ".adz",
+            ".dms",
+            ".fdi",
+            ".ipf",
+            ".hdf",
+            ".msa",
+            ".dim",
+            ".stx",
+            ".pasti",
+            ".tzx",
+            ".z80",
+            ".sna"
         ],
         "unwanted_patterns": [
             "\\b(japan|jp|jap)\\b",
-            "\\b(demo|beta|alpha|sample|preview)\\b", 
+            "\\b(demo|beta|alpha|sample|preview)\\b",
             "\\b(hack|hacked|pirate|cracked)\\b",
             "\\b(test|debug|unfinished)\\b",
             "\\b(prototype|proto|prerelease)\\b",
@@ -55,7 +150,6 @@
             ".rom": 6
         }
     },
-    
     "prioritization": {
         "region_priorities": {
             "World": 10,
@@ -155,7 +249,6 @@
             }
         }
     },
-    
     "performance": {
         "caching": {
             "enable_caching": true,
@@ -186,7 +279,6 @@
             "memory_pool_size": "256MB"
         }
     },
-    
     "features": {
         "sorting": {
             "console_sorting_enabled": true,
@@ -235,7 +327,6 @@
             "ml_model_path": "models/console_detection.pkl"
         }
     },
-    
     "operations": {
         "file_operations": {
             "move_files": true,
@@ -266,7 +357,6 @@
             "cleanup_on_exit": true
         }
     },
-    
     "interface": {
         "logging": {
             "level": "INFO",
@@ -311,10 +401,9 @@
             "websocket_enabled": true
         }
     },
-    
     "presets": {
         "speed_optimized": {
-            "description": "Maximale Geschwindigkeit für große ROM-Sammlungen",
+            "description": "Maximale Geschwindigkeit f\u00fcr gro\u00dfe ROM-Sammlungen",
             "performance": {
                 "processing": {
                     "parallel_workers": 8,
@@ -343,7 +432,7 @@
             }
         },
         "quality_focused": {
-            "description": "Maximale Qualität und Genauigkeit bei der ROM-Organisation",
+            "description": "Maximale Qualit\u00e4t und Genauigkeit bei der ROM-Organisation",
             "features": {
                 "duplicate_detection": {
                     "enabled": true,
@@ -376,7 +465,7 @@
             }
         },
         "retro_gaming": {
-            "description": "Optimiert für klassische Retro-Gaming-Sammlungen",
+            "description": "Optimiert f\u00fcr klassische Retro-Gaming-Sammlungen",
             "features": {
                 "sorting": {
                     "group_by_manufacturer": true,
@@ -406,7 +495,7 @@
             }
         },
         "archival": {
-            "description": "Vollständige Archivierung aller ROMs ohne Ausschlüsse",
+            "description": "Vollst\u00e4ndige Archivierung aller ROMs ohne Ausschl\u00fcsse",
             "features": {
                 "advanced_detection": {
                     "detect_homebrew": true,
@@ -440,7 +529,7 @@
             }
         },
         "conservative": {
-            "description": "Konservative Einstellungen für kritische ROM-Sammlungen",
+            "description": "Konservative Einstellungen f\u00fcr kritische ROM-Sammlungen",
             "operations": {
                 "file_operations": {
                     "copy_files": true,
@@ -466,5 +555,40 @@
                 }
             }
         }
+    },
+    "scanner": {
+        "use_high_performance": true,
+        "max_threads": 0,
+        "chunk_size": 4194304,
+        "follow_symlinks": false,
+        "use_cache": true,
+        "recursive": true,
+        "max_depth": -1
+    },
+    "ui": {
+        "theme": "system",
+        "language": "de_DE",
+        "remember_window_state": true,
+        "remember_last_directories": true,
+        "show_tooltips": true,
+        "animation_speed": 1.0,
+        "icon_size": "medium",
+        "enable_drag_drop": true,
+        "show_status_bar": true,
+        "show_toolbar": true
+    },
+    "database": {
+        "use_memory_cache": true,
+        "cache_size_mb": 100,
+        "auto_backup": true,
+        "backup_interval_days": 7,
+        "backup_max_count": 10,
+        "vacuum_on_exit": true
+    },
+    "cache": {
+        "enabled": true,
+        "max_size_mb": 500,
+        "clean_on_exit": false,
+        "expiry_days": 30
     }
 }

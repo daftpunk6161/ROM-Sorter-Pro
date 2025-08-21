@@ -18,7 +18,7 @@ class ROMSorterWindow(tk.Tk):
     def __init__(self):
         """Initialize the main window."""
         super().__init__()
-        self.title("ROM Sorter Pro 🎮 - Optimized v2.1.6")
+        self.title("ROM Sorter Pro 🎮 - Optimized v2.1.7")
         self.geometry("1000x700")
         self.minsize(800, 600)
 
@@ -145,7 +145,7 @@ class ROMSorterWindow(tk.Tk):
         # Version and info
         version_label = tk.Label(
             header_frame,
-            text="v2.1.4 Optimized",
+            text="v2.1.7 Optimized",
             font=STYLE.fonts.small,
             bg=STYLE.colors.accent_primary,
             fg="#ffffff"
@@ -275,11 +275,11 @@ class ROMSorterWindow(tk.Tk):
         )
 
     def _show_about(self):
-        """Zeige Informationen über die Anwendung."""
+        """Show information about the application."""
         messagebox.showinfo(
-            "Über ROM Sorter Pro",
-            "ROM Sorter Pro v2.1.4\n\n"
-            "Ein Werkzeug zum Sortieren und Organisieren von ROM-Dateien.\n\n"
+            "About ROM Sorter Pro",
+            "ROM Sorter Pro v2.1.7\n\n"
+            "A tool for sorting and organizing ROM files.\n\n"
             "© 2025 ROM Sorter Team"
         )
 

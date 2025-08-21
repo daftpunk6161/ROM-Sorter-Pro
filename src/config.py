@@ -2,27 +2,22 @@
 # -*- coding: utf-8 -*-
 
 """
-ROM Sorter Pro - Konsolidiertes Konfigurationsmodul v2.3.0
+ROM Sorter Pro - Consolidated Configuration Module v2.1.7
 
-KONSOLIDIERUNG v2.3.0:
-- HINZUGEFÜGT: Validierungsfunktionen für Listen und Dictionaries
-- VERBESSERT: Erweiterte Validierungsfunktionen für komplexere Datentypen
-- OPTIMIERT: Verbesserte Typprüfungen und Fehlerbehandlung
-
-KONSOLIDIERUNG v2.2.0:
-- VEREINIGT: config.py und config_utils.py in einer Datei
-- VERBESSERT: Zentrale Fehlerbehandlung mit exceptions.py
-- OPTIMIERT: Reduzierung von Codeduplication und Abhängigkeiten
-- VERSTÄRKT: Konsistente Validierungsmethoden
-
-SECURITY FIXES v2.1.3:
+CONSOLIDATION v2.1.7:
+- ADDED: Validation functions for lists and dictionaries
+- IMPROVED: Enhanced validation functions for complex data types
+- OPTIMIZED: Improved type checking and error handling
+- UPDATED: Version consistency across the application
+- UNIFIED: config.py and config_utils.py into a single file
+- IMPROVED: Central error handling with exceptions.py
+- OPTIMIZED: Reduction of code duplication and dependencies
+- STRENGTHENED: Consistent validation methods
 - FIXED: Input validation with proper type checking and bounds
 - ENHANCED: Property-based configuration validation
 - IMPROVED: Error handling with detailed validation messages
 - ADDED: Configuration schema validation with secure defaults
 - STRENGTHENED: Thread-safe configuration with proper bounds checking
-
-OPTIMIERTE FEATURES v2.1.1:
 - High-performance JSON processing with streaming
 - Advanced schema validation with caching
 - Intelligent configuration repair and migration
@@ -31,8 +26,8 @@ OPTIMIERTE FEATURES v2.1.1:
 - Comprehensive error handling and recovery
 
 Project:        ROM Sorter Pro
-File:           src/config.py (konsolidiert mit config_utils.py)
-Version:        2.2.0 - Konsolidierte Version
+File:           src/config.py (consolidated with config_utils.py)
+Version:        2.2.0 - Consolidated Version
 Author:         cemal / daftpunk6161
 Created:        2024
 Updated:        10.08.2025
@@ -65,7 +60,7 @@ import logging
 try:
     from exceptions import ConfigurationError, ValidationError
 except ImportError:
-    from src.exceptions import ConfigurationError, ValidationError
+    from .exceptions import ConfigurationError, ValidationError
 
 # Optional imports with graceful fallbacks
 try:
@@ -95,7 +90,7 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 # ============================================================================
-# KONFIGURATIONSVALIDIERUNG
+# CONFIGURATION VALIDATION
 # ============================================================================
 
 class EnhancedConfigValidator:
@@ -128,11 +123,26 @@ class EnhancedConfigValidator:
             # Additional validation
             validation_warnings = self._post_validate_json_structure(config_data)
 
+            # Add enhanced nested structure validation
+            structure_issues = self.validate_nested_structure(config_data)
+
+            # Extract warnings from structure issues
+            for issue in structure_issues:
+                if issue['severity'] == 'warning':
+                    validation_warnings.append(f"{issue['message']} at {issue['path']}")
+
             result_details = {
                 'file_size': len(content),
                 'object_count': self._count_json_objects(config_data),
-                'warnings': validation_warnings
+                'warnings': validation_warnings,
+                'detailed_issues': structure_issues
             }
+
+            # Check if there are any error-level issues
+            errors = [issue for issue in structure_issues if issue['severity'] == 'error']
+            if errors:
+                error_messages = [f"{issue['message']} at {issue['path']}" for issue in errors]
+                return False, f"Configuration structure errors: {'; '.join(error_messages)}", result_details
 
             return True, None, result_details
 
@@ -229,6 +239,69 @@ class EnhancedConfigValidator:
         else:
             return 0
 
+    def validate_nested_structure(self, data: Any, max_depth: int = 5,
+                              max_array_size: int = 1000, path: str = "") -> List[Dict[str, Any]]:
+        """
+        Advanced validation for nested structures with detailed error reporting.
+
+        Args:
+            data: The data structure to validate
+            max_depth: Maximum allowed nesting depth
+            max_array_size: Maximum allowed array size
+            path: Current JSON path (for error reporting)
+
+        Returns:
+            List of issues found (each as a dict with details)
+        """
+        issues = []
+        current_depth = len(path.split('.')) if path else 0
+
+        # Check depth limit
+        if current_depth > max_depth:
+            issues.append({
+                'type': 'excessive_nesting',
+                'path': path,
+                'message': f"Excessive nesting depth ({current_depth} levels)",
+                'severity': 'warning'
+            })
+
+        if isinstance(data, dict):
+            # Check for empty keys
+            for key, value in data.items():
+                if not key.strip():
+                    issues.append({
+                        'type': 'empty_key',
+                        'path': path,
+                        'message': "Empty keys in dictionary",
+                        'severity': 'error'
+                    })
+
+                # Check each value recursively
+                child_path = f"{path}.{key}" if path else key
+                child_issues = self.validate_nested_structure(
+                    value, max_depth, max_array_size, child_path)
+                issues.extend(child_issues)
+
+        elif isinstance(data, list):
+            # Check array size
+            if len(data) > max_array_size:
+                issues.append({
+                    'type': 'large_array',
+                    'path': path,
+                    'message': f"Very large array ({len(data)} elements)",
+                    'severity': 'warning',
+                    'size': len(data)
+                })
+
+            # Check each item recursively
+            for idx, item in enumerate(data):
+                child_path = f"{path}[{idx}]"
+                child_issues = self.validate_nested_structure(
+                    item, max_depth, max_array_size, child_path)
+                issues.extend(child_issues)
+
+        return issues
+
     def load_schema(self, schema_path: str) -> Optional[Dict[str, Any]]:
         """Load and cache JSON schema."""
         if not JSONSCHEMA_AVAILABLE:
@@ -271,10 +344,28 @@ class EnhancedConfigValidator:
             logger.error(f"Error loading schema: {e}")
             return None
 
-    def validate_config(self, config_data: Dict[str, Any], schema: Dict[str, Any]) -> Tuple[bool, Optional[str], Dict[str, Any]]:
-        """Enhanced configuration validation with comprehensive error reporting."""
+    def validate_config(self, config_data: Dict[str, Any], schema: Dict[str, Any],
+                        repair_mode: bool = False) -> Tuple[bool, Optional[str], Dict[str, Any]]:
+        """
+        Enhanced configuration validation with comprehensive error reporting and repair options.
+
+        Args:
+            config_data: The configuration to validate
+            schema: JSON schema to validate against
+            repair_mode: If True, attempts to repair common issues
+
+        Returns:
+            Tuple of (is_valid, error_message, details)
+        """
         if not JSONSCHEMA_AVAILABLE:
-            return True, "Validation skipped - jsonschema not available", {}
+            # First perform our custom validation even without jsonschema
+            structure_issues = self.validate_nested_structure(config_data)
+            errors = [issue for issue in structure_issues if issue['severity'] == 'error']
+            if errors:
+                error_messages = [f"{issue['message']} at {issue['path']}" for issue in errors]
+                return False, f"Configuration structure errors: {'; '.join(error_messages)}", {'issues': structure_issues}
+
+            return True, "Schema validation skipped - jsonschema not available", {'structure_validation': 'passed'}
 
         try:
             # Create cache key for validator
@@ -292,40 +383,198 @@ class EnhancedConfigValidator:
 
                 validator = self._validator_cache[schema_hash]
 
-            # Perform validation
-            errors = list(validator.iter_errors(config_data))
+            # First perform our custom validation
+            structure_issues = self.validate_nested_structure(config_data)
+            structure_errors = [issue for issue in structure_issues if issue['severity'] == 'error']
 
-            if not errors:
-                return True, None, {'validation_time': time.time()}
+            # Then perform schema validation
+            schema_errors = list(validator.iter_errors(config_data))
+
+            all_errors = structure_errors + schema_errors
+
+            # If no errors, report success
+            if not all_errors:
+                return True, None, {
+                    'validation_time': time.time(),
+                    'structure_warnings': [issue for issue in structure_issues if issue['severity'] == 'warning']
+                }
+
+            # Attempt repair if requested
+            if repair_mode and self._can_auto_repair(all_errors):
+                repaired_config = self._attempt_repair(config_data, all_errors, schema)
+
+                # Validate the repaired config
+                repaired_structure_issues = self.validate_nested_structure(repaired_config)
+                repaired_structure_errors = [issue for issue in repaired_structure_issues if issue['severity'] == 'error']
+                repaired_schema_errors = list(validator.iter_errors(repaired_config))
+
+                # If repaired successfully, return the fixed config
+                if not repaired_structure_errors and not repaired_schema_errors:
+                    return True, "Configuration was automatically repaired", {
+                        'validation_time': time.time(),
+                        'repaired': True,
+                        'repaired_config': repaired_config,
+                        'original_errors': len(all_errors)
+                    }
 
             # Process errors for better reporting
             error_details = {
-                'error_count': len(errors),
-                'errors': [],
+                'error_count': len(all_errors),
+                'structure_errors': structure_errors,
+                'schema_errors': [self._format_schema_error(err) for err in schema_errors],
                 'validation_time': time.time()
             }
 
-            for error in errors[:10]:  # Limit to first 10 errors
-                error_info = {
-                    'message': error.message,
-                    'path': list(error.absolute_path),
-                    'schema_path': list(error.schema_path),
-                    'validator': error.validator,
-                    'validator_value': error.validator_value
-                }
-                error_details['errors'].append(error_info)
+            # Format for the first few errors for the error message
+            formatted_errors = []
 
-            if len(errors) > 10:
-                error_details['additional_errors'] = len(errors) - 10
+            # Add structure errors first
+            for error in structure_errors[:5]:
+                formatted_errors.append(f"{error['message']} at {error['path']}")
 
-            primary_error = f"Schema validation failed: {errors[0].message}"
-            if len(errors) > 1:
-                primary_error += f" (and {len(errors) - 1} more errors)"
+            # Then add schema errors
+            for error in schema_errors[:5]:
+                formatted_error = self._format_schema_error(error)
+                formatted_errors.append(f"{formatted_error['message']} at {'.'.join(str(p) for p in formatted_error['path'])}")
+                error_details['errors'].append(formatted_error)
+
+            # Create the main error message
+            if formatted_errors:
+                primary_error = f"Validation failed: {formatted_errors[0]}"
+                if len(formatted_errors) > 1:
+                    primary_error += f" (and {len(formatted_errors) - 1} more errors)"
+            else:
+                primary_error = "Validation failed with unknown errors"
 
             return False, primary_error, error_details
 
         except Exception as e:
             return False, f"Validation error: {e}", {'error_type': type(e).__name__}
+
+    def _format_schema_error(self, error) -> Dict[str, Any]:
+        """Format a jsonschema ValidationError into a structured dictionary."""
+        return {
+            'message': error.message,
+            'path': list(error.absolute_path) if hasattr(error, 'absolute_path') else [],
+            'schema_path': list(error.schema_path) if hasattr(error, 'schema_path') else [],
+            'validator': error.validator if hasattr(error, 'validator') else 'unknown',
+            'validator_value': error.validator_value if hasattr(error, 'validator_value') else None,
+            'error_type': 'schema_error'
+        }
+
+    def _can_auto_repair(self, errors) -> bool:
+        """Determine if the configuration errors can be automatically repaired."""
+        # Check for common repairable issues
+        repairable_issues = ['type', 'required', 'minimum', 'maximum', 'enum']
+
+        # For schema errors
+        for error in errors:
+            if hasattr(error, 'validator') and error.validator in repairable_issues:
+                return True
+
+            # For structure errors
+            if isinstance(error, dict) and error.get('type') in ['empty_key', 'large_array']:
+                return True
+
+        return False
+
+    def _attempt_repair(self, config_data: Dict[str, Any], errors, schema: Dict[str, Any]) -> Dict[str, Any]:
+        """Attempt to repair configuration data based on errors and schema."""
+        # Create a deep copy to avoid modifying the original
+        repaired = json.loads(json.dumps(config_data))
+
+        # Process schema errors first
+        for error in [e for e in errors if not isinstance(e, dict)]:
+            # Handle missing required fields
+            if hasattr(error, 'validator') and error.validator == 'required':
+                # Get parent object and missing field
+                parent_path = list(error.absolute_path)[:-1] if hasattr(error, 'absolute_path') else []
+                missing_property = error.validator_value if hasattr(error, 'validator_value') else None
+
+                if missing_property and parent_path:
+                    # Navigate to parent object
+                    parent = repaired
+                    for key in parent_path:
+                        if key in parent:
+                            parent = parent[key]
+                        else:
+                            break
+
+                    # Add default value based on schema
+                    if isinstance(parent, dict) and isinstance(missing_property, str):
+                        # Try to find the property schema
+                        prop_schema = self._find_property_schema(schema, parent_path, missing_property)
+                        if prop_schema:
+                            parent[missing_property] = self._get_default_value(prop_schema)
+
+        # Process structure errors
+        for error in [e for e in errors if isinstance(e, dict)]:
+            if error.get('type') == 'empty_key':
+                # For empty keys, we can't do much except remove them
+                path_parts = error.get('path', '').split('.')
+                if path_parts and path_parts[0]:
+                    parent = repaired
+                    for part in path_parts[:-1]:
+                        if part in parent:
+                            parent = parent[part]
+                        else:
+                            break
+
+                    # Remove empty keys
+                    if isinstance(parent, dict):
+                        keys_to_remove = [k for k in parent.keys() if not k.strip()]
+                        for key in keys_to_remove:
+                            del parent[key]
+
+        return repaired
+
+    def _find_property_schema(self, schema: Dict[str, Any], path: List[str], property_name: str) -> Optional[Dict[str, Any]]:
+        """Find the schema for a specific property within a nested schema."""
+        # Start at the root schema
+        current_schema = schema
+
+        # Navigate through the path
+        for key in path:
+            if not isinstance(current_schema, dict):
+                return None
+
+            # Handle different schema structures
+            if 'properties' in current_schema and key in current_schema['properties']:
+                current_schema = current_schema['properties'][key]
+            elif 'items' in current_schema and isinstance(current_schema['items'], dict):
+                # For array items
+                current_schema = current_schema['items']
+            else:
+                return None
+
+        # Now at the parent level, look for the property
+        if 'properties' in current_schema and property_name in current_schema['properties']:
+            return current_schema['properties'][property_name]
+
+        return None
+
+    def _get_default_value(self, schema: Dict[str, Any]) -> Any:
+        """Get a default value based on a schema definition."""
+        # Use explicit default if provided
+        if 'default' in schema:
+            return schema['default']
+
+        # Otherwise, create a sensible default based on type
+        if 'type' in schema:
+            if schema['type'] == 'string':
+                return ""
+            elif schema['type'] == 'number' or schema['type'] == 'integer':
+                # Use minimum if specified, otherwise 0
+                return schema.get('minimum', 0)
+            elif schema['type'] == 'boolean':
+                return False
+            elif schema['type'] == 'array':
+                return []
+            elif schema['type'] == 'object':
+                return {}
+
+        # Last resort, return null
+        return None
 
     def get_cache_stats(self) -> Dict[str, Any]:
         """Get validation cache statistics."""
@@ -1626,6 +1875,7 @@ def main():
     validate_parser.add_argument('config_file', help='Path to configuration file')
     validate_parser.add_argument('--schema', help='Path to schema file')
     validate_parser.add_argument('--detailed', action='store_true', help='Show detailed validation report')
+    validate_parser.add_argument('--repair', action='store_true', help='Try to automatically repair common issues')
 
     # Repair command
     repair_parser = subparsers.add_parser('repair', help='Repair damaged configuration file')
@@ -1671,13 +1921,29 @@ def main():
                     with open(args.config_file, 'r', encoding='utf-8') as f:
                         config_data = json.load(f)
 
-                    is_valid, error_msg, details = validator.validate_config(config_data, schema)
+                    # Check if repair mode is enabled
+                    repair_mode = getattr(args, 'repair', False)
+
+                    is_valid, error_msg, details = validator.validate_config(config_data, schema, repair_mode=repair_mode)
 
                     if not is_valid:
                         print(f"? Schema Validation Error: {error_msg}")
                         if args.detailed and details:
                             print(f"Details: {json.dumps(details, indent=2)}")
                         sys.exit(1)
+                    elif repair_mode and details.get('repaired'):
+                        print(f"✓ Configuration repaired: {error_msg}")
+
+                        # If repaired, save the fixed configuration
+                        repaired_config = details.get('repaired_config')
+                        if repaired_config:
+                            backup_path = f"{args.config_file}.bak"
+                            print(f"- Creating backup at {backup_path}")
+                            shutil.copy2(args.config_file, backup_path)
+
+                            with open(args.config_file, 'w', encoding='utf-8') as f:
+                                json.dump(repaired_config, f, indent=2)
+                            print(f"✓ Repaired configuration saved to {args.config_file}")
 
                     print("? Schema validation passed")
                 else:
