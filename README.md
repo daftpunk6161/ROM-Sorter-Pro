@@ -22,7 +22,7 @@ rom-sorter-pro/
 │
 ├── 📦 src/                          # Hauptquellcode
 │   ├── cli/                         # Kommandozeilen-Interface
-│   ├── config/                      # Konfigurationsmanagement  
+│   ├── config/                      # Konfigurationsmanagement
 │   ├── core/                        # Kern-Funktionalität
 │   ├── database/                    # Datenbankintegration
 │   ├── detectors/                   # ROM-Erkennungsmodule
