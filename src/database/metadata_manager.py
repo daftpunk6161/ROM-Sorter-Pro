@@ -38,6 +38,7 @@ class APIKeyManager:
 
     _instance = None
     _lock = threading.RLock()
+    _initialized = False
 
     def __new__(cls):
         with cls._lock:
@@ -117,6 +118,7 @@ class MetadataCache:
 
     _instance = None
     _lock = threading.RLock()
+    _initialized = False
 
     def __new__(cls):
         with cls._lock:
@@ -557,6 +559,7 @@ class MetadataManager:
 
     _instance = None
     _lock = threading.RLock()
+    _initialized = False
 
     def __new__(cls):
         with cls._lock:

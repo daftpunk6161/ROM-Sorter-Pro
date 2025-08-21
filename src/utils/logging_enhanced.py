@@ -16,6 +16,7 @@ from typing import Dict, List, Any, Optional, Union, Set, Tuple
 from pathlib import Path
 from datetime import datetime
 from collections import defaultdict, Counter
+from functools import wraps
 
 
 # Benutzerdefinierte Log-Ebenen

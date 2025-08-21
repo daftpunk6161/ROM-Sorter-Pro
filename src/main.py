@@ -45,7 +45,7 @@ from .database.console_db import (
     get_all_rom_extensions
 )
 
-from .utils.performance_enhanced import (
+from .utils.performance import (
     PerformanceMonitor as performance_monitor
 )
 
@@ -992,7 +992,12 @@ class RefactoredROMSorterPro:
         logging.info(f"Destination: {dest_dir}")
 
         self.stats = ProcessingStatistics()
-        self.performance_monitor.start_monitoring()
+        # Create performance monitor instance
+        from .utils.performance import PerformanceMonitor
+        if not hasattr(self, 'performance_monitor') or self.performance_monitor is None:
+            self.performance_monitor = PerformanceMonitor()
+        # Call instance method explicitly
+        PerformanceMonitor.start_monitoring(self.performance_monitor)
 
         try:
 # Enhanced Validation Using File Operations Manager
@@ -1438,7 +1443,9 @@ class RefactoredROMSorterPro:
 
             # Stop performance monitoring
             try:
-                self.performance_monitor.stop_monitoring()
+                if hasattr(self, 'performance_monitor') and self.performance_monitor is not None:
+                    from .utils.performance import PerformanceMonitor
+                    PerformanceMonitor.stop_monitoring(self.performance_monitor)
             except:
                 pass
 

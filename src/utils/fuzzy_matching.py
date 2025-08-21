@@ -136,9 +136,15 @@ class ProcessMatch:
                score_cutoff: int = 0) -> List[Tuple[T, int]]:
         """Extract the best matches from a list of options. ARGS: Query: The Search String Choices: List of Elements to Be Searched Limit: Maximum Number of Results Processor: Function to Convert the Elements Into Strings Scorer: Similarity Function Score_Cutoff: Minimal Similarity Value Return: List of (element, Similarity Value) Tuber"""
         if _USE_EXTERNAL_FUZZ:
-            return process.extract(query, choices, limit=limit,
-                                  processor=processor, scorer=scorer,
-                                  score_cutoff=score_cutoff)
+            # Always use the compatible API version without score_cutoff
+            results = process.extract(query, choices, limit=None,
+                                     processor=processor, scorer=scorer)
+            # Filter results manually and limit
+            results = [(choice, score) for choice, score in results if score >= score_cutoff]
+            results.sort(key=lambda x: x[1], reverse=True)
+
+            # Return only the requested number of results
+            return results[:limit] if limit else results
 
         # Eigene Implementierung
         results = []

@@ -1,4 +1,4 @@
-"""ROM hash utilities this modules Contains Functions for Calculating Hash Values ​​for Rome Files, that Are Used for Database Integration and Rome Identification."""
+"""ROM hash utilities - This module contains functions for calculating hash values for ROM files, that are used for database integration and ROM identification."""
 
 import os
 import hashlib

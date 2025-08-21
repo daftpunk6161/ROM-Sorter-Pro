@@ -239,17 +239,22 @@ class AdvancedArchiveDetector:
                         'compressed_size': 0,
                         'date_time': None
                     }
-                elif line.startswith("Size = ") and current_file:
+                elif line.startswith("Size = ") and current_file and isinstance(current_file, dict):
                     try:
-                        current_file['size'] = int(line[7:])
+                        size_value = int(line[7:])
+                        current_file = dict(current_file)  # Ensure it's a mutable dict
+                        current_file['size'] = size_value
                     except ValueError:
                         pass
-                elif line.startswith("Packed Size = ") and current_file:
+                elif line.startswith("Packed Size = ") and current_file and isinstance(current_file, dict):
                     try:
-                        current_file['compressed_size'] = int(line[14:])
+                        compressed_size = int(line[14:])
+                        current_file = dict(current_file)  # Ensure it's a mutable dict
+                        current_file['compressed_size'] = compressed_size
                     except ValueError:
                         pass
-                elif line.startswith("Modified = ") and current_file:
+                elif line.startswith("Modified = ") and current_file and isinstance(current_file, dict):
+                    current_file = dict(current_file)  # Ensure it's a mutable dict
                     current_file['date_time'] = line[11:]
 
 # Add last entry

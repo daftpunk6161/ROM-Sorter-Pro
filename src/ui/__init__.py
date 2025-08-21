@@ -69,6 +69,46 @@ def _initialize_dnd():
 # Initialize DND support
 _initialize_dnd()
 
+# UI status and mode functions
+def is_ui_available():
+    """Check if UI is available.
+
+    Returns:
+        bool: True if UI is available, False otherwise
+    """
+    try:
+        import tkinter
+        return True
+    except ImportError:
+        return False
+
+def get_ui_mode():
+    """Get the UI mode.
+
+    Returns:
+        str: UI mode (tkinter, qt, cli)
+    """
+    if not is_ui_available():
+        return "cli"
+
+    # Check for Qt
+    try:
+        # Try to import either PyQt5 or PyQt6
+        try:
+            import PyQt5
+            return "qt"
+        except ImportError:
+            try:
+                import PyQt6
+                return "qt"
+            except ImportError:
+                pass
+    except Exception:
+        pass
+
+    # Default to Tkinter
+    return "tkinter"
+
 # Exposing the main function for starting the application
 __all__ = [
     'STYLE', 'BaseApp', 'center_window', 'create_tooltip',

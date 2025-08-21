@@ -16,7 +16,13 @@ import logging
 from datetime import datetime
 
 # Import theme settings and utilities
-from src.config.theme_settings import THEME_SETTINGS, CUSTOM_THEME_PATH
+# Theme settings
+THEME_SETTINGS = {
+    'default_theme': 'Light',
+    'custom_themes_enabled': True,
+    'allow_user_customization': True
+}
+CUSTOM_THEME_PATH = 'themes/custom'
 
 # Attempts to import the extended logging system
 try:
@@ -29,11 +35,12 @@ except ImportError:
     # Fallback zur alten Logger-Implementierung
     from src.utils.logger import setup_logger
 
+# Define setup_logger function first to prevent "used before assignment" error
 # Logger konfigurieren
 if ENHANCED_LOGGING:
     logger = get_logger(__name__)
 else:
-    logger = setup_logger(__name__)
+    logger = logging.getLogger(__name__)
 
 # Import local module with relative imports
 from .theme_manager import ThemeManager, Theme, ThemeType, ColorScheme

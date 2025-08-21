@@ -222,8 +222,31 @@ class MLEnhancedConsoleDetector(BaseDetector):
             ]
         }
 
+    def detect(self, file_path: Path) -> Optional[Dict[str, Any]]:
+        """Recognize the console type for a file.
+
+        Args:
+            file_path: Path to the file to be examined
+
+        Returns:
+            Dict with console information or None if no detection is possible
+        """
+        try:
+            console, confidence, metadata = self.predict_console(str(file_path))
+            result = {
+                "console": console,
+                "confidence": confidence,
+                "metadata": metadata
+            }
+            self.last_result = result
+            self.last_confidence = confidence
+            return result
+        except Exception as e:
+            logger.error(f"Detection error: {e}")
+            return None
+
     def predict_console(self, file_path: str) -> Tuple[str, float, Dict[str, Any]]:
-        """Carries out the rule -based console detection. Args: File_Path: path to the Rome file Return: Tuble consisting of (console name, confidence, metadata)"""
+        """Carries out the rule-based console detection. Args: file_path: path to the ROM file Return: Tuple consisting of (console name, confidence, metadata)"""
         file_path_obj = validate_path(file_path)
 
 # Check the cache

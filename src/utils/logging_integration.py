@@ -8,6 +8,7 @@ import logging
 import logging.handlers
 import time
 import threading
+import traceback
 from pathlib import Path
 from typing import Dict, Any, Optional, Callable, Union
 from datetime import datetime
@@ -67,6 +68,7 @@ def initialize_logging(log_dir: Optional[str] = None,
                        level: int = DEFAULT_LOG_LEVEL,
                        use_colors: bool = True,
                        use_json: bool = False,
+                       app_name: Optional[str] = None,
                        subsystem_levels: Optional[Dict[str, int]] = None) -> bool:
     """Initialized the integrated logging system. Args: Log_dir: List for log files (standard: 'logs') Level: General Log level (Standard: Info) use_colors: Activate colored console output use_json: Activate JSON logging for file output Subsystem_Levels: specific log levels for subsystems Return: True with successful initialization, otherwise false"""
     global _initialized, _log_dir, _subsystem_levels

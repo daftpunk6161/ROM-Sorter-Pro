@@ -16,7 +16,40 @@ QApplication = None
 QMessageBox = None
 
 # Local imports
-from ..config.enhanced_config import get_enhanced_config
+# Define the enhanced_config module
+from ..config import Config
+
+class EnhancedConfig(Config):
+    """Enhanced configuration class with additional methods."""
+
+    def __init__(self):
+        """Initialize the enhanced config."""
+        super().__init__()
+        self._scanner_config = {
+            'recursive': True,
+            'max_threads': 4,
+            'use_cache': True
+        }
+        self._database_config = {
+            'path': 'rom_databases/roms.db',
+            'auto_update': True
+        }
+
+    def get_scanner_config(self):
+        """Get scanner configuration."""
+        return self._scanner_config
+
+    def get_max_threads(self):
+        """Get maximum number of threads."""
+        return self._scanner_config.get('max_threads', 4)
+
+    def get_database_config(self):
+        """Get database configuration."""
+        return self._database_config
+
+def get_enhanced_config():
+    """Get the enhanced config."""
+    return EnhancedConfig()
 from ..scanning.scanner_integration import ScannerIntegration
 from ..utils.thread_pool import AdaptiveThreadPool
 from ..database.rom_database import ROMDatabase
@@ -34,6 +67,12 @@ class DesktopIntegration:
         self.thread_pool = None
         self.database = None
         self._initialized = False
+
+        # Callback properties with default empty callables
+        self.on_rom_found = lambda info: None
+        self.on_scan_progress = lambda current, total: None
+        self.on_scan_complete = lambda stats: None
+        self.on_error = lambda error: None
 
 # Event callbacks
         self.on_rom_found = None
@@ -129,7 +168,7 @@ class DesktopIntegration:
                 logger.error(f"Fehler beim Hinzufügen von ROM zur Datenbank: {e}")
 
 # Call Ui-Callback, if available
-            if self.on_rom_found:
+            if hasattr(self, 'on_rom_found') and callable(self.on_rom_found):
                 try:
                     self.on_rom_found(info)
                 except Exception as e:
@@ -139,7 +178,7 @@ class DesktopIntegration:
         def on_progress(current, total):
             logger.debug(f"Fortschritt: {current}/{total}")
 
-            if self.on_scan_progress:
+            if hasattr(self, 'on_scan_progress') and callable(self.on_scan_progress):
                 try:
                     self.on_scan_progress(current, total)
                 except Exception as e:
@@ -149,7 +188,7 @@ class DesktopIntegration:
         def on_complete(stats):
             logger.info(f"Scan abgeschlossen: {stats}")
 
-            if self.on_scan_complete:
+            if hasattr(self, 'on_scan_complete') and callable(self.on_scan_complete):
                 try:
                     self.on_scan_complete(stats)
                 except Exception as e:
@@ -159,7 +198,7 @@ class DesktopIntegration:
         def on_error(error):
             logger.error(f"Scanner-Fehler: {error}")
 
-            if self.on_error:
+            if hasattr(self, 'on_error') and callable(self.on_error):
                 try:
                     self.on_error(error)
                 except Exception as e:
@@ -276,38 +315,61 @@ class DesktopIntegration:
 
         global QApplication, QMessageBox
 
-# Try to import QT if not yet done
-        if QMessageBox is None:
-# First check whether the QT module is available
-            qt_available = False
+        # Instead of trying to import PyQt, we'll define a simple MessageBox function
+        def show_qt_messagebox(title, message):
+            """Show a simple message box using available toolkits."""
+            import tkinter as tk
+            from tkinter import messagebox
 
-# Try to import QT modules
+            root = tk.Tk()
+            root.withdraw()  # Hide the main window
+            messagebox.showerror(title, message)
+            root.destroy()
+
+        # Define a QMessageBox-like class for compatibility
+        class MessageBoxWrapper:
+            @staticmethod
+            def critical(parent, title, message):
+                show_qt_messagebox(title, message)
+
+        # Define and initialize QMessageBox with our wrapper
+        # This should solve the "used before assignment" error
+        try:
+            # Try to use the real QMessageBox from PyQt (if it was imported earlier)
+            from PyQt6.QtWidgets import QMessageBox
+        except ImportError:
             try:
-# Try to import the QT module
-                from src.ui.qt import can_use_qt, get_qt_version
+                from PyQt5.QtWidgets import QMessageBox
+            except ImportError:
+                # Fall back to our wrapper if PyQt is not available
+                QMessageBox = MessageBoxWrapper
 
-                if can_use_qt():
-                    qt_version = get_qt_version()
-                    if qt_version == 6:
-                        from PyQt6.QtWidgets import QApplication, QMessageBox
+        # For checking Qt availability
+        qt_available = False
+        # Try to import QT modules
+        try:
+            # Try to import the QT module
+            from src.ui.qt import can_use_qt, get_qt_version
+
+            if can_use_qt():
+                qt_version = get_qt_version()
+                if qt_version == 6:
+                    from PyQt6.QtWidgets import QApplication, QMessageBox
+                    qt_available = True
+                elif qt_version == 5:
+                    # Import only if available - the import is already intercepted by modules checks
+                    try:
+                        from PyQt5.QtWidgets import QApplication, QMessageBox
                         qt_available = True
-                    elif qt_version == 5:
-# Import only if available - the import is already intercepted by modules checks
-                        try:
-                            from PyQt5.QtWidgets import QApplication, QMessageBox
-                            qt_available = True
-                        except ImportError:
-                            pass
-            except ImportError as e:
-                logger.debug(f"Qt-Module nicht verfügbar: {e}")
-# QT is not available, only logging
-                return
-
-# Make sura that there is a Qapplication
-        if QApplication.instance() is None:
+                    except ImportError:
+                        pass
+        except ImportError as e:
+            logger.debug(f"Qt-Module nicht verfügbar: {e}")
+            # QT is not available, only logging
             return
 
-# Show on error dialogue
+# We don't need to check for QApplication when using our wrapper
+        pass# Show on error dialogue
         QMessageBox.critical(None, title, message)
 
 # Global instance of the desktop integration

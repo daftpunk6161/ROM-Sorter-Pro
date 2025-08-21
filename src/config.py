@@ -18,6 +18,82 @@ import hashlib
 import re
 from typing import Dict, List, Any, Optional, Union, Tuple, Callable
 from dataclasses import dataclass, field, asdict
+
+from src.exceptions import ConfigurationError as ConfigError
+
+# Export necessary symbols for backwards compatibility
+__all__ = ['ConfigError', 'modules']
+
+# Module container to simulate submodules
+class ModuleContainer:
+    """Container for config submodules."""
+    pass
+
+# Create modules container
+modules = ModuleContainer()
+
+# Configuration class
+class Config:
+    """Main configuration class for ROM Sorter Pro."""
+    def __init__(self, config_data=None):
+        self._config_data = config_data or {}
+
+    def get(self, key, default=None):
+        """Get config value by key."""
+        return self._config_data.get(key, default)
+
+    def set(self, key, value):
+        """Set config value."""
+        self._config_data[key] = value
+
+    def save(self, config_path=None):
+        """Save configuration to file."""
+        if config_path:
+            save_config(self._config_data, config_path)
+        else:
+            save_config(self._config_data)
+
+# Configuration utility functions
+def load_config(config_path=None):
+    """Load configuration from file."""
+    if config_path is None:
+        config_path = get_config_path()
+
+    try:
+        with open(config_path, 'r', encoding='utf-8') as f:
+            config_data = json.load(f)
+        return Config(config_data)
+    except Exception as e:
+        logger.error(f"Failed to load configuration: {e}")
+        return Config({})
+
+def save_config(config_data, config_path=None):
+    """Save configuration to file."""
+    if config_path is None:
+        config_path = get_config_path()
+
+    try:
+        os.makedirs(os.path.dirname(config_path), exist_ok=True)
+        with open(config_path, 'w', encoding='utf-8') as f:
+            json.dump(config_data, f, indent=2)
+        return True
+    except Exception as e:
+        logger.error(f"Failed to save configuration: {e}")
+        return False
+
+def get_config_path():
+    """Get default configuration path."""
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(base_dir, 'config.json')
+
+# Add ROMSorterError to exceptions.py
+from src.exceptions import BaseError
+class ROMSorterError(BaseError):
+    """Base exception for all ROM Sorter errors."""
+
+    def __init__(self, message: str, error_code: Optional[str] = None,
+                details: Optional[Dict[str, Any]] = None):
+        super().__init__(message, error_code or "ROMSORTER_ERROR", details)
 from pathlib import Path
 from functools import lru_cache, wraps
 from datetime import datetime, timedelta

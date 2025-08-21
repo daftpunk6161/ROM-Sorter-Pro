@@ -147,6 +147,52 @@ class PerformanceMonitor:
         # Speichermetriken initialisieren
         self._update_memory_usage()
 
+        # Status für Monitoring
+        self._is_monitoring = False
+        self._monitoring_thread = None
+        self._stop_event = threading.Event()
+
+    def start_monitoring(self, interval=1.0):
+        """Start continuous performance monitoring in a background thread.
+
+        Args:
+            interval (float): Interval between measurements in seconds
+        """
+        if self._is_monitoring:
+            logger.warning("Performance monitoring already running")
+            return
+
+        self._is_monitoring = True
+        self._stop_event.clear()
+
+        def monitoring_task():
+            while not self._stop_event.is_set():
+                try:
+                    self._update_memory_usage()
+                    time.sleep(interval)
+                except Exception as e:
+                    logger.error(f"Error in performance monitoring: {e}")
+
+        self._monitoring_thread = threading.Thread(
+            target=monitoring_task,
+            name="PerformanceMonitor",
+            daemon=True
+        )
+        self._monitoring_thread.start()
+        logger.info(f"Performance monitoring started (interval: {interval}s)")
+
+    def stop_monitoring(self):
+        """Stop the continuous performance monitoring."""
+        if not self._is_monitoring:
+            logger.warning("Performance monitoring not running")
+            return
+
+        self._stop_event.set()
+        if self._monitoring_thread:
+            self._monitoring_thread.join(timeout=1.0)
+        self._is_monitoring = False
+        logger.info("Performance monitoring stopped")
+
     def record_operation_time(self, operation_name: str, duration: float) -> None:
         """Records the time of an operation. Args: Operation_Name: Name of the Operation Duration: Duration in seconds"""
         with self._lock:

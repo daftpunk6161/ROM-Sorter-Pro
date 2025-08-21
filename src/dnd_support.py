@@ -8,7 +8,13 @@ import logging
 import ctypes
 import weakref
 import time
-from typing import Callable, List, Optional, Union, Any, Set, Dict
+from typing import Dict, List, Set, Tuple, Callable, Any, Optional, Union, NewType
+from pathlib import Path
+
+# Type definitions for drag and drop
+FilePath = NewType('FilePath', str)
+FileList = List[FilePath]
+DropCallback = Callable[[FileList], None]
 from ctypes import POINTER, byref, c_char_p, c_uint, c_void_p, c_wchar_p, create_unicode_buffer
 from ctypes.wintypes import BOOL, DWORD, HWND, LPARAM, LPCWSTR, POINT, RECT
 
@@ -27,6 +33,31 @@ DND_MODE = "none"  # "native", "tkdnd", "none"
 # Global variables for drag & drop condition
 _active_drop_target = None
 _drop_callbacks = {}
+
+# DragDropManager class for centralized DND handling
+class DragDropManager:
+    """Central manager for drag and drop operations."""
+
+    def __init__(self):
+        """Initialize the drag and drop manager."""
+        self.handlers = {}
+
+    def register_drop_target(self, target_id, callback):
+        """Register a drop target with a callback."""
+        self.handlers[target_id] = callback
+
+    def register_drop_callback(self, target_id, callback):
+        """Register a drop callback (alias for register_drop_target)."""
+        self.register_drop_target(target_id, callback)
+
+    def unregister_drop_target(self, target_id):
+        """Unregister a drop target."""
+        if target_id in self.handlers:
+            del self.handlers[target_id]
+
+    def unregister_drop_callback(self, target_id):
+        """Unregister a drop callback (alias for unregister_drop_target)."""
+        self.unregister_drop_target(target_id)
 
 
 def enable_native_dnd() -> bool:
@@ -96,9 +127,12 @@ def _setup_windows_dnd() -> bool:
     if not WINDOWS:
         return False
 
+    # Define Windows constants
+    global WM_DROPFILES
+    WM_DROPFILES = 0x0233
+
     try:
-        if (WM_DROPFILES is not None and
-            _DragAcceptFiles is not None and
+        if (_DragAcceptFiles is not None and
             _DragFinish is not None and
             _DragQueryFileW is not None and
             _DragQueryPoint is not None):
@@ -455,6 +489,7 @@ def _extract_drop_file_paths(hdrop) -> List[str]:
 
 # Line breaks
         elif '\n' in data_str or '\r' in data_str:
+            import re  # Import at the top of function to ensure it's available
             for line in re.split(r'\r\n|\r|\n', data_str):
                 clean = line.strip('"\'{} ')
                 if clean and os.path.exists(clean):
@@ -520,5 +555,5 @@ def is_dnd_available():
 
 
 def get_dnd_mode():
-    """Gives back the current drag & drop mode. Return: Str: "Native", "Tkdnd" or "None""""
+    """Gives back the current drag & drop mode. Return: Str: "Native", "Tkdnd" or "None"."""
     return DND_MODE

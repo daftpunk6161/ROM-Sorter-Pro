@@ -316,17 +316,27 @@ def has_gpu_support() -> bool:
     # Check GPU support in Tensorflow
     if tf_available:
         try:
-            import tensorflow as tf
-            gpus = tf.config.list_physical_devices('GPU')
-            return len(gpus) > 0
+            # Try to import tensorflow, but handle ImportError for PyLint
+            try:
+                import tensorflow as tf
+                gpus = tf.config.list_physical_devices('GPU')
+                return len(gpus) > 0
+            except ImportError:
+                logger.debug("TensorFlow konnte nicht importiert werden")
+                return False
         except Exception as e:
             logger.debug(f"Fehler beim Prüfen der TensorFlow GPU-Unterstützung: {e}")
 
     # Check GPU support in Pytorch
     if torch_available:
         try:
-            import torch
-            return torch.cuda.is_available()
+            # Try to import torch, but handle ImportError for PyLint
+            try:
+                import torch
+                return torch.cuda.is_available()
+            except ImportError:
+                logger.debug("PyTorch konnte nicht importiert werden")
+                return False
         except Exception as e:
             logger.debug(f"Fehler beim Prüfen der PyTorch GPU-Unterstützung: {e}")
 

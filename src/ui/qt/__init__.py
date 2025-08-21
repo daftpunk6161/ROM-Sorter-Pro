@@ -51,6 +51,24 @@ def check_qt_dependencies():
 
 def can_use_qt():
     """Gives back whether QT can be used."""
+    # Force QT availability for PyLint
+    global qt_available, qt_version
+
+    # Try to import PyQt6
+    try:
+        import PyQt6.QtWidgets
+        qt_available = True
+        qt_version = 6
+    except ImportError:
+        # Try to import PyQt5
+        try:
+            import PyQt5.QtWidgets
+            qt_available = True
+            qt_version = 5
+        except ImportError:
+            qt_available = False
+            qt_version = 0
+
     return qt_available
 
 def get_qt_version():
@@ -64,10 +82,21 @@ def start_qt_app(args=None):
         return None
 
     # Import depending on the available QT version
+    QApplication = None
     if qt_version == 6:
-        from PyQt6.QtWidgets import QApplication
+        try:
+            # Some PyQt6 installations have different module structures
+            from PyQt6 import QtWidgets
+            QApplication = QtWidgets.QApplication
+        except (ImportError, AttributeError):
+            logging.error("QApplication konnte nicht aus PyQt6.QtWidgets importiert werden.")
     elif qt_version == 5:
-        from PyQt5.QtWidgets import QApplication
+        try:
+            # Handle PyQt5 import with error catching
+            from PyQt5 import QtWidgets
+            QApplication = QtWidgets.QApplication
+        except (ImportError, AttributeError):
+            logging.error("QApplication konnte nicht aus PyQt5.QtWidgets importiert werden.")
     else:
         logging.error("Keine unterstützte Qt-Version verfügbar.")
         return None
@@ -75,6 +104,11 @@ def start_qt_app(args=None):
     # Verwende sys.argv, wenn keine Argumente angegeben sind
     if args is None:
         args = sys.argv
+
+    # Check if QApplication was successfully imported
+    if QApplication is None:
+        logging.error("QApplication konnte nicht importiert werden. GUI kann nicht gestartet werden.")
+        return None
 
     app = QApplication(args)
     app.setApplicationName("ROM Sorter Pro")
@@ -110,4 +144,8 @@ def show_main_window():
     main_window.show()
 
     # Start the event loop
-    sys.exit(app.exec())
+    if qt_version == 6:
+        sys.exit(app.exec())
+    else:
+        # PyQt5 uses exec_() instead of exec()
+        sys.exit(app.exec_())

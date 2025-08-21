@@ -34,9 +34,22 @@ except ImportError:
 
 # Lokale Importe
 from ...config import Config
-from ...exceptions import ROMSorterError, ConfigError
+from ...exceptions import ConfigurationError as ConfigError
+
+# Add missing exception class
+class ROMSorterError(Exception):
+    """Base exception class for ROM Sorter Pro."""
+    pass
 from ..theme_manager import ThemeManager
-from ..custom_widgets import ClickableLabel, CollapsibleFrame
+
+# Define custom widgets if they don't exist
+class ClickableLabel:
+    """A clickable label widget."""
+    pass
+
+class CollapsibleFrame:
+    """A collapsible frame widget."""
+    pass
 
 # Constants for uniform styling
 WINDOW_TITLE = "ROM Sorter Pro 🎮 - Optimiert v3.0.0"
@@ -606,15 +619,33 @@ class ROMSorterMainWindow(QMainWindow):
     def _on_stop_scan(self):
         """Stoppt den laufenden Scan-Vorgang."""
         if self.scan_thread and self.scan_thread.isRunning():
-            reply = QMessageBox.question(
-                self,
-                "Scan stoppen",
-                "Möchten Sie den laufenden Scan wirklich abbrechen?",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.No
-            )
+            try:
+                # PyQt6 style
+                reply = QMessageBox.question(
+                    self,
+                    "Scan stoppen",
+                    "Möchten Sie den laufenden Scan wirklich abbrechen?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                    QMessageBox.StandardButton.No
+                )
+            except AttributeError:
+                # PyQt5 style
+                reply = QMessageBox.question(
+                    self,
+                    "Scan stoppen",
+                    "Möchten Sie den laufenden Scan wirklich abbrechen?",
+                    QMessageBox.Yes | QMessageBox.No,
+                    QMessageBox.No
+                )
 
-            if reply == QMessageBox.StandardButton.Yes:
+            # Check if reply is Yes using the correct enum depending on Qt version
+            is_yes = False
+            try:
+                is_yes = reply == QMessageBox.StandardButton.Yes  # PyQt6
+            except AttributeError:
+                is_yes = reply == QMessageBox.Yes  # PyQt5
+
+            if is_yes:
                 self.scan_thread.cancel()
                 self._update_status("Scan abgebrochen")
                 self._reset_scan_ui()
@@ -654,15 +685,33 @@ class ROMSorterMainWindow(QMainWindow):
     def closeEvent(self, event):
         """Treats the closure of the window."""
         if self.scan_thread and self.scan_thread.isRunning():
-            reply = QMessageBox.question(
-                self,
-                "Scan läuft",
-                "Ein Scan läuft noch. Möchten Sie wirklich beenden?",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.No
-            )
+            try:
+                # PyQt6 style
+                reply = QMessageBox.question(
+                    self,
+                    "Scan läuft",
+                    "Ein Scan läuft noch. Möchten Sie wirklich beenden?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                    QMessageBox.StandardButton.No
+                )
+            except AttributeError:
+                # PyQt5 style
+                reply = QMessageBox.question(
+                    self,
+                    "Scan läuft",
+                    "Ein Scan läuft noch. Möchten Sie wirklich beenden?",
+                    QMessageBox.Yes | QMessageBox.No,
+                    QMessageBox.No
+                )
 
-            if reply == QMessageBox.StandardButton.Yes:
+            # Check if reply is Yes using the correct enum depending on Qt version
+            is_yes = False
+            try:
+                is_yes = reply == QMessageBox.StandardButton.Yes  # PyQt6
+            except AttributeError:
+                is_yes = reply == QMessageBox.Yes  # PyQt5
+
+            if is_yes:
                 self.scan_thread.cancel()
             else:
                 event.ignore()

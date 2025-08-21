@@ -17,6 +17,10 @@ class ThemeColors:
         self.text_primary = "#333333"
         self.text_secondary = "#555555"
         self.text_accent = "#777777"
+        # Compatibility attributes for foreground colors
+        self.fg_primary = "#333333"
+        self.fg_secondary = "#555555"
+        self.fg_accent = "#777777"
 
 # Accent colors
         self.accent_primary = "#4a86e8"

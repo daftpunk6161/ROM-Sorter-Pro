@@ -9,8 +9,8 @@ import json
 from typing import Dict, Any, Optional, List, Union
 from pathlib import Path
 
-# Import the base class from __init__
-from . import Config as BaseConfig, ConfigError
+# Import the base class from config
+from src.config import Config as BaseConfig, ConfigError
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -220,7 +220,7 @@ class EnhancedConfig(BaseConfig):
                         logger.info(f"Konfiguration aus {self.config_path} geladen")
                     except json.JSONDecodeError as e:
                         logger.error(f"Fehler beim Laden der Konfiguration: {e}")
-                        # Initialize with Standard Values ​​for Errors
+                        # Initialize with Standard Values for Errors
                         self._config = {}
             else:
                 logger.info(f"Konfigurationsdatei {self.config_path} nicht gefunden, verwende Standardwerte")

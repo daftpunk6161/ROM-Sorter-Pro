@@ -38,6 +38,46 @@ logger = logging.getLogger(__name__)
 # Perform the charging message for debugging purposes
 logger.info("Utils-Modul mit Wrapper-Funktionen geladen")
 
+# Fallback console database for compatibility
+ENHANCED_CONSOLE_DATABASE = {
+    "nintendo_nes": {
+        "extensions": [".nes", ".unf", ".unif"],
+        "folder": "Nintendo NES",
+        "priority": 100,
+        "enabled": True
+    },
+    "nintendo_snes": {
+        "extensions": [".sfc", ".smc", ".fig"],
+        "folder": "Super Nintendo",
+        "priority": 100,
+        "enabled": True
+    },
+    "nintendo_n64": {
+        "extensions": [".n64", ".v64", ".z64"],
+        "folder": "Nintendo 64",
+        "priority": 100,
+        "enabled": True
+    },
+    "nintendo_gba": {
+        "extensions": [".gba", ".agb"],
+        "folder": "Game Boy Advance",
+        "priority": 100,
+        "enabled": True
+    },
+    "nintendo_gbc": {
+        "extensions": [".gbc", ".cgb"],
+        "folder": "Game Boy Color",
+        "priority": 100,
+        "enabled": True
+    },
+    "sega_genesis": {
+        "extensions": [".md", ".gen", ".smd", ".bin"],
+        "folder": "Sega Genesis",
+        "priority": 100,
+        "enabled": True
+    }
+}
+
 @lru_cache(maxsize=1000)
 def detect_console_by_extension_cached(filename: str) -> str:
     """Recognize the console based on the file extension with caching. This function is a wrapper that is the functionality of src.utils.detect_console_by_extension_cached Replicated and migration is relieved. Args: Filename: the file name or path Return: Recognized console or "unknown\""""

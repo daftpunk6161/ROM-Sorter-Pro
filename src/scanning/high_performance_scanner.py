@@ -66,11 +66,12 @@ class HighPerformanceScanner:
         logger.info(f"Scanner konfiguriert mit {self.max_workers} Threads")
 
 # Callbacks for event handler
-        self.on_file_found = None  # Callback: (path: str) -> None
-        self.on_rom_found = None   # Callback: (rom_info: Dict) -> None
-        self.on_progress = None    # Callback: (current: int, total: int) -> None
-        self.on_complete = None    # Callback: (stats: Dict) -> None
-        self.on_error = None       # Callback: (error: str) -> None
+        # Define default empty callback functions to ensure they're always callable
+        self.on_file_found = lambda path: None  # Callback: (path: str) -> None
+        self.on_rom_found = lambda rom_info: None   # Callback: (rom_info: Dict) -> None
+        self.on_progress = lambda current, total: None    # Callback: (current: int, total: int) -> None
+        self.on_complete = lambda stats: None    # Callback: (stats: Dict) -> None
+        self.on_error = lambda error: None       # Callback: (error: str) -> None
 
     def _reset_counters(self):
         """Reset all statistics meters."""
@@ -220,7 +221,7 @@ class HighPerformanceScanner:
 # Processes the result
                     try:
                         file_path = futures[future]
-                        rom_info = future.result()
+                        rom_info = future.result() or {}  # Ensure we have a valid dict, not None
 
 # If a valid rome was found
                         if rom_info:
@@ -247,7 +248,9 @@ class HighPerformanceScanner:
 
                     except Exception as e:
                         self.errors += 1
-                        logger.error(f"Fehler bei der Verarbeitung von {file_path}: {str(e)}")
+                        # Use the file from the future dictionary
+                        file_to_report = futures.get(future, "unknown file")
+                        logger.error(f"Fehler bei der Verarbeitung von {file_to_report}: {str(e)}")
 
 # Updates progress
                     self.files_processed += 1
@@ -340,9 +343,12 @@ class HighPerformanceScanner:
         try:
 # Perform cache lookup if activated
             if use_cache:
-                cached_info = self._get_from_cache(file_path)
-                if cached_info:
-                    return cached_info
+                # Initialize cache if needed
+                if not hasattr(self, '_cache'):
+                    self._cache = {}
+                # Return from cache if available
+                if file_path in self._cache:
+                    return self._cache.get(file_path)
 
 # Check whether it is an archive
             if any(file_path.lower().endswith(ext) for ext in ARCHIVE_EXTENSIONS):

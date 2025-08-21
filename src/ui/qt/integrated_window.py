@@ -354,7 +354,11 @@ def start_integrated_ui():
     app = QApplication(sys.argv)
     window = IntegratedMainWindow()
     window.show()
-    sys.exit(app.exec())
+    # Handle PyQt5 vs PyQt6 compatibility for exec
+    try:
+        sys.exit(app.exec())  # PyQt6
+    except AttributeError:
+        sys.exit(app.exec_())  # PyQt5
 
 if __name__ == "__main__":
     # Konfiguriere Logging

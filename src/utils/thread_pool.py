@@ -75,9 +75,9 @@ class AdaptiveThreadPool:
         self.total_tasks_failed = 0
 
         # Callbacks
-        self.on_task_start = None  # Callback: (task: Task) -> None
-        self.on_task_complete = None  # Callback: (task: Task) -> None
-        self.on_task_error = None  # Callback: (task: Task, error: Exception) -> None
+        self.on_task_start = lambda task: None  # Callback: (task: Task) -> None
+        self.on_task_complete = lambda task, result=None: None  # Callback: (task: Task, result) -> None
+        self.on_task_error = lambda task, error=None: None  # Callback: (task: Task, error: Exception) -> None
 
         # Status and synchronization
         self.running = False
@@ -366,9 +366,9 @@ class BatchProcessor:
         self.current_batch = None
 
         # Callbacks
-        self.on_batch_start = None
-        self.on_batch_complete = None
-        self.on_batch_progress = None
+        self.on_batch_start = lambda batch_id, batch: None
+        self.on_batch_complete = lambda batch_id, batch: None
+        self.on_batch_progress = lambda batch_id, batch, progress: None
 
         # Status and synchronization
         self._lock = threading.RLock()

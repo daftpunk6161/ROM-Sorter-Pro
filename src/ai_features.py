@@ -23,6 +23,12 @@ from functools import lru_cache
 from collections import defaultdict, deque
 import re
 
+# Standard library imports
+import os
+import re
+import logging
+from typing import Dict, List, Any, Optional, Union, Tuple
+
 # Enhanced optional imports with graceful fallbacks
 try:
     import requests
@@ -737,6 +743,19 @@ class SecureEnhancedAIConsoleDetector:
         self._cache_lock = threading.RLock()
         self._load_learning_data()
 
+    def _load_learning_data(self):
+        """Load learning data from the database with security checks."""
+        try:
+            with self._cache_lock:
+                patterns = self.database.get_ai_patterns() if hasattr(self.database, "get_ai_patterns") else {}
+                for pattern, console_weights in patterns.items():
+                    for console, weight in console_weights.items():
+                        self.pattern_weights[pattern][console] = float(weight)
+            logger.debug(f"Loaded {len(self.pattern_weights)} pattern sets from database")
+        except Exception as e:
+            logger.error(f"Error loading AI learning data: {e}")
+            self.pattern_weights = defaultdict(lambda: defaultdict(float))
+
     def learn_from_correction(self, filename: str, correct_console: str, confidence: float = 0.9):
         """Enhanced learning with security validation."""
         try:
@@ -755,14 +774,77 @@ class SecureEnhancedAIConsoleDetector:
 
             if not patterns:
                 return
+        except Exception as e:
+            logger.error(f"Error in learning correction: {e}")
+            return
 
+    def _extract_enhanced_patterns(self, filename):
+        """Extract enhanced patterns from a filename with security measures.
+
+        Args:
+            filename (str): The filename to extract patterns from
+
+        Returns:
+            list: List of extracted patterns
+        """
+        try:
+            # Security check
+            if not isinstance(filename, str) or len(filename) > 255:
+                logger.warning("Invalid filename for pattern extraction")
+                return []
+
+            # Clean the filename
+            clean_name = os.path.basename(filename).lower()
+            clean_name = re.sub(r'[^a-z0-9\s\-\.]', ' ', clean_name)
+
+            # Extract base name without extension
+            base_name = os.path.splitext(clean_name)[0]
+
+            # Split into tokens and generate n-grams (1-3 words)
+            tokens = re.split(r'\s+|-|_|\.', base_name)
+            tokens = [t for t in tokens if t and len(t) > 1]
+
+            patterns = []
+
+            # Single tokens
+            patterns.extend(tokens)
+
+            # Token pairs (bigrams)
+            for i in range(len(tokens) - 1):
+                patterns.append(f"{tokens[i]}_{tokens[i+1]}")
+
+            # Token triplets (trigrams)
+            for i in range(len(tokens) - 2):
+                patterns.append(f"{tokens[i]}_{tokens[i+1]}_{tokens[i+2]}")
+
+            # Add beginning and ending patterns
+            if tokens:
+                patterns.append(f"START_{tokens[0]}")
+                patterns.append(f"END_{tokens[-1]}")
+
+            return patterns
+
+        except Exception as e:
+            logger.error(f"Error extracting patterns: {e}")
+            return []
+
+    def _save_learning_data(self, patterns, safe_console, confidence):
+        """Save learning data to the database with security measures.
+
+        Args:
+            patterns (list): List of patterns to save
+            safe_console (str): The validated console name
+            confidence (float): The confidence level
+        """
+        try:
+            from datetime import datetime
             conn = self.database.connection_pool.get_connection()
             try:
                 cursor = conn.cursor()
                 current_time = datetime.now().isoformat()
 
                 for pattern in patterns:
-# Use Prepared Statement
+                # Use Prepared Statement
                     cursor.execute(self.database._prepared_statements['insert_improvement'],
                                  (pattern, safe_console, confidence, True, 'enhanced', pattern, safe_console, current_time))
 
@@ -770,7 +852,7 @@ class SecureEnhancedAIConsoleDetector:
                     self.pattern_weights[pattern][safe_console] = confidence
 
                 conn.commit()
-                logger.info(f"Learned from correction: {safe_filename} -> {safe_console}")
+                logger.info(f"Learned from correction: patterns -> {safe_console}")
 
             except Exception as e:
                 logger.error(f"Error saving learning correction: {e}")

@@ -591,7 +591,7 @@ def detect_console_from_file(file_path: str) -> Tuple[str, float]:
 
 
 def detect_console_from_path(file_path: str) -> Tuple[str, float]:
-    """Alias ​​for detect_console_from_file for api consistacy. ARGS: File_Path: Complete File Path to Rome File Return: Tube from (Console Name, Confidence Value)"""
+    """Alias for detect_console_from_file for API consistency. ARGS: file_path: Complete file path to ROM file Return: Tuple of (Console Name, Confidence Value)"""
     return detect_console_from_file(file_path)
 
 

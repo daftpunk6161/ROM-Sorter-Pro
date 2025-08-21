@@ -56,11 +56,12 @@ class OptimizedROMSorterGUICompat(ROMSorterWindow):
 OptimizedROMSorterGUI = OptimizedROMSorterGUICompat
 
 # Start the GUI with the new implementation
-def launch_gui():
-    """Start the GUI with the new implementation."""
-    app = ROMSorterWindow()
-    app.mainloop()
-    return 0
+try:
+    def launch_gui():
+        """Start the GUI with the new implementation."""
+        app = ROMSorterWindow()
+        app.mainloop()
+        return 0
 
 except ImportError as e:
     logger.error(f"Fehler beim Import der UI-Module: {e}")

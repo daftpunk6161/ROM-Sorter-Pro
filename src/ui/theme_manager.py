@@ -713,6 +713,22 @@ class ThemeManager:
         # Lade gespeicherte Themes
         self._load_saved_themes()
 
+    def set_active_theme(self, theme_name: str) -> bool:
+        """Set the active theme.
+
+        Args:
+            theme_name: Name of the theme to set
+
+        Returns:
+            True if successful, False otherwise
+        """
+        if theme_name in self.themes:
+            self.current_theme_name = theme_name
+            logger.info(f"Theme '{theme_name}' aktiviert")
+            return True
+        logger.error(f"Theme '{theme_name}' nicht gefunden")
+        return False
+
     def _initialize_default_themes(self) -> None:
         """Initialisiert Standardthemes."""
         # Helles Standardtheme

@@ -99,6 +99,19 @@ class ValidationError(ConfigurationError):
 # IO and data -related errors
 # =====================================================================================================
 
+class ScannerError(BaseError):
+    """Raised when a file scanning operation fails."""
+
+    def __init__(self, message: str, file_path: Optional[str] = None,
+                 scanner_name: Optional[str] = None,
+                 details: Optional[Dict[str, Any]] = None):
+        scanner_details = details or {}
+        if file_path:
+            scanner_details['file_path'] = file_path
+        if scanner_name:
+            scanner_details['scanner_name'] = scanner_name
+        super().__init__(message, "SCANNER_ERROR", scanner_details)
+
 class DataError(BaseError):
     """Base class for data-related errors."""
 

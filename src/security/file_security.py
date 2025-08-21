@@ -58,8 +58,8 @@ def validate_file_operation(source: Union[str, Path], destination: Union[str, Pa
     try:
         from .security_utils import sanitize_path
 
-        source_path = sanitize_path(source, allowed_base_dirs)
-        dest_path = sanitize_path(destination, allowed_base_dirs)
+        source_path = Path(sanitize_path(str(source)))
+        dest_path = Path(sanitize_path(str(destination)))
 
 # Additional exams
         if not source_path.exists():
