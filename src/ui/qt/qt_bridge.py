@@ -1,13 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-ROM Sorter Pro - Qt-Integration Bridge
-Phase 1 Implementation: Desktop-Optimierung und Integration
-
-Dieses Modul stellt eine Brücke zwischen der neuen Qt-Benutzeroberfläche und den
-optimierten Backend-Komponenten her. Es ermöglicht die nahtlose Integration der
-bestehenden Logik in die neue UI-Struktur und bietet saubere Adapter-Schnittstellen.
-"""
+"""Rome Sorter Pro - Qt Integration Bridge Phase 1 Implementation: Desktop Optimization and Integration This Module Places A Bridge between the New Qt User Interface and the Optimized Backend Components. It Enables the Seamless Integration of the Existing Logic In The New Ui Structure and Offers Clean Adapter Interfaces."""
 
 import os
 import sys
@@ -50,7 +43,7 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 class QtScannerSignals(QObject):
-    """Signale für die Kommunikation zwischen Scanner und Qt-UI."""
+    """Signals for communication between scanner and QT-UI."""
 
     file_found = pyqtSignal(str)  # Pfad zur gefundenen Datei
     rom_found = pyqtSignal(dict)  # ROM-Informationen als Dict
@@ -59,7 +52,7 @@ class QtScannerSignals(QObject):
     error_occurred = pyqtSignal(str)  # Fehlermeldung
 
 class QtDatabaseSignals(QObject):
-    """Signale für die Kommunikation zwischen Database und Qt-UI."""
+    """Signals for communication between Database and QT-UI."""
 
     query_completed = pyqtSignal(list)  # Ergebnis als Liste
     update_completed = pyqtSignal(bool, str)  # Erfolg, Nachricht
@@ -68,19 +61,11 @@ class QtDatabaseSignals(QObject):
     export_progress = pyqtSignal(int, int)  # Aktuell, Gesamt
 
 class ScannerWorker(QThread):
-    """Worker-Thread für Scanner-Operationen."""
+    """Worker thread for scanner operations."""
 
     def __init__(self, scanner_integration: ScannerIntegration, directory: str,
                  signals: QtScannerSignals, options: Dict = None):
-        """
-        Initialisiert den Scanner-Worker.
-
-        Args:
-            scanner_integration: Die Scanner-Integration-Instanz
-            directory: Das zu scannende Verzeichnis
-            signals: Die Qt-Signale für die UI-Kommunikation
-            options: Optionale Scanner-Konfiguration
-        """
+        """Initialized the scanner worker. Args: scanner_integration: the scanner integration instance Directory: The directory to be scanned Signals: The QT signals for UI communication Options: optional scanner configuration"""
         super().__init__()
         self.scanner = scanner_integration
         self.directory = directory
@@ -89,7 +74,7 @@ class ScannerWorker(QThread):
         self._setup_callbacks()
 
     def _setup_callbacks(self):
-        """Registriert die Callbacks für den Scanner."""
+        """Register the callbacks for the scanner."""
         self.scanner.register_callback('file_found',
                                      lambda path: self.signals.file_found.emit(path))
         self.scanner.register_callback('rom_found',
@@ -102,7 +87,7 @@ class ScannerWorker(QThread):
                                      lambda error: self.signals.error_occurred.emit(error))
 
     def run(self):
-        """Führt den Scan-Vorgang aus."""
+        """Leads the scan process."""
         try:
             recursive = self.options.get('recursive', True)
             file_types = self.options.get('file_types', None)
@@ -129,19 +114,11 @@ class ScannerWorker(QThread):
             self.signals.error_occurred.emit(f"Scanner-Fehler: {str(e)}")
 
 class DatabaseWorker(QThread):
-    """Worker-Thread für Database-Operationen."""
+    """Worker thread for database operations."""
 
     def __init__(self, database: ROMDatabase, operation: str,
                  signals: QtDatabaseSignals, params: Dict = None):
-        """
-        Initialisiert den Datenbank-Worker.
-
-        Args:
-            database: Die Datenbank-Instanz
-            operation: Die auszuführende Operation ('query', 'update', 'import', 'export')
-            signals: Die Qt-Signale für die UI-Kommunikation
-            params: Parameter für die Operation
-        """
+        """Initialized the database worker. Args: Database: The database instance Operation: The operation to be carried out ('query', 'update', 'import', 'Export') Signals: The QT signals for UI communication Params: parameters for the operation"""
         super().__init__()
         self.db = database
         self.operation = operation
@@ -149,7 +126,7 @@ class DatabaseWorker(QThread):
         self.params = params or {}
 
     def run(self):
-        """Führt die Datenbankoperation aus."""
+        """The database surgery."""
         try:
             if self.operation == 'query':
                 self._handle_query()
@@ -167,7 +144,7 @@ class DatabaseWorker(QThread):
             self.signals.error_occurred.emit(f"Datenbankfehler: {str(e)}")
 
     def _handle_query(self):
-        """Führt eine Datenbankabfrage aus."""
+        """A database query."""
         query_type = self.params.get('type', 'roms')
         filters = self.params.get('filters', {})
 
@@ -183,7 +160,7 @@ class DatabaseWorker(QThread):
         self.signals.query_completed.emit(result)
 
     def _handle_update(self):
-        """Führt ein Datenbankupdate aus."""
+        """A database update."""
         update_type = self.params.get('type', 'rom')
         item_data = self.params.get('data', {})
         item_id = self.params.get('id')
@@ -206,7 +183,7 @@ class DatabaseWorker(QThread):
         self.signals.update_completed.emit(success, message)
 
     def _handle_import(self):
-        """Führt einen Datenbankimport aus."""
+        """Leads A Database Import."""
         import_file = self.params.get('file')
         import_type = self.params.get('type', 'dat')
 
@@ -222,7 +199,7 @@ class DatabaseWorker(QThread):
         self.signals.update_completed.emit(True, f"Import von {import_file} abgeschlossen")
 
     def _handle_export(self):
-        """Führt einen Datenbankexport aus."""
+        """A database export."""
         export_file = self.params.get('file')
         export_type = self.params.get('type', 'csv')
 
@@ -238,14 +215,10 @@ class DatabaseWorker(QThread):
         self.signals.update_completed.emit(True, f"Export nach {export_file} abgeschlossen")
 
 class QtIntegrationBridge:
-    """
-    Haupt-Bridge-Klasse zur Integration der Backend-Komponenten mit der Qt-UI.
-    Diese Klasse bietet eine einheitliche Schnittstelle für die UI-Komponenten,
-    um mit dem Backend zu interagieren.
-    """
+    """Main Bridge Class for Integrating the Backend Components with the Qt-UI. This class offer a uniform interface for the ui components, to interact with the backend."""
 
     def __init__(self):
-        """Initialisiert die Integration-Bridge."""
+        """Initialized the integration bridge."""
         self.config = get_enhanced_config()
         self.scanner = ScannerIntegration(self.config)
         self.database = ROMDatabase()
@@ -259,16 +232,7 @@ class QtIntegrationBridge:
         self.active_workers = {}
 
     def start_scan(self, directory: str, options: Dict = None) -> str:
-        """
-        Startet einen asynchronen Scan-Vorgang.
-
-        Args:
-            directory: Das zu scannende Verzeichnis
-            options: Optionale Scanner-Konfiguration
-
-        Returns:
-            ID des Scan-Vorgangs für spätere Referenz
-        """
+        """Starts an asynchronous scan process. Args: Directory: The directory to be scanned Options: optional scanner configuration Return: ID of the scan process for later reference"""
         worker_id = f"scan_{threading.get_ident()}_{int(time.time())}"
         worker = ScannerWorker(self.scanner, directory, self.scanner_signals, options)
         self.active_workers[worker_id] = worker
@@ -276,15 +240,7 @@ class QtIntegrationBridge:
         return worker_id
 
     def stop_scan(self, worker_id: str) -> bool:
-        """
-        Stoppt einen laufenden Scan-Vorgang.
-
-        Args:
-            worker_id: ID des zu stoppenden Vorgangs
-
-        Returns:
-            True, wenn erfolgreich gestoppt, sonst False
-        """
+        """Stop a Current Scan Process. ARGS: Worker_ID: ID of the Process to Be Stoped Return: True, IF Successfoyle Stoped, OtherWise False"""
         if worker_id in self.active_workers:
             # Search for the associated scan-ID and stop the scan
             scan_ids = self.scanner.get_active_scans()
@@ -299,16 +255,7 @@ class QtIntegrationBridge:
         return False
 
     def execute_database_operation(self, operation: str, params: Dict = None) -> str:
-        """
-        Führt eine asynchrone Datenbankoperation aus.
-
-        Args:
-            operation: Die auszuführende Operation ('query', 'update', 'import', 'export')
-            params: Parameter für die Operation
-
-        Returns:
-            ID des Datenbank-Vorgangs für spätere Referenz
-        """
+        """An asynchronous database surgery. Args: Operation: The operation to be carried out ('query', 'update', 'import', 'Export') Params: parameters for the operation Return: ID of the database process for later reference"""
         worker_id = f"db_{operation}_{threading.get_ident()}_{int(time.time())}"
         worker = DatabaseWorker(self.database, operation, self.database_signals, params)
         self.active_workers[worker_id] = worker
@@ -316,15 +263,7 @@ class QtIntegrationBridge:
         return worker_id
 
     def cancel_operation(self, worker_id: str) -> bool:
-        """
-        Bricht eine laufende Operation ab.
-
-        Args:
-            worker_id: ID des zu stoppenden Vorgangs
-
-        Returns:
-            True, wenn erfolgreich gestoppt, sonst False
-        """
+        """If an ongoing operation breaks off. Args: Worker_id: ID of the process to be stopped Return: True, if successfully stopped, otherwise false"""
         if worker_id in self.active_workers:
             worker = self.active_workers[worker_id]
             worker.terminate()
@@ -334,19 +273,19 @@ class QtIntegrationBridge:
         return False
 
     def get_database(self) -> ROMDatabase:
-        """Gibt die Database-Instanz zurück."""
+        """Gives back the database instance."""
         return self.database
 
     def get_scanner(self) -> ScannerIntegration:
-        """Gibt die Scanner-Integration-Instanz zurück."""
+        """Gives back the scanner integration instance."""
         return self.scanner
 
     def get_config(self):
-        """Gibt die Konfigurationsinstanz zurück."""
+        """The configuration instance returns."""
         return self.config
 
     def cleanup(self):
-        """Bereinigt Ressourcen beim Beenden der Anwendung."""
+        """Adjusted resources when ending the application."""
         # Stoppe alle aktiven Worker
         for worker_id, worker in list(self.active_workers.items()):
             self.cancel_operation(worker_id)
@@ -359,13 +298,7 @@ class QtIntegrationBridge:
 _bridge_instance = None
 
 def get_bridge() -> QtIntegrationBridge:
-    """
-    Gibt die globale Bridge-Instanz zurück oder erstellt eine neue,
-    wenn noch keine existiert.
-
-    Returns:
-        QtIntegrationBridge-Instanz
-    """
+    """Does the global bridge instance return or creates a new, if there is no yet. Return: Qintegration Bridge Instance"""
     global _bridge_instance
 
     if _bridge_instance is None:

@@ -1,11 +1,4 @@
-"""
-ROM Sorter Pro - Integrierte Drag & Drop Unterstützung
-
-Dieses Modul kombiniert die verschiedenen Drag & Drop Implementierungen
-und bietet eine einheitliche Schnittstelle für alle UI-Komponenten.
-Es dient als Vermittler zwischen der Legacy-DND-Unterstützung und
-der neuen, verbesserten DND-Funktionalität.
-"""
+"""Rom Sarter Pro - Integrated Drag & Drop Support This module Combines the Various Drag & Drop Implementation and Offers A Uniform Interface for All Ui Components. It Serves as an intermediary the legacy dnd support and the new, impovered dnd functionality."""
 
 import os
 import logging
@@ -29,18 +22,10 @@ DND_MANAGER_AVAILABLE = True  # Always available because we have our own impleme
 
 
 class IntegratedDnDSupport:
-    """
-    Integrierte Drag & Drop Unterstützung, die beide DND-Systeme verwendet.
-    """
+    """Integrated drag & drop support that both DND systems used."""
 
     def __init__(self, widget: tk.Widget, callback: Optional[Callable[[List[str]], None]] = None):
-        """
-        Initialisiert die integrierte DND-Unterstützung.
-
-        Args:
-            widget: Das Widget, das DND unterstützen soll
-            callback: Funktion, die bei Drop-Events aufgerufen wird
-        """
+        """Initialized the integrated DND support. Args: Widget: The widget that is supposed to support DND Callback: Function that is called at drop events"""
         self.widget = widget
         self.callback = callback
         self.widget_id = str(id(widget))
@@ -59,9 +44,7 @@ class IntegratedDnDSupport:
                 logger.warning(f"Fehler bei der TkinterDnD2-Initialisierung: {e}")
 
     def _on_tk_drop(self, event) -> None:
-        """
-        Handler für TkinterDnD2 Drop-Events.
-        """
+        """Handler for Tkinterdnd2 Drop events."""
         try:
             data = event.data
             if data:
@@ -83,9 +66,7 @@ class IntegratedDnDSupport:
             logger.error(f"Fehler bei der Verarbeitung des TkinterDnD2 Drop-Events: {e}")
 
     def _on_files_dropped(self, files: List[FilePath]) -> None:
-        """
-        Handler für Drop-Events vom DragDropManager.
-        """
+        """Handler for drop events from the dragdrop manager."""
         if self.callback:
             try:
                 # Convert all paths to strings
@@ -96,17 +77,12 @@ class IntegratedDnDSupport:
                 logger.error(f"Fehler bei der Verarbeitung des DragDropManager Drop-Events: {e}")
 
     def set_callback(self, callback: Callable[[List[str]], None]) -> None:
-        """
-        Setzt einen neuen Callback für Drop-Events.
-
-        Args:
-            callback: Die neue Callback-Funktion
-        """
+        """Set A New Callback for Drop Events. Args: Callback: The New Callback Function"""
         self.callback = callback
         _global_dnd_manager.register_drop_callback(self.widget_id, self._on_files_dropped)
 
     def enable(self) -> None:
-        """Aktiviert die DND-Unterstützung."""
+        """Activates the DND support."""
         if TKDND_AVAILABLE and hasattr(self.widget, 'drop_target_register'):
             try:
                 self.widget.drop_target_register('*')
@@ -114,7 +90,7 @@ class IntegratedDnDSupport:
                 pass
 
     def disable(self) -> None:
-        """Deaktiviert die DND-Unterstützung."""
+        """Deactivates the DND support."""
         if TKDND_AVAILABLE and hasattr(self.widget, 'drop_target_unregister'):
             try:
                 self.widget.drop_target_unregister()
@@ -134,17 +110,7 @@ class IntegratedDnDSupport:
 
 def create_drop_target(parent: tk.Widget, callback: Callable[[List[str]], None],
                       **kwargs) -> Union[tk.Frame, OptimizedDragDropFrame]:
-    """
-    Erstellt ein Drop-Target-Widget, das beide DND-Systeme unterstützt.
-
-    Args:
-        parent: Das übergeordnete Widget
-        callback: Funktion, die bei Drop-Events aufgerufen wird
-        **kwargs: Zusätzliche Parameter für das Frame-Widget
-
-    Returns:
-        Ein Frame mit DND-Unterstützung
-    """
+    """Creates a drop-type widget that supports both dnd systems. Args: Parent: The Overarching Widget Callback: Function that is called at drop events ** Kwargs: Additional Parameters for the Frame Widget Return: A frame with dnd support"""
     if TKDND_AVAILABLE:
         # Use the optimized version with Tkinterdnd2
         frame = OptimizedDragDropFrame(parent, callback=callback, **kwargs)
@@ -157,24 +123,10 @@ def create_drop_target(parent: tk.Widget, callback: Callable[[List[str]], None],
 
 
 def add_drop_support(widget: tk.Widget, callback: Callable[[List[str]], None]) -> IntegratedDnDSupport:
-    """
-    Fügt einem Widget DND-Unterstützung hinzu.
-
-    Args:
-        widget: Das Widget, das DND unterstützen soll
-        callback: Funktion, die bei Drop-Events aufgerufen wird
-
-    Returns:
-        IntegratedDnDSupport-Objekt
-    """
+    """Adds to a widget dnd support. Args: Widget: The Widget That Is Supposed to Support Dnd Callback: Function That Is Called at Drop Events Return: Integrateddddddddddddddddddddddddddddddddddddddddddddddddddddort Object"""
     return IntegratedDnDSupport(widget, callback)
 
 
 def get_dnd_manager() -> DragDropManager:
-    """
-    Gibt den globalen DND-Manager zurück.
-
-    Returns:
-        DragDropManager-Instanz
-    """
+    """Gives back the global DND manager. Return: Dragdrop Manager instance"""
     return _global_dnd_manager

@@ -1,11 +1,6 @@
 #!/usr/bin/env python3
 # -*-coding: utf-8-*-
-"""
-ROM Sorter Pro - Sicherheitsvalidierung
-
-Dieses Modul enthält Funktionen zur sicheren Validierung von Pfaden
-und Benutzereingaben, um Directory-Traversal und andere Angriffe zu verhindern.
-"""
+"""ROM SARTER PRO - Safety validation This module contains functions for the safe validation of paths And user inputs to prevent directory traversal and other attacks."""
 
 import os
 import re
@@ -18,26 +13,17 @@ logger = logging.getLogger(__name__)
 
 
 class SecurityError(Exception):
-    """Basisklasse für sicherheitsrelevante Error."""
+    """Basic class for safety -relevant error."""
     pass
 
 
 class InvalidPathError(SecurityError):
-    """Error bei ungültigen oder unsicheren Pfaden."""
+    """Error in invalid or uncertain paths."""
     pass
 
 
 def is_valid_directory(path: Union[str, Path], must_exist: bool = True) -> bool:
-    """
-    Überprüft, ob ein Pfad ein gültiges Verzeichnis ist.
-
-    Args:
-        path: Der zu prüfende Verzeichnispfad
-        must_exist: Ob das Verzeichnis existieren muss
-
-    Returns:
-        True, wenn der Pfad ein gültiges Verzeichnis ist
-    """
+    """Check Whether a path is a valid directory. Args: Path: The Directory Path to Be Tested must_exist: Whether the Directory must exist Return: True if the path is a valid directory"""
     try:
         path_obj = Path(path).resolve()
 
@@ -69,15 +55,7 @@ def is_valid_directory(path: Union[str, Path], must_exist: bool = True) -> bool:
 
 
 def sanitize_path(path: str) -> str:
-    """
-    Bereinigt einen Pfad, um ihn sicherer zu machen.
-
-    Args:
-        path: Der zu bereinigende Pfad
-
-    Returns:
-        Bereinigter Pfad
-    """
+    """Adjusted a path to make it safe. Args: Path: The Path to Be Adjusted Return: Cleaning Path"""
     if not path:
         return ""
 
@@ -101,23 +79,7 @@ def validate_file_operation(file_path: Union[str, Path],
                           base_dir: Optional[Union[str, Path]] = None,
                           allow_read: bool = True,
                           allow_write: bool = True) -> bool:
-    """
-    Validiert eine Dateioperation hinsichtlich Sicherheit.
-
-    Prüft, ob der Dateipfad sicher ist und innerhalb des erlaubten Bereichs liegt.
-
-    Args:
-        file_path: Der zu validierende Dateipfad
-        base_dir: Das Basisverzeichnis, in dem die Datei liegen sollte
-        allow_read: Ob Lesezugriff erlaubt ist
-        allow_write: Ob Schreibzugriff erlaubt ist
-
-    Returns:
-        True, wenn die Operation sicher ist
-
-    Raises:
-        InvalidPathError: Wenn der Pfad unsicher ist
-    """
+    """Validates a File Surgery in Terms of Security. Check Whether the File Path is Safe and is Within the Permitted Area. Args: File_Path: The File Path to Be validated base_dir: The basic directory in which the file should be allow_read: Whether reading access is allow_write: Whether wring access is allowed Return: True When Safe Raises: Invalid Path is unsavory"""
 # Convert to path objects
     file_path = Path(file_path).resolve()
 
@@ -199,20 +161,7 @@ def check_environment_security() -> Dict[str, Any]:
 
 
 def validate_input(input_value: str, max_length: int = 255, pattern: Optional[str] = None) -> str:
-    """
-    Validiert und bereinigt eine Benutzereingabe.
-
-    Args:
-        input_value: Die zu validierende Eingabe
-        max_length: Maximale zulässige Länge
-        pattern: Optionales Regex-Muster für gültige Eingaben
-
-    Returns:
-        Die bereinigte Eingabe
-
-    Raises:
-        SecurityError: Wenn die Eingabe ungültig oder potenziell gefährlich ist
-    """
+    """Validated and Adjusted a user input. ARGS: Input_value: The Entry to Be validated max_length: Maximum permissible Length patterns: Optional regex pattern for valid inputs return: The adjusted input raises: Security Terror: if the input is invalid or potential danger"""
     if not input_value:
         return ""
 

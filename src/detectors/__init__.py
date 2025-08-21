@@ -1,11 +1,6 @@
 #!/usr/bin/env python3
 # -*-coding: utf-8-*-
-"""
-ROM Sorter Pro - Detektoren-Paket
-
-Dieses Paket enthält alle Detektor-Module für die Erkennung von ROM-Typen,
-einschließlich Konsolen-, Archiv- und CHD-Detektoren.
-"""
+"""Rome Sorter Pro - Detector Package This package contains all detector modules for the detection of ROM types, including console, archive and CHD detectors."""
 
 # Import and re-export of the basic functions
 from .base_detector import BaseDetector

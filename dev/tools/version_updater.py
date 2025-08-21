@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""
-ROM Sorter Pro - Version Updater Tool
-
-This script finds and updates all occurrences of a specific version number
-to a new version across all project files.
-"""
+"""Rome Sarter Pro - version updater Tool this script Finds and updates All Occurrences of a Specific Version Number to A New version Across All Project Files."""
 
 import os
 import re
@@ -29,7 +24,7 @@ FILE_EXTENSIONS = [
 ]
 
 def update_version(file_path, old_version, new_version):
-    """Update version in a file"""
+    """Update version in A File"""
     try:
         with open(file_path, 'r', encoding='utf-8') as file:
             content = file.read()

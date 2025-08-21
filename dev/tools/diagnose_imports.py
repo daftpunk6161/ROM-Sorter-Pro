@@ -20,12 +20,7 @@ def check_path():
     print()
 
 def check_module(module_name):
-    """
-    Attempts to import a module and displays details.
-
-    Args:
-        module_name: The name of the module to import
-    """
+    """Attempts to Import A Module and Displays Details. ARGS: Module_Name: The Name of the Module to Import"""
     print(f"Trying to import '{module_name}'...")
     try:
         module = importlib.import_module(module_name)

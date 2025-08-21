@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-ROM Sorter Pro - UI Modul Einstiegspunkt
-Ermöglicht direkten Start des UI-Moduls: python -m src.ui
-"""
+"""Rome Sorter Pro - Ui module entry point Enables direct start of the UI module: python -m src.ui"""
 
 import sys
 from .gui import main

@@ -1,12 +1,6 @@
 #!/usr/bin/env python3
 # -*-coding: utf-8-*-
-"""
-ROM Sorter Pro - Konfigurationsadapter für die neue Architektur
-Phase 1 Implementation: Desktop-Optimierung und Integration
-
-Dieses Modul erweitert die bestehende Konfigurationskomponente um die
-Unterstützung der neuen Features der Phase 1.
-"""
+"""ROM SARTER Pro configuration adapter for the new architecture Phase 1 Implementation: Desktop optimization and integration This module extends the existing configuration component to Support of the new features of phase 1."""
 
 import os
 import logging
@@ -22,10 +16,7 @@ from . import Config as BaseConfig, ConfigError
 logger = logging.getLogger(__name__)
 
 class EnhancedConfig(BaseConfig):
-    """
-    Erweiterte Konfigurationsklasse, die die neue Architektur unterstützt.
-    Erbt von der bestehenden Konfigurationsklasse und fügt neue Funktionalitäten hinzu.
-    """
+    """Extended configuration class that supports the new architecture. Inherits from the existing configuration class and adds new functionalities."""
 
 # New standard configuration options for expanded functionality
     DEFAULT_CONFIG_EXTENSION = {
@@ -74,13 +65,7 @@ class EnhancedConfig(BaseConfig):
     }
 
     def __init__(self, config_path: Optional[str] = None, *args, **kwargs):
-        """
-        Initialisiert die erweiterte Konfiguration.
-
-        Args:
-            config_path: Optionaler Pfad zur Konfigurationsdatei
-            *args, **kwargs: Weitere Parameter für die Basisklasse
-        """
+        """Initialized the extended configuration. Args: Config_Path: Optional path to the configuration file *Args, ** Kwargs: More parameters for the basic class"""
         # Initialization of the basic class
         # Super ().__ init __ () is avoided to prevent circular imports
         self.config_path = config_path or os.path.join(os.path.dirname(__file__), '..', 'config.json')
@@ -96,10 +81,7 @@ class EnhancedConfig(BaseConfig):
         logger.info("Erweiterte Konfiguration initialisiert")
 
     def _ensure_extensions(self):
-        """
-        Stellt sicher, dass alle notwendigen erweiterten Konfigurationsoptionen vorhanden sind.
-        Fügt fehlende Optionen mit Standardwerten hinzu.
-        """
+        """Make sure that all the necessary extended configuration options are available. Add missing options with standard values."""
         modified = False
 
 # Add the new configuration sections if they do not exist
@@ -121,118 +103,47 @@ class EnhancedConfig(BaseConfig):
             self.save()
 
     def get_scanner_config(self) -> Dict[str, Any]:
-        """
-        Gibt die Konfiguration für den Scanner zurück.
-
-        Returns:
-            Dictionary mit Scanner-Konfigurationsoptionen
-        """
+        """Gives back the configuration for the scanner. Return: Dictionary with scanner configuration options"""
         return self._config.get("scanner", self.DEFAULT_CONFIG_EXTENSION["scanner"])
 
     def get_ui_config(self) -> Dict[str, Any]:
-        """
-        Gibt die Konfiguration für die Benutzeroberfläche zurück.
-
-        Returns:
-            Dictionary mit UI-Konfigurationsoptionen
-        """
+        """Gives back the configuration for the user interface. Return: Dictionary with UI configuration options"""
         return self._config.get("ui", self.DEFAULT_CONFIG_EXTENSION["ui"])
 
     def get_database_config(self) -> Dict[str, Any]:
-        """
-        Gibt die Konfiguration für die Datenbank zurück.
-
-        Returns:
-            Dictionary mit Datenbank-Konfigurationsoptionen
-        """
+        """Gives back the configuration for the database. Return: Dictionary with database configuration options"""
         return self._config.get("database", self.DEFAULT_CONFIG_EXTENSION["database"])
 
     def get_cache_config(self) -> Dict[str, Any]:
-        """
-        Gibt die Konfiguration für den Cache zurück.
-
-        Returns:
-            Dictionary mit Cache-Konfigurationsoptionen
-        """
+        """Gives back the configuration for the cache. Return: Dictionary with cache configuration options"""
         return self._config.get("cache", self.DEFAULT_CONFIG_EXTENSION["cache"])
 
     def set_scanner_option(self, option: str, value: Any) -> bool:
-        """
-        Setzt eine Scanner-Konfigurationsoption.
-
-        Args:
-            option: Name der Option
-            value: Neuer Wert
-
-        Returns:
-            True, wenn erfolgreich, False bei Fehler
-        """
+        """Set A Scanner Configuration option. ARGS: Option: Name of the Option Value: New Value Return: True, IF Successful, False in the event of errors"""
         return self.set(f"scanner.{option}", value)
 
     def set_ui_option(self, option: str, value: Any) -> bool:
-        """
-        Setzt eine UI-Konfigurationsoption.
-
-        Args:
-            option: Name der Option
-            value: Neuer Wert
-
-        Returns:
-            True, wenn erfolgreich, False bei Fehler
-        """
+        """Set a ui configuration option. ARGS: Option: Name of the Option Value: New Value Return: True, IF Successful, False in the event of errors"""
         return self.set(f"ui.{option}", value)
 
     def set_database_option(self, option: str, value: Any) -> bool:
-        """
-        Setzt eine Datenbank-Konfigurationsoption.
-
-        Args:
-            option: Name der Option
-            value: Neuer Wert
-
-        Returns:
-            True, wenn erfolgreich, False bei Fehler
-        """
+        """Set A Database Configuration option. ARGS: Option: Name of the Option Value: New Value Return: True, IF Successful, False in the event of errors"""
         return self.set(f"database.{option}", value)
 
     def set_cache_option(self, option: str, value: Any) -> bool:
-        """
-        Setzt eine Cache-Konfigurationsoption.
-
-        Args:
-            option: Name der Option
-            value: Neuer Wert
-
-        Returns:
-            True, wenn erfolgreich, False bei Fehler
-        """
+        """Set a cache configuration option. ARGS: Option: Name of the Option Value: New Value Return: True, IF Successful, False in the event of errors"""
         return self.set(f"cache.{option}", value)
 
     def get_ui_theme(self) -> str:
-        """
-        Gibt das konfigurierte UI-Theme zurück.
-
-        Returns:
-            Name des Themes ('system', 'light', 'dark')
-        """
+        """Gives back the configured UI theme. Return: Name of the theme ('System', 'Light', 'Dark')"""
         return self.get_ui_config().get("theme", "system")
 
     def get_ui_language(self) -> str:
-        """
-        Gibt die konfigurierte UI-Sprache zurück.
-
-        Returns:
-            Sprachcode (z.B. 'de_DE')
-        """
+        """Gives back the configured UI language. Return: Language code (e.g. 'de_de')"""
         return self.get_ui_config().get("language", "de_DE")
 
     def get_max_threads(self) -> int:
-        """
-        Gibt die maximale Anzahl von Threads für den Scanner zurück.
-
-        Returns:
-            Maximale Thread-Anzahl (0 für automatisch)
-        """
+        """Gives back the maximum number of threads for the scanner. Return: Maximum number of thread (0 for automatic)"""
         threads = self.get_scanner_config().get("max_threads", 0)
 
 # If automatically (0), calculated based on CPU cores
@@ -244,22 +155,11 @@ class EnhancedConfig(BaseConfig):
         return threads
 
     def should_use_high_performance(self) -> bool:
-        """
-        Gibt an, ob der High-Performance-Scanner verwendet werden soll.
-
-        Returns:
-            True, wenn der High-Performance-Scanner verwendet werden soll,
-            False für den klassischen Scanner
-        """
+        """Indicates whether the high performance scanner should be used. Return: True if the high-performance scanner is to be used, False for the classic scanner"""
         return self.get_scanner_config().get("use_high_performance", True)
 
     def validate_scanner_config(self) -> List[str]:
-        """
-        Überprüft die Gültigkeit der Scanner-Konfiguration.
-
-        Returns:
-            Liste von Fehlermeldungen (leere Liste, wenn keine Fehler)
-        """
+        """Check the validity of the scanner configuration. Return: List of error messages (empty list if no errors)"""
         errors = []
         scanner_config = self.get_scanner_config()
 
@@ -285,12 +185,7 @@ class EnhancedConfig(BaseConfig):
         return errors
 
     def validate_ui_config(self) -> List[str]:
-        """
-        Überprüft die Gültigkeit der UI-Konfiguration.
-
-        Returns:
-            Liste von Fehlermeldungen (leere Liste, wenn keine Fehler)
-        """
+        """Check the validity of the UI configuration. Return: List of error messages (empty list if no errors)"""
         errors = []
         ui_config = self.get_ui_config()
 
@@ -314,9 +209,7 @@ class EnhancedConfig(BaseConfig):
         return errors
 
     def _load_config(self) -> None:
-        """
-        Lädt die Konfiguration aus der Datei oder initialisiert sie mit Standardwerten.
-        """
+        """Loads the configuration from the file or initializes it with standard values."""
         try:
             # Check whether the file exists
             if os.path.exists(self.config_path):
@@ -337,12 +230,7 @@ class EnhancedConfig(BaseConfig):
             self._config = {}
 
     def save(self) -> bool:
-        """
-        Speichert die Konfiguration in der Datei.
-
-        Returns:
-            True, wenn erfolgreich, False bei Fehler
-        """
+        """Saves the configuration in the file. Return: True, if successful, false in the event of errors"""
         try:
             # Make sure the directory exists
             os.makedirs(os.path.dirname(self.config_path), exist_ok=True)
@@ -358,16 +246,7 @@ class EnhancedConfig(BaseConfig):
             return False
 
     def get(self, key: str, default: Any = None) -> Any:
-        """
-        Gibt den Wert für einen Schlüssel zurück.
-
-        Args:
-            key: Schlüssel (kann Punktnotation für verschachtelte Schlüssel verwenden)
-            default: Standardwert, wenn der Schlüssel nicht gefunden wurde
-
-        Returns:
-            Wert oder default, wenn nicht gefunden
-        """
+        """Gives back the value for a key. Args: key: key (can use point notation for nested keys) default: default value if the key was not found: value or default, if not found"""
         parts = key.split('.')
         current = self._config
 
@@ -379,16 +258,7 @@ class EnhancedConfig(BaseConfig):
         return current
 
     def set(self, key: str, value: Any) -> bool:
-        """
-        Setzt den Wert für einen Schlüssel.
-
-        Args:
-            key: Schlüssel (kann Punktnotation für verschachtelte Schlüssel verwenden)
-            value: Zu setzender Wert
-
-        Returns:
-            True, wenn erfolgreich, False bei Fehler
-        """
+        """Sets the value for a key. Args: Key: Key (can use point notation for nested keys) Value: Return: True, IF Successful, False in the event of errors"""
         try:
             parts = key.split('.')
             current = self._config
@@ -411,16 +281,7 @@ class EnhancedConfig(BaseConfig):
 enhanced_config_instance = None
 
 def get_enhanced_config(config_path: Optional[str] = None) -> EnhancedConfig:
-    """
-    Gibt die globale Instanz der erweiterten Konfiguration zurück
-    oder erstellt eine neue, wenn noch keine existiert.
-
-    Args:
-        config_path: Optionaler Pfad zur Konfigurationsdatei
-
-    Returns:
-        EnhancedConfig-Instanz
-    """
+    """Returns the Global Instance of the Extended Configuration or Create a New One IF None Still Exists. ARGS: Config_Path: Optional path to the configuration File Return: Enhanancedconfig Instance"""
     global enhanced_config_instance
 
     if enhanced_config_instance is None:

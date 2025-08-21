@@ -1,21 +1,7 @@
 #!/usr/bin/env python3
 # -*-coding: utf-8-*-
 
-"""
-ROM Sorter Pro - KI-basierte ROM-Erkennung
-
-Dieses Modul implementiert eine KI-basierte ROM-Erkennungsfunktion, die Muster
-in ROM-Headern und Dateinamen identifiziert, um die Konsolenplattform präziser
-zu bestimmen. Das System verwendet eine Kombination aus regelbasierten Heuristiken
-und einfachen Klassifikationsalgorithmen, um auch ohne externe ML-Bibliotheken
-zu funktionieren.
-
-Features:
-- Header-basierte Signaturerkennung mit gewichteter Ähnlichkeitsanalyse
-- Selbstlernendes System, das aus Benutzerfeedback lernt
-- Lokales Feature-Caching zur Leistungsoptimierung
-- Robustes Fallback-System bei unbekannten ROMs
-"""
+"""Rome Sarter Pro-Ai-BASED ROM RECOGNITION This modules Implements A ai-Based Rome Recognition Function, The Patterns Identified in Rome Header and File Names To The Console Platform More to Dettermine. The System Uses A Combination of Rule -Based Heuristics and Simple Classification Algorithms to Do Without External ML Libraries to Function. Features: - Header -Based Signature Detection with Weighted Similarity Analysis - Self -Learning System that Learns from User Feedback - Local Feature Caching for Performance Optimization - Robust Fallback System for Unknown ROMS"""
 
 import os
 import re
@@ -67,10 +53,7 @@ _MIN_CONFIDENCE = 0.7
 
 
 class AIEnhancedROMDetector:
-    """
-    ROM-Detector mit KI-ähnlichen Funktionen, der ohne externe ML-Bibliotheken funktioniert.
-    Verwendet Header-Signaturen, Heuristiken und Benutzerfeedback für kontinuierliche Verbesserung.
-    """
+    """ROM detector with AI-like functions that works without external ML libraries. Uses header signatures, heuristics and user feedback for continuous improvement."""
 
     def __init__(self):
         """Initialisiere den KI-basierten Detector."""
@@ -86,7 +69,7 @@ class AIEnhancedROMDetector:
         self._header_cache = {}
 
     def _load_signatures(self) -> Dict[str, Dict[str, Any]]:
-        """Lade die ROM-Signaturen aus der JSON-Datei."""
+        """Use the Rome signatures from the JSON file."""
         if os.path.exists(_SIGNATURES_DB):
             try:
                 with open(_SIGNATURES_DB, 'r', encoding='utf-8') as f:
@@ -169,7 +152,7 @@ class AIEnhancedROMDetector:
         return default_signatures
 
     def _load_feedback(self) -> Dict[str, Any]:
-        """Lade das gesammelte Benutzerfeedback."""
+        """Use the collected user feedback."""
         if os.path.exists(_FEEDBACK_DB):
             try:
                 with open(_FEEDBACK_DB, 'r', encoding='utf-8') as f:
@@ -199,16 +182,7 @@ class AIEnhancedROMDetector:
         return default_feedback
 
     def detect_console(self, filename: str, content: Optional[bytes] = None) -> Tuple[str, float, str]:
-        """
-        Erkennt die Konsole eines ROMs mit KI-ähnlicher Logik.
-
-        Args:
-            filename: Dateiname oder -pfad
-            content: Optionaler Dateiinhalt für Header-Analyse
-
-        Returns:
-            Tuple mit (Konsolenname, Konfidenz, Erkennungsmethode)
-        """
+        """Recognits the Console of a Rome With Ai-Like Logic. ARGS: File Name: File Name Or Path Content: Optional File Content for Header Analysis Return: Tuple with (Console Name, Confidence, Identification Method)"""
 # Calculate the hash for feedback lookup (if content is available)
         rom_hash = None
         if content:
@@ -252,15 +226,7 @@ class AIEnhancedROMDetector:
         return console, confidence, "combined"
 
     def _detect_by_header(self, content: bytes) -> Tuple[str, float]:
-        """
-        Erkennt die Konsole basierend auf ROM-Header-Signaturen.
-
-        Args:
-            content: ROM-Inhalt
-
-        Returns:
-            Tuple mit (Konsolenname, Konfidenz)
-        """
+        """Recognizes the console based on Rome header signatures. Args: Content: Rome content Return: Tuple with (console name, confidence)"""
         best_match = None
         best_confidence = 0.0
 
@@ -305,15 +271,7 @@ class AIEnhancedROMDetector:
             return "Unknown", 0.0
 
     def _detect_by_fuzzy_matching(self, filename: str) -> Tuple[str, float]:
-        """
-        Verwendet Fuzzy-Matching, um ROM-Namen mit bekannten Mustern zu vergleichen.
-
-        Args:
-            filename: Dateiname
-
-        Returns:
-            Tuple mit (Konsolenname, Konfidenz)
-        """
+        """Uses fuzzy matching to compare ROM names with known patterns. Args: Filename: file name Return: Tuple with (console name, confidence)"""
         basename = os.path.basename(filename).lower()
 
 # Extract tokens from the file name
@@ -358,19 +316,7 @@ class AIEnhancedROMDetector:
 
     def add_feedback(self, filename: str, content: Optional[bytes], detected_console: str,
                     correct_console: str, user_confidence: float = 1.0) -> bool:
-        """
-        Fügt Benutzerfeedback zur Erkennungsdatenbank hinzu.
-
-        Args:
-            filename: Dateiname der ROM
-            content: ROM-Inhalt (falls verfügbar)
-            detected_console: Ursprünglich erkannte Konsole
-            correct_console: Vom Benutzer angegebene korrekte Konsole
-            user_confidence: Vom Benutzer angegebene Konfidenz (1.0 = sicher)
-
-        Returns:
-            True wenn das Feedback erfolgreich hinzugefügt wurde
-        """
+        """Add user feedback to the recognition database. Args: Filename: File name of the Rome Content: Rome content (if available) detected_console: originally recognized console correct_console: correct console specified by the user User_confidence: Confidence given by the user (1.0 = safe) Return: True when the feedback has been successfully added"""
         try:
             with self._lock:
 # Calculate the Rome Hash if available
@@ -429,14 +375,7 @@ class AIEnhancedROMDetector:
             return False
 
     def _extract_patterns(self, filename: str, console: str, confidence: float) -> None:
-        """
-        Extrahiert Muster aus dem Dateinamen für zukünftiges Lernen.
-
-        Args:
-            filename: Dateiname der ROM
-            console: Korrekte Konsolenplattform
-            confidence: Konfidenz der Zuordnung
-        """
+        """Extracts patterns from the file name for future learning. Args: Filename: File name of the Rome Console: Correct console platform Confidence: Confidence of the assignment"""
         basename = os.path.basename(filename).lower()
 
 # Extract tokens and N-grammels
@@ -488,12 +427,7 @@ class AIEnhancedROMDetector:
 _ai_detector = None
 
 def get_ai_detector() -> AIEnhancedROMDetector:
-    """
-    Gibt eine globale AI-Detector-Instanz zurück.
-
-    Returns:
-        Eine Instanz von AIEnhancedROMDetector
-    """
+    """Gives back a global ai detector instance. Return: An Instance of Aienhacedromdetector"""
     global _ai_detector
     if _ai_detector is None:
         _ai_detector = AIEnhancedROMDetector()
@@ -501,16 +435,7 @@ def get_ai_detector() -> AIEnhancedROMDetector:
 
 
 def detect_console_with_ai(filename: str, content: Optional[bytes] = None) -> Tuple[str, float, Dict[str, Any]]:
-    """
-    Hochlevel-Funktion zur ROM-Konsolenerkennung mit erweiterter KI-ähnlicher Logik.
-
-    Args:
-        filename: Dateiname oder -pfad
-        content: Optionaler Dateiinhalt für Header-Analyse
-
-    Returns:
-        Tuple mit (Konsolenname, Konfidenz, Metadaten-Dictionary)
-    """
+    """High level function for ROM console detection with extended AI-like logic. Args: Filename: file name or path Content: Optional file content for header analysis Return: Tuple with (console name, confidence, metadata dictionary)"""
     detector = get_ai_detector()
     console, confidence, method = detector.detect_console(filename, content)
 
@@ -528,18 +453,6 @@ def detect_console_with_ai(filename: str, content: Optional[bytes] = None) -> Tu
 # Feedback function for user interaction
 def add_user_feedback(filename: str, content: Optional[bytes], detected_console: str,
                      correct_console: str, user_confidence: float = 1.0) -> bool:
-    """
-    Fügt Benutzerfeedback zur KI-Erkennungsdatenbank hinzu.
-
-    Args:
-        filename: Dateiname der ROM
-        content: ROM-Inhalt (falls verfügbar)
-        detected_console: Ursprünglich erkannte Konsole
-        correct_console: Vom Benutzer angegebene korrekte Konsole
-        user_confidence: Vom Benutzer angegebene Konfidenz (1.0 = sicher)
-
-    Returns:
-        True wenn das Feedback erfolgreich hinzugefügt wurde
-    """
+    """Add user feedback to the ai recognition database. ARGS: FILENAME: File Name of the Rome Content: Rome Content (IF Available) Detected_Console: Originally Recognized Console Correct_Console: Correct Console Specified by the User_Confidence: Confidence Given by the User (1.0 = Safe) Return: True When the feedback has been successfully added"""
     detector = get_ai_detector()
     return detector.add_feedback(filename, content, detected_console, correct_console, user_confidence)

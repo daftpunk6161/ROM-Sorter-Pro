@@ -1,13 +1,7 @@
 #!/usr/bin/env python3
 # -*-coding: utf-8-*-
 
-"""
-ROM Sorter Pro - Regelbasierte ROM-Erkennung (ML-Ersatz)
-
-WICHTIG: Diese Datei ersetzt die ML-basierte Erkennung mit einer
-regelbasierten Version, die ohne externe Abhängigkeiten funktioniert.
-Die API bleibt kompatibel, damit bestehender Code nicht angepasst werden muss.
-"""
+"""Rome Sarter Pro-Rule-Based Rome Detection (ML Replacement) Important: This file replaces the ml-based detection with a regular -based version that Works without External dependencies. The api remains compatible so that existing code does not have to be adjusted."""
 
 import os
 import re
@@ -164,18 +158,10 @@ HEADER_SIGNATURES = {
 
 
 class MLEnhancedConsoleDetector(BaseDetector):
-    """
-    Eine regelbasierte Konsolen-Erkennungs-Klasse, die das ML-Interface beibehält.
-    """
+    """A Regular-Based Console Recognition Class that Maintains the ML Interface."""
 
     def __init__(self, model_path: str = DEFAULT_MODEL_PATH, confidence_threshold: float = 0.5):
-        """
-        Initialisiert den Konsolen-Detektor.
-
-        Args:
-            model_path: Pfad für Modelldaten (wird in dieser Version nicht verwendet)
-            confidence_threshold: Minimaler Konfidenzschwellenwert für eine positive Erkennung
-        """
+        """Initialized the console detector. Args: model_path: path for model data (is not used in this version) Confidence_threshold: Minimal confidence threshold for positive detection"""
         super().__init__(confidence_threshold=confidence_threshold)
         self.model_path = model_path
         self.vectorizer = None
@@ -191,31 +177,13 @@ class MLEnhancedConsoleDetector(BaseDetector):
                 logger.error(f"Fehler beim Erstellen des Modellverzeichnisses: {e}")
 
     def detect_console(self, filename: str, content: Optional[bytes] = None) -> Tuple[str, float]:
-        """
-        Erkennt die Konsole basierend auf Dateiname und optional dem Inhalt.
-
-        Args:
-            filename: Der Dateiname oder Pfad des ROMs
-            content: Optional, die Bytes des Dateiinhalts für tiefere Analyse
-
-        Returns:
-            Tuple mit (Konsolenname, Konfidenz)
-        """
+        """Recognize the console based on the file name and optionally the content. Args: Filename: the file name or path of the Rome Content: optional, the bytes of the file content for deeper analysis Return: Tuple with (console name, confidence)"""
 # Perform rule -based detection
         console, confidence = self._rule_based_detection(filename, content)
         return console, confidence
 
     def _rule_based_detection(self, filename: str, content: Optional[bytes] = None) -> Tuple[str, float]:
-        """
-        Regelbasierte Konsolen-Erkennung basierend auf Dateiname und Inhalt.
-
-        Args:
-            filename: Der Dateiname oder Pfad
-            content: Optional, die Bytes des Dateiinhalts für tiefere Analyse
-
-        Returns:
-            Tuple mit (Konsolenname, Konfidenz)
-        """
+        """Rule-based console detection based on the file name and content. Args: Filename: the file name or path Content: optional, the bytes of the file content for deeper analysis Return: Tuple with (console name, confidence)"""
         filename = os.path.basename(filename).lower()
 
 # 1. Check known file extensions
@@ -308,24 +276,11 @@ class MLEnhancedConsoleDetector(BaseDetector):
         return "Unbekannte Konsole", 0.1
 
     def load_model(self) -> bool:
-        """
-        Dummy-Methode für API-Kompatibilität. Lädt keine Modelle.
-
-        Returns:
-            Immer True (Erfolgssimulation)
-        """
+        """Dummy method for API compatibility. Do not load any models. Return: Always true (success simulation)"""
         return True
 
     def _preprocess_filename(self, filename: str) -> str:
-        """
-        Bereitet einen Dateinamen für die Feature-Extraktion vor.
-
-        Args:
-            filename: Der zu verarbeitende Dateiname
-
-        Returns:
-            Vorverarbeiteter Dateiname als String
-        """
+        """Prepare a file name for the feature extraction. ARGS: Filename: The File Name to Be Processed Return: Pre -Processed File Name as a String"""
 # Remove extension
         name = os.path.splitext(filename)[0]
 
@@ -341,15 +296,7 @@ class MLEnhancedConsoleDetector(BaseDetector):
         return name
 
     def detect(self, file_path) -> Optional[Dict[str, Any]]:
-        """
-        Erkennt den Konsolentyp für eine Datei.
-
-        Args:
-            file_path: Pfad zur zu untersuchenden Datei
-
-        Returns:
-            Dict mit Konsoleninformationen oder None, wenn keine Erkennung möglich ist
-        """
+        """Recognize the Console Type for A File. ARGS: File_Path: Path to the File to Be Examined Return: Dict with Console Information or None If No Detection is possible"""
         try:
 # Convert path to string, if necessary
             if hasattr(file_path, "as_posix"):
@@ -380,23 +327,14 @@ class MLEnhancedConsoleDetector(BaseDetector):
 
 # Dummy function for API compatibility
 def train_ml_model(*args, **kwargs):
-    """Dummy-Funktion, die ein Training simuliert."""
+    """Dummy function that simulates training."""
     logger.warning("ML-Training nicht verfügbar: Regelbasierte Version wird verwendet")
     return {"info": "Regelbasierte Version verwendet keine ML-Modelle"}
 
 
 @lru_cache(maxsize=1024)
 def detect_console_with_ml(filename: str, content: Optional[bytes] = None) -> Tuple[str, float]:
-    """
-    Erkennt die Konsole eines ROMs mit regelbasierter Erkennung.
-
-    Args:
-        filename: Dateiname oder -pfad
-        content: Optionaler Dateiinhalt für tiefere Analyse
-
-    Returns:
-        Tuple mit (Konsolenname, Konfidenz)
-    """
+    """Recognits the Console of a Rome with Rule -Based Recognition. ARGS: Filename: File Name Or Path Content: Optional File Content for Deeper Analysis Return: Tuble with (Console Name, Confidence)"""
     detector = MLEnhancedConsoleDetector()
     return detector.detect_console(filename, content)
 
@@ -405,12 +343,7 @@ def detect_console_with_ml(filename: str, content: Optional[bytes] = None) -> Tu
 _global_detector = None
 
 def get_detector() -> MLEnhancedConsoleDetector:
-    """
-    Gibt eine globale Detector-Instanz zurück.
-
-    Returns:
-        Eine Instanz von MLEnhancedConsoleDetector
-    """
+    """Gives back a global detector instance. Return: An instance of mlenhanconsoledetetector"""
     global _global_detector
     if _global_detector is None:
         _global_detector = MLEnhancedConsoleDetector()

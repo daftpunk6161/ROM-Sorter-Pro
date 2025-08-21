@@ -1,0 +1,280 @@
+#!/usr/bin/env python3
+# -*-coding: utf-8-*-
+"""ROM SARTER PRO-Integration Bridge for High Performance Scanner Phase 1 Implementation: Desktop optimization This module serves as a bridge between the new high-performance scanner and the existing Application. It provides adapter functionality that enables the new scanner Integrating in existing code without making extensive changes to other modules."""
+
+import os
+import sys
+import logging
+import threading
+import time
+from typing import Dict, List, Optional, Callable, Union, Any, Tuple, TypeVar
+
+# Define the type alias for the config class
+ConfigType = TypeVar('ConfigType')
+
+# Local imports
+try:
+    from .high_performance_scanner import HighPerformanceScanner
+    from ..config import Config
+except ImportError:
+# Fallback for direct call to this module
+    from high_performance_scanner import HighPerformanceScanner
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from config import Config
+
+# Set up logging
+logger = logging.getLogger(__name__)
+
+class ScannerIntegration:
+    """Integration of the high-performance scanner with the existing application. This class offers a simple API for other modules to use the new scanner."""
+
+    def __init__(self, config: Optional[ConfigType] = None):
+        """Initialized the scanner integration. Args: Config: Optional configuration instance. If None, the standard configuration is used."""
+        self.config = config or Config()
+        self.scanner = HighPerformanceScanner(self.config)
+        self.callbacks = {}
+        self.active_scans = {}
+        self.scan_counter = 0
+        self._register_callbacks()
+
+    def _register_callbacks(self):
+        """Register the callbacks for the scanner."""
+        self.scanner.on_file_found = lambda path: self._handle_callback('file_found', path)
+        self.scanner.on_rom_found = lambda info: self._handle_callback('rom_found', info)
+        self.scanner.on_progress = lambda current, total: self._handle_callback('progress', current, total)
+        self.scanner.on_complete = lambda stats: self._handle_callback('complete', stats)
+        self.scanner.on_error = lambda error: self._handle_callback('error', error)
+
+    def _handle_callback(self, event_type: str, *args):
+        """Forwards events to registered callbacks. Args: Event_type: Type of the event ('File_found', 'Rom_found', etc.) *Args: Arguments that are passed on to the callback"""
+        if event_type in self.callbacks:
+            for callback in self.callbacks.get(event_type, []):
+                try:
+                    callback(*args)
+                except Exception as e:
+                    logger.error(f"Fehler im {event_type} Callback: {str(e)}")
+
+    def register_callback(self, event_type: str, callback: Callable):
+        """Register a callback for a specific event. Args: Event_type: Type of the event ('File_found', 'Rom_found', 'Progress', 'Complete', 'Error') Callback: Function that is called when the event occurs"""
+        if event_type not in self.callbacks:
+            self.callbacks[event_type] = []
+        self.callbacks[event_type].append(callback)
+
+    def scan_directory(self, directory: str, recursive: bool = True, file_types: Optional[List[str]] = None,
+                      max_depth: int = -1, follow_symlinks: bool = False, use_cache: bool = True):
+        """Starts an asynchronous scan of the specified directory. Args: Directory: The directory to be searched Recursive: Whether subdirectaries should be searched File_types: List of file extensions that are to be searched (None for all known Rome types) Max_depth: Maximum depth of recursion (-1 for unlimited) Follow_symlinks: Whether symbolic links should be followed use_cache: Whether cache data should be used Return: Scan-ID that can be used to identify the scan"""
+# Check whether the directory exists
+        if not os.path.isdir(directory):
+            self._handle_callback('error', f"Verzeichnis existiert nicht: {directory}")
+            return None
+
+# Create new scan-ID
+        self.scan_counter += 1
+        scan_id = f"scan_{self.scan_counter}"
+
+# Starts the scan in a separate thread
+        scan_thread = threading.Thread(
+            target=self._run_scan,
+            args=(scan_id, directory, recursive, file_types, max_depth, follow_symlinks, use_cache),
+            daemon=True
+        )
+
+# Save and start the thread
+        self.active_scans[scan_id] = {
+            'thread': scan_thread,
+            'directory': directory,
+            'start_time': time.time(),
+            'status': 'starting'
+        }
+
+        scan_thread.start()
+        return scan_id
+
+    def _run_scan(self, scan_id: str, directory: str, recursive: bool, file_types: Optional[List[str]],
+                 max_depth: int, follow_symlinks: bool, use_cache: bool):
+        """Performs the actual scan in the thread. Args: Scan_id: ID of the scan Directory: The directory to be searched Recursive: Whether subdirectaries should be searched File_types: List of file extensions that are to be searched Max_depth: Maximum depth of recursion Follow_symlinks: Whether symbolic links should be followed use_cache: Whether cache data should be used"""
+        try:
+            self.active_scans[scan_id]['status'] = 'running'
+
+# Starts the scanner
+            result = self.scanner.scan(
+                directory, recursive, file_types, max_depth, follow_symlinks, use_cache
+            )
+
+            if result:
+                self.active_scans[scan_id]['status'] = 'running'
+                logger.info(f"Scan {scan_id} gestartet für Verzeichnis {directory}")
+            else:
+                self.active_scans[scan_id]['status'] = 'error'
+                logger.error(f"Scan {scan_id} konnte nicht gestartet werden")
+                self._handle_callback('error', f"Scan konnte nicht gestartet werden: {directory}")
+
+        except Exception as e:
+            self.active_scans[scan_id]['status'] = 'error'
+            error_msg = f"Fehler beim Starten des Scans: {str(e)}"
+            logger.exception(error_msg)
+            self._handle_callback('error', error_msg)
+
+    def pause_scan(self, scan_id: Optional[str] = None):
+        """Pauses a running scan. Args: Scan_id: ID of the scan or none to be paused for all scans Return: True if at least one scan was successfully paused, otherwise false"""
+        if scan_id is not None:
+            if scan_id in self.active_scans and self.active_scans[scan_id]['status'] == 'running':
+                result = self.scanner.pause()
+                if result:
+                    self.active_scans[scan_id]['status'] = 'paused'
+                return result
+            return False
+        else:
+# Pause all ongoing scans
+            paused_any = False
+            for scan_id in self.active_scans:
+                if self.active_scans[scan_id]['status'] == 'running':
+                    if self.scanner.pause():
+                        self.active_scans[scan_id]['status'] = 'paused'
+                        paused_any = True
+            return paused_any
+
+    def resume_scan(self, scan_id: Optional[str] = None):
+        """Stop a paused scan. Args: Scan_id: ID of continuing scans or none for all scans Return: True if at least one scan was successfully continued, otherwise false"""
+        if scan_id is not None:
+            if scan_id in self.active_scans and self.active_scans[scan_id]['status'] == 'paused':
+                result = self.scanner.resume()
+                if result:
+                    self.active_scans[scan_id]['status'] = 'running'
+                return result
+            return False
+        else:
+# Continue all paused scans
+            resumed_any = False
+            for scan_id in self.active_scans:
+                if self.active_scans[scan_id]['status'] == 'paused':
+                    if self.scanner.resume():
+                        self.active_scans[scan_id]['status'] = 'running'
+                        resumed_any = True
+            return resumed_any
+
+    def stop_scan(self, scan_id: Optional[str] = None):
+        """Stop a running scan. Args: Scan_id: ID of the scan to be stopped or none for all scans Return: True if at least one scan was successfully stopped, otherwise false"""
+        if scan_id is not None:
+            if scan_id in self.active_scans and self.active_scans[scan_id]['status'] in ['running', 'paused']:
+                result = self.scanner.stop()
+                if result:
+                    self.active_scans[scan_id]['status'] = 'stopping'
+                return result
+            return False
+        else:
+# Stop all running or paused scans
+            stopped_any = False
+            for scan_id in self.active_scans:
+                if self.active_scans[scan_id]['status'] in ['running', 'paused']:
+                    if self.scanner.stop():
+                        self.active_scans[scan_id]['status'] = 'stopping'
+                        stopped_any = True
+            return stopped_any
+
+    def get_scan_status(self, scan_id: Optional[str] = None) -> Union[Dict, List[Dict]]:
+        """Gives back the status of a or all scan. Args: Scan_id: ID of the scan or none for all scans Return: If scan_id is given, a dictionary with status information If scan_id none is a list of dictionaries with status information for all scans"""
+        if scan_id is not None:
+            if scan_id in self.active_scans:
+                return self.active_scans[scan_id].copy()
+            return None
+        else:
+            return [scan.copy() for scan in self.active_scans.values()]
+
+    def cleanup_completed_scans(self):
+        """Removed completed scans from the list of active scans. Return: Number of adjusted scans"""
+        completed_scans = []
+
+        for scan_id, scan_info in self.active_scans.items():
+            thread = scan_info.get('thread')
+            if thread and not thread.is_alive() and scan_info['status'] not in ['running', 'paused']:
+                completed_scans.append(scan_id)
+
+        for scan_id in completed_scans:
+            del self.active_scans[scan_id]
+
+        return len(completed_scans)
+
+# Main function for test purposes
+def main():
+    """Test function for scanner integration."""
+    import argparse
+
+# Configure logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+
+    parser = argparse.ArgumentParser(description='ROM Scanner Integration Test')
+    parser.add_argument('directory', help='Verzeichnis zum Scannen')
+    parser.add_argument('--recursive', '-r', action='store_true', help='Unterverzeichnisse durchsuchen')
+    parser.add_argument('--symlinks', '-s', action='store_true', help='Symbolischen Links folgen')
+    parser.add_argument('--no-cache', '-n', action='store_true', help='Cache nicht verwenden')
+
+    args = parser.parse_args()
+
+    def on_file_found(path):
+        print(f"Datei gefunden: {path}")
+
+    def on_rom_found(info):
+        print(f"ROM gefunden: {info['name']} ({info['system']})")
+
+    def on_progress(current, total):
+        print(f"Fortschritt: {current}/{total} ({int(current/total*100 if total else 0)}%)")
+
+    def on_complete(stats):
+        print("\nScan abgeschlossen:")
+        print(f"Verarbeitete Dateien: {stats.get('files_processed', 0)}")
+        print(f"Gefundene Dateien: {stats.get('files_found', 0)}")
+        print(f"Gefundene ROMs: {stats.get('roms_found', 0)}")
+        print(f"Gefundene Archive: {stats.get('archives_found', 0)}")
+        print(f"Fehler: {stats.get('errors', 0)}")
+        print(f"Dauer: {stats.get('duration_seconds', 0):.2f} Sekunden")
+
+# Show systems
+        system_counts = stats.get('system_counts', {})
+        if system_counts:
+            print("\nGefundene Systeme:")
+            for system, count in system_counts.items():
+                print(f"  - {system}: {count}")
+
+    def on_error(error):
+        print(f"Fehler: {error}")
+
+# Initialize scanner integration
+    integration = ScannerIntegration()
+
+# Register callbacks
+    integration.register_callback('file_found', on_file_found)
+    integration.register_callback('rom_found', on_rom_found)
+    integration.register_callback('progress', on_progress)
+    integration.register_callback('complete', on_complete)
+    integration.register_callback('error', on_error)
+
+# Start scan
+    print(f"Starte Scan von {args.directory}...")
+    scan_id = integration.scan_directory(
+        args.directory,
+        recursive=args.recursive,
+        follow_symlinks=args.symlinks,
+        use_cache=not args.no_cache
+    )
+
+    if scan_id:
+        print(f"Scan gestartet mit ID: {scan_id}")
+
+# Wait for a Conclusion
+        try:
+            while integration.active_scans[scan_id]['thread'].is_alive():
+                time.sleep(0.1)
+        except KeyboardInterrupt:
+            print("\nScan wird abgebrochen...")
+            integration.stop_scan(scan_id)
+            sys.exit(1)
+    else:
+        print("Scan konnte nicht gestartet werden.")
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()

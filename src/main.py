@@ -1280,7 +1280,7 @@ class RefactoredROMSorterPro:
                     self.stats.files_failed += 1
 
     def _process_single_file(self, rom_file: Dict[str, Any], dest_dir: str) -> Dict[str, str]:
-        """Process a single ROM file using file operations manager."""
+        """Process a Single Rom File Using File Operations Manager."""
         try:
             console = rom_file.get('console', 'Unknown')
             source_path = rom_file['path']
@@ -1633,25 +1633,7 @@ def memory_optimized_batch_process_roms(
     max_memory_mb: int = 512,
     extensions: Optional[List[str]] = None
 ) -> Iterator[Dict[str, Any]]:
-    """Process ROMs in batches with optimized memory usage.
-
-    This memory-optimized version uses:
-    1. A generator to process ROMs incrementally and minimize memory
-       consumption
-    2. Dynamic memory management for large collections
-    3. Adaptive batch size based on available memory
-    4. Automatic cleanup after each batch
-
-    Args:
-        directory (str): The directory to scan
-        batch_size (int): Maximum number of ROMs per batch (dynamically
-            adjusted)
-        max_memory_mb (int): Maximum RAM to use in megabytes
-        extensions (List[str], optional): List of file extensions to look for
-
-    Returns:
-        Iterator[Dict[str, Any]]: A generator with ROM information
-    """
+    """Process Roms in Batches with Optimized Memory Usage. This memory-optimized version uses: 1. A generator to process roms incrementary and minimize memory consumption 2. Dynamic memory management for large collections 3. Adaptive Batch Sized based on Available Memory 4. Directory to scan batch_size (Int): Maximum Number of Rome Per Batch (Dynamically Adjust) Max_Memory_MB (Int): Maximum Ram to use in megabytes extensions (List [Str], optional): List of file extensions to look for return: Iterator [Dict [StR, ANY]]] with rome information"""
     msg = f"Starting memory-optimized batch processing of ROMs in {directory}"
     logging.info(msg)
 
@@ -1766,10 +1748,7 @@ def _process_rom_batch(
     rom_files: List[str],
     memory_manager: MemoryManager
 ) -> Iterator[Dict[str, Any]]:
-    """Processes a single batch of ROM files.
-
-    This function is called by memory_optimized_batch_process_roms.
-    """
+    """Processes a single batch of rom files. This function is called by memory_optimized_batch_process_roms."""
     for rom_file in rom_files:
         try:
 # Perform Rome Detection and Data Extraction

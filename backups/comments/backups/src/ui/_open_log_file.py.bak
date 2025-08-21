@@ -1,20 +1,13 @@
-"""
-Implementierung der _open_log_file-Methode für die OptimizedROMSorterGUI-Klasse.
-Dieses Modul stellt eine einfache Funktion zum Öffnen der Log-Dateien bereit.
-"""
+"""Implementation of the _open_log_file method for the OptimizedRomeSortergui class. This module provides a simple function to open the log files."""
 
 import os
 import platform
 from tkinter import messagebox
 
 def open_log_file(self):
-    """
-    Öffnet die aktuelle Log-Datei.
-
-    Diese Methode ist dafür gedacht, in die OptimizedROMSorterGUI-Klasse integriert zu werden.
-    """
+    """Opens the current log file. This method is intended to be integrated into the Optimized Rome Sortergui class."""
     try:
-        # Go up to the logs from the UI directory a directory for the logs
+        # Go up to the logs from the Ui Directory a Directory for the Logs
         ui_dir = os.path.dirname(os.path.abspath(__file__))
         app_dir = os.path.dirname(ui_dir)
         log_path = os.path.join(app_dir, 'logs')

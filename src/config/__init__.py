@@ -1,11 +1,6 @@
 #!/usr/bin/env python3
 # -*-coding: utf-8-*-
-"""
-ROM Sorter Pro - Configuration Package v2.1.8
-
-This module initializes the configuration package and provides helper functions.
-The package is organized in a modular way to improve maintainability.
-"""
+"""Rome Sarter Pro - Configuration Package V2.1.8 This module Initialities the Configuration Package and Provides Helper Functions. The package is organized in a modular way to improve."""
 
 from pathlib import Path
 import sys
@@ -40,19 +35,11 @@ class Config:
         return default
 
 class ConfigError(Exception):
-    """Fehler bei der Konfiguration."""
+    """Configuration error."""
     pass
 
 def load_config(config_path=None):
-    """
-    Lädt die Konfiguration aus einer Datei
-
-    Args:
-        config_path: Optionaler Pfad zur Konfigurationsdatei
-
-    Returns:
-        Dictionary mit der geladenen Konfiguration oder leeres Dictionary bei Fehler
-    """
+    """Loads the configuration from a file args: config_path: optional path to the configuration file return: dictionary with the invited configuration or empty dictionary for errors"""
     if config_path is None:
         # Standardpfad verwenden
         config_path = os.path.join(os.path.dirname(__file__), '..', 'config.json')
@@ -73,11 +60,7 @@ config_instance = Config()
 
 # Importing the extended configuration without causing circular imports
 def get_enhanced_config():
-    """
-    Liefert die erweiterte Konfigurationsinstanz.
-    Hinweis: Diese Funktion wird später durch die richtige Implementierung
-    in enhanced_config.py ersetzt.
-    """
+    """Delivers the extended configuration instance. Note: This function is later carried out by the correct implementation replaced in enhanced_config.py."""
     return config_instance
 
 # Import the extended configuration only after defining the auxiliary functions

@@ -1,25 +1,5 @@
 # -*-coding: utf-8-*-
-"""
-ROM Sorter Pro - DEPRECATED: Optimized File Scanner v2.1.8
-
-CAUTION: This module is deprecated and will be removed in future versions.
-Please use the new scanner modules in src.scanning instead.
-
-PERFORMANCE OPTIMIZATIONS v2.1.8:
-- High-performance threading for large directory structures
-- Intelligent caching with adaptive adjustment
-- Adaptive batch processing for optimal throughput
-- Depth-limited recursion for faster search
-- Adaptive settings based on filesystem performance
-- Optimized memory usage for large directories
-
-Project:        ROM Sorter Pro
-File:           src/optimized_scanner.py
-Version:        2.1.8
-Author:         cemal / daftpunk6161
-License:        MIT License
-Python:         3.8+
-"""
+"""ROM SORTER PRO - DEPRECATED: Optimized File Scanner V2.1.8 Caution: this modules is deprecated and will be removed in future versions. Please use the new scanner module in SRC.Scanning Instead. Performance Optimizations V2.1.8: - High-performance Threading for Large Directory Structures - Intelligent caching with adaptive adaptation - Adaptive Batch Processing for optimal throughout - Depth-Limited Recursion for Faster Search - Adaptive settings Based on File System Performance - Optimized Memory Usage for Large Directories Project: Rome Sorter Pro File: SRC/Optimized_Scanner.py Version: 2.1.8 Author: Cemal / Daftpunk6161 License: with license Python: 3.8+"""
 
 import os
 import re
@@ -50,7 +30,7 @@ _imports = {
 }
 
 def _get_module(name):
-    """Lädt ein Modul nur bei Bedarf"""
+    """ONLY LOADS A Module If Necessary"""
     global _imports
     if _imports[name] is None:
         try:
@@ -69,44 +49,22 @@ def _get_module(name):
 
 # Simple wrapper functions for API compatibility
 def scan_directory(directory: str, progress_callback=None, stop_event=None, use_cache=True) -> List[Path]:
-    """
-    Scannt ein Verzeichnis nach ROM-Dateien.
-
-    Diese Funktion ist veraltet und delegiert an den neuen AdaptiveScanner.
-
-    Args:
-        directory: Zu durchsuchendes Verzeichnis
-        progress_callback: Callback-Funktion für Fortschritt
-        stop_event: Event zum Stoppen des Scans
-        use_cache: Ob der Cache verwendet werden soll
-
-    Returns:
-        Liste von ROM-Dateipfaden
-    """
+    """Scan a List of Rome Files. This function is outdated and delegated to the new adaptive scanner. ARGS: Directory: Directory to Be Searched Progress_Callback: Callback Function for Progress Stop_event: Event to Stop the Scan Use_Cache: Whather the Cache Should Be Used Return: List of Rom File Paths"""
     compat = _get_module('compat')
     return compat.scan_directory(directory, progress_callback, stop_event, use_cache)
 
 def clear_cache():
-    """Löscht den Scan-Cache (delegiert an AdaptiveScanner)."""
+    """Deletes the scan cache (delegates to adaptive scanners)."""
     compat = _get_module('compat')
     compat.clear_cache()
 
 def get_cache_stats():
-    """
-    Gibt Statistiken zum Cache zurück.
-
-    Returns:
-        Dict mit Cache-Statistiken
-    """
+    """Gives back statistics to the cache. Return: Dict with cache statistics"""
     compat = _get_module('compat')
     return compat.get_cache_stats()
 
 class OptimizedFileScanner:
-    """
-    Veraltete OptimizedFileScanner-Klasse.
-    Diese Klasse ist nur noch ein Wrapper für die neue AdaptiveScanner-Klasse in src.scanning.
-    Sie wird in zukünftigen Versionen entfernt werden.
-    """
+    """Outdated optimized files scanner class. This class is just a wrapper for the new adaptive scanner class in SRC.Scanning. IT wants to remove in future versions."""
 
 # Lightweight class attributes with delegate patterns
     _cache_lock = threading.RLock()
@@ -130,7 +88,7 @@ class OptimizedFileScanner:
     }
 
     def __init__(self, extensions=None):
-        """Scanner mit optionalem Erweiterungsfilter initialisieren."""
+        """Initialize the scanner with optional extension filter."""
         compat = _get_module('compat')
 
 # Direct delegation to optimized files from compat
@@ -150,7 +108,7 @@ class OptimizedFileScanner:
         self._is_rom_file = lru_cache(maxsize=2048)(self._optimized_extension_check)
 
     def _optimized_extension_check(self, path):
-        """Optimierter Check für ROM-Dateierweiterungen mit Delegation."""
+        """Optimized check for ROM date eggs with delegation."""
         try:
             return self._delegate._real_scanner._is_valid_extension(path)
         except (AttributeError, TypeError):
@@ -159,18 +117,7 @@ class OptimizedFileScanner:
             return ext.lstrip('.') in self.ROM_EXTENSIONS if self.ROM_EXTENSIONS else True
 
     def scan_directory(self, directory: str, progress_callback=None, stop_event=None, use_cache=True) -> List[Path]:
-        """
-        Scannt Verzeichnis nach ROM-Dateien mit optimaler Leistung und adaptiver Anpassung.
-
-        Args:
-            directory: Zu durchsuchendes Verzeichnis
-            progress_callback: Callback-Funktion für Fortschritt
-            stop_event: Event zum Stoppen des Scans
-            use_cache: Ob der Cache verwendet werden soll
-
-        Returns:
-            Liste von ROM-Dateipfaden
-        """
+        """Scans the directory of Rome files with optimal performance and adaptive adaptation. Args: Directory: Directory to be searched Progress_Callback: Callback function for progress Stop_event: Event to stop the scan use_cache: Whether the cache should be used Return: List of ROM file paths"""
         try:
 # Efficient delegation to the real scanner
             return self._delegate.scan_directory(directory, progress_callback, stop_event, use_cache)
@@ -209,17 +156,12 @@ class OptimizedFileScanner:
 
     @classmethod
     def clear_cache(cls):
-        """Löscht den Scanner-Cache."""
+        """Deletes the scanner cache."""
         compat = _get_module('compat')
         compat.clear_cache()
 
     @property
     def cache_stats(self):
-        """
-        Gibt Cache-Statistiken zurück.
-
-        Returns:
-            Dict mit Cache-Statistiken
-        """
+        """Gives back cache statistics. Return: Dict with cache statistics"""
         compat = _get_module('compat')
         return compat.get_cache_stats()

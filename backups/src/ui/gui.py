@@ -31,10 +31,7 @@ from . import DND_AVAILABLE
 
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-ROM Sorter Pro - Hauptzugangspunkt für die GUI
-Diese Datei dient als Einstiegspunkt für die refaktorierte GUI-Anwendung.
-"""
+"""ROM SARTER PRO - main accession point for the GUI This file serves as an entry point for the refactored GUI application."""
 
 import os
 import sys
@@ -68,9 +65,7 @@ except ImportError as e:
     raise
 
 def main():
-    """
-    Startet die ROM Sorter Pro Anwendung mit der refaktorierten Struktur
-    """
+    """The Rome Sorter starts with the refactored structure per application"""
     try:
         # Load configuration
         config = load_config()
@@ -155,7 +150,7 @@ if __name__ == "__main__":
         return self._colors
 
     def _detect_system_dark_mode(self) -> bool:
-        """Erkennt, ob das System im Dark Mode ist."""
+        """Recognize whether the system is in the dark fashion."""
         try:
             if platform.system() == 'Windows':
                 # Windows 10/11 Dark Mode Erkennung
@@ -214,7 +209,7 @@ if __name__ == "__main__":
         return self._fonts
 
     def _find_available_font(self, font_list: List[str]) -> str:
-        """Finds the first available font from a list."""
+        """Finds the First Available Font From A List."""
         # Import only if necessary to optimize start time
         try:
             if not hasattr(self, '_available_fonts'):
@@ -578,7 +573,7 @@ class SmartThread(threading.Thread):
 
     @classmethod
     def get_thread_pool(cls, max_workers=None):
-        """Returns a shared thread pool."""
+        """Returns A Shared Thread Pool."""
         with cls._pool_lock:
             if cls._thread_pool is None:
                 if max_workers is None:
@@ -802,7 +797,7 @@ class OptimizedDragDropFrame(tk.Frame):
         self._reset_appearance()
 
     def _handle_native_drop(self, file_paths):
-        """Verarbeitet gedropte Dateien von der nativen Drag & Drop-Implementierung."""
+        """Processed printed files from native drag & drop implementation."""
         if not self.callback:
             print("No callback defined for Drag & Drop processing")
             return
@@ -1285,7 +1280,7 @@ class EfficientLogWidget(tk.Frame):
         self._log_thread.start()
 
     def _process_batch(self, batch):
-        """Process a batch of log messages."""
+        """Process a Batch of Log Messages."""
         current_time = time.time()
         if current_time - self._last_update < (self._update_interval / 1000):
             # Re-queue for later
@@ -1703,7 +1698,7 @@ class OptimizedStatsWidget(tk.Frame):
 # ============================================================================
 
 class FastFileScanner:
-    """Hochleistungs-Dateiscanner mit optimierter Speichernutzung und adaptiver Leistungsanpassung."""
+    """High-performance file scanner with optimized storage use and adaptive performance adjustment."""
 
     # Class-level cache for better memory efficiency
     _scan_cache = {}
@@ -1739,7 +1734,7 @@ class FastFileScanner:
     }
 
     def __init__(self, extensions=None):
-        """Scanner mit optionalem Erweiterungsfilter initialisieren."""
+        """Initialize the scanner with optional extension filter."""
         self._file_count = 0
         self._dir_count = 0
         self._stop_event = None
@@ -2478,7 +2473,7 @@ class OptimizedROMSorterGUI:
             return []
 
     def _show_drag_drop_feedback(self, message):
-        """Shows a short visual feedback for Drag & Drop operations."""
+        """Shows a short visual feedback for drag & drop operations."""
         try:
             # Create A Temporary Label for Feedback
             feedback = tk.Label(
@@ -2573,7 +2568,7 @@ class OptimizedROMSorterGUI:
         menubar.add_cascade(label="Hilfe", menu=help_menu)
 
     def _initialize_theme_support(self):
-        """Initialisiert das Theme-System."""
+        """Initialized the theme system."""
         if THEME_SUPPORT:
             try:
                 self.theme_integrator = ThemeIntegrator(self)
@@ -2596,7 +2591,7 @@ class OptimizedROMSorterGUI:
         self.stop_requested = threading.Event()  # Event for the demolition request
 
     def _show_settings(self):
-        """Zeigt den Dialog mit den allgemeinen Einstellungen an."""
+        """Displays the dialogue with the general settings."""
         settings_window = tk.Toplevel(self.root)
         settings_window.title("Einstellungen")
         settings_window.geometry("500x400")
@@ -2634,12 +2629,7 @@ class OptimizedROMSorterGUI:
         ttk.Button(main_frame, text="Close", command=settings_window.destroy).pack(pady=10)
 
     def _change_theme(self, theme_name):
-        """
-        Ändert das aktuelle Theme.
-
-        Args:
-            theme_name: Name des zu verwendenden Themes
-        """
+        """Changes the current theme. Args: Theme_Name: Name of the theme to be used"""
         if THEME_SUPPORT and self.theme_integrator:
             self.theme_integrator._change_theme(theme_name)
 
@@ -2649,13 +2639,7 @@ class OptimizedROMSorterGUI:
             self.theme_integrator._show_theme_customizer()
 
     def show_notification(self, message, level="info"):
-        """
-        Zeigt eine Benachrichtigung an.
-
-        Args:
-            message: Die Nachricht, die angezeigt werden soll
-            level: Der Typ der Nachricht ("info", "warning", "error")
-        """
+        """Displays a notification. Args: Message: The Message that is to be displayed level: The Type of Message ("Info", "Warning", "Error")"""
         if level.lower() == "info":
             messagebox.showinfo("Information", message)
         elif level.lower() == "warning":
@@ -2667,19 +2651,7 @@ class OptimizedROMSorterGUI:
 
     def _show_about(self):
         """Show about dialog with information about ROM Sorter Pro."""
-        about_text = """ROM Sorter Pro v2.1.8 - Theme Edition
-
-Ein professionelles Werkzeug zur Organisation von ROM-Sammlungen.
-
-Features:
-- Automatische ROM-Erkennung mit mehreren Detektionsstrategien
-- Datenbank-basierte ROM-Identifikation (No-Intro und Redump)
-- Improved CHD support
-- Drag & Drop-Support
-- Multithreading-Performance
-- Erweiterte Konsolen-Erkennung
-
-© 2024 ROM Sorter Team. Alle Rechte vorbehalten."""
+        about_text = """Rome Sorter Pro V2.1.8 - Theme Edition A Professional Tool for Organizing Rome Collections. Features: - Automatic Rome Detection with Several Detection Strategies -Database -Based Rome Identification (no -intro and redump) - Improved CHD Support - Drag & Drop Support - Multithreading Performance - Extended Console Recognition © 2024 Rome Sorter Team. All rights reserved."""
 
         messagebox.showinfo("Über ROM Sorter Pro", about_text)
 
@@ -2953,7 +2925,7 @@ Features:
         thread_local.check_shutdown = check_shutdown
 
     def _select_source_folder(self):
-        """Opens a dialog to select the source folder."""
+        """Open's A Dialog to Select the Source Folder."""
         folder = filedialog.askdirectory(
             title="Select source folder with ROMs",
             initialdir=self.source_folder.get() or os.path.expanduser("~")
@@ -2962,7 +2934,7 @@ Features:
             self._set_source_folder(folder)
 
     def _select_dest_folder(self):
-        """Opens a dialog to select the destination folder."""
+        """Open's A Dialog to Select the Destination Folder."""
         folder = filedialog.askdirectory(
             title="Select destination folder for sorted ROMs",
             initialdir=self.dest_folder.get() or os.path.expanduser("~")
@@ -3850,8 +3822,7 @@ Features:
         self._show_sort_results("Erfolg", report_lines)
 
     def _show_sort_results(self, title: str, report_lines: List[str]):
-        """Verbesserte Methode zum Anzeigen von Ergebnisdialogen mit Modal-Status.
-        Verhindert doppelte oder überlappende Erfolgsmeldungen."""
+        """Improved method for displaying results dialogues with modal status. Prevents double or overlapping success reports."""
         # Close all previous top level windows that could be success/error dialogues
         for widget in self.root.winfo_children():
             if isinstance(widget, tk.Toplevel) and widget.wm_title() in ["Erfolg", "Error"]:
@@ -3974,8 +3945,7 @@ Features:
         self._show_error_dialog("Fehler", error_lines)
 
     def _show_error_dialog(self, title: str, error_lines: List[str]):
-        """Verbesserte Methode zum Anzeigen von Fehlerdialogen mit Modal-Status.
-        Verhindert doppelte oder überlappende Fehlermeldungen."""
+        """Improved method for displaying error dialogues with modal status. Prevents double or overlapping error messages."""
         # Close all previous top level windows that could be success/error dialogues
         for widget in self.root.winfo_children():
             if isinstance(widget, tk.Toplevel) and widget.wm_title() in ["Erfolg", "Error", "Fehler"]:
@@ -4213,25 +4183,7 @@ Features:
 
     def _show_help(self):
         """Show help dialog."""
-        help_text = """ROM Sorter Pro v2.1.4 - Help
-
-Quick Start:
-1. Select source folder containing ROM files
-2. Select destination folder for organized ROMs
-3. Click 'Preview Scan' to see what will be sorted
-4. Click 'Start Sorting' to organize your ROMs
-
-Supported Formats:
-• Nintendo: .nes, .smc, .sfc, .n64, .z64, .gb, .gbc, .gba
-• PlayStation: .iso, .bin, .cue, .pbp
-• Archives: .zip, .7z, .rar
-• And many more!
-
-Features:
-• Automatic console detection
-• Duplicate handling
-• Progress tracking
-• Safe file operations"""
+        help_text = """Rome Sorter Pro V2.1.4 - Help Quick Start: 1. Select Source Folders Containing Rome Files 2. Select Destination Folder for Organized Rome 3. Click 'Preview Scan' To See What Will Be Sorted 4. Click 'to Organize Your Rome Supported Format: • Nintendo:.Nes,.SMC,.SFC,.n64,.z64,.gb,.gbc,.gba • Playstation:.iso,.bin,.cue,.pbp • Archives:.7Z,.rar • and many more! Features: • Automatic Console Detection • Duplicate Handling • Progress Tracking • Safe File Operations"""
 
         messagebox.showinfo("Help", help_text)
 

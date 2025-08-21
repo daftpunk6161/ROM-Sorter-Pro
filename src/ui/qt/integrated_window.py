@@ -1,12 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-ROM Sorter Pro - Qt-UI-Integration
-Phase 1 Implementation: Desktop-Optimierung und Integration
-
-Dieses Modul verbindet die Qt-UI mit dem High-Performance-Scanner und
-anderen Backend-Komponenten über die Qt-Bridge-Integration.
-"""
+"""Rome Sorter Pro-QT-UI integration Phase 1 Implementation: Desktop optimization and integration This module connects the QT-UI with the high-performance scanner and other backend components via the QT-Bridge integration."""
 
 import os
 import sys
@@ -78,21 +72,17 @@ except ImportError:
                 pass
 
         def get_enhanced_config(*args, **kwargs):
-            """Mock-Implementierung, falls die echte nicht verfügbar ist."""
+            """Mock implementation if the real one is not available."""
             return SimpleConfig()
 
 # Logging einrichten
 logger = logging.getLogger(__name__)
 
 class IntegratedMainWindow(ROMSorterMainWindow):
-    """
-    Erweiterte Hauptfenster-Klasse, die die Integration mit dem Backend implementiert.
-    Erbt von der bestehenden ROMSorterMainWindow-Klasse und erweitert sie um
-    die Verbindung mit dem High-Performance-Scanner und anderen Backend-Komponenten.
-    """
+    """Extended main window class, which implemented the integration with the backend. Inherits from the existing RomeSortermainwindow class and expand them The connection with the high-performance scanner and other backend components."""
 
     def __init__(self):
-        """Initialisiert das integrierte Hauptfenster."""
+        """Initialized the integrated main window."""
         # Get the extended configuration
         self.enhanced_config = get_enhanced_config()
 
@@ -111,7 +101,7 @@ class IntegratedMainWindow(ROMSorterMainWindow):
         logger.info("Integriertes Hauptfenster initialisiert")
 
     def _connect_bridge_signals(self):
-        """Verbindet die Signale der Bridge mit den entsprechenden UI-Elementen."""
+        """Connect the signals of the bridge with the corresponding UI elements."""
         # Scanner-Signale verbinden
         self.bridge.scanner_signals.file_found.connect(self._on_file_found)
         self.bridge.scanner_signals.rom_found.connect(self._on_rom_found)
@@ -127,7 +117,7 @@ class IntegratedMainWindow(ROMSorterMainWindow):
         self.bridge.database_signals.export_progress.connect(self._on_export_progress)
 
     def _init_extended_ui(self):
-        """Initialisiert erweiterte UI-Elemente für die Integration."""
+        """Initialized extended UI elements for integration."""
         # Here we could create additional UI elements
         # But since we use the existing components,
         # Let's focus on the connection of the actions
@@ -158,7 +148,7 @@ class IntegratedMainWindow(ROMSorterMainWindow):
     # ======================================================================
 
     def _on_scan_action(self):
-        """Handler für die Scan-Aktion im Menü."""
+        """Handler for the scan campaign in the menu."""
         # Open A Directory Selection Dialogue
         directory = QFileDialog.getExistingDirectory(
             self, "ROM-Verzeichnis auswählen", "",
@@ -203,25 +193,25 @@ class IntegratedMainWindow(ROMSorterMainWindow):
                                 f"Der Scan konnte nicht gestartet werden:\n{str(e)}")
 
     def _on_file_found(self, path):
-        """Handler für das Signal, wenn eine File gefunden wurde."""
+        """Handler for the Signal When A File Has Been Found."""
         # Update the status bar
         self.statusBar().showMessage(f"Verarbeite: {path}")
 
     def _on_rom_found(self, rom_info):
-        """Handler für das Signal, wenn eine ROM gefunden wurde."""
+        """Handler for the Signal When A Rome Has Been Found."""
         # Add the Rome to the table if available
         if hasattr(self, 'roms_table'):
             self._add_rom_to_table(rom_info)
 
     def _on_scan_progress(self, current, total):
-        """Handler für das Fortschrittssignal des Scans."""
+        """Handler for the progress signal of the scan."""
         # Aktualisiere den Fortschrittsbalken, wenn vorhanden
         if hasattr(self, 'progress_bar'):
             self.progress_bar.setMaximum(total)
             self.progress_bar.setValue(current)
 
     def _on_scan_completed(self, stats):
-        """Handler für das Signal, wenn ein Scan abgeschlossen ist."""
+        """Handler for the Signal When A Scan is Complete."""
         # Update the UI
         self.statusBar().showMessage(f"Scan abgeschlossen: {stats.get('roms_found', 0)} ROMs gefunden in {stats.get('duration_seconds', 0)} Sekunden")
 
@@ -245,12 +235,12 @@ class IntegratedMainWindow(ROMSorterMainWindow):
         )
 
     def _on_scan_error(self, error):
-        """Handler für Error während des Scans."""
+        """Handler for error during the scan."""
         logger.error(f"Scan-Fehler: {error}")
         QMessageBox.critical(self, "Scan-Fehler", f"Ein Fehler ist aufgetreten:\n{error}")
 
     def _add_rom_to_table(self, rom_info):
-        """Fügt eine ROM zur Tabelle hinzu."""
+        """Add a rome to the table."""
         try:
             if not hasattr(self, 'roms_table'):
                 return
@@ -279,7 +269,7 @@ class IntegratedMainWindow(ROMSorterMainWindow):
             logger.error(f"Fehler beim Hinzufügen der ROM zur Tabelle: {e}")
 
     def _format_size(self, size_bytes):
-        """Formatiert eine Größe in Bytes in eine lesbare Form."""
+        """Formats A Size in bytes in a Readable form."""
         if size_bytes < 1024:
             return f"{size_bytes} B"
         elif size_bytes < 1024 * 1024:
@@ -294,25 +284,25 @@ class IntegratedMainWindow(ROMSorterMainWindow):
     # ======================================================================
 
     def _on_query_completed(self, results):
-        """Handler für abgeschlossene Datenbankabfragen."""
+        """Handler for completed database queries."""
         # This method would be implemented to the results
         # to display in the UI, e.G. In A Table Or List
         logger.debug(f"Abfrage abgeschlossen: {len(results)} Ergebnisse")
 
     def _on_update_completed(self, success, message):
-        """Handler für abgeschlossene Datenbankupdates."""
+        """Handler for completed database updates."""
         if success:
             self.statusBar().showMessage(message, 3000)
         else:
             QMessageBox.warning(self, "Update-Fehler", message)
 
     def _on_db_error(self, error):
-        """Handler für Datenbankfehler."""
+        """Handler for database errors."""
         logger.error(f"Datenbankfehler: {error}")
         QMessageBox.critical(self, "Datenbankfehler", f"Ein Fehler ist aufgetreten:\n{error}")
 
     def _on_import_progress(self, current, total):
-        """Handler für den Fortschritt beim Datenbankimport."""
+        """Handler for progress in database import."""
         # Aktualisiere den Fortschrittsbalken, wenn vorhanden
         if hasattr(self, 'progress_bar'):
             self.progress_bar.setMaximum(total)
@@ -320,7 +310,7 @@ class IntegratedMainWindow(ROMSorterMainWindow):
             self.progress_bar.setVisible(True)
 
     def _on_export_progress(self, current, total):
-        """Handler für den Fortschritt beim Datenbankexport."""
+        """Handler for progress in database export."""
         # Aktualisiere den Fortschrittsbalken, wenn vorhanden
         if hasattr(self, 'progress_bar'):
             self.progress_bar.setMaximum(total)
@@ -328,13 +318,13 @@ class IntegratedMainWindow(ROMSorterMainWindow):
             self.progress_bar.setVisible(True)
 
     def _on_import_action(self):
-        """Handler für die Import-Aktion im Menü."""
+        """Handler for the import campaign in the menu."""
         # This Method would be implemented to a file selection dialogue
         # to open and start a database import
         pass
 
     def _on_export_action(self):
-        """Handler für die Export-Aktion im Menü."""
+        """Handler for the export campaign in the menu."""
         # This Method would be implemented to a file selection dialogue
         # to open and start database export
         pass
@@ -344,7 +334,7 @@ class IntegratedMainWindow(ROMSorterMainWindow):
     # ======================================================================
 
     def closeEvent(self, event):
-        """Wird aufgerufen, wenn das Fenster geschlossen wird."""
+        """Is called when the window is closed."""
         try:
             # Bereinige Ressourcen
             if hasattr(self, 'bridge'):
@@ -360,7 +350,7 @@ class IntegratedMainWindow(ROMSorterMainWindow):
 
 # Create a function to start the application
 def start_integrated_ui():
-    """Startet die integrierte UI."""
+    """Starts the integrated UI."""
     app = QApplication(sys.argv)
     window = IntegratedMainWindow()
     window.show()

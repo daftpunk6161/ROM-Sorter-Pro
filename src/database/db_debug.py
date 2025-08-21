@@ -1,6 +1,4 @@
-"""
-Debug-Funktionen für die ROM-Datenbank.
-"""
+"""Debug functions for the Rome database."""
 
 import os
 import sqlite3
@@ -9,7 +7,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 def debug_database_initialization(db_path):
-    """Prüft die Database und meldet ihren Status."""
+    """Check the database and report its status."""
 
     logger.info(f"Überprüfe Datenbank: {db_path}")
 
@@ -91,7 +89,7 @@ def debug_database_initialization(db_path):
         return False
 
 def get_db_connection(db_path=None):
-    """Stellt eine Verbindung zur Datenbank her und erstellt die Tabellen bei Bedarf."""
+    """Establish a Connection to the Database and Create the Tables If Necessary."""
 
     if db_path is None:
 # Use standard path

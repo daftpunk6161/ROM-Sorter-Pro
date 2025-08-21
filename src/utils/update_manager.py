@@ -108,12 +108,7 @@ class UpdateManager:
             return "0.0.1"
 
     def _load_update_config(self) -> Dict[str, Any]:
-        """
-        Loads the update configuration from the file.
-
-        Returns:
-            Update configuration as a dictionary
-        """
+        """Loads the Update Configuration from the File. Return: Update Configuration as a dictionary"""
         default_config = {
             "auto_check": self.auto_check,
             "check_interval": self.check_interval,
@@ -146,12 +141,7 @@ class UpdateManager:
             return default_config
 
     def _save_update_config(self) -> bool:
-        """
-        Speichert die Update-Konfiguration in die Datei.
-
-        Returns:
-            True bei Erfolg, False bei Fehler
-        """
+        """Save the update configuration in the file. Return: True in the event of success, false in the event of errors"""
         try:
             os.makedirs(os.path.dirname(UPDATE_CONFIG_FILE), exist_ok=True)
             with open(UPDATE_CONFIG_FILE, 'w') as f:
@@ -162,7 +152,7 @@ class UpdateManager:
             return False
 
     def _start_auto_check(self) -> None:
-        """Startet die automatische Update-Check."""
+        """Starts the automatic update check."""
         def check_thread():
             while self.auto_check:
                 # Check whether an update test is required
@@ -184,13 +174,7 @@ class UpdateManager:
         self.update_thread.start()
 
     def set_progress_callback(self, callback: Callable[[int, str], None]) -> None:
-        """
-        Setzt einen Callback für Update-Fortschritt.
-
-        Args:
-            callback: Funktion, die bei Fortschritt aufgerufen wird
-                     Signatur: callback(progress, message)
-        """
+        """Set A Callback for Update Progress. ARGS: Callback: Function that is called When Progress Signature: Callback (Progress, Message)"""
         self.update_progress_callback = callback
 
     def _report_progress(self, progress: int, message: str) -> None:
@@ -207,12 +191,7 @@ class UpdateManager:
             self.update_progress_callback(progress, message)
 
     def check_for_updates(self) -> bool:
-        """
-        Prüft, ob Updates verfügbar sind.
-
-        Returns:
-            True, wenn Updates verfügbar sind, sonst False
-        """
+        """Check whether updates are available. Return: True when updates are available, otherwise false"""
         if self.is_checking:
             logger.warning("Update-Prüfung läuft bereits")
             return False
@@ -352,17 +331,7 @@ class UpdateManager:
 
     def _verify_checksum(self, file_path: str, expected_checksum: str,
                         checksum_type: str = "sha256") -> bool:
-        """
-        Verifies the integrity of a file using checksum.
-
-        Args:
-            file_path: Path to the file to verify
-            expected_checksum: Expected checksum
-            checksum_type: Type of checksum (md5, sha1, sha256, sha512)
-
-        Returns:
-            True, wenn die Checksum übereinstimmt, sonst False
-        """
+        """Verifies the Integrity of A File Using Checksum. ARGS: File_Path: Path to the File to Verify Expected_Checksum: Expected Checksum Checksum_Type: Type of Checksum (MD5, SHA1, SHA256, SHA512) Return: True, if the Checks Matches, OtherWise False"""
         try:
             if checksum_type == "md5":
                 hasher = hashlib.md5()
@@ -394,15 +363,7 @@ class UpdateManager:
             return False
 
     def install_update(self, update_file_path: str) -> bool:
-        """
-        Installiert ein heruntergeladenes Update.
-
-        Args:
-            update_file_path: Pfad zur Update-Datei
-
-        Returns:
-            True bei Erfolg, False bei Fehler
-        """
+        """Install a downloaded update. ARGS: Update_file_Path: Path to the Update File Return: True in the event of Success, False in the event of errors"""
         if not os.path.exists(update_file_path):
             logger.error(f"Update-Datei nicht gefunden: {update_file_path}")
             return False
@@ -479,22 +440,11 @@ class UpdateManager:
             return False
 
     def _run_python_script(self, script_path: str) -> None:
-        """
-        Führt ein Python-Skript aus.
-
-        Args:
-            script_path: Pfad zum Python-Skript
-        """
+        """Leads a python script. Args: script_path: path to the python script"""
         subprocess.run([sys.executable, script_path], check=True)
 
     def _create_backup(self, source_dir: str, backup_dir: str) -> None:
-        """
-        Creates a backup of the program directory.
-
-        Args:
-            source_dir: Source directory
-            backup_dir: Target directory for the backup
-        """
+        """Creates A Backup of the Program Directory. Args: Source_dir: Source Directory Backup_Dir: Target Directory for the Backup"""
         # Create the backup directory if it does not exist
         os.makedirs(backup_dir, exist_ok=True)
 
@@ -513,13 +463,7 @@ class UpdateManager:
                 shutil.copy2(source_item, backup_item)
 
     def _restore_backup(self, backup_dir: str, target_dir: str) -> None:
-        """
-        Stellt ein Backup wieder her.
-
-        Args:
-            backup_dir: Backup-Verzeichnis
-            target_dir: Zielverzeichnis für die Wiederherstellung
-        """
+        """Restore a backup. Args: backup_dir: backup Directory Target_dir: Table Directory for restoration"""
         # Copy all files and subdirectories back
         for item in os.listdir(backup_dir):
             backup_item = os.path.join(backup_dir, item)
@@ -537,13 +481,7 @@ class UpdateManager:
                 shutil.copy2(backup_item, target_item)
 
     def _copy_update_files(self, update_dir: str, target_dir: str) -> None:
-        """
-        Kopiert die Update-Dateien in das Zielverzeichnis.
-
-        Args:
-            update_dir: Verzeichnis mit den Update-Dateien
-            target_dir: Zielverzeichnis für die Installation
-        """
+        """Copies the update files into the target directory. Args: UPDATE_DIR: List with the update files TARGET_DIR: target directory for installation"""
         # Check whether an update.json file exists
         update_json_path = os.path.join(update_dir, "update.json")
         if os.path.exists(update_json_path):
@@ -599,9 +537,7 @@ class UpdateManager:
 
 
 def check_and_update() -> None:
-    """
-    Prüft auf Updates und führt sie aus.
-    """
+    """Check for updates and lead them."""
     # Konfiguriere Logging
     logging.basicConfig(level=logging.INFO,
                       format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')

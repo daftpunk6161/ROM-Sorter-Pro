@@ -1,10 +1,6 @@
 #!/usr/bin/env python3
 # -*-coding: utf-8-*-
-"""
-ROM Sorter Pro - Database-Paket
-
-Dieses Paket enthält alle Datenbank-bezogenen Module und Funktionalitäten.
-"""
+"""ROM SARTER Pro - Database package This package contains all database-related modules and functionalities."""
 
 from .console_db import (
     get_all_rom_extensions,

@@ -1,21 +1,4 @@
-"""
-ROM Sorter Pro - Zentrale Detektorschnittstelle
-
-Diese Datei stellt eine zentrale Schnittstelle für alle ROM-Detektoren bereit,
-um eine konsistente API für die Konsolenerkennung zu bieten.
-
-Features:
-- Einheitliche API für alle Erkennungsmethoden
-- Automatischer Fallback-Mechanismus
-- Leistungsoptimierung durch Caching
-- Kontextbewusste Erkennung
-- Spezialisierte Detektoren für bestimmte Formate (CHD, Archive)
-- Datenbankintegration für höchste Genauigkeit (No-Intro & Redump)
-
-Verwendung:
-    from src.detectors import detect_console
-    console, confidence = detect_console(filename, file_path)
-"""
+"""Rome Sarter Pro - Central Detector Interface This File Provides A Central Interface for All Rome Detectors, to Offer a Consistent API for Console Detection. Features: - uniform api for all identification methods - automatic fallback mechanism - Performance optimization through caching - context -conscious detection - Specialized detectors for certain formats (CHD, archive) - database integration for maximum accuracy (no -intro & redump) use: from src.detectors import detect_console console, confidence = detect_console (file name, file_path)"""
 
 import os
 import sqlite3
@@ -51,7 +34,7 @@ try:
 except ImportError:
 # Fallback implementation if DB_Gui_integration is not available
     def initialize_database(db_path):
-        """Fallback-Initialisierung der Datenbank."""
+        """Fallback initialization of the database."""
         try:
             os.makedirs(os.path.dirname(db_path), exist_ok=True)
             conn = sqlite3.connect(db_path)
@@ -86,7 +69,7 @@ try:
     from src.database.db_debug import debug_database_initialization
 except ImportError:
     def debug_database_initialization(db_path):
-        """Fallback für Debug-Function."""
+        """Fallback for Debug-Function."""
         logger.debug(f"Überprüfe Datenbank: {db_path}")
         try:
             conn = sqlite3.connect(db_path)
@@ -108,19 +91,7 @@ DATABASE_ENABLED = True  # Switch for database functionality
 
 @lru_cache(maxsize=CACHE_SIZE)
 def detect_console_by_database(file_path: str) -> Tuple[str, float]:
-    """
-    Erkennt die Konsole einer ROM durch Abgleich mit der ROM-Datenbank.
-
-    Diese Funktion berechnet den MD5-Hash der Datei und vergleicht ihn mit
-    den Einträgen in der Datenbank. Bei einem Treffer wird die entsprechende
-    Konsole mit höchster Konfidenz zurückgegeben.
-
-    Args:
-        file_path: Vollständiger Pfad zur ROM-Datei
-
-    Returns:
-        Tuple aus (console_name, confidence_score)
-    """
+    """Recognits the Console of a Rome by Comparing the Rome Database. This function calculates the MD5-Hash of the File and Compares It The Entries in the Database. In the event of a hit, The Corresponding Console Returned with the Highest Confidence. ARGS: File_Path: Complete Path to the Rome File Return: Tube from (Console_Name, Confidence_Score)"""
     if not DATABASE_ENABLED or not file_path or not os.path.exists(file_path):
         return "Unknown", 0.0
 
@@ -195,25 +166,11 @@ CACHE_SIZE = 1000
 
 
 class DetectionResult:
-    """
-    Klasse zur Repräsentation eines Erkennungsergebnisses mit Metadaten.
-
-    Diese Klasse speichert sowohl das Erkennungsergebnis (Konsole, Konfidenz)
-    als auch Metadaten zur verwendeten Erkennungsmethode und zum Dateipfad.
-    """
+    """Class for Representing A Detection Result with Metadata. This class store Both the Detection Result (Console, Confidence) as well as metadata for the identification method used and the file path."""
 
     def __init__(self, console: str = "Unknown", confidence: float = 0.0,
                  method: str = "unknown", file_path: str = "", metadata: Dict[str, Any] = None):
-        """
-        Initialisiert ein neues Erkennungsergebnis.
-
-        Args:
-            console: Name der erkannten Konsole
-            confidence: Konfidenzniveau (0.0-1.0)
-            method: Verwendete Erkennungsmethode
-            file_path: Pfad der untersuchten Datei
-            metadata: Optionale zusätzliche Metadaten zur Erkennung
-        """
+        """Initialized A New Detection Result. ARGS: Console: Name of the Recognized Console Confidence: Confidence Level (0.0-1.0) Method: Used Identification Method File_Path: Path of the Examined File Metadata: Optional Additional Metadata for Detection"""
         self.console = console
         self.confidence = float(max(0.0, min(1.0, confidence)))  # Limit between 0 and 1
         self.method = method
@@ -226,12 +183,12 @@ class DetectionResult:
         self.is_unknown = self.console == "Unknown" or self.confidence < 0.3
 
     def to_tuple(self) -> Tuple[str, float]:
-        """Gibt das Result als (console, confidence) Tuple zurück."""
+        """Gives the result back as (Console, Confidence) Tuple."""
         return (self.console, self.confidence)
 
     @staticmethod
     def from_tuple(result: Tuple[str, float], method: str = "unknown", file_path: str = "") -> 'DetectionResult':
-        """Erstellt ein Erkennungsergebnis aus einem (console, confidence) Tuple."""
+        """Creates a detection result from a (console, confidence) taple."""
         console, confidence = result
         return DetectionResult(console, confidence, method=method, file_path=file_path)
 
@@ -250,7 +207,7 @@ class DetectionResult:
         return f"{self.console} ({confidence_str}, {status})"
 
     def to_dict(self) -> Dict[str, Any]:
-        """Konvertiert das Result in ein Dictionary für JSON-Serialisierung."""
+        """Converts the results into a dictionary for json searialialies."""
         return {
             "console": self.console,
             "confidence": self.confidence,
@@ -262,22 +219,19 @@ class DetectionResult:
 
 
 class DetectionManager:
-    """
-    Zentrale Manager-Klasse für die Verwaltung und Koordination aller Detektoren.
-    Implementiert das Singleton-Muster, um einen globalen Zugriffspunkt zu bieten.
-    """
+    """Central Manager Class for the Administration and Coordination of All Detectors. Implements the singleton pattern to offer a global access point."""
 
     _instance = None
 
     @classmethod
     def get_instance(cls):
-        """Gibt die Singleton-Instanz zurück."""
+        """Gives back the singleton instance."""
         if cls._instance is None:
             cls._instance = DetectionManager()
         return cls._instance
 
     def __init__(self):
-        """Initialisiert den DetectionManager mit den Standard-Detektoren."""
+        """Initializes the detection manager with the standard detectors."""
 # Cache for results
         self._cache = {}
         self._cache_size = CACHE_SIZE
@@ -296,30 +250,12 @@ class DetectionManager:
         }
 
     def detect_console(self, filename: str, file_path: Optional[str] = None) -> Tuple[str, float]:
-        """
-        Erkennt die Konsole für eine Datei, indem automatisch der richtige Detektor ausgewählt wird.
-
-        Args:
-            filename: Name der ROM-Datei
-            file_path: Optionaler vollständiger Dateipfad für Kontextanalyse
-
-        Returns:
-            Tuple aus (Konsolenname, Konfidenzwert)
-        """
+        """Recognize the Console for A File by Automatically Selecting The Right Detector. ARGS: Filename: Name of the Rome File File_Path: Optional Full File Path for Context Analysis Return: Tuble from (Console Name, Confidence Value)"""
         result = self.detect_console_with_metadata(filename, file_path)
         return result.console, result.confidence
 
     def detect_console_with_metadata(self, filename: str, file_path: Optional[str] = None) -> DetectionResult:
-        """
-        Erkennt die Konsole für eine Datei mit vollständigen Metadaten.
-
-        Args:
-            filename: Name der ROM-Datei
-            file_path: Optionaler vollständiger Dateipfad für Kontextanalyse
-
-        Returns:
-            DetectionResult-Objekt mit Konsole, Konfidenz und Metadaten
-        """
+        """Recognize the Console for a File with Complete Metadata. ARGS: Filename: Name of the Rome File File_Path: Optional Full File Path for Context Analysis Return: Detection Result Object With Console, Confidence and Metadata"""
         try:
 # Update statistics
             self.stats["total_detections"] += 1
@@ -427,7 +363,7 @@ class DetectionManager:
             return DetectionResult("Unknown", 0.0, {"error": str(e)})
 
     def get_statistics(self) -> Dict[str, Any]:
-        """Gibt die aktuellen Erkennungsstatistiken zurück."""
+        """Returns the current identification statistics."""
         return dict(self.stats)
 
     def clear_cache(self) -> None:
@@ -438,26 +374,12 @@ class DetectionManager:
 
 # Simple API function for downward compatibility
 def detect_console(filename: str, file_path: Optional[str] = None) -> Tuple[str, float]:
-    """
-    Zentrale Funktion für die Konsolenerkennung, die automatisch den geeigneten Detektor auswählt.
-
-    Args:
-        filename: Name der ROM-Datei
-        file_path: Optionaler vollständiger Dateipfad für Kontextanalyse
-
-    Returns:
-        Tuple aus (Konsolenname, Konfidenzwert)
-    """
+    """Central function for console detection, which automatically selects the suitable detector. Args: Filename: Name of the Rome file File_Path: Optional full file path for context analysis Return: Tuble from (console name, confidence value)"""
     return DetectionManager.get_instance().detect_console(filename, file_path)
 
 
 def get_console_list() -> Dict[str, Dict[str, Any]]:
-    """
-    Liefert eine umfassende Liste der unterstützten Konsolen mit Metadaten.
-
-    Returns:
-        Dictionary mit Konsolennamen und zugehörigen Metadaten
-    """
+    """Provides A Comprehensive List of Supported Consoles with Metadata. Return: Dictionary with console Names and Associated Metadata"""
     try:
 # First try to use the new console database
         from src.database.console_db import get_console_metadata_all

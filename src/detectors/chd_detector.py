@@ -1,22 +1,4 @@
-"""
-Verbessertes CHD-Erkennungsmodul für ROM Sorter
-------------------------------------------------
-
-Dieses Modul fügt spezialisierte Erkennung für CHD-Dateien hinzu, die über
-mehrere Konsolentypen hinweg verwendet werden können, einschließlich:
-- MAME Arcade
-- PlayStation (1, 2)
-- Dreamcast
-- Sega CD
-- Und andere Disc-basierte Systeme
-
-Die Erkennung basiert auf:
-1. Dateinamensmustern
-2. Header-Analyse
-3. Metadaten aus der CHD-Datei
-4. Externe Datenbanken (wenn verfügbar)
-5. Kontextbasierte Hinweise (Ordnerstruktur)
-"""
+"""Improved CHD recognition module for Rome Sorter ------------------------------------------ This module adds specialized detection for CHD files several types of console can be used, including: - Mame Arcade - Playstation (1, 2) - Dreamcast - Sega CD - and other disc-based systems The detection is based on: 1. File name pattern 2. Header analysis 3. Metadata from the CHD file 4. External databases (if available) 5. Context -based information (folder structure)"""
 
 import os
 import sqlite3
@@ -115,15 +97,7 @@ CONSOLE_SIZE_RANGES = {
 }
 
 def get_chd_console(chd_path: str) -> Tuple[str, float]:
-    """
-    Erkennt die Konsole für eine CHD-Datei durch mehrere Methoden.
-
-    Args:
-        chd_path: Pfad zur CHD-Datei
-
-    Returns:
-        Tuple mit (console_name, confidence)
-    """
+    """Recognize the Console for a Chd File Using Several Methods. ARGS: CHD_Path: Path to the Chd File Return: Tube with (Console_Name, Confidence)"""
 # Standard values
     console = "MAME - Arcade"  # Standard-Fallback
     confidence = 0.5
@@ -218,17 +192,7 @@ def get_chd_console(chd_path: str) -> Tuple[str, float]:
     return console, confidence
 
 def calculate_partial_md5(file_path: str, read_size: int = 4*1024*1024) -> Optional[str]:
-    """
-    Berechnet einen MD5-Hash nur der ersten n Bytes einer Datei.
-    Dies ist schneller für große Dateien und für die meisten Erkennungszwecke ausreichend.
-
-    Args:
-        file_path: Pfad zur Datei
-        read_size: Anzahl der zu lesenden Bytes
-
-    Returns:
-        MD5-Hash als Hex-String oder None bei Fehler
-    """
+    """Calculate to Md5-Hash only the first n bytes of a file. This is Faster for Large Files and for Most Recognition Purposes. ARGS: File_Path: Path to the File Read_Size: Number of bytes to be read Return: Md5-Hash as a Hex String or None in the event of errors"""
     try:
         md5 = hashlib.md5()
         with open(file_path, 'rb') as f:
@@ -240,15 +204,7 @@ def calculate_partial_md5(file_path: str, read_size: int = 4*1024*1024) -> Optio
         return None
 
 def check_chd_database(md5_hash: str) -> Optional[str]:
-    """
-    Überprüft die ROM-Datenbank auf ein Spiel mit dem angegebenen Hash.
-
-    Args:
-        md5_hash: MD5-Hash der CHD-Datei
-
-    Returns:
-        Konsolenname oder None wenn nicht gefunden
-    """
+    """Checks the Rome Database for a Game with the Specified Hash. Args: md5_hash: md5-haash of the chd file return: console name or none if not found"""
     from src.database.connection_pool import ROM_DATABASE_PATH, database_connection
 
 # If database does not exist, do not try
@@ -273,15 +229,7 @@ def check_chd_database(md5_hash: str) -> Optional[str]:
     return None
 
 def detect_chd_console(file_path: str) -> Tuple[str, float]:
-    """
-    Öffentliche API-Funktion zur Erkennung von CHD-Konsolen.
-
-    Args:
-        file_path: Pfad zur CHD-Datei
-
-    Returns:
-        Tuple aus (console_name, confidence)
-    """
+    """Public API function for recognizing CHD consoles. Args: File_Path: path to the CHD file Return: Tuble from (console_name, confidence)"""
 # Check Whether it is actual a chd file
     if not file_path.lower().endswith('.chd'):
         return "Unknown", 0.0
@@ -289,15 +237,7 @@ def detect_chd_console(file_path: str) -> Tuple[str, float]:
     return get_chd_console(file_path)
 
 def is_chd_file(file_path: str) -> bool:
-    """
-    Überprüft, ob eine Datei im CHD-Format vorliegt.
-
-    Args:
-        file_path: Pfad zur zu prüfenden Datei
-
-    Returns:
-        True wenn es sich um eine CHD-Datei handelt, sonst False
-    """
+    """Check Whether there is a file in CHD format. ARGS: File_Path: Path to the File to Be Tested Return: True IF IT is A Chd File, Other Whisse"""
     if not file_path.lower().endswith('.chd'):
         return False
 
@@ -310,14 +250,5 @@ def is_chd_file(file_path: str) -> bool:
         return False
 
 def detect_console_from_chd(file_path: str) -> Tuple[str, float]:
-    """
-    Erkennt die Konsole aus einer CHD-Datei.
-    Diese Funktion ist ein Alias für detect_chd_console für API-Konsistenz.
-
-    Args:
-        file_path: Pfad zur CHD-Datei
-
-    Returns:
-        Tuple aus (console_name, confidence)
-    """
+    """Recognize the Console from A Chd File. This function is an alias for detect_chd_console for api Consistency. Args: File_Path: Path to the Chd File Return: Tube from (Console_Name, Confidence)"""
     return detect_chd_console(file_path)

@@ -39,16 +39,7 @@ from src.database.console_db import (
 def detect_console_fast(
     filename: str, file_path: Optional[str] = None
 ) -> Tuple[str, float]:
-    """
-    Schnelle Konsolenerkennung basierend auf Dateiname und Dateiendung.
-
-    Args:
-        filename: ROM-Dateiname
-        file_path: Optionaler vollständiger Dateipfad
-
-    Returns:
-        Tupel mit (Konsolenname, Konfidenzwert)
-    """
+    """Fast console detection based on the file name and file extension. Args: Filename: Rome date name File_Path: Optional full file path Return: Tupel with (console name, confidence value)"""
     path_obj = Path(filename) if not isinstance(filename, Path) else filename
     filename_lower = (
         path_obj.name.lower() if hasattr(path_obj, 'name')
@@ -93,7 +84,7 @@ def detect_console_fast(
 
 
 def detect_console_by_extension(filename: str) -> str:
-    """Erkennt Konsole anhand der Dateiendung."""
+    """Recognize the console based on the file extension."""
     path_obj = Path(filename)
     extension = path_obj.suffix.lower()
 
@@ -116,7 +107,7 @@ CACHE_SIZE = 10000
 
 @dataclass
 class DetectionResult:
-    """Represents a ROM console detection result with metadata."""
+    """Represents A Rom Console Detection Result with Metadata."""
     console: str
     confidence: float
     source: str
@@ -233,15 +224,7 @@ class ConsoleDetector:
         )
 
     def process_batch(self, file_paths: List[Path]) -> None:
-        """
-        Process a batch of files for optimized console detection.
-        
-        This method identifies similar files and applies pattern recognition
-        techniques to speed up the detection process.
-
-        Args:
-            file_paths: A list of file paths to process together
-        """
+        """Process a Batch of Files for Optimized Console Detection. This method identifies similar files and applies pattern recognition techniques to speed up the detection process. ARGS: File_Paths: A List of File Paths to Process Together"""
         if not file_paths:
             return
 
@@ -490,15 +473,7 @@ class ConsoleDetector:
         return best_match, best_confidence
 
     def process_directory_batch(self, directory: str) -> None:
-        """
-        Process a directory as a batch for optimized detection of similar
-        files.
-        
-        In directories with ROM files, similar files often have the same
-        console format. This method extracts common patterns and applies them
-        to the entire directory to reduce repeated expensive detection
-        operations.
-        """
+        """Process a Directory as a Batch for Optimized Detection of Similar Files. In Directories with Rome Files, Similar Files Often Have the Same Console Format. This method extracts Common Patterns and Applies Them to the Entire Directory to reduce repeated expensive detection operations."""
         if (not os.path.exists(directory) or
                 directory in self._batch_processed_dirs):
             return
@@ -562,12 +537,7 @@ class ConsoleDetector:
             logger.error(f"Fehler bei Batch-Verarbeitung: {e}")
 
     def _record_successful_detection(self, result: DetectionResult) -> None:
-        """
-        Record successful detection for learning.
-        This helps improve future detections.
-
-        Optimiert für bessere Performance durch selektives Lernen.
-        """
+        """Record Successful Detection for Learning. This Helps Improve Future Detections. Optimized for better performance through selective learning."""
         if not result.is_confident or result.console == "Unknown":
             return
 
@@ -615,40 +585,16 @@ def detect_console_enhanced(
 
 
 def detect_console_from_file(file_path: str) -> Tuple[str, float]:
-    """
-    Erkennt die Konsole aus einer Datei durch Analyse des vollständigen Pfads.
-
-    Args:
-        file_path: Vollständiger Dateipfad zur ROM-Datei
-
-    Returns:
-        Tuple aus (Konsolenname, Konfidenzwert)
-    """
+    """Recognits the Console From A File by Analyzing The Full Path. Args: File_Path: Complete File Path to Rome File Return: Tube From (Console Name, Confidence Value)"""
     filename = os.path.basename(file_path)
     return detect_console_enhanced(filename, file_path)
 
 
 def detect_console_from_path(file_path: str) -> Tuple[str, float]:
-    """
-    Alias für detect_console_from_file für API-Konsistenz.
-
-    Args:
-        file_path: Vollständiger Dateipfad zur ROM-Datei
-
-    Returns:
-        Tuple aus (Konsolenname, Konfidenzwert)
-    """
+    """Alias ​​for detect_console_from_file for api consistacy. ARGS: File_Path: Complete File Path to Rome File Return: Tube from (Console Name, Confidence Value)"""
     return detect_console_from_file(file_path)
 
 
 def detect_console_from_name(filename: str) -> Tuple[str, float]:
-    """
-    Erkennt die Konsole nur anhand des Dateinamens ohne Kontextinformationen.
-
-    Args:
-        filename: Name der ROM-Datei
-
-    Returns:
-        Tuple aus (Konsolenname, Konfidenzwert)
-    """
+    """Only recognizes the console on the basis of the file name without context information. Args: Filename: Name of the Rome file Return: Tuble from (console name, confidence value)"""
     return detect_console_enhanced(filename, None)

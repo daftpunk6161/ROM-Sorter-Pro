@@ -1,20 +1,7 @@
 #!/usr/bin/env python3
 # -*-coding: utf-8-*-
 
-"""
-ROM Sorter Pro - Erweiterte Archiv-Erkennung und Verarbeitung
-
-Dieses Modul bietet erweiterte Funktionen zur Erkennung und Verarbeitung von
-verschiedenen Archivformaten (ZIP, RAR, 7Z, etc.), mit Unterstützung für
-verschachtelte Archive und interne Strukturen.
-
-Features:
-- Erkennung von verschiedenen Archivformaten
-- Verarbeitung verschachtelter Archive
-- Optimierte Extraktion von ROMs aus Archiven
-- Komprimierungsoptimierungen für ROMs
-- Analyse von Archivstrukturen
-"""
+"""ROM SARTER PRO - extended archive detection and processing This module offers extended functions for the detection and processing of various archive formats (zip, rar, 7z, etc.), with support for Nested archives and internal structures. Features: - detection of different archive formats - Processing nested archives - Optimized extraction of Rome from archives - Compression optimization for Rome - Analysis of archive structures"""
 
 import os
 import re
@@ -70,12 +57,7 @@ _7ZIP_PATHS = [
 
 
 def find_7zip_path() -> Optional[str]:
-    """
-    Sucht nach dem Pfad zur 7-Zip-Executable.
-
-    Returns:
-        Pfad zu 7-Zip oder None, wenn nicht gefunden
-    """
+    """Search for the path to the 7-Zip-Executable. Return: Path to 7-Zip or None, if not found"""
     for path in _7ZIP_PATHS:
         if os.path.exists(path):
             return path
@@ -96,7 +78,7 @@ def find_7zip_path() -> Optional[str]:
 
 
 class ArchiveInfo:
-    """Class zur Storage von Informationen über ein Archiv."""
+    """Class for the storage of information about an archive."""
 
     def __init__(self, file_path: str):
         """
@@ -116,27 +98,19 @@ class ArchiveInfo:
         self.is_multi_rom = False
 
     def _detect_archive_type(self) -> str:
-        """
-        Erkennt den Typ des Archivs anhand der Dateiendung.
-
-        Returns:
-            Archivtyp als String
-        """
+        """Recognize the Type of Archive Based on the File Extension. Return: Archive Type AS A String"""
         ext = os.path.splitext(self.file_path.lower())[1]
         return ARCHIVE_EXTENSIONS.get(ext, "UNKNOWN")
 
     def __str__(self) -> str:
-        """String-Repräsentation des ArchiveInfo-Objekts."""
+        """String representation of the archive incoming object."""
         return (f"ArchiveInfo({os.path.basename(self.file_path)}, "
                 f"type={self.archive_type}, files={len(self.files)}, "
                 f"roms={len(self.rom_files)}, nested={len(self.nested_archives)})")
 
 
 class AdvancedArchiveDetector:
-    """
-    Erweiterte Klasse zur Erkennung und Verarbeitung von Archivdateien.
-    Unterstützt verschiedene Archivformate und verschachtelte Archive.
-    """
+    """Extended class for the detection and processing of archive files. Supports various archive formats and nested archives."""
 
     def __init__(self):
         """Initialisiert den AdvancedArchiveDetector."""
@@ -144,42 +118,17 @@ class AdvancedArchiveDetector:
         logger.debug(f"7-Zip-Pfad: {self._7zip_path}")
 
     def is_archive(self, file_path: str) -> bool:
-        """
-        Prüft, ob eine Datei ein unterstütztes Archiv ist.
-
-        Args:
-            file_path: Pfad zur Datei
-
-        Returns:
-            True, wenn die Datei ein unterstütztes Archiv ist, sonst False
-        """
+        """Check Whether a file is a supported archive. ARGS: File_Path: Path to the File Return: True When the File Is A Supported Archive, OtherWise False"""
         ext = os.path.splitext(file_path.lower())[1]
         return ext in ARCHIVE_EXTENSIONS
 
     def get_archive_type(self, file_path: str) -> str:
-        """
-        Gibt den Typ eines Archivs zurück.
-
-        Args:
-            file_path: Pfad zum Archiv
-
-        Returns:
-            Archivtyp als String oder "UNKNOWN", wenn unbekannt
-        """
+        """Gives Back the Type of An Archive. Args: File_Path: Path to the Archive Return: Archive Type as a String or "Unknown" when unknown"""
         ext = os.path.splitext(file_path.lower())[1]
         return ARCHIVE_EXTENSIONS.get(ext, "UNKNOWN")
 
     def get_archive_info(self, file_path: str, scan_nested: bool = True) -> Optional[ArchiveInfo]:
-        """
-        Sammelt Informationen über ein Archiv.
-
-        Args:
-            file_path: Pfad zum Archiv
-            scan_nested: Ob verschachtelte Archive gescannt werden sollen
-
-        Returns:
-            ArchiveInfo-Objekt oder None bei Fehler
-        """
+        """Collect information about an archive. Args: File_Path: path to the archive scan_nested: Whether nested archives should be scanned Return: Archiveinfo object or none in the event of errors"""
         if not self.is_archive(file_path) or not os.path.exists(file_path):
             return None
 
@@ -261,13 +210,7 @@ class AdvancedArchiveDetector:
             logger.error(f"Fehler bei der Verarbeitung von {archive_info.file_path}: {e}")
 
     def _process_archive_with_7zip(self, archive_info: ArchiveInfo, scan_nested: bool) -> None:
-        """
-        Verarbeitet ein Archiv mit 7-Zip.
-
-        Args:
-            archive_info: ArchiveInfo-Objekt
-            scan_nested: Ob verschachtelte Archive gescannt werden sollen
-        """
+        """Processes to Archive With A 7-Zip. ARGS: Archive_info: Archive Info Object Scan_nested: Whether Nested Archives Should Be Scanned"""
         try:
 # List mode for archive content
             cmd = [self._7zip_path, "l", "-slt", archive_info.file_path]
@@ -352,17 +295,7 @@ class AdvancedArchiveDetector:
             logger.error(f"Fehler bei der 7-Zip-Verarbeitung von {archive_info.file_path}: {e}")
 
     def extract_file_from_archive(self, archive_path: str, file_path: str, output_path: str) -> bool:
-        """
-        Extrahiert eine einzelne Datei aus einem Archiv.
-
-        Args:
-            archive_path: Pfad zum Archiv
-            file_path: Pfad der zu extrahierenden Datei im Archiv
-            output_path: Zielverzeichnis für die extrahierte Datei
-
-        Returns:
-            True bei Erfolg, False bei Fehler
-        """
+        """Extract a single file from an archive. ARGS: Archive_Path: Path to the Archive File_Path: Path of the File to Be Extracted in the Archive Output_Path: Table Directory for the Extracted File Return: True In The Event of Success, False In The Event of Errors"""
         try:
             archive_type = self.get_archive_type(archive_path)
 
@@ -394,16 +327,7 @@ class AdvancedArchiveDetector:
             return False
 
     def extract_all_roms_from_archive(self, archive_path: str, output_path: str) -> List[str]:
-        """
-        Extrahiert alle ROM-Dateien aus einem Archiv.
-
-        Args:
-            archive_path: Pfad zum Archiv
-            output_path: Zielverzeichnis für die extrahierten Dateien
-
-        Returns:
-            Liste der extrahierten Dateien oder leere Liste bei Fehler
-        """
+        """Extract all Rome files from an archive. Args: Archive_Path: path to the archive OutPut_Path: Table directory for the extracted files Return: List of extracted files or empty list for errors"""
         try:
             archive_info = self.get_archive_info(archive_path)
             if not archive_info or not archive_info.rom_files:
@@ -488,17 +412,7 @@ class AdvancedArchiveDetector:
 
     def create_optimized_archive(self, files: List[str], output_path: str,
                                archive_type: str = "ZIP") -> bool:
-        """
-        Erstellt ein optimiertes Archiv mit den angegebenen Dateien.
-
-        Args:
-            files: Liste der Dateipfade, die archiviert werden sollen
-            output_path: Pfad für das Ausgabearchiv
-            archive_type: Typ des zu erstellenden Archivs (ZIP, 7Z)
-
-        Returns:
-            True bei Erfolg, False bei Fehler
-        """
+        """Creates an optimized archive with the specified files. Args: Files: List of the file paths that are to be archived OutPut_Path: path for the edition archive Archive_type: Type of the archive to be created (ZIP, 7Z) Return: True in the event of success, false in the event of errors"""
         try:
             if not files:
                 logger.warning("Keine Dateien zum Archivieren angegeben")
@@ -527,16 +441,7 @@ class AdvancedArchiveDetector:
             return False
 
     def _create_zip_archive(self, files: List[str], output_path: str) -> bool:
-        """
-        Erstellt ein optimiertes ZIP-Archiv.
-
-        Args:
-            files: Liste der zu archivierenden Dateien
-            output_path: Pfad für das Ausgabearchiv
-
-        Returns:
-            True bei Erfolg, False bei Fehler
-        """
+        """Creates an optimized ZIP archive. Args: Files: List of files to be archived OutPut_Path: path for the edition archive Return: True in the event of success, false in the event of errors"""
         try:
             compression = zipfile.ZIP_DEFLATED
 
@@ -552,16 +457,7 @@ class AdvancedArchiveDetector:
             return False
 
     def _create_7z_archive(self, files: List[str], output_path: str) -> bool:
-        """
-        Erstellt ein optimiertes 7Z-Archiv mit 7-Zip.
-
-        Args:
-            files: Liste der zu archivierenden Dateien
-            output_path: Pfad für das Ausgabearchiv
-
-        Returns:
-            True bei Erfolg, False bei Fehler
-        """
+        """Creates to Optimized 7Z Archive with a 7-Zip. ARGS: Files: List of Files to Be Archived Output_Path: Path for the Edition Archive Return: True in the event of Success, False in the event of errors"""
         try:
 # Change to the directory of the first file so that only file names are archived
             working_dir = os.path.dirname(files[0])
@@ -578,15 +474,7 @@ class AdvancedArchiveDetector:
             return False
 
     def get_best_compression_format(self, file_path: str) -> str:
-        """
-        Bestimmt das beste Komprimierungsformat für eine Datei.
-
-        Args:
-            file_path: Pfad zur Datei
-
-        Returns:
-            Empfohlenes Archivformat ("ZIP", "7Z", etc.)
-        """
+        """Definitely determined the best compression format for a file. Args: File_Path: Path to the File Return: Recommended Archive Format ("Zip", "7z", etc.)"""
         ext = os.path.splitext(file_path.lower())[1]
 
 # ZIP is often better for compressed file formats
@@ -602,55 +490,24 @@ class AdvancedArchiveDetector:
 
 
 def get_advanced_archive_detector() -> AdvancedArchiveDetector:
-    """
-    Gibt eine Instanz des AdvancedArchiveDetector zurück.
-
-    Returns:
-        Eine Instanz des AdvancedArchiveDetector
-    """
+    """Gives back an instance of the Advancedarchivedetector. Return: An instance of the Advancedarchivedetector"""
     return AdvancedArchiveDetector()
 
 
 def is_archive_file(file_path: str) -> bool:
-    """
-    Prüft, ob eine Datei ein unterstütztes Archiv ist.
-
-    Args:
-        file_path: Pfad zur Datei
-
-    Returns:
-        True, wenn die Datei ein unterstütztes Archiv ist, sonst False
-    """
+    """Check Whether a file is a supported archive. ARGS: File_Path: Path to the File Return: True When the File Is A Supported Archive, OtherWise False"""
     detector = get_advanced_archive_detector()
     return detector.is_archive(file_path)
 
 
 def extract_rom_from_archive(archive_path: str, output_dir: str) -> List[str]:
-    """
-    Extrahiert ROM-Dateien aus einem Archiv.
-
-    Args:
-        archive_path: Pfad zum Archiv
-        output_dir: Zielverzeichnis für die extrahierten Dateien
-
-    Returns:
-        Liste der extrahierten Dateipfade
-    """
+    """Extracted Rome files from an archive. Args: Archive_Path: path to the archive OUTPUT_DIR: Table directory for the extracted files Return: List of the extracted file paths"""
     detector = get_advanced_archive_detector()
     return detector.extract_all_roms_from_archive(archive_path, output_dir)
 
 
 def create_rom_archive(rom_files: List[str], output_path: str) -> bool:
-    """
-    Erstellt ein optimiertes Archiv mit ROM-Dateien.
-
-    Args:
-        rom_files: Liste der ROM-Dateipfade
-        output_path: Pfad für das Ausgabearchiv
-
-    Returns:
-        True bei Erfolg, False bei Fehler
-    """
+    """Creates an optimized archive with ROM files. Args: ROM_FILES: List of the Rome file path OutPut_Path: path for the edition archive Return: True in the event of success, false in the event of errors"""
     detector = get_advanced_archive_detector()
 
 # Determine the best format based on the first file

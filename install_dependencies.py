@@ -134,7 +134,7 @@ def install_optional_packages():
 
 
 def create_virtual_environment():
-    """Creates a virtual environment for the project."""
+    """Creates A Virtual Environment for the Project."""
     try:
         logger.info("Creating virtual environment...")
         venv_path = os.path.join(

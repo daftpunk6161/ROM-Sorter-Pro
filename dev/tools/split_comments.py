@@ -1,21 +1,11 @@
 #!/usr/bin/env python3
-"""
-Helper script for splitting long comment lines in source code.
-The script reads a source file, looks for long lines in comments,
-and splits them into multiple lines.
-"""
+"""Helper script for Splitting Long Comment Lines in Source Code. The Script Reads A Source File, Looks for Long Lines in Comments, and Splits Them into Multiple Lines."""
 
 import sys
 import re
 
 def split_long_comment_lines(file_path, max_line_length=79):
-    """
-    Splits long comment lines in a file.
-
-    Args:
-        file_path: Path to the file to process
-        max_line_length: Maximum line length
-    """
+    """Splits Long Comment Lines in A File. ARGS: File_Path: Path to the File to Process Max_Line_Length: Maximum Line Length"""
     try:
         with open(file_path, 'r', encoding='utf-8') as file:
             lines = file.readlines()

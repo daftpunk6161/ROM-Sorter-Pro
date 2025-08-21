@@ -1,9 +1,4 @@
-"""
-ROM Hash Utilities
-
-Dieses Modul enthält Funktionen zur Berechnung von Hash-Werten für ROM-Dateien,
-die für die Datenbankintegration und ROM-Identifizierung verwendet werden.
-"""
+"""ROM hash utilities this modules Contains Functions for Calculating Hash Values ​​for Rome Files, that Are Used for Database Integration and Rome Identification."""
 
 import os
 import hashlib
@@ -12,16 +7,7 @@ from functools import lru_cache
 
 @lru_cache(maxsize=1000)
 def calculate_md5_fast(file_path: str, chunk_size: int = 1048576) -> Optional[str]:
-    """
-    Berechnet den MD5-Hash einer Datei mit optimaler Leistung.
-
-    Args:
-        file_path: Pfad zur Datei
-        chunk_size: Größe der Chunks beim Lesen der Datei
-
-    Returns:
-        MD5-Hash als Hex-String oder None bei Fehler
-    """
+    """Calculate the MD5 hash of a file with optimal performance. ARGS: File_Path: Path to the File Chunk_Size: Size of the Chunks When Reading the File Return: Md5-Hash as a Hex String Or None in the event of errors"""
     try:
         md5 = hashlib.md5()
         with open(file_path, 'rb') as f:
@@ -36,16 +22,7 @@ def calculate_md5_fast(file_path: str, chunk_size: int = 1048576) -> Optional[st
         return None
 
 def calculate_sha1(file_path: str, chunk_size: int = 1048576) -> Optional[str]:
-    """
-    Berechnet den SHA1-Hash einer Datei.
-
-    Args:
-        file_path: Pfad zur Datei
-        chunk_size: Größe der Chunks beim Lesen der Datei
-
-    Returns:
-        SHA1-Hash als Hex-String oder None bei Fehler
-    """
+    """Calculate the Sha1-Hash of a File. ARGS: File_Path: Path to the File Chunk_Size: Size of the Chunks When Reading the File Return: Sha1-Hash as a Hex-String Or None in the event of errors"""
     try:
         sha1 = hashlib.sha1()
         with open(file_path, 'rb') as f:
@@ -60,15 +37,7 @@ def calculate_sha1(file_path: str, chunk_size: int = 1048576) -> Optional[str]:
         return None
 
 def calculate_crc32(file_path: str) -> Optional[str]:
-    """
-    Berechnet den CRC32-Hash einer Datei.
-
-    Args:
-        file_path: Pfad zur Datei
-
-    Returns:
-        CRC32-Wert als Hex-String oder None bei Fehler
-    """
+    """Calculate the Crc32-Hash of a File. Args: File_Path: Path to the File Return: CRC32 Value as a Hex String or None in the event of errors"""
     try:
         import zlib
         crc = 0

@@ -1,21 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""
-ROM Sorter Pro - Theme Manager
-
-This module implements a flexible theme system for ROM Sorter Pro,
-which allows customizing the user interface with different themes,
-including light and dark modes, custom color schemes, and
-customizable UI elements.
-
-Features:
-- Support for light and dark themes
-- Custom theme creation
-- Automatic theme detection based on system settings
-- Saving and loading themes from configuration files
-- Integration with PyQt and web interface
-"""
+"""Rome Sorter Pro - Topic This Module Implements A Flexible Theme System for Rome Sorter Pro, which Allows Customizing The User Interface With Different Themes, Including Light and Dark Modes, Custom Color Schemes, And Customizable Ui Elements. Features: - Support for Light and Dark Themes - Custom Theme Creation - Automatic Thematic Detection Based on System Settings - Saving and Loading Themes From Configuration Files - Integration with Pyqt and Web Interface"""
 
 import os
 import json
@@ -37,7 +23,7 @@ class ThemeType(Enum):
 
 
 class ColorScheme:
-    """Manages a color scheme for a theme."""
+    """Manages A Color Scheme for a Theme."""
 
     def __init__(self,
                  primary: str = "#3498db",
@@ -49,20 +35,7 @@ class ColorScheme:
                  warning: str = "#f39c12",
                  success: str = "#2ecc71",
                  border: str = "#dddddd"):
-        """
-        Initialisiert das Farbschema.
-
-        Args:
-            primary: Primäre Farbe für UI-Elemente
-            secondary: Sekundäre Farbe für UI-Elemente
-            background: Hintergrundfarbe
-            text: Textfarbe
-            accent: Akzentfarbe für Hervorhebungen
-            error: Farbe für Fehlermeldungen
-            warning: Farbe für Warnungen
-            success: Farbe für Erfolgsmeldungen
-            border: Farbe für Ränder und Trennlinien
-        """
+        """Initialized the color scheme. Args: Primary: primary color for UI elements Secondary: secondary color for UI elements Background: background color Text: text color Accent: accent color for highlights Error: Color for error messages Warning: color for warnings Success: Color for success reports Border: Color for edges and dividing lines"""
         self.primary = primary
         self.secondary = secondary
         self.background = background
@@ -75,26 +48,13 @@ class ColorScheme:
 
     @classmethod
     def from_dict(cls, color_dict: Dict[str, str]) -> 'ColorScheme':
-        """
-        Erstellt ein ColorScheme aus einem Dictionary.
-
-        Args:
-            color_dict: Dictionary mit Farbdefinitionen
-
-        Returns:
-            ColorScheme-Instanz
-        """
+        """Creates a color scheme from a dictionary. Args: Color_dict: Dictionary with color definitions Return: Color Cheme Instance"""
         return cls(**{k: v for k, v in color_dict.items()
                    if k in ['primary', 'secondary', 'background', 'text',
                            'accent', 'error', 'warning', 'success', 'border']})
 
     def to_dict(self) -> Dict[str, str]:
-        """
-        Konvertiert das ColorScheme in ein Dictionary.
-
-        Returns:
-            Dictionary mit Farbdefinitionen
-        """
+        """Convert the Color Scheme Into a dictionary. Return: Dictionary with color definitions"""
         return {
             'primary': self.primary,
             'secondary': self.secondary,
@@ -109,12 +69,7 @@ class ColorScheme:
 
     @classmethod
     def create_dark_scheme(cls) -> 'ColorScheme':
-        """
-        Erstellt ein dunkles Farbschema.
-
-        Returns:
-            ColorScheme-Instanz für ein dunkles Theme
-        """
+        """Creates a Dark Color Scheme. Return: Colorscheme instance for a Dark Theme"""
         return cls(
             primary="#3498db",
             secondary="#2ecc71",
@@ -129,12 +84,7 @@ class ColorScheme:
 
     @classmethod
     def create_light_scheme(cls) -> 'ColorScheme':
-        """
-        Erstellt ein helles Farbschema.
-
-        Returns:
-            ColorScheme-Instanz für ein helles Theme
-        """
+        """Creates a Bright Color Scheme. Return: Colorscheme Instance for A Light Theme"""
         return cls(
             primary="#2980b9",
             secondary="#27ae60",
@@ -148,12 +98,7 @@ class ColorScheme:
         )
 
     def invert(self) -> 'ColorScheme':
-        """
-        Invertiert das Farbschema (hell zu dunkel oder umgekehrt).
-
-        Returns:
-            Invertiertes ColorScheme
-        """
+        """Inverts the color scheme (light too dark or vice versa). Return: Inverted color scheme"""
         inverted = ColorScheme()
 
         # Invert the main colors
@@ -192,16 +137,7 @@ class ColorScheme:
         return f"#{r:02x}{g:02x}{b:02x}"
 
     def _adjust_brightness(self, hex_color: str, is_background: bool = True) -> str:
-        """
-        Passt die Helligkeit einer Farbe an, behält aber den Farbton bei.
-
-        Args:
-            hex_color: Hex-Farbcode (z.B. "#ffffff")
-            is_background: Ob es sich um eine Hintergrundfarbe handelt
-
-        Returns:
-            Angepasster Hex-Farbcode
-        """
+        """If the Brightness of a Color Adapts, but Keep the Color. ARGS: Hex_color: Hex Color Code (e.G. "#FFFFFFFF") IS_BACKGROUND: Whether it is a background color return: adapted hex color code"""
         # Remove the #symbol and convert to RGB
         hex_color = hex_color.lstrip('#')
         r, g, b = int(hex_color[0:2], 16), int(hex_color[2:4], 16), int(hex_color[4:6], 16)
@@ -227,7 +163,7 @@ class ColorScheme:
 
 
 class Theme:
-    """Repräsentiert ein komplettes Theme mit Farbschema und Designeinstellungen."""
+    """Represents a complete theme with a color scheme and design settings."""
 
     def __init__(self,
                  name: str,
@@ -238,19 +174,7 @@ class Theme:
                  border_radius: int = 4,
                  spacing: int = 8,
                  use_system_defaults: bool = False):
-        """
-        Initialisiert das Theme.
-
-        Args:
-            name: Name des Themes
-            type: Typ des Themes (LIGHT, DARK, CUSTOM)
-            colors: ColorScheme für das Theme
-            font_family: Standard-Schriftfamilie
-            font_size: Standard-Schriftgröße
-            border_radius: Radius für abgerundete Ecken
-            spacing: Standardabstand zwischen Elementen
-            use_system_defaults: Ob Systemvorgaben verwendet werden sollen
-        """
+        """Initialized the theme. Args: Name: name of the theme Type: Type of the theme (Light, Dark, Custom) Colors: Colorscheme for the theme FONT_FAMALY: Standard font family font_size: standard script size Border_radius: Radius for rounded corners Spacing: Standard distance between elements use_system_defaults: Whether system specifications should be used"""
         self.name = name
         self.type = type
         self.colors = colors or (
@@ -266,15 +190,7 @@ class Theme:
 
     @classmethod
     def from_dict(cls, theme_dict: Dict[str, Any]) -> 'Theme':
-        """
-        Erstellt ein Theme aus einem Dictionary.
-
-        Args:
-            theme_dict: Dictionary mit Theme-Definitionen
-
-        Returns:
-            Theme-Instanz
-        """
+        """Creates a theme from a dictionary. Args: Theme_dict: Dictionary with theme Definitions Return: Theme Instance"""
         # Farbschema extrahieren
         color_scheme = None
         if 'colors' in theme_dict:
@@ -296,12 +212,7 @@ class Theme:
         )
 
     def to_dict(self) -> Dict[str, Any]:
-        """
-        Konvertiert das Theme in ein Dictionary.
-
-        Returns:
-            Dictionary mit Theme-Definitionen
-        """
+        """Convert the theme into a dictionary. Return: Dictionary with theme definitions"""
         return {
             'name': self.name,
             'type': self.type.value,
@@ -314,12 +225,7 @@ class Theme:
         }
 
     def generate_qt_stylesheet(self) -> str:
-        """
-        Generiert ein Qt-Stylesheet aus dem Theme.
-
-        Returns:
-            Qt-Stylesheet als String
-        """
+        """Generates A Qt Stylesheet from the theme. Return: Qt Stylesheet as a String"""
         colors = self.colors
 
         return f"""
@@ -519,12 +425,7 @@ class Theme:
         """
 
     def generate_css(self) -> str:
-        """
-        Generiert ein CSS-Stylesheet für Web-Anwendungen.
-
-        Returns:
-            CSS-Stylesheet als String
-        """
+        """Generates A CSS Stylesheet for Web Applications. Return: CSS Stylesheet as a String"""
         colors = self.colors
 
         return f"""
@@ -750,16 +651,7 @@ class Theme:
         """
 
     def _lighten_or_darken(self, hex_color: str, amount: float) -> str:
-        """
-        Hellt eine Farbe auf oder dunkelt sie ab.
-
-        Args:
-            hex_color: Hex-Farbcode (z.B. "#ffffff")
-            amount: Betrag der Änderung (positiv zum Aufhellen, negativ zum Abdunkeln)
-
-        Returns:
-            Angepasster Hex-Farbcode
-        """
+        """Holds Up a Color Or Darkens it. ARGS: Hex_color: Hex Color Code (e.G. "#FFFFFFFF") Amount: Amount of the Change (positive for Lightening, negative for Darkening) Return: Adapted Hex Color Code"""
         # Remove the #symbol and convert to RGB
         hex_color = hex_color.lstrip('#')
         r, g, b = int(hex_color[0:2], 16) / 255.0, int(hex_color[2:4], 16) / 255.0, int(hex_color[4:6], 16) / 255.0
@@ -778,17 +670,7 @@ class Theme:
         return f"#{r:02x}{g:02x}{b:02x}"
 
     def _alpha_blend(self, color1: str, color2: str, alpha: float) -> str:
-        """
-        Mischt zwei Farben mit einem Alpha-Wert.
-
-        Args:
-            color1: Erste Farbe (z.B. "#ffffff")
-            color2: Zweite Farbe (z.B. "#000000")
-            alpha: Alpha-Wert für die Mischung (0.0 bis 1.0)
-
-        Returns:
-            Gemischter Hex-Farbcode
-        """
+        """Mix two colors with an alpha value. Args: Color1: First color (e.g. "#ffffffff") Color2: second color (e.g. "#000000") Alpha: Alpha value for the mixture (0.0 to 1.0) Return: Mixed hex color code"""
         # Remove the #symbol and convert to RGB
         color1 = color1.lstrip('#')
         r1, g1, b1 = int(color1[0:2], 16), int(color1[2:4], 16), int(color1[4:6], 16)
@@ -806,15 +688,10 @@ class Theme:
 
 
 class ThemeManager:
-    """Verwaltet Themes für die Anwendung."""
+    """Manages themes for the application."""
 
     def __init__(self, config_dir: str = None):
-        """
-        Initialisiert den ThemeManager.
-
-        Args:
-            config_dir: Verzeichnis für Theme-Konfigurationsdateien
-        """
+        """Initialized the theme manager. Args: Config_Dir: List for theme configuration files"""
         if config_dir is None:
             # Bestimme Standard-Konfigurationsverzeichnis
             user_home = os.path.expanduser("~")
@@ -919,7 +796,7 @@ class ThemeManager:
             self.current_theme_name = "Light"
 
     def _load_saved_themes(self) -> None:
-        """Lädt gespeicherte Themes aus Konfigurationsdateien."""
+        """Lades stored themes from configuration files."""
         try:
             # Upload the theme list
             theme_index_file = os.path.join(self.config_dir, "theme_index.json")
@@ -972,15 +849,7 @@ class ThemeManager:
             logger.error(f"Fehler beim Speichern des Theme-Index: {e}")
 
     def add_theme(self, theme: Theme) -> bool:
-        """
-        Fügt ein neues Theme hinzu.
-
-        Args:
-            theme: Das hinzuzufügende Theme
-
-        Returns:
-            True bei Erfolg, False bei Fehler
-        """
+        """Add a new theme. Args: Theme: The Theme to Be Added Return: True in the event of Success, False in the event of errors"""
         try:
             # Add the theme to the dictionary
             self.themes[theme.name] = theme
@@ -1002,15 +871,7 @@ class ThemeManager:
             return False
 
     def remove_theme(self, theme_name: str) -> bool:
-        """
-        Entfernt ein Theme.
-
-        Args:
-            theme_name: Name des zu entfernenden Themes
-
-        Returns:
-            True bei Erfolg, False bei Fehler
-        """
+        """Removes a theme. Args: Theme_Name: Name of the Theme to Be Removed Return: True in the event of Success, False in the event of errors"""
         # Standarddthemes cannot be removed
         if theme_name in ['Light', 'Dark', 'Blue', 'Dark Blue', 'Retro Gaming']:
             logger.warning(f"Standardtheme '{theme_name}' kann nicht entfernt werden")
@@ -1047,30 +908,14 @@ class ThemeManager:
             return False
 
     def get_theme(self, theme_name: str = None) -> Theme:
-        """
-        Gibt ein Theme zurück.
-
-        Args:
-            theme_name: Name des Themes oder None für das aktuelle Theme
-
-        Returns:
-            Theme-Instanz
-        """
+        """Gives back a theme. ARGS: Theme_Name: Name of the Themes Or None for the Current Theme Return: Theme Instance"""
         if theme_name is None:
             theme_name = self.current_theme_name
 
         return self.themes.get(theme_name, self.themes["Light"])
 
     def set_current_theme(self, theme_name: str) -> bool:
-        """
-        Setzt das aktuelle Theme.
-
-        Args:
-            theme_name: Name des zu setzenden Themes
-
-        Returns:
-            True bei Erfolg, False bei Fehler
-        """
+        """Set the current theme. Args: Theme_Name: Name of the theme to be set Return: True in the event of success, false in the event of errors"""
         if theme_name not in self.themes:
             logger.warning(f"Theme '{theme_name}' nicht gefunden")
             return False
@@ -1081,12 +926,7 @@ class ThemeManager:
         return True
 
     def _detect_system_theme(self) -> ThemeType:
-        """
-        Erkennt das System-Theme (hell oder dunkel).
-
-        Returns:
-            ThemeType.LIGHT oder ThemeType.DARK
-        """
+        """Recognize the system theme (light or dark). Return: Themetype.light or themetype.dark"""
         # Plattformspezifische Erkennung
         system = platform.system()
 
@@ -1128,38 +968,16 @@ class ThemeManager:
         return ThemeType.LIGHT
 
     def get_theme_names(self) -> List[str]:
-        """
-        Gibt eine Liste aller verfügbaren Theme-Namen zurück.
-
-        Returns:
-            Liste von Theme-Namen
-        """
+        """Gives Back a List of All Available Theme Names. Return: List of Theme Names"""
         return list(self.themes.keys())
 
     def get_current_theme_name(self) -> str:
-        """
-        Gibt den Namen des aktuellen Themes zurück.
-
-        Returns:
-            Name des aktuellen Themes
-        """
+        """Gives back the name of the current theme. Return: Name of the current theme"""
         return self.current_theme_name
 
     def create_theme_from_colors(self, name: str, primary: str, secondary: str,
                                background: str, text: str) -> Theme:
-        """
-        Erstellt ein neues Theme aus Grundfarben.
-
-        Args:
-            name: Name des Themes
-            primary: Primärfarbe
-            secondary: Sekundärfarbe
-            background: Hintergrundfarbe
-            text: Textfarbe
-
-        Returns:
-            Erstelltes Theme
-        """
+        """Creates a new theme from Basic Colors. ARGS: Name: Name of the Theme Primary: Primary Color Secondary: Secondary Color Background: Background Color Text: Text Color Return: Created Theme"""
         # Determine Whether it is a light or dark theme
         is_dark = self._is_dark_color(background)
         theme_type = ThemeType.DARK if is_dark else ThemeType.LIGHT
@@ -1187,15 +1005,7 @@ class ThemeManager:
         return theme
 
     def _is_dark_color(self, hex_color: str) -> bool:
-        """
-        Prüft, ob eine Farbe dunkel ist.
-
-        Args:
-            hex_color: Hex-Farbcode (z.B. "#ffffff")
-
-        Returns:
-            True, wenn die Farbe dunkel ist, sonst False
-        """
+        """Check Whether a Color is Dark. ARGS: Hex_Color: Hex Color Code (e.G. "#ffffffff") Return: True When the Color is Dark, OtherWise False"""
         # Remove the #symbol and convert to RGB
         hex_color = hex_color.lstrip('#')
         r, g, b = int(hex_color[0:2], 16), int(hex_color[2:4], 16), int(hex_color[4:6], 16)
@@ -1207,16 +1017,7 @@ class ThemeManager:
         return brightness < 128
 
     def _generate_accent_color(self, primary: str, secondary: str) -> str:
-        """
-        Generiert eine Akzentfarbe aus Primär- und Sekundärfarbe.
-
-        Args:
-            primary: Primärfarbe
-            secondary: Sekundärfarbe
-
-        Returns:
-            Generierte Akzentfarbe
-        """
+        """Generates an accent color from primary and secondary color. Args: Primary: primary color Secondary: secondary color Return: Generated accent color"""
         # Remove the #symbol and convert to RGB
         primary = primary.lstrip('#')
         r1, g1, b1 = int(primary[0:2], 16) / 255.0, int(primary[2:4], 16) / 255.0, int(primary[4:6], 16) / 255.0
@@ -1240,16 +1041,7 @@ class ThemeManager:
         return f"#{r:02x}{g:02x}{b:02x}"
 
     def _generate_border_color(self, background: str, text: str) -> str:
-        """
-        Generiert eine Randfarbe aus Hintergrund- und Textfarbe.
-
-        Args:
-            background: Hintergrundfarbe
-            text: Textfarbe
-
-        Returns:
-            Generierte Randfarbe
-        """
+        """Generates A Edge Color From Background and Text Color. Args: Background: Background Color Text: Text Color Return: Generated Edge Color"""
         # Remove the #symbol and convert to RGB
         background = background.lstrip('#')
         r1, g1, b1 = int(background[0:2], 16), int(background[2:4], 16), int(background[4:6], 16)

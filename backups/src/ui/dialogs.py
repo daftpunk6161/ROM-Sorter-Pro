@@ -137,17 +137,10 @@ class AboutDialog(tk.Toplevel):
 
 
 class SettingsDialog(tk.Toplevel):
-    """Dialog für die Anwendungseinstellungen."""
+    """Dialogue for the application settings."""
 
     def __init__(self, parent, config=None, on_save=None):
-        """
-        Initialisiere den Einstellungen-Dialog.
-
-        Args:
-            parent: Das übergeordnete Fenster
-            config: Das Konfigurationsobjekt oder -dictionary
-            on_save: Callback-Funktion, die aufgerufen wird, wenn die Einstellungen gespeichert werden
-        """
+        """Initialize the settings dialog. Args: Parent: The overarching window Config: The configuration object or dictionary On_save: Callback function that is called when the settings are saved"""
         super().__init__(parent)
         self.title("Einstellungen")
         self.geometry("600x500")
@@ -166,7 +159,7 @@ class SettingsDialog(tk.Toplevel):
         self._create_ui()
 
     def _create_ui(self):
-        """Erstelle die UI-Komponenten."""
+        """Create the UI components."""
 # Main frame with padding
         main_frame = tk.Frame(self, bg=STYLE.colors.bg_primary)
         main_frame.pack(fill="both", expand=True, padx=10, pady=10)
@@ -206,7 +199,7 @@ class SettingsDialog(tk.Toplevel):
         cancel_button.pack(side="right", padx=5)
 
     def _create_general_tab(self):
-        """Erstelle den Tab für allgemeine Settings."""
+        """Create the tab for general settings."""
         tab = ttk.Frame(self.notebook)
         self.notebook.add(tab, text="Allgemein")
 
@@ -219,7 +212,7 @@ class SettingsDialog(tk.Toplevel):
         label.pack(pady=10)
 
     def _create_scanner_tab(self):
-        """Erstelle den Tab für Scanner-Settings."""
+        """Create the tab for scanner settings."""
         tab = ttk.Frame(self.notebook)
         self.notebook.add(tab, text="Scanner")
 
@@ -232,7 +225,7 @@ class SettingsDialog(tk.Toplevel):
         label.pack(pady=10)
 
     def _create_appearance_tab(self):
-        """Erstelle den Tab für Erscheinungsbild-Settings."""
+        """Create the Tab for appearance settings."""
         tab = ttk.Frame(self.notebook)
         self.notebook.add(tab, text="Erscheinungsbild")
 
@@ -245,7 +238,7 @@ class SettingsDialog(tk.Toplevel):
         label.pack(pady=10)
 
     def _create_advanced_tab(self):
-        """Erstelle den Tab für erweiterte Settings."""
+        """Create the tab for extended settings."""
         tab = ttk.Frame(self.notebook)
         self.notebook.add(tab, text="Erweitert")
 
@@ -258,7 +251,7 @@ class SettingsDialog(tk.Toplevel):
         label.pack(pady=10)
 
     def _save_settings(self):
-        """Speichere die Einstellungen."""
+        """Save the settings."""
 # In a complete implementation, The Settings from the Ui would be read here
 # and saved in self.config
 
@@ -269,7 +262,7 @@ class SettingsDialog(tk.Toplevel):
 
 
 class ErrorDialog(tk.Toplevel):
-    """Dialog zur Anzeige von Fehlerinformationen mit detaillierten Optionen."""
+    """Dialog for displaying error information with detailed options."""
 
     def __init__(
         self,
@@ -279,16 +272,7 @@ class ErrorDialog(tk.Toplevel):
         details: Optional[str] = None,
         exception: Optional[Exception] = None
     ):
-        """
-        Initialisiere den Fehler-Dialog.
-
-        Args:
-            parent: Das übergeordnete Fenster
-            title: Der Titel des Dialogs
-            message: Die Fehlermeldung
-            details: Optionale detaillierte Informationen zum Fehler
-            exception: Optionale Ausnahme, die den Fehler verursacht hat
-        """
+        """Initialize the error dialog. Args: Parent: The overarching window Title: The title of the dialogue Message: the error message Details: Optional detailed information on the error Exception: Optional exception that caused the error"""
         super().__init__(parent)
         self.title(title)
         self.geometry("500x300")
@@ -315,7 +299,7 @@ class ErrorDialog(tk.Toplevel):
         self._create_ui()
 
     def _create_ui(self):
-        """Erstelle die UI-Komponenten."""
+        """Create the UI components."""
 # Main frame with padding
         main_frame = tk.Frame(self, bg=STYLE.colors.bg_primary)
         main_frame.pack(fill="both", expand=True, padx=10, pady=10)
@@ -399,7 +383,7 @@ class ErrorDialog(tk.Toplevel):
             copy_button.pack(side="left", padx=5)
 
     def _copy_to_clipboard(self):
-        """Kopiere die Details in die Zwischenablage."""
+        """Copy the details into the clipboard."""
         if self.details:
             self.clipboard_clear()
             self.clipboard_append(self.details)
@@ -412,36 +396,15 @@ class ErrorDialog(tk.Toplevel):
 
 
 def show_error_dialog(parent, title, message, details=None, exception=None):
-    """
-    Zeige einen Fehlerdialog an.
-
-    Args:
-        parent: Das übergeordnete Fenster
-        title: Der Titel des Dialogs
-        message: Die Fehlermeldung
-        details: Optionale detaillierte Informationen zum Fehler
-        exception: Optionale Ausnahme, die den Fehler verursacht hat
-    """
+    """Show an error dialog. Args: Parent: The overarching window Title: The title of the dialogue Message: the error message Details: Optional detailed information on the error Exception: Optional exception that caused the error"""
     ErrorDialog(parent, title, message, details, exception)
 
 
 def show_about_dialog(parent):
-    """
-    Zeige den About-Dialog an.
-
-    Args:
-        parent: Das übergeordnete Fenster
-    """
+    """Show the About dialog. Args: Parent: The overarching window"""
     AboutDialog(parent)
 
 
 def show_settings_dialog(parent, config=None, on_save=None):
-    """
-    Zeige den Einstellungen-Dialog an.
-
-    Args:
-        parent: Das übergeordnete Fenster
-        config: Das Konfigurationsobjekt oder -dictionary
-        on_save: Callback-Funktion, die aufgerufen wird, wenn die Einstellungen gespeichert werden
-    """
+    """Show the settings dialog. Args: Parent: The overarching window Config: The configuration object or dictionary On_save: Callback function that is called when the settings are saved"""
     SettingsDialog(parent, config, on_save)

@@ -1,179 +1,102 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ROM Sorter GUI - Optimized interface for ROM organization v2.2.0
+ROM Sorter Pro v2.1.8 - Main Entry Module
 
-OPTIMIZED VERSION 2.2.0:
-- Theming System: Support for light and dark themes
-- Customizable user interface with custom color schemes
-- Improved usability through consistent design
-- Accessibility support with contrasting colors
-- Eliminated memory leaks with proper widget cleanup
-- Optimized threading with coordinated worker management
-- Streamlined UI updates with smart batching
-- Enhanced resource management with automatic cleanup
-- Improved performance with efficient event handling
-- Reduced memory footprint through smart caching
-- Better error recovery with graceful degradation
-- FIXED: Git merge conflicts resolved
-- FIXED: Removed dangerous signal monkey-patching
+This is the main entry point for the ROM Sorter Pro application.
+The GUI implementation has been refactored into several modules:
+- gui_core.py: Core functionality and main window
+- gui_components.py: Reusable UI components
+- gui_scanner.py: Scanner functionality
+- gui_dnd.py: Drag and drop functionality
+- gui_handlers.py: Event handlers
 """
 
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox, scrolledtext
+from tkinter import ttk
+from collections import deque
 import threading
-import queue
-import os
-import sys
 import time
 import weakref
-import gc
-import atexit
-import re
+import os
+import sys
 import platform
-from functools import lru_cache
-from typing import Dict, List, Optional, Any, Callable
-from datetime import datetime
-from concurrent.futures import ThreadPoolExecutor
-import concurrent.futures
-from pathlib import Path
-from collections import Counter, deque
-import random
+import queue
 import logging
-import shutil
+from typing import Dict, List, Optional, Any, Callable, Union
+
+# Import DND_AVAILABLE from the package __init__
+# This avoids circular import issues
+from . import DND_AVAILABLE
+
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""ROM SARTER PRO - main accession point for the GUI This file serves as an entry point for the refactored GUI application."""
+
+import os
+import sys
+import logging
 import traceback
+from pathlib import Path
 
-# Import local modules
-from .console_mappings import CONSOLE_MAP, get_console_for_extension
+# Configure logging only for this module (no stdout handlers)
+# Remove all existing handlers from the root logger to prevent duplicate output
+root_logger = logging.getLogger()
+for handler in root_logger.handlers[:]:
+    if isinstance(handler, logging.StreamHandler) and handler.stream == sys.stdout:
+        root_logger.removeHandler(handler)
 
-# Add the main project directory to the Python search path
+logger = logging.getLogger("ROM-Sorter-Pro")
+
+# Make sure that the SRC directory is in the path
 script_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.abspath(os.path.join(script_dir, '..', '..'))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
-    print(f"Project directory added to Python path: {project_root}")
+    logger.info(f"Project directory added to Python path: {project_root}")
 
-# Import theme system
+# Importiere refaktorierte Module
 try:
-    from src.ui.theme_integration import ThemeIntegrator
-    THEME_SUPPORT = True
-    print("Theme support loaded")
-except ImportError:
-    THEME_SUPPORT = False
-    print("Theme support could not be loaded")
+    from .gui_core import ROMSorterGUI
+    from .theme_integration import ThemeIntegrator
+    from ..config import load_config
+except ImportError as e:
+    logger.error(f"Fehler beim Importieren der refaktorierten Module: {e}")
+    raise
 
-# Get absolute path to script
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-APP_DIR = os.path.dirname(SCRIPT_DIR)
-EXTERNAL_LIBS_DIR = os.path.join(APP_DIR, "external_libs")
-
-# Debug output for import process
-print(f"Initializing Drag & Drop support... (Script: {SCRIPT_DIR})")
-
-# Try to import the new DnD support
-try:
-    # Try our own DnD implementation first
-    from src.dnd_support import init_drag_drop, get_dnd_mode
-    DND_AVAILABLE = init_drag_drop()
-    DND_MODE = get_dnd_mode()
-    print(f"New Drag & Drop support loaded, mode: {DND_MODE}")
-except ImportError:
-    # Fallback to direct import of tkinterdnd2
-    DND_AVAILABLE = False
-    DND_MODE = "none"
-
+def main():
+    """The Rome Sorter starts with the refactored structure per application"""
     try:
-        from tkinterdnd2 import DND_FILES
-        DND_AVAILABLE = True
-        DND_MODE = "tkdnd"
-        print("Info: tkinterdnd2 successfully imported, Drag & Drop enabled")
-    except ImportError:
-        print("No Drag & Drop support available - standard file dialogs will be used")
+        # Load configuration
+        config = load_config()
 
-# Dynamic module imports with error handling
-MODULES_AVAILABLE = False
-try:
-    # Add src to path if needed
-    current_dir = Path(__file__).parent
-    src_dir = current_dir / "src" if (current_dir / "src").exists() else current_dir
-    parent_dir = current_dir.parent
-    if str(src_dir) not in sys.path:
-        sys.path.insert(0, str(src_dir))
-    if str(parent_dir) not in sys.path:
-        sys.path.insert(0, str(parent_dir))
+        # Create and start the main application
+        app = ROMSorterGUI(title="ROM Sorter Pro v2.1.8")
 
-    # Try different import strategies
-    try:
-        # Strategy 1: Direct import
-        from main import SortingOptions
-        from utils import performance_monitor
-        MODULES_AVAILABLE = True
-        print("✅ ROM Sorter modules loaded successfully (direct)")
-    except ImportError:
+        # Enable theme support
+        theme_integrator = ThemeIntegrator(app)
+        theme_integrator.apply_theme(config.get("theme", "system"))
+
+        # Start application
+        app.mainloop()
+
+        return 0  # Erfolgreicher Exit-Code
+
+    except Exception as e:
+        logger.error(f"Error starting the application: {e}")
+        logger.error(traceback.format_exc())
+
+        # Show error message if possible
         try:
-            # Strategy 2: Import from src
-            from src.main import SortingOptions
-            from src.utils import performance_monitor
-            MODULES_AVAILABLE = True
-            print("✅ ROM Sorter modules loaded successfully (from src)")
-        except ImportError:
-            try:
-                # Strategy 3: Relative import
-                from ..main import SortingOptions
-                from ..utils import performance_monitor
-                MODULES_AVAILABLE = True
-                print("✅ ROM Sorter modules loaded successfully (relative)")
-            except ImportError:
-                # Modules not available, but GUI still works
-                MODULES_AVAILABLE = False
-                print("⚠️ Module nicht geladen, aber GUI wird trotzdem funktionieren")
+            import tkinter.messagebox as messagebox
+            messagebox.showerror("Error", f"The application could not be started:\n{e}")
+        except:
+            pass
 
-except (ImportError, ModuleNotFoundError) as e:
-    print(f"Info: Using demo mode - modules not available: {e}")
+        return 1  # Fehler Exit-Code
 
-    # Lightweight demo classes
-    class OptimizedROMSorterPro:
-        def __init__(self, *args, **kwargs):
-            self._shutdown_event = threading.Event()
-
-        def sort_by_console_advanced(self, source_dir, dest_dir):
-            # Demo implementation that doesn't use signals
-            time.sleep(1)
-            return {'files_processed': 42, 'duration': 5.0}
-
-        def sort_roms(self, *args):
-            return {}
-
-    class SortingOptions:
-        def __init__(self, **kwargs):
-            for k, v in kwargs.items(): setattr(self, k, v)
-
-    def get_console_statistics(rom_files):
-        return {"Test Console": 10, "Another Console": 5}
-
-    def batch_process_roms(directory, batch_size=200):
-        return [{"name": "test1.rom"}, {"name": "test2.rom"}]
-
-    class performance_monitor:
-        @staticmethod
-        def get_comprehensive_stats():
-            return {'duration': 1.5, 'files_per_second': 10.5}
-        @staticmethod
-        def start(): pass
-        @staticmethod
-        def stop(): return 1.5
-
-# ============================================================================
-# OPTIMIZED STYLING SYSTEM
-# ============================================================================
-
-class OptimizedStyleManager:
-    """Memory-efficient style manager with caching and theme support."""
-
-    _instance = None
-    _colors = None
-    _fonts = None
-    _theme_cache = {}
+if __name__ == "__main__":
+    sys.exit(main())
 
     def __new__(cls):
         if cls._instance is None:
@@ -227,7 +150,7 @@ class OptimizedStyleManager:
         return self._colors
 
     def _detect_system_dark_mode(self) -> bool:
-        """Erkennt, ob das System im Dark Mode ist."""
+        """Recognize whether the system is in the dark fashion."""
         try:
             if platform.system() == 'Windows':
                 # Windows 10/11 Dark Mode Erkennung
@@ -286,7 +209,7 @@ class OptimizedStyleManager:
         return self._fonts
 
     def _find_available_font(self, font_list: List[str]) -> str:
-        """Finds the first available font from a list."""
+        """Finds the First Available Font From A List."""
         # Import only if necessary to optimize start time
         try:
             if not hasattr(self, '_available_fonts'):
@@ -309,6 +232,38 @@ class OptimizedStyleManager:
 
         # Fallback zur ersten Option
         return font_list[0]
+
+# ============================================================================
+# Simplified Style Manager for Compatibility
+# ============================================================================
+
+class OptimizedStyleManager:
+    """Simplified version of the style manager for compatibility with old code."""
+
+    def __init__(self):
+        # Define the basic colors for light and dark theme
+        self.colors = {
+            'bg_primary': '#2b2b2b',
+            'bg_secondary': '#3c3c3c',
+            'bg_accent': '#4a4a4a',
+            'text_primary': '#ffffff',
+            'text_secondary': '#cccccc',
+            'accent': '#007acc',
+            'accent_hover': '#1e90ff',
+            'success': '#28a745',
+            'warning': '#ffc107',
+            'error': '#dc3545',
+            'border': '#555555'
+        }
+
+        # Add fonts
+        self.fonts = {
+            'header': ('Segoe UI', 16, 'bold'),
+            'subheader': ('Segoe UI', 14, 'bold'),
+            'body': ('Segoe UI', 11),
+            'small': ('Segoe UI', 9),
+            'default': ('Segoe UI', 10)
+        }
 
 # Global style instance
 STYLE = OptimizedStyleManager()
@@ -618,7 +573,7 @@ class SmartThread(threading.Thread):
 
     @classmethod
     def get_thread_pool(cls, max_workers=None):
-        """Returns a shared thread pool."""
+        """Returns A Shared Thread Pool."""
         with cls._pool_lock:
             if cls._thread_pool is None:
                 if max_workers is None:
@@ -722,7 +677,7 @@ class OptimizedDragDropFrame(tk.Frame):
             try:
                 print(f"Initializing Drag & Drop support (Mode: {DND_MODE})...")
 
-                # Erstelle eine ansprechendere Drag & Drop-Zone
+                # Create a more appealing drag & drop zone
                 self.configure(
                     relief="groove",
                     borderwidth=2,
@@ -731,10 +686,10 @@ class OptimizedDragDropFrame(tk.Frame):
                 )
 
                 if DND_MODE == "native":
-                    # Verwende unsere eigene DnD-Implementierung
-                    from src.dnd_support import DropFrame
+                    # Use our own DnD implementation
+                    from ...dnd_support import DropFrame
 
-                    # Erstelle ein Drop-Frame innerhalb dieses Frames
+                    # Create a drop frame within this frame
                     self.drop_frame = DropFrame(self, drop_callback=self._handle_native_drop)
                     self.drop_frame.pack(fill=tk.BOTH, expand=True)
 
@@ -748,7 +703,7 @@ class OptimizedDragDropFrame(tk.Frame):
                     print("Native Drag & Drop support successfully registered")
 
                 elif DND_MODE == "tkdnd":
-                    # Verwende tkinterdnd2-Implementierung
+                    # Use tkinterdnd2 implementation
 
                     # Check whether the root class supports Tkinterdnd
                     if not hasattr(self.winfo_toplevel(), 'TkdndVersion'):
@@ -842,7 +797,7 @@ class OptimizedDragDropFrame(tk.Frame):
         self._reset_appearance()
 
     def _handle_native_drop(self, file_paths):
-        """Verarbeitet gedropte Dateien von der nativen Drag & Drop-Implementierung."""
+        """Processed printed files from native drag & drop implementation."""
         if not self.callback:
             print("No callback defined for Drag & Drop processing")
             return
@@ -929,7 +884,7 @@ class OptimizedDragDropFrame(tk.Frame):
             print(f"Drop-Event Daten: {event.data}")
             print(f"Drop-Event Typ: {type(event.data)}")
 
-            # Especialy for Windows: with Tkdnd 2.x, a format search as "{c:/path/zu/file}" is returned
+            # Especialy for Windows: with Tkdnd 2.x, a format search as "{C:/Path/zu/File}" is returned
             raw_data = event.data
 
             # Treat Windows Explorer specific format with curly brackets
@@ -1325,7 +1280,7 @@ class EfficientLogWidget(tk.Frame):
         self._log_thread.start()
 
     def _process_batch(self, batch):
-        """Process a batch of log messages."""
+        """Process a Batch of Log Messages."""
         current_time = time.time()
         if current_time - self._last_update < (self._update_interval / 1000):
             # Re-queue for later
@@ -1743,7 +1698,7 @@ class OptimizedStatsWidget(tk.Frame):
 # ============================================================================
 
 class FastFileScanner:
-    """Hochleistungs-Dateiscanner mit optimierter Speichernutzung und adaptiver Leistungsanpassung."""
+    """High-performance file scanner with optimized storage use and adaptive performance adjustment."""
 
     # Class-level cache for better memory efficiency
     _scan_cache = {}
@@ -1779,7 +1734,7 @@ class FastFileScanner:
     }
 
     def __init__(self, extensions=None):
-        """Scanner mit optionalem Erweiterungsfilter initialisieren."""
+        """Initialize the scanner with optional extension filter."""
         self._file_count = 0
         self._dir_count = 0
         self._stop_event = None
@@ -2372,7 +2327,7 @@ class OptimizedROMSorterGUI:
                 print(f"Create root window with Drag & Drop support (Mode: {DND_MODE})...")
 
                 if DND_MODE == "tkdnd":
-                    # Verwende TkinterDnD
+                    # Use TkinterDnD
                     from tkinterdnd2 import TkinterDnD
                     self.root = TkinterDnD.Tk()
 
@@ -2386,7 +2341,7 @@ class OptimizedROMSorterGUI:
                     self.root = tk.Tk()
 
                     # Patch the window for cross-platform drag & drop support
-                    from src.dnd_support import patch_tkinter_root
+                    from ...dnd_support import patch_tkinter_root
                     patch_tkinter_root(self.root)
                     print("Root window patched for native Drag & Drop")
 
@@ -2404,7 +2359,7 @@ class OptimizedROMSorterGUI:
             # No drag & drop available
             self.root = tk.Tk()
 
-        self.root.title("ROM Sorter Pro 🎮 - Optimized v2.1.4")
+        self.root.title("ROM Sorter Pro 🎮 - Optimized v2.1.8")
         self.root.geometry("1000x700")
         self.root.minsize(800, 600)
 
@@ -2518,7 +2473,7 @@ class OptimizedROMSorterGUI:
             return []
 
     def _show_drag_drop_feedback(self, message):
-        """Shows a short visual feedback for Drag & Drop operations."""
+        """Shows a short visual feedback for drag & drop operations."""
         try:
             # Create A Temporary Label for Feedback
             feedback = tk.Label(
@@ -2613,7 +2568,7 @@ class OptimizedROMSorterGUI:
         menubar.add_cascade(label="Hilfe", menu=help_menu)
 
     def _initialize_theme_support(self):
-        """Initialisiert das Theme-System."""
+        """Initialized the theme system."""
         if THEME_SUPPORT:
             try:
                 self.theme_integrator = ThemeIntegrator(self)
@@ -2636,7 +2591,7 @@ class OptimizedROMSorterGUI:
         self.stop_requested = threading.Event()  # Event for the demolition request
 
     def _show_settings(self):
-        """Zeigt den Dialog mit den allgemeinen Einstellungen an."""
+        """Displays the dialogue with the general settings."""
         settings_window = tk.Toplevel(self.root)
         settings_window.title("Einstellungen")
         settings_window.geometry("500x400")
@@ -2674,28 +2629,17 @@ class OptimizedROMSorterGUI:
         ttk.Button(main_frame, text="Close", command=settings_window.destroy).pack(pady=10)
 
     def _change_theme(self, theme_name):
-        """
-        Ändert das aktuelle Theme.
-
-        Args:
-            theme_name: Name des zu verwendenden Themes
-        """
+        """Changes the current theme. Args: Theme_Name: Name of the theme to be used"""
         if THEME_SUPPORT and self.theme_integrator:
             self.theme_integrator._change_theme(theme_name)
 
     def _customize_theme(self):
-        """Öffnet den Dialog zur Theme-Anpassung."""
+        """Opens the theme customization dialog."""
         if THEME_SUPPORT and self.theme_integrator:
             self.theme_integrator._show_theme_customizer()
 
     def show_notification(self, message, level="info"):
-        """
-        Zeigt eine Benachrichtigung an.
-
-        Args:
-            message: Die Nachricht, die angezeigt werden soll
-            level: Der Typ der Nachricht ("info", "warning", "error")
-        """
+        """Displays a notification. Args: Message: The message that is to be displayed Level: The type of message ("Info", "Warning", "Error")"""
         if level.lower() == "info":
             messagebox.showinfo("Information", message)
         elif level.lower() == "warning":
@@ -2707,19 +2651,7 @@ class OptimizedROMSorterGUI:
 
     def _show_about(self):
         """Show about dialog with information about ROM Sorter Pro."""
-        about_text = """ROM Sorter Pro v2.2.0 - Theme Edition
-
-Ein professionelles Werkzeug zur Organisation von ROM-Sammlungen.
-
-Features:
-- Automatische ROM-Erkennung mit mehreren Detektionsstrategien
-- Datenbank-basierte ROM-Identifikation (No-Intro und Redump)
-- Improved CHD support
-- Drag & Drop-Support
-- Multithreading-Performance
-- Erweiterte Konsolen-Erkennung
-
-© 2024 ROM Sorter Team. Alle Rechte vorbehalten."""
+        about_text = """Rome Sorter Pro V2.1.8 - Theme Edition A professional tool for organizing Rome collections. Features: - Automatic ROM detection with several detection strategies -Database-based ROM identification (no-intro and redump) - Improved CHD support - Drag & drop support - Multithreading performance - Extended console recognition © 2024 Rome Sorter Team. All rights reserved."""
 
         messagebox.showinfo("Über ROM Sorter Pro", about_text)
 
@@ -2993,7 +2925,7 @@ Features:
         thread_local.check_shutdown = check_shutdown
 
     def _select_source_folder(self):
-        """Opens a dialog to select the source folder."""
+        """Open's A Dialog to Select the Source Folder."""
         folder = filedialog.askdirectory(
             title="Select source folder with ROMs",
             initialdir=self.source_folder.get() or os.path.expanduser("~")
@@ -3002,7 +2934,7 @@ Features:
             self._set_source_folder(folder)
 
     def _select_dest_folder(self):
-        """Opens a dialog to select the destination folder."""
+        """Open's A Dialog to Select the Destination Folder."""
         folder = filedialog.askdirectory(
             title="Select destination folder for sorted ROMs",
             initialdir=self.dest_folder.get() or os.path.expanduser("~")
@@ -3480,8 +3412,8 @@ Features:
 
                                 # 0. Experiments advanced archive detection for archives
                                 try:
-                                    # Importiere den Archiv-Detektor
-                                    from src.detectors.archive_detector import (
+                                    # Import the archive detector
+                                    from ...detectors.archive_detector import (
                                         is_archive_file, detect_console_from_archive,
                                         improve_generic_type_detection
                                     )
@@ -3506,7 +3438,7 @@ Features:
 
                                 # 1. Versuche CHD-Dateierkennung
                                 try:
-                                    from src.detectors.chd_detector import (
+                                    from ...detectors.chd_detector import (
                                         is_chd_file, detect_console_from_chd
                                     )
 
@@ -3603,7 +3535,7 @@ Features:
                                 if console_type in ["Binary", "ROM_File", "Disk_Image", "Archive"]:
                                     try:
                                         # Use the improved detection code for ROMS
-                                        from src.utils import detect_console_fast, is_chd_file, detect_console_from_chd, is_archive_file, detect_console_from_archive
+                                        from ...utils import detect_console_fast, is_chd_file, detect_console_from_chd, is_archive_file, detect_console_from_archive
 
                                         # CHD-Datei-Erkennung
                                         if is_chd_file(str(file_path)):
@@ -3890,8 +3822,7 @@ Features:
         self._show_sort_results("Erfolg", report_lines)
 
     def _show_sort_results(self, title: str, report_lines: List[str]):
-        """Verbesserte Methode zum Anzeigen von Ergebnisdialogen mit Modal-Status.
-        Verhindert doppelte oder überlappende Erfolgsmeldungen."""
+        """Improved method for displaying results dialogues with modal status. Prevents double or overlapping success reports."""
         # Close all previous top level windows that could be success/error dialogues
         for widget in self.root.winfo_children():
             if isinstance(widget, tk.Toplevel) and widget.wm_title() in ["Erfolg", "Error"]:
@@ -4002,7 +3933,7 @@ Features:
         # Reset UI state
         self._set_running_state(False)
 
-        # Erstelle Fehlermeldungstext
+        # Create error message text
         error_lines = [f"Sortierung fehlgeschlagen: {error_msg}"]
 
         # Add details if available
@@ -4014,8 +3945,7 @@ Features:
         self._show_error_dialog("Fehler", error_lines)
 
     def _show_error_dialog(self, title: str, error_lines: List[str]):
-        """Verbesserte Methode zum Anzeigen von Fehlerdialogen mit Modal-Status.
-        Verhindert doppelte oder überlappende Fehlermeldungen."""
+        """Improved method for displaying error dialogues with modal status. Prevents double or overlapping error messages."""
         # Close all previous top level windows that could be success/error dialogues
         for widget in self.root.winfo_children():
             if isinstance(widget, tk.Toplevel) and widget.wm_title() in ["Erfolg", "Error", "Fehler"]:
@@ -4253,25 +4183,7 @@ Features:
 
     def _show_help(self):
         """Show help dialog."""
-        help_text = """ROM Sorter Pro v2.1.4 - Help
-
-Quick Start:
-1. Select source folder containing ROM files
-2. Select destination folder for organized ROMs
-3. Click 'Preview Scan' to see what will be sorted
-4. Click 'Start Sorting' to organize your ROMs
-
-Supported Formats:
-• Nintendo: .nes, .smc, .sfc, .n64, .z64, .gb, .gbc, .gba
-• PlayStation: .iso, .bin, .cue, .pbp
-• Archives: .zip, .7z, .rar
-• And many more!
-
-Features:
-• Automatic console detection
-• Duplicate handling
-• Progress tracking
-• Safe file operations"""
+        help_text = """Rome Sorter Pro V2.1.4 - Help Quick Start: 1. Select Source Folder Containing Rome Files 2. Select Destination Folder for Organized Rome 3. Click 'Preview Scan' To See What Will Be Sorted 4. Click 'Start Sorting' to Organize your Rome Supported format: • Nintendo:.Nes,.SMC,.SFC,.n64,.z64,.gb,.gbc,.gba • Playstation:.iso,.bin,.cue,.pbp • Archives:.zip,.7z,.rar • And many more! Features: • Automatic Console Detection • Duplicate handling • Progress tracking • Safe File Operations"""
 
         messagebox.showinfo("Help", help_text)
 
@@ -4372,22 +4284,22 @@ Features:
 
 # Integrate the database functionality into the GUI class
 try:
-    from src.database.db_gui_integration import add_database_methods_to_gui
+    from ...database.db_gui_integration import add_database_methods_to_gui
     OptimizedROMSorterGUI = add_database_methods_to_gui(OptimizedROMSorterGUI)
 except Exception as e:
-    print(f"Warnung: Datenbank-Integration konnte nicht geladen werden: {e}")
+    print(f"Warning: Database integration could not be loaded: {e}")
 
     # If the database integration cannot be loaded, the missing methods implement
     def _display_database_status(self):
-        """Fallback-Implementierung für die Anzeige des Datenbankstatus."""
-        self.status_bar.config(text="Datenbankstatus: Datenbank nicht verfügbar")
+        """Fallback implementation for displaying the database status."""
+        self.status_bar.config(text="Database status: Database not available")
 
     def _show_database_manager(self):
-        """Fallback-Implementierung für den Datenbank-Manager."""
-        messagebox.showinfo("Datenbank-Manager", "Die Datenbank-Funktionen sind nicht verfügbar.")
+        """Fallback implementation for the database manager."""
+        messagebox.showinfo("Database Manager", "The database functions are not available.")
 
     def _show_database_docs(self):
-        """Fallback-Implementierung für die Dokumentation."""
+        """Fallback implementation for documentation."""
         messagebox.showinfo("Dokumentation", "Die Datenbank-Dokumentation ist nicht verfügbar.")
 
     # Add the fallback methods to the class
@@ -4397,7 +4309,7 @@ except Exception as e:
 
 # Add the missing method _open_log_file directly to the GUI class
 def _open_log_file(self):
-    """Öffnet die aktuelle Log-Datei."""
+    """Opens the current log file."""
     try:
         # Go up to the logs from the Ui Directory a Directory for the Logs
         ui_dir = os.path.dirname(os.path.abspath(__file__))

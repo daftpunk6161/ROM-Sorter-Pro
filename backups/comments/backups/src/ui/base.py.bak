@@ -5,7 +5,7 @@ import tkinter as tk
 from tkinter import ttk
 
 class ThemeColors:
-    """Farbschema für die Anwendung."""
+    """Color scheme for the application."""
 
     def __init__(self):
 # Main colors
@@ -31,7 +31,7 @@ class ThemeColors:
         self.selected = "#d0d0d0"
 
 class ThemeFonts:
-    """Schriftarten für die Anwendung."""
+    """Fonts for the application."""
 
     def __init__(self):
 # Standard fonts
@@ -43,17 +43,17 @@ class ThemeFonts:
         self.button = ("Segoe UI", 9)
 
 class UIStyle:
-    """Zentraler Style-Manager für die Anwendung."""
+    """Central style manager for the application."""
 
     def __init__(self):
-        """Initialisiere den Style-Manager mit Standardwerten."""
+        """Initialize the style manager with standard values."""
         self.colors = ThemeColors()
         self.fonts = ThemeFonts()
         self._style = ttk.Style()
         self._initialize_styles()
 
     def _initialize_styles(self) -> None:
-        """Initialisiere die TTK-Stile."""
+        """Initialize the TTK styles."""
         self._style.configure('TButton',
                              font=self.fonts.button,
                              background=self.colors.bg_primary,
@@ -88,13 +88,7 @@ class UIStyle:
                              background=self.colors.accent_primary)
 
     def apply_to_widget(self, widget: tk.Widget, widget_type: str = 'frame') -> None:
-        """
-        Wendet den Stil auf ein bestimmtes Widget an.
-
-        Args:
-            widget: Das Widget, auf das der Stil angewendet werden soll
-            widget_type: Der Typ des Widgets (frame, button, label, etc.)
-        """
+        """Apply the style to a certain widget. Args: Widget: The widget to which the style is to be applied Widget_type: The type of widget (frame, button, label, etc.)"""
         if widget_type == 'frame':
             widget.configure(background=self.colors.bg_primary)
         elif widget_type == 'button':
@@ -152,42 +146,25 @@ STYLE = UIStyle()
 
 
 class BaseApp:
-    """Basisklasse für die Anwendung mit grundlegenden Funktionen."""
+    """Basic class for use with basic functions."""
 
     def __init__(self):
-        """Initialisiere die Basisanwendung."""
+        """Initialize the basic application."""
         self.app_dir = Path(__file__).parent.parent.parent
         self.assets_dir = self.app_dir / "assets"
         self.style = STYLE
 
     def get_asset_path(self, asset_name: str) -> Path:
-        """
-        Gibt den absoluten Pfad zu einer Asset-Datei zurück.
-
-        Args:
-            asset_name: Name der Asset-Datei
-
-        Returns:
-            Path: Der absolute Pfad zur Asset-Datei
-        """
+        """Gives the absolute path back to an asset file. Args: Asset_Name: Name of the Asset file Return: Path: The absolute path to the asset file"""
         return self.assets_dir / asset_name
 
     def create_basic_window(self, title: str, geometry: str = "800x600") -> tk.Tk:
-        """
-        Erstellt ein grundlegendes Tkinter-Fenster.
-
-        Args:
-            title: Titel des Fensters
-            geometry: Größe des Fensters im Format "BreitexHöhe"
-
-        Returns:
-            tk.Tk: Das erstellte Tkinter-Fenster
-        """
+        """Creates a basic tkinter window. Args: Title: Title of the window Geometry: size of the window in the "Breitexhöhe" format Return: TK.TK: The created tkinter window"""
         root = tk.Tk()
         root.title(title)
         root.geometry(geometry)
 
-# Set a minimum size for the window
+# Set a minimum size for the Window
         root.minsize(640, 480)
 
 # Improve the rendering performance
@@ -214,14 +191,7 @@ class BaseApp:
 
 
 def center_window(window: tk.Tk, width: int = 800, height: int = 600) -> None:
-    """
-    Zentriert ein Tkinter-Fenster auf dem Bildschirm.
-
-    Args:
-        window: Das zu zentrierende Fenster
-        width: Breite des Fensters
-        height: Höhe des Fensters
-    """
+    """Center a tkinter window on the screen. Args: Window: The window to be centered Width: Width of the window Height: Height of the window"""
 # Call up screen dimensions
     screen_width = window.winfo_screenwidth()
     screen_height = window.winfo_screenheight()
@@ -235,13 +205,7 @@ def center_window(window: tk.Tk, width: int = 800, height: int = 600) -> None:
 
 
 def create_tooltip(widget: tk.Widget, text: str) -> None:
-    """
-    Erstellt einen Tooltip für ein Widget.
-
-    Args:
-        widget: Das Widget, für das der Tooltip erstellt werden soll
-        text: Der anzuzeigende Text
-    """
+    """Creates a tooltip for a widget. Args: Widget: The widget for which the tooltip is to be created Text: The text to be displayed"""
     tooltip = tk.Toplevel(widget)
     tooltip.wm_overrideredirect(True)  # Removes the window decorations
     tooltip.wm_geometry("+0+0")  # Initially placed the window in the upper left corner
@@ -261,7 +225,7 @@ def create_tooltip(widget: tk.Widget, text: str) -> None:
     label.pack()
 
     def show_tooltip(event=None):
-        """Zeigt den Tooltip an der Mausposition an."""
+        """Displays the tooltip at the mouse position."""
         x = widget.winfo_pointerx() + 15
         y = widget.winfo_pointery() + 10
         tooltip.wm_geometry(f"+{x}+{y}")

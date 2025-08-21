@@ -60,7 +60,7 @@ COLORS = {
 }
 
 class ScanWorkerThread(QThread):
-    """Thread für das Scannen von Verzeichnissen ohne UI-Blockierung."""
+    """Thread for scanning directories without UI blocking."""
 
     # Signals for communication with the main thread
     progress_updated = pyqtSignal(int, int)  # Aktuell/Gesamt
@@ -76,7 +76,7 @@ class ScanWorkerThread(QThread):
         self.is_cancelled = False
 
     def run(self):
-        """Führt den Scanvorgang im Hintergrund aus."""
+        """Performs the scanning process in the background."""
         try:
             # Here the actual scan logic would be implemented
             # Beispielimplementierung:
@@ -138,7 +138,7 @@ class ScanWorkerThread(QThread):
 
 
 class ROMSorterMainWindow(QMainWindow):
-    """Hauptfenster der ROM Sorter Pro-Anwendung mit Qt."""
+    """Main window of the Rome Sorter Pro application with QT."""
 
     def __init__(self, config=None):
         super().__init__()
@@ -153,7 +153,7 @@ class ROMSorterMainWindow(QMainWindow):
         self._load_settings()
 
     def _init_ui(self):
-        """Initialisiert die Benutzeroberfläche."""
+        """Initialized the user interface."""
         # Grundlegende Fenstereinstellungen
         self.setWindowTitle(WINDOW_TITLE)
         self.setMinimumSize(MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT)
@@ -192,7 +192,7 @@ class ROMSorterMainWindow(QMainWindow):
         self._create_statusbar()
 
     def _create_menus(self):
-        """Erstellt die Menüleiste mit allen Menüs und Aktionen."""
+        """Creates the menu bar with all menus and actions."""
         # Create menu bar
         menubar = self.menuBar()
 
@@ -256,7 +256,7 @@ class ROMSorterMainWindow(QMainWindow):
         help_menu.addAction(docs_action)
 
     def _create_left_panel(self):
-        """Erstellt den linken Panel mit Navigation und Konfiguration."""
+        """Creates the left panel with navigation and configuration."""
         # Scan-Bereich
         scan_group = QGroupBox("Scannen")
         scan_layout = QVBoxLayout(scan_group)
@@ -341,7 +341,7 @@ class ROMSorterMainWindow(QMainWindow):
         self.left_layout.addStretch(1)  # Add space at the bottom
 
     def _create_right_panel(self):
-        """Erstellt den rechten Panel mit Tabs für verschiedene Ansichten."""
+        """Creates the right panel with tabs for different views."""
         # Tab for Rome list
         self.roms_tab = QWidget()
         roms_layout = QVBoxLayout(self.roms_tab)
@@ -378,7 +378,7 @@ class ROMSorterMainWindow(QMainWindow):
         self.right_panel.addTab(self.log_tab, "Log")
 
     def _create_statusbar(self):
-        """Erstellt die Statusleiste am unteren Rand des Fensters."""
+        """Creates the status bar at the bottom of the window."""
         statusbar = self.statusBar()
 
         self.status_label = QLabel("Bereit")
@@ -393,7 +393,7 @@ class ROMSorterMainWindow(QMainWindow):
         # Here the signals from the configuration class would be connected in a complete implementation
 
     def _load_settings(self):
-        """Lädt die gespeicherten Settings."""
+        """Loads the stored settings."""
         settings = QSettings("ROM Sorter Pro", "v3")
 
         # Window position and size
@@ -411,7 +411,7 @@ class ROMSorterMainWindow(QMainWindow):
         self.dir_input.setText(last_dir)
 
     def _save_settings(self):
-        """Speichert die aktuellen Einstellungen."""
+        """Saves the current settings."""
         settings = QSettings("ROM Sorter Pro", "v3")
 
         # Window position and size
@@ -424,7 +424,7 @@ class ROMSorterMainWindow(QMainWindow):
         settings.setValue("last_directory", self.dir_input.text())
 
     def _update_rom_table(self, rom_info=None):
-        """Aktualisiert die ROM-Tabelle mit neuen Daten."""
+        """Updates the ROM table with new data."""
         if rom_info:
             # Add a new rome
             self.roms_table_data.append(rom_info)
@@ -453,7 +453,7 @@ class ROMSorterMainWindow(QMainWindow):
             self.rom_count_label.setText("0 ROMs gefunden")
 
     def _format_size(self, size_bytes):
-        """Formatiert Bytes in eine lesbare Größe."""
+        """Formatted bytes in A Readable Size."""
         for unit in ['B', 'KB', 'MB', 'GB']:
             if size_bytes < 1024.0:
                 return f"{size_bytes:.2f} {unit}"
@@ -461,7 +461,7 @@ class ROMSorterMainWindow(QMainWindow):
         return f"{size_bytes:.2f} TB"
 
     def _update_progress(self, current, total):
-        """Aktualisiert die Fortschrittsanzeige."""
+        """Updates the progress display."""
         if total <= 0:
             self.progress_bar.setValue(0)
             self.progress_label.setText("Bereit")
@@ -473,11 +473,11 @@ class ROMSorterMainWindow(QMainWindow):
         self.status_label.setText(f"Scan läuft... ({percentage}%)")
 
     def _update_status(self, message):
-        """Aktualisiert die Statusleiste mit einer Nachricht."""
+        """Updates the status bar with a message."""
         self.status_label.setText(message)
 
     def _handle_scan_error(self, error_message):
-        """Behandelt Error während des Scanvorgangs."""
+        """Treats error during the scanning process."""
         QMessageBox.critical(self, "Scan-Fehler", f"Fehler beim Scannen: {error_message}")
         self._update_status("Scan fehlgeschlagen")
         self._reset_scan_ui()
@@ -502,7 +502,7 @@ class ROMSorterMainWindow(QMainWindow):
         QMessageBox.information(self, "Scan abgeschlossen", success_message)
 
     def _update_statistics(self, summary):
-        """Aktualisiert die Statistik-Ansicht mit den Scan-Ergebnissen."""
+        """Updates the statistics view with the scan results."""
         stats_text = f"""
         <h2>Scan-Zusammenfassung</h2>
         <ul>
@@ -516,14 +516,14 @@ class ROMSorterMainWindow(QMainWindow):
         self.stats_label.setText(stats_text)
 
     def _reset_scan_ui(self):
-        """Setzt die UI nach einem Scan zurück."""
+        """Put the ui back after a scan."""
         self.scan_button.setEnabled(True)
         self.stop_button.setEnabled(False)
         self.progress_bar.setValue(0)
         self.progress_label.setText("Bereit")
 
     def _on_open_directory(self):
-        """Öffnet einen Dialog zur Verzeichnisauswahl."""
+        """Open's A Dialogue for the Directory Selection."""
         directory = QFileDialog.getExistingDirectory(
             self,
             "Verzeichnis zum Scannen auswählen",
@@ -534,7 +534,7 @@ class ROMSorterMainWindow(QMainWindow):
             self.dir_input.setText(directory)
 
     def _on_export_results(self):
-        """Exportiert die Scan-Ergebnisse in eine Datei."""
+        """Export the scan results into a file."""
         if not self.roms_table_data:
             QMessageBox.warning(self, "Export nicht möglich", "Keine ROMs zum Exportieren gefunden.")
             return
@@ -564,12 +564,12 @@ class ROMSorterMainWindow(QMainWindow):
                 QMessageBox.critical(self, "Export fehlgeschlagen", f"Fehler beim Exportieren: {str(e)}")
 
     def _on_open_settings(self):
-        """Öffnet den Einstellungsdialog."""
+        """Opens the setting dialog."""
         # A separate setting dialog would be opened here
         QMessageBox.information(self, "Einstellungen", "Diese Funktion ist noch nicht implementiert.")
 
     def _on_refresh(self):
-        """Aktualisiert die Ansichten."""
+        """Updates the views."""
         # In a real application, the data would be ared here
         self._update_status("Ansicht aktualisiert")
 
@@ -620,7 +620,7 @@ class ROMSorterMainWindow(QMainWindow):
                 self._reset_scan_ui()
 
     def _on_search_changed(self, text):
-        """Filtert die ROM-Tabelle basierend auf dem Suchtext."""
+        """Filters the Rome table based on the search text."""
         for row in range(self.roms_table.rowCount()):
             show_row = False
 
@@ -634,7 +634,7 @@ class ROMSorterMainWindow(QMainWindow):
             self.roms_table.setRowHidden(row, not show_row)
 
     def _on_about(self):
-        """Zeigt den Über-Dialog an."""
+        """Displays the over-dialog."""
         about_text = (
             f"<h2>ROM Sorter Pro v3.0.0</h2>"
             f"<p>Eine leistungsstarke Anwendung zur Organisation von ROM-Sammlungen</p>"
@@ -646,13 +646,13 @@ class ROMSorterMainWindow(QMainWindow):
         QMessageBox.about(self, "Über ROM Sorter Pro", about_text)
 
     def _on_open_docs(self):
-        """Öffnet die Dokumentation."""
+        """Opens the documentation."""
         # In a real application, The Local Documentation would be opened here
         # Or the online documentation in the browser
         QMessageBox.information(self, "Dokumentation", "Diese Funktion ist noch nicht implementiert.")
 
     def closeEvent(self, event):
-        """Behandelt das Schließen des Fensters."""
+        """Treats the closure of the window."""
         if self.scan_thread and self.scan_thread.isRunning():
             reply = QMessageBox.question(
                 self,

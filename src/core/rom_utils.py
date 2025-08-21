@@ -73,16 +73,7 @@ def get_all_rom_extensions(include_dot: bool = False) -> List[str]:
 
 
 def get_sorted_rom_list(directory_path: Union[str, Path], filter_extensions: Optional[List[str]] = None) -> List[str]:
-    """
-    Durchsucht das angegebene Verzeichnis nach ROM-Dateien und gibt eine sortierte Liste zurück.
-
-    Args:
-        directory_path: Zu durchsuchendes Verzeichnis
-        filter_extensions: Optionaler Filter für bestimmte Dateierweiterungen
-
-    Returns:
-        Sortierte Liste von ROM-Dateipfaden
-    """
+    """Searches the Specified Directory for Rome Files and Returns a Sorted List. ARGS: Directory_Path: Filter_extensions: Optional Filter for Certain File Extensions Return: Sorted List of Rome File Paths"""
 # Normalize path
     path_obj = Path(directory_path)
 
@@ -112,15 +103,7 @@ def get_sorted_rom_list(directory_path: Union[str, Path], filter_extensions: Opt
 
 
 def group_roms_by_console(rom_paths: List[str]) -> Dict[str, List[str]]:
-    """
-    Gruppiert ROMs nach ihrer Konsole.
-
-    Args:
-        rom_paths: Liste von ROM-Dateipfaden
-
-    Returns:
-        Dictionary mit Konsolen als Schlüssel und ROM-Listen als Werte
-    """
+    """Group Rome after her console. Args: ROM_PATHS: List of ROM file paths Return: Dictionary with consoles as keys and Rome lists as values"""
 # Importing identification functions
     from src.detectors import detect_console_fast
 
@@ -148,15 +131,7 @@ def group_roms_by_console(rom_paths: List[str]) -> Dict[str, List[str]]:
 
 
 def is_valid_rom_file(file_path: Union[str, Path]) -> bool:
-    """
-    Überprüft, ob eine Datei eine gültige ROM-Datei ist.
-
-    Args:
-        file_path: Zu prüfender Dateipfad
-
-    Returns:
-        True, wenn es sich um eine gültige ROM-Datei handelt
-    """
+    """Check Whether a file is a valid rome file. ARGS: File_Path: File Path to Be Examined Return: True When It Comes to A Valid Rome File"""
 # Normalize path
     path_obj = Path(file_path)
 
@@ -171,17 +146,7 @@ def is_valid_rom_file(file_path: Union[str, Path]) -> bool:
 
 
 def calculate_rom_signature(file_path: Union[str, Path], chunk_size: int = 16 * 1024) -> str:
-    """
-    Berechnet eine eindeutige Signatur für eine ROM-Datei.
-    Diese Funktion verwendet verschiedene Teile der Datei für eine schnelle, aber zuverlässige Erkennung.
-
-    Args:
-        file_path: Pfad zur ROM-Datei
-        chunk_size: Größe der zu lesenden Chunks für die Signaturberechnung
-
-    Returns:
-        Hexadezimale Signatur der ROM-Datei
-    """
+    """Calculate A Clear Signature for a Rome File. This function uses various parts of the file for quick but reliable detection. Args: File_Path: Path to the Rome File Chunk_Size: Size of the Chunks to Be Read for the Signature Calculation Return: Hexadecimal Signature of the Rome File"""
     path_obj = Path(file_path)
 
     if not path_obj.exists() or not path_obj.is_file():

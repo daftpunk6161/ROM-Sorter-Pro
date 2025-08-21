@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*-coding: utf-8-*-
 """
-ROM Sorter Pro - Hauptfenster v2.1.8
+ROM Sorter Pro - Main Window v2.1.8
 """
 
 # Standard-Bibliotheken
@@ -24,7 +24,7 @@ from tkinter import ttk, messagebox, filedialog
 from .base import STYLE, BaseApp, center_window
 
 class ROMSorterWindow(tk.Tk):
-    """Hauptfenster der ROM Sorter Anwendung."""
+    """Main window of the ROM Sorter application."""
 
     def __init__(self):
         """Initialize the main window."""
@@ -64,17 +64,17 @@ class ROMSorterWindow(tk.Tk):
         self.dest_path = tk.StringVar()
 
         # Status variables
-        self.status_text = tk.StringVar(value="Bereit")
+        self.status_text = tk.StringVar(value="Ready")
         self.progress_value = tk.DoubleVar(value=0.0)
         self.is_processing = threading.Event()
 
-        # Optionsvariablen
+        # Option variables
         self.copy_mode = tk.BooleanVar(value=True)  # True = Copy, False = Move
         self.recursive_scan = tk.BooleanVar(value=True)
         self.create_subfolders = tk.BooleanVar(value=True)
         self.overwrite_existing = tk.BooleanVar(value=False)
 
-        # Fortschrittswerte
+        # Progress values
         self.total_files = 0
         self.processed_files = 0
 
@@ -87,36 +87,36 @@ class ROMSorterWindow(tk.Tk):
 
         # File menu
         file_menu = tk.Menu(menubar, tearoff=0)
-        file_menu.add_command(label="Quellordner wählen...", command=lambda: self._select_folder("source"))
-        file_menu.add_command(label="Zielordner wählen...", command=lambda: self._select_folder("dest"))
+        file_menu.add_command(label="Select Source Folder...", command=lambda: self._select_folder("source"))
+        file_menu.add_command(label="Select Destination Folder...", command=lambda: self._select_folder("dest"))
         file_menu.add_separator()
-        file_menu.add_command(label="Beenden", command=self._on_close)
-        menubar.add_cascade(label="Datei", menu=file_menu)
+        file_menu.add_command(label="Exit", command=self._on_close)
+        menubar.add_cascade(label="File", menu=file_menu)
 
         # Actions menu
         action_menu = tk.Menu(menubar, tearoff=0)
-        action_menu.add_command(label="ROMs sortieren", command=self._on_start_sorting)
-        action_menu.add_command(label="Abbrechen", command=self._on_cancel_sorting)
+        action_menu.add_command(label="Sort ROMs", command=self._on_start_sorting)
+        action_menu.add_command(label="Cancel", command=self._on_cancel_sorting)
         action_menu.add_separator()
-        action_menu.add_command(label="Log-Datei öffnen", command=self.open_log_file)
-        menubar.add_cascade(label="Aktionen", menu=action_menu)
+        action_menu.add_command(label="Open Log File", command=self.open_log_file)
+        menubar.add_cascade(label="Actions", menu=action_menu)
 
         # Help menu
         help_menu = tk.Menu(menubar, tearoff=0)
-        help_menu.add_command(label="Dokumentation", command=self._show_documentation)
-        help_menu.add_command(label="Über ROM Sorter", command=self._show_about)
-        menubar.add_cascade(label="Hilfe", menu=help_menu)
+        help_menu.add_command(label="Documentation", command=self._show_documentation)
+        help_menu.add_command(label="About ROM Sorter", command=self._show_about)
+        menubar.add_cascade(label="Help", menu=help_menu)
 
         # Use menu bars
         self.config(menu=menubar)
 
     def _create_layout(self):
-        """Erstelle das Hauptlayout der Anwendung."""
+        """Create the main layout of the application."""
         # Main frame with padding
         main_frame = tk.Frame(self, bg=STYLE.colors.bg_primary)
         main_frame.pack(fill='both', expand=True, padx=10, pady=10)
 
-        # Oberer Bereich (Header)
+        # Upper area (Header)
         self._create_header(main_frame)
 
         # Mittlerer Bereich (Zweispaltig)
@@ -166,8 +166,8 @@ class ROMSorterWindow(tk.Tk):
         version_label.pack(side='right', padx=20, pady=10)
 
     def _create_left_panel(self, parent):
-        """Erstelle das linke Panel mit Ordnerauswahl und Optionen."""
-        # Quellordner auswählen
+        """Create the left panel with folder selection and options."""
+        # Select source folder
         source_frame = tk.LabelFrame(parent, text="Quellordner", bg=STYLE.colors.bg_primary)
         source_frame.pack(fill='x', padx=5, pady=5)
 
@@ -181,7 +181,7 @@ class ROMSorterWindow(tk.Tk):
         )
         source_button.pack(side='right', padx=5, pady=5)
 
-        # Zielordner auswählen
+        # Select target folder
         dest_frame = tk.LabelFrame(parent, text="Zielordner", bg=STYLE.colors.bg_primary)
         dest_frame.pack(fill='x', padx=5, pady=5)
 
@@ -199,7 +199,7 @@ class ROMSorterWindow(tk.Tk):
         options_frame = tk.LabelFrame(parent, text="Optionen", bg=STYLE.colors.bg_primary)
         options_frame.pack(fill='x', padx=5, pady=5)
 
-        # Optionen hinzufügen
+        # Add options
         options = [
             ("Kopieren statt verschieben", self.copy_mode),
             ("Unterordner durchsuchen", self.recursive_scan),
@@ -229,15 +229,15 @@ class ROMSorterWindow(tk.Tk):
 
     def _create_right_panel(self, parent):
         """Create the right panel with tabs for statistics and logs."""
-        # Notebook für Tabs erstellen
+        # Create notebook for tabs
         notebook = ttk.Notebook(parent)
         notebook.pack(fill='both', expand=True)
 
-        # Tab für Dateiliste
+        # Tab by file list
         files_frame = tk.Frame(notebook, bg=STYLE.colors.bg_primary)
         notebook.add(files_frame, text="Dateien")
 
-        # Einfache Listbox für Dateien
+        # Simple list box for files
         file_list = tk.Listbox(
             files_frame,
             bg="white",
@@ -247,7 +247,7 @@ class ROMSorterWindow(tk.Tk):
         )
         file_list.pack(fill='both', expand=True, padx=5, pady=5)
 
-        # Scrollbar für die Listbox
+        # Scroll bar for the list box
         scrollbar = tk.Scrollbar(file_list)
         scrollbar.pack(side='right', fill='y')
 
@@ -256,11 +256,11 @@ class ROMSorterWindow(tk.Tk):
 
         self.file_list = file_list  # Save reference
 
-        # Tab für Logs
+        # Tab for logs
         log_frame = tk.Frame(notebook, bg=STYLE.colors.bg_primary)
         notebook.add(log_frame, text="Logs")
 
-        # Text widget für Logs
+        # Text widget for logs
         log_text = tk.Text(
             log_frame,
             bg="white",
@@ -269,7 +269,7 @@ class ROMSorterWindow(tk.Tk):
         )
         log_text.pack(fill='both', expand=True, padx=5, pady=5)
 
-        # Scrollbar für das Text-Widget
+        # Scroll bar for the text widget
         log_scrollbar = tk.Scrollbar(log_text)
         log_scrollbar.pack(side='right', fill='y')
 
@@ -279,7 +279,7 @@ class ROMSorterWindow(tk.Tk):
         self.log_text = log_text  # Save reference
 
     def _create_footer(self, parent):
-        """Erstelle den Footer-Bereich mit Statusanzeige und Fortschrittsbalken."""
+        """Create the footer area with status display and progress bar."""
         footer_frame = tk.Frame(parent, bg=STYLE.colors.bg_secondary, height=40)
         footer_frame.pack(fill='x', pady=(10, 0))
         footer_frame.pack_propagate(False)  # Prevents the frame from shrinking
@@ -364,7 +364,7 @@ class ROMSorterWindow(tk.Tk):
                 break
 
     def _select_folder(self, target):
-        """Dialog zum Auswählen eines Ordners öffnen."""
+        """Open Dialog to Select A Folder."""
         folder = filedialog.askdirectory(title=f"Bitte wählen Sie einen {'Quell' if target == 'source' else 'Ziel'}-Ordner")
 
         if folder:
@@ -467,21 +467,19 @@ class ROMSorterWindow(tk.Tk):
             })
 
     def _show_documentation(self):
-        """Zeige die Dokumentation an."""
+        """Show the documentation."""
         messagebox.showinfo("Dokumentation",
                            "Die Dokumentation für ROM Sorter Pro finden Sie im 'docs' Ordner.")
 
     def _show_about(self):
-        """Zeige Informationen über die Anwendung an."""
+        """Show information about the application."""
         messagebox.showinfo("Über ROM Sorter Pro",
                            "ROM Sorter Pro v2.1.8\n\n"
                            "Ein universeller Organizer für ROM-Dateien.\n\n"
                            "© 2025")
 
     def open_log_file(self):
-        """
-        Öffnet die aktuelle Log-Datei.
-        """
+        """Opens the current log file."""
         try:
             # Go up to the logs from the UI Directory
             ui_dir = os.path.dirname(os.path.abspath(__file__))

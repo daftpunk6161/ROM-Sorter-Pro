@@ -48,15 +48,7 @@ def _calculate_small_file_hash(file_path: Path, algorithm: str) -> str:
     return hash_obj.hexdigest()
 
 def create_directory_if_not_exists(path: Union[str, Path]) -> bool:
-    """
-    Erstellt ein Verzeichnis, falls es noch nicht existiert.
-
-    Args:
-        path: Pfad des zu erstellenden Verzeichnisses
-
-    Returns:
-        True bei Erfolg, False bei Fehler
-    """
+    """Creates a directory if it does not yet exist. ARGS: Path: Path of the Directory to Be created Return: True in the Event of Success, False in the event of errors"""
     try:
         path_obj = Path(path)
         if not path_obj.exists():
@@ -69,16 +61,7 @@ def create_directory_if_not_exists(path: Union[str, Path]) -> bool:
 
 
 def enhanced_copy_file(source: Union[str, Path], destination: Union[str, Path]) -> bool:
-    """
-    Kopiert eine Datei mit erweiterten Fehlerprüfungen und Logging.
-
-    Args:
-        source: Quellpfad der zu kopierenden Datei
-        destination: Zielpfad für die Datei
-
-    Returns:
-        True bei Erfolg, False bei Fehler
-    """
+    """Copies a file with extended error tests and logging. ARGS: Source: Source Path of the File to Be Copied Destination: Target Path for the File Return: True In The Event of Success, False In The Event of Errors"""
     source_path = Path(source)
     dest_path = Path(destination)
 
@@ -111,18 +94,7 @@ def enhanced_copy_file(source: Union[str, Path], destination: Union[str, Path]) 
 
 @lru_cache(maxsize=256)
 def calculate_file_hash(file_path: Union[str, Path], algorithm='md5', block_size=65536) -> Optional[str]:
-    """
-    Berechnet den Hashwert einer Datei mit dem angegebenen Algorithmus.
-    Optimiert mit größerem Cache und Blocksize für bessere Performance.
-
-    Args:
-        file_path: Pfad zur Datei
-        algorithm: Hashalgorithmus ('md5', 'sha1', 'sha256')
-        block_size: Größe der zu lesenden Blöcke in Bytes (Standard: 64KB)
-
-    Returns:
-        Hashwert als Hex-String oder None bei Fehler
-    """
+    """Calculate the hash value of a file with the specified algorithm. Optimized with Larger Cache and Blocksize for Better Performance. ARGS: File_Path: Path to the File Algorithm: Hashalgorithm ('Md5', 'Sha1', 'Sha256') Block_Size: Size of the Blocks to Be Read in Bytes (Standard: 64kb) Return: Hash Value as A Hex String Or None in the event of errors"""
     try:
         file_path_obj = Path(file_path)
         file_size = file_path_obj.stat().st_size
@@ -169,16 +141,7 @@ def calculate_file_hash(file_path: Union[str, Path], algorithm='md5', block_size
 
 
 def get_file_extension(file_path: Union[str, Path]) -> str:
-    """
-    Gibt die Dateierweiterung mit führendem Punkt zurück.
-    Behandelt auch Sonderfälle wie doppelte Extensions.
-
-    Args:
-        file_path: Pfad zur Datei
-
-    Returns:
-        Dateierweiterung mit führendem Punkt oder leerer String
-    """
+    """Gives Back the File Extension with a leading point. So Treat Special Cases Search as Double Extensions. ARGS: File_Path: Path to the File Return: File Extension with a leading point or Empty String"""
     path_obj = Path(file_path)
     file_name = path_obj.name
 
@@ -195,19 +158,7 @@ def get_file_extension(file_path: Union[str, Path]) -> str:
 
 
 def normalize_filename(filename: str, max_length: int = 255) -> str:
-    """
-    Normalisiert einen Dateinamen für sichere Verwendung auf verschiedenen Dateisystemen.
-
-    Entfernt ungültige Zeichen, begrenzt die Länge und stellt sicher,
-    dass der Dateiname den Standards entspricht.
-
-    Args:
-        filename: Originaler Dateiname
-        max_length: Maximale erlaubte Länge
-
-    Returns:
-        Normalisierter Dateiname
-    """
+    """Normalizes a file name for safe use on different file systems. Removes Invalid Characters, Limits the Length and Ensures That That The File Name Corresponds to the standards. ARGS: Filename: Original File Name Max_Length: Maximum Permitted Length Return: Normalized File Name"""
     import re
 
     if not filename:
@@ -240,20 +191,7 @@ def normalize_filename(filename: str, max_length: int = 255) -> str:
 
 def safe_move_file(source: Union[str, Path], destination: Union[str, Path],
                   ensure_dir: bool = True) -> bool:
-    """
-    Verschiebt eine Datei sicher mit erweiterter Fehlerbehandlung.
-
-    Diese Funktion versucht zuerst eine direkte Verschiebung (schneller und atomisch).
-    Falls das fehlschlägt, wird ein Kopieren und anschließendes Löschen durchgeführt.
-
-    Args:
-        source: Quellpfad der Datei
-        destination: Zielpfad für die Datei
-        ensure_dir: Zielverzeichnis automatisch erstellen, falls es nicht existiert
-
-    Returns:
-        True bei Erfolg, False bei Fehler
-    """
+    """Show A File Safely with Extended Error Treatment. This function first tries A Direct Shift (Faster and Atomic). If this fails, a copy and subsequent deletion wants to be carry out. ARGS: Source: Source Path of the File Destination: Target Path for the File Ensure_dir: Create the Target Directory if it does not Exist Return: True In The Event of Success, False In The Event of Errors"""
     source_path = Path(source)
     dest_path = Path(destination)
 

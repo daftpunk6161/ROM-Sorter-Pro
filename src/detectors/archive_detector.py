@@ -46,15 +46,7 @@ MIN_CONFIDENCE = 0.65
 
 @lru_cache(maxsize=100)
 def get_archive_type(file_path: str) -> str:
-    """
-    Bestimmt den Archivtyp basierend auf der Dateierweiterung.
-
-    Args:
-        file_path: Pfad zur Archivdatei
-
-    Returns:
-        String mit dem Archivtyp oder "Unknown" falls unbekannt
-    """
+    """Determines the archive type based on the file extension. Args: File_Path: path to the archive file Return: String with the archive type or "unknown" if unknown"""
     file_path_lower = file_path.lower()
 
 # Check first combined extensions such as .tar.gz
@@ -68,28 +60,12 @@ def get_archive_type(file_path: str) -> str:
 
 
 def is_archive_file(file_path: str) -> bool:
-    """
-    Prüft, ob eine Datei ein Archiv ist.
-
-    Args:
-        file_path: Pfad zur Datei
-
-    Returns:
-        True, wenn es sich um ein Archiv handelt
-    """
+    """Check Whether a file is an archive. Args: File_Path: Path to the File Return: True When It It Comes to an Archive"""
     return get_archive_type(file_path) != "Unknown"
 
 
 def analyze_zip_archive(zip_path: str) -> Tuple[str, float]:
-    """
-    Analysiert ein ZIP-Archiv, um den Konsolentyp zu bestimmen.
-
-    Args:
-        zip_path: Pfad zum ZIP-Archiv
-
-    Returns:
-        Tuple mit (Konsolentyp, Konfidenz)
-    """
+    """Analyzes A ZIP Archive to Determine the Console Type. ARGS: ZIP_Path: Path to the ZIP Archive Return: Tuple with (Console Type, Confidence)"""
     try:
         if not os.path.exists(zip_path) or not zipfile.is_zipfile(zip_path):
             logger.warning(f"Ungültige ZIP-Datei: {zip_path}")
@@ -142,15 +118,7 @@ def analyze_zip_archive(zip_path: str) -> Tuple[str, float]:
 
 
 def detect_console_from_archive(archive_path: str) -> Tuple[str, float]:
-    """
-    Hauptfunktion zum Erkennen der Konsole aus einem Archiv.
-
-    Args:
-        archive_path: Pfad zur Archivdatei
-
-    Returns:
-        Tuple mit (Konsolentyp, Konfidenz)
-    """
+    """Main function to recognize the console from an archive. Args: Archive_Path: path to the archive file Return: Tuple with (console type, confidence)"""
     if not os.path.exists(archive_path):
         logger.warning(f"Archiv existiert nicht: {archive_path}")
         return "Unknown", 0.0
@@ -175,15 +143,7 @@ def detect_console_from_archive(archive_path: str) -> Tuple[str, float]:
 
 # Pattern-based consoling caps for certain archive types
 def detect_console_from_patterns(file_name: str) -> Optional[str]:
-    """
-    Erkennt die Konsole anhand von Dateinamen-Mustern.
-
-    Args:
-        file_name: Dateiname
-
-    Returns:
-        Erkannte Konsole oder None
-    """
+    """Recognize the console using file name patterns. Args: File_Name: File name Return: Recognized console or none"""
     patterns = {
         'NES': [r'\.nes$', r'nintendo.*entertainment.*system'],
         'SNES': [r'\.smc$', r'\.sfc$', r'super.*nintendo'],
@@ -213,16 +173,7 @@ def detect_console_from_patterns(file_name: str) -> Optional[str]:
 
 # Main function to improve the detection of generic files
 def improve_generic_type_detection(file_path: str, file_type: str) -> Tuple[str, float]:
-    """
-    Verbessert die Erkennung für generische Dateitypen wie Archive und Binärdateien.
-
-    Args:
-        file_path: Pfad zur Datei
-        file_type: Aktueller Dateityp (z.B. "Archive", "Binary", "ROM_File")
-
-    Returns:
-        Tuple mit (verbesserter Dateityp, Konfidenz)
-    """
+    """Improves detection for generic file types such as archives and binary files. Args: File_Path: path to the file File_type: Current file type (e.g. "Archive", "Binary", "Rom_file") Return: Tuble with (improved file type, confidence)"""
     if file_type == "Archive" and is_archive_file(file_path):
         return detect_console_from_archive(file_path)
     elif file_type in ["Binary", "ROM_File"]:

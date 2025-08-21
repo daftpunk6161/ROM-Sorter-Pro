@@ -1,13 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-ROM Sorter Pro - Comment Translation Tool v2.1.8
-
-This script translates German comments in Python files to English,
-preserving the original files as backups. It uses GoogleTranslator
-or MyMemoryTranslator as fallback and maintains a translation cache
-to avoid repeated translations of the same text.
-"""
+"""Rome Sarter Pro - Comment Translation Tool V2.1.8 This script Translates German Comments in Python Files to English, Preserving the original files as backups. It uses GoogleTranslator or MymemoryTranslator as Fallback and Maintains a Translation Cache to Avoid Repeated Translations of the Same Text."""
 import io
 import re
 import sys
@@ -161,16 +154,7 @@ def backup_file(original: Path) -> Path:
     return backup_path.with_suffix(backup_path.suffix + ".bak")
 
 def process_python_file(path: Path, cache: Dict[str, str]) -> bool:
-    """
-    Process a Python file to translate German comments to English.
-
-    Args:
-        path: The path to the Python file
-        cache: Translation cache dictionary
-
-    Returns:
-        True if the file was changed, False otherwise
-    """
+    """Process a Python File to Translate German Comment to English. Args: Path: The Path to the Python File Cache: Translation Cache Dictionary Return: True If the File Was Changed, False OtherWise"""
     if path.suffix.lower() != ".py":
         return False
 

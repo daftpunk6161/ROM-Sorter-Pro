@@ -15,12 +15,7 @@ from typing import Optional, List, Dict, Any
 logger = logging.getLogger(__name__)
 
 def start_cli_mode():
-    """
-    Starts the ROM Sorter in CLI mode.
-
-    This function provides a simple command-line interface for basic
-    operations with ROM Sorter Pro, without requiring a graphical interface.
-    """
+    """Starts The Rom Sorter in Cli Mode. This function provides a simple command-line interface for basic operations with rome sorter Pro, Without Requiring a Graphical Interface."""
     logger.info("CLI mode started")
     print("=" * 50)
     print("ROM SORTER PRO - COMMAND-LINE MODE")
@@ -57,7 +52,7 @@ def start_cli_mode():
     print("\nVielen Dank für die Verwendung von ROM Sorter Pro!")
 
 def scan_directory():
-    """Funktion zum Scannen eines Verzeichnisses nach ROMs"""
+    """Function to scan a Directory According to Rome"""
     directory = input("Bitte geben Sie das zu scannende Verzeichnis ein: ")
 
     if not os.path.exists(directory):
@@ -80,7 +75,7 @@ def scan_directory():
     print("5 ROMs gefunden (Simulationsmodus)")
 
 def show_rom_info():
-    """Funktion zum Anzeigen von ROM-Informationen"""
+    """Function for displaying ROM information"""
     rom_file = input("Bitte geben Sie den Pfad zur ROM-Datei ein: ")
 
     if not os.path.exists(rom_file):

@@ -1,18 +1,7 @@
 #!/usr/bin/env python3
 # -*-coding: utf-8-*-
 
-"""
-ROM Sorter Pro - Integration mit externen Metadaten-Diensten
-
-Dieses Modul implementiert die Integration mit externen ROM-Datenbanken und
-Metadaten-Diensten, um umfassende Informationen über ROMs zu sammeln.
-
-Features:
-- Abrufen von ROM-Metadaten von verschiedenen Online-Quellen
-- Lokales Caching von Metadaten für Offline-Verwendung
-- Sichere Authentifizierung mit API-Schlüsselverwaltung
-- Extraktion von Cover-Bildern, Screenshots und Beschreibungen
-"""
+"""ROM SARTER PRO - Integration with external metadata services This module implemented integration with external ROM databases and Metadata services to collect comprehensive information about ROMs. Features: -Calling ROM metadata from various online sources - Local caching of metadata for offline use - Safe authentication with API key management - Extraction of cover images, screenshots and descriptions"""
 
 import os
 import re
@@ -45,7 +34,7 @@ os.makedirs(_IMAGE_CACHE_DIR, exist_ok=True)
 
 
 class APIKeyManager:
-    """Verwaltet API-Key für externe Dienste sicher."""
+    """Manages API-Key for external services."""
 
     _instance = None
     _lock = threading.RLock()
@@ -66,7 +55,7 @@ class APIKeyManager:
         self._initialized = True
 
     def _load_api_keys(self):
-        """Lädt API-Key aus der Konfigurationsdatei."""
+        """Invites Api-Key from the configuration file."""
         try:
             if os.path.exists(_API_CONFIG_FILE):
                 with open(_API_CONFIG_FILE, 'r') as f:
@@ -98,30 +87,13 @@ class APIKeyManager:
             self._api_keys = {}
 
     def get_api_key(self, service: str) -> Optional[Dict[str, Any]]:
-        """
-        Gibt die API-Schlüssel-Konfiguration für einen Dienst zurück.
-
-        Args:
-            service: Name des Dienstes (z.B. 'thegamesdb', 'mobygames')
-
-        Returns:
-            API-Schlüssel-Konfiguration oder None, wenn nicht verfügbar
-        """
+        """Returns The Api Key Configuration for a Service. Args: Service: Name of the Service (e.G. 'Thegamesdb', 'Mobygames') Return: Api key configuration or none, if not available"""
         if service in self._api_keys and self._api_keys[service].get("enabled", False):
             return self._api_keys[service]
         return None
 
     def set_api_key(self, service: str, key_data: Dict[str, Any]) -> bool:
-        """
-        Setzt oder aktualisiert einen API-Schlüssel.
-
-        Args:
-            service: Name des Dienstes
-            key_data: API-Schlüssel-Konfiguration
-
-        Returns:
-            True bei Erfolg, False bei Fehler
-        """
+        """Set or update an API key. Args: Service: name of the service Key_Data: API key configuration Return: True in the event of success, false in the event of errors"""
         try:
             with self._lock:
                 self._api_keys[service] = key_data
@@ -136,20 +108,12 @@ class APIKeyManager:
             return False
 
     def is_service_configured(self, service: str) -> bool:
-        """
-        Prüft, ob ein Dienst konfiguriert und aktiviert ist.
-
-        Args:
-            service: Name des Dienstes
-
-        Returns:
-            True wenn konfiguriert und aktiviert, sonst False
-        """
+        """Check Whether a Service is configured and activated. ARGS: Service: Name of the Service Return: True When Configured and Activated, OtherWise False"""
         return service in self._api_keys and self._api_keys[service].get("enabled", False)
 
 
 class MetadataCache:
-    """Verwaltet das Caching von ROM-Metadaten."""
+    """Manage the caching of ROM metadata."""
 
     _instance = None
     _lock = threading.RLock()
@@ -170,7 +134,7 @@ class MetadataCache:
         self._initialized = True
 
     def _load_cache(self):
-        """Lädt den Metadaten-Cache aus der File."""
+        """Loads the metadata cache from the file."""
         try:
             if os.path.exists(_METADATA_CACHE_FILE):
                 with open(_METADATA_CACHE_FILE, 'r') as f:
@@ -190,7 +154,7 @@ class MetadataCache:
             }
 
     def _save_cache(self):
-        """Speichert den Metadaten-Cache in die Datei."""
+        """Save the metadata cache in the file."""
         try:
             with self._lock:
                 with open(_METADATA_CACHE_FILE, 'w') as f:
@@ -200,15 +164,7 @@ class MetadataCache:
             logger.error(f"Fehler beim Speichern des Metadaten-Cache: {e}")
 
     def get_metadata(self, rom_id: str) -> Optional[Dict[str, Any]]:
-        """
-        Gibt gecachte Metadaten für eine ROM zurück.
-
-        Args:
-            rom_id: Eindeutige ID der ROM (typischerweise ein Hash)
-
-        Returns:
-            Metadaten-Dictionary oder None, wenn nicht im Cache oder abgelaufen
-        """
+        """Gives back cached metadata for a rome. ARGS: ROM_ID: Clear Id of the Rome (Typical Aally a hash) Return: Metadata dictionary or none, if not in the cache or expired"""
         with self._lock:
             if rom_id in self._cache["metadata"]:
                 entry = self._cache["metadata"][rom_id]
@@ -223,16 +179,7 @@ class MetadataCache:
             return None
 
     def add_metadata(self, rom_id: str, metadata: Dict[str, Any]) -> bool:
-        """
-        Fügt Metadaten zum Cache hinzu.
-
-        Args:
-            rom_id: Eindeutige ID der ROM
-            metadata: Metadaten-Dictionary
-
-        Returns:
-            True bei Erfolg, False bei Fehler
-        """
+        """Add metadata to the cache. Args: ROM_ID: Clear ID of the Rome Metadata: Metadata dictionary Return: True in the event of success, false in the event of errors"""
         try:
             with self._lock:
 # Add caching information
@@ -252,17 +199,7 @@ class MetadataCache:
             return False
 
     def save_image(self, rom_id: str, image_url: str, image_type: str = "cover") -> Optional[str]:
-        """
-        Lädt ein Bild herunter und speichert es im Cache.
-
-        Args:
-            rom_id: Eindeutige ID der ROM
-            image_url: URL des Bildes
-            image_type: Typ des Bildes (cover, screenshot, banner, etc.)
-
-        Returns:
-            Pfad zum gespeicherten Bild oder None bei Fehler
-        """
+        """Lades Down a picture and save it in the cache. ARGS: ROM_ID: Clear Id of the Rome Image_url: Url of the Picture Image_Type: Type of the image (Cover, Screenshot, Banner, etc.) Return: Path to the Saved Picture Or None in the event of errors"""
         try:
 # Create a Directory for Rome
             rom_image_dir = os.path.join(_IMAGE_CACHE_DIR, rom_id)
@@ -298,16 +235,7 @@ class MetadataCache:
             return None
 
     def get_image_path(self, rom_id: str, image_type: str = "cover") -> Optional[str]:
-        """
-        Gibt den Pfad zu einem gecachten Bild zurück.
-
-        Args:
-            rom_id: Eindeutige ID der ROM
-            image_type: Typ des Bildes
-
-        Returns:
-            Pfad zum Bild oder None, wenn nicht vorhanden
-        """
+        """Gives Back the Path to a Caight Picture. ARGS: ROM_ID: Clear Id of the Rome Image_Type: Type of the Picture Return: Path to the Picture Or None, if not Available"""
         rom_image_dir = os.path.join(_IMAGE_CACHE_DIR, rom_id)
         if not os.path.exists(rom_image_dir):
             return None
@@ -321,10 +249,10 @@ class MetadataCache:
 
 
 class TheGamesDBAPI:
-    """Integration mit TheGamesDB API für ROM-Metadaten."""
+    """Integration with ThegamesDB API for ROM metadata."""
 
     def __init__(self):
-        """Initialisiert die TheGamesDB API-Integration."""
+        """Initializes the Thegamesdb API integration."""
         self.api_manager = APIKeyManager()
         self.cache = MetadataCache()
         self.api_config = self.api_manager.get_api_key("thegamesdb")
@@ -349,20 +277,11 @@ class TheGamesDBAPI:
         }
 
     def is_available(self) -> bool:
-        """Prüft, ob die API verfügbar ist."""
+        """Check whether the API is available."""
         return self.api_config is not None and "api_key" in self.api_config
 
     def search_game(self, name: str, platform_id: Optional[int] = None) -> List[Dict[str, Any]]:
-        """
-        Sucht nach einem Spiel in der TheGamesDB.
-
-        Args:
-            name: Name des Spiels
-            platform_id: ID der Plattform (optional)
-
-        Returns:
-            Liste von Suchergebnissen
-        """
+        """Looking for a Game in the Thegamesdb. ARGS: Name: Name of the Game Platform_ID: ID of the Platform (optional) Return: List of Search Results"""
         if not self.is_available():
             logger.warning("TheGamesDB API ist nicht konfiguriert")
             return []
@@ -399,15 +318,7 @@ class TheGamesDBAPI:
             return []
 
     def get_game_metadata(self, game_id: int) -> Optional[Dict[str, Any]]:
-        """
-        Ruft detaillierte Metadaten für ein Spiel ab.
-
-        Args:
-            game_id: ID des Spiels in TheGamesDB
-
-        Returns:
-            Metadaten-Dictionary oder None bei Fehler
-        """
+        """Calls detailed metadata for a game. Args: Game_ID: ID of the Game in Thegamesdb Return: Metadata Dictionary or None in the event of errors"""
         if not self.is_available():
             logger.warning("TheGamesDB API ist nicht konfiguriert")
             return None
@@ -467,10 +378,10 @@ class TheGamesDBAPI:
 
 
 class MobyGamesAPI:
-    """Integration mit MobyGames API für umfangreiche Spiele-Metadaten."""
+    """Integration with MobyGames API for extensive game metadata."""
 
     def __init__(self):
-        """Initialisiert die MobyGames API-Integration."""
+        """Initialized the Mobygames API integration."""
         self.api_manager = APIKeyManager()
         self.cache = MetadataCache()
         self.api_config = self.api_manager.get_api_key("mobygames")
@@ -495,20 +406,11 @@ class MobyGamesAPI:
         }
 
     def is_available(self) -> bool:
-        """Prüft, ob die API verfügbar ist."""
+        """Check whether the API is available."""
         return self.api_config is not None and "api_key" in self.api_config
 
     def search_game(self, name: str, platform: Optional[str] = None) -> List[Dict[str, Any]]:
-        """
-        Sucht nach einem Spiel in MobyGames.
-
-        Args:
-            name: Name des Spiels
-            platform: Plattform-ID (optional)
-
-        Returns:
-            Liste von Suchergebnissen
-        """
+        """Looking for a Game in Mobygames. ARGS: Name: Name of the Game Platform: Platform ID (optional) Return: List of Search Results"""
         if not self.is_available():
             logger.warning("MobyGames API ist nicht konfiguriert")
             return []
@@ -544,15 +446,7 @@ class MobyGamesAPI:
             return []
 
     def get_game_metadata(self, game_id: int) -> Optional[Dict[str, Any]]:
-        """
-        Ruft detaillierte Metadaten für ein Spiel ab.
-
-        Args:
-            game_id: ID des Spiels in MobyGames
-
-        Returns:
-            Metadaten-Dictionary oder None bei Fehler
-        """
+        """Calls detailed metadata for a game. Args: Game_ID: Id of the Game in Mobygames Return: Metadata Dictionary Or None in the event of errors"""
         if not self.is_available():
             logger.warning("MobyGames API ist nicht konfiguriert")
             return None
@@ -659,9 +553,7 @@ class MobyGamesAPI:
 
 
 class MetadataManager:
-    """
-    Zentrale Klasse zur Verwaltung und Abfrage von ROM-Metadaten aus verschiedenen Quellen.
-    """
+    """Central class for managing and querying ROM metadata from various sources."""
 
     _instance = None
     _lock = threading.RLock()
@@ -674,7 +566,7 @@ class MetadataManager:
             return cls._instance
 
     def __init__(self):
-        """Initialisiert den Metadata-Manager mit allen verfügbaren Quellen."""
+        """Initialized the metadata manager with all available sources."""
         if self._initialized:
             return
 
@@ -689,17 +581,7 @@ class MetadataManager:
 
     def get_metadata_for_rom(self, rom_name: str, console: str,
                            rom_content: Optional[bytes] = None) -> Optional[Dict[str, Any]]:
-        """
-        Ruft Metadaten für eine ROM ab, mit lokalem Caching.
-
-        Args:
-            rom_name: Name der ROM-Datei
-            console: Name der Konsolenplattform
-            rom_content: Optionaler ROM-Inhalt für Hash-Berechnung
-
-        Returns:
-            Metadaten-Dictionary oder None bei Fehler
-        """
+        """Calls Metadata for a rome, with local caching. ARGS: ROM_NAME: Name of the Rome File Console: Name of the Console Platform Rom_Content: Optional Rome Content for Hash Calculation Return: Metadata Dictionary Or None In The Event"""
 # Generates A Clear ID for Rome
         if rom_content:
             rom_id = hashlib.md5(rom_content[:4096]).hexdigest()
@@ -757,15 +639,7 @@ class MetadataManager:
             return None
 
     def _clean_rom_name(self, rom_name: str) -> str:
-        """
-        Bereinigt einen ROM-Namen für die Suche.
-
-        Args:
-            rom_name: Originaler ROM-Name
-
-        Returns:
-            Bereinigter Name für die Suche
-        """
+        """Adjusted a Rom name for the search. ARGS: ROM_NAME: Original Rome Name Return: Adjusted Name for the Search"""
 # Remove the extension of the file
         name = os.path.splitext(rom_name)[0]
 
@@ -790,45 +664,19 @@ class MetadataManager:
 
 
 def get_metadata_manager() -> MetadataManager:
-    """
-    Gibt eine Instanz des MetadataManager zurück.
-
-    Returns:
-        Eine Instanz des MetadataManager
-    """
+    """Gives back an instance of the metadada manager. Return: An instance of the metadadamanager"""
     return MetadataManager()
 
 
 def get_rom_metadata(rom_name: str, console: str, rom_content: Optional[bytes] = None) -> Optional[Dict[str, Any]]:
-    """
-    Hochlevel-Funktion zum Abrufen von ROM-Metadaten.
-
-    Args:
-        rom_name: Name der ROM-Datei
-        console: Name der Konsolenplattform
-        rom_content: Optionaler ROM-Inhalt für Hash-Berechnung
-
-    Returns:
-        Metadaten-Dictionary oder None bei Fehler
-    """
+    """High level function for retrieving ROM metadata. Args: ROM_Name: Name of the Rome file Console: name of the console platform ROM_Content: Optional ROM content for hash calculation Return: Metadata dictionary or none in the event of errors"""
     manager = get_metadata_manager()
     return manager.get_metadata_for_rom(rom_name, console, rom_content)
 
 
 def get_rom_image(rom_name: str, console: str, image_type: str = "front",
                 rom_content: Optional[bytes] = None) -> Optional[str]:
-    """
-    Gibt den Pfad zu einem gecachten ROM-Bild zurück.
-
-    Args:
-        rom_name: Name der ROM-Datei
-        console: Name der Konsolenplattform
-        image_type: Art des Bildes (front, back, screenshot, etc.)
-        rom_content: Optionaler ROM-Inhalt für Hash-Berechnung
-
-    Returns:
-        Pfad zum Bild oder None, wenn nicht verfügbar
-    """
+    """Gives Back the Path to a Crashed Rome Picture. ARGS: ROM_NAME: Name of the Rome File Console: Name of the Console Platform Image_Type: Type of image (Front, Back, Screenshot, etc.) Rom_Content: Optional Rom Content for Hash Calculation Return: Path to the Picture Or None, if not Available"""
     cache = MetadataCache()
 
 # Generates A Clear ID for Rome

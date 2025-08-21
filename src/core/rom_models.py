@@ -95,7 +95,7 @@ class EnhancedROM(ROMMetadata):
     bios_name: str = ""
 
     def to_dict(self) -> Dict[str, Any]:
-        """Konvertiert die ROM in ein Dictionary."""
+        """Convert the rome into a dictionary."""
         result = {}
         for key, value in self.__dict__.items():
             if isinstance(value, Path):
@@ -108,7 +108,7 @@ class EnhancedROM(ROMMetadata):
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'EnhancedROM':
-        """Erstellt eine ROM aus einem Dictionary."""
+        """Creates a rome from a dictionary."""
 # Make sure that Path objects are created correctly
         if 'path' in data and isinstance(data['path'], str):
             data['path'] = Path(data['path'])
@@ -126,7 +126,7 @@ class EnhancedROM(ROMMetadata):
 
 @dataclass
 class ROMCollection:
-    """Sammlung von ROMs mit Suchfunktionen."""
+    """Collection of ROMS with search functions."""
 
     roms: List[EnhancedROM] = field(default_factory=list)
     name: str = "ROM Collection"
@@ -134,16 +134,16 @@ class ROMCollection:
     last_updated: datetime = field(default_factory=datetime.now)
 
     def add_rom(self, rom: EnhancedROM) -> None:
-        """Adds a ROM to the collection."""
+        """Adds a rom to the collection."""
         self.roms.append(rom)
         self.last_updated = datetime.now()
 
     def find_by_console(self, console: str) -> List[EnhancedROM]:
-        """Finds all ROMs for a specific console."""
+        """Find of all roms for a specific console."""
         return [rom for rom in self.roms if rom.console.lower() == console.lower()]
 
     def find_by_title(self, title_fragment: str) -> List[EnhancedROM]:
-        """Finds all ROMs with a specific title fragment."""
+        """Finds all roms with a specific title fragment."""
         return [rom for rom in self.roms if title_fragment.lower() in rom.title.lower()]
 
     def find_duplicates(self) -> Dict[str, List[EnhancedROM]]:

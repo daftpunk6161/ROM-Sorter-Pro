@@ -28,26 +28,18 @@ from .custom_widgets import CustomTreeview, DragDropSupport
 
 # Scanner options great for compatibility
 class ScannerOptions:
-    """Konfigurationsoptionen für den Scanner."""
+    """Configuration options for the scanner."""
 
     def __init__(self, recursive: bool = True, hash_method: str = "crc32",
                  parallel: bool = True, max_workers: int = None):
-        """
-        Initialisiere die Scanner-Optionen.
-
-        Args:
-            recursive: Durchsuche Ordner rekursiv
-            hash_method: Zu verwendende Hash-Methode (crc32, md5, sha1)
-            parallel: Verwende parallele Verarbeitung
-            max_workers: Maximale Anzahl an Worker-Threads
-        """
+        """Initialize the scanner options. Args: Recursive: Search folders recursive hash_method: Hash method (CRC32, MD5, SHA1) Parallel: Use parallel workmanship Max_Workers: Maximum number of worker threads"""
         self.recursive = recursive
         self.hash_method = hash_method
         self.parallel = parallel
         self.max_workers = max_workers
 
     def __str__(self) -> str:
-        """String-Repräsentation der Optionen."""
+        """String representation of the options."""
         return (f"ScannerOptions(recursive={self.recursive}, hash_method={self.hash_method}, "
                 f"parallel={self.parallel}, max_workers={self.max_workers})")
 
@@ -78,10 +70,10 @@ except ImportError:
 
 
 class ROMSorterApp:
-    """Hauptanwendungsklasse, die das GUI und die Logik verbindet."""
+    """Main application class that connects the GUI and the logic."""
 
     def __init__(self):
-        """Initialisiere die Anwendung."""
+        """Initialize the application."""
 # Basic configuration
         self.app_dir = Path(__file__).parent.parent.parent
         self.config_manager = get_enhanced_config(str(self.app_dir / "config.json"))
@@ -116,7 +108,7 @@ class ROMSorterApp:
         logging.info("ROM Sorter Anwendung gestartet")
 
     def _setup_logging(self):
-        """Richte das Logging ein."""
+        """Set up the logging."""
         log_dir = self.app_dir / "logs"
         log_dir.mkdir(exist_ok=True)
 
@@ -166,12 +158,12 @@ class ROMSorterApp:
         )
 
     def _get_date_string(self):
-        """Gib einen Datums-String für Logdateien zurück."""
+        """Give Back a Date String for Log Files."""
         import datetime
         return datetime.datetime.now().strftime("%Y%m%d")
 
     def _setup_window(self):
-        """Erweitere das Hauptfenster mit der App-Logik."""
+        """Expand the main window with the app logic."""
 # Connect configuration with UI elements
         self._connect_config_to_ui()
 
@@ -182,20 +174,20 @@ class ROMSorterApp:
         self._init_scanner()
 
     def _connect_config_to_ui(self):
-        """Verbinde die Konfiguration mit den UI-Elementen."""
+        """Connect the configuration with the UI elements."""
 # Here the UI elements would be linked to the configuration values
 # Placeholder for the actual implementation
         pass
 
     def _register_event_handlers(self):
-        """Registriere Event-Handler für UI-Interaktionen."""
+        """Register event handler for UI interactions."""
 # Event handler for buttons, menus etc. would be registered here
 # Placeholder for the actual implementation
         pass
 
     @log_exception(logger_name="src.ui.app") if ENHANCED_LOGGING else lambda x: x
     def _init_scanner(self):
-        """Initialisiere den Scanner mit den aktuellen Einstellungen."""
+        """Initialize the scanner with the current settings."""
         # Create scanner options
         options = ScannerOptions(
             recursive=self.config.get("recursive_scan", True),
@@ -227,7 +219,7 @@ class ROMSorterApp:
             logging.debug("Scanner initialisiert mit Optionen: %s", options)
 
     def _initialize_enhanced_systems(self):
-        """Initialisiert die erweiterten Systeme wie Themes und DND."""
+        """Initialized the extended systems such as themes and dnd."""
         # Initialize the theme system if available
         try:
             from . import THEME_SUPPORT, initialize_theme_system
@@ -265,7 +257,7 @@ class ROMSorterApp:
             logging.warning("DND-Unterstützung konnte nicht initialisiert werden")
 
     def _on_theme_changed(self, theme):
-        """Callback für Theme-Änderungen."""
+        """Callback for theme changes."""
         # Update the configuration with the new theme type
         if not "ui" in self.config:
             self.config["ui"] = {}
@@ -292,11 +284,11 @@ class ROMSorterApp:
                     self.window.after(1000, self.window._on_start_sorting)
 
     def run(self):
-        """Starte die Anwendung."""
+        """Start the application."""
         self.window.mainloop()
 
     def cleanup(self):
-        """Bereinige Ressourcen bei Beendigung."""
+        """Cleaning resources when ending."""
 # Saving configuration
         try:
             # Try to use Save () first (Enhancedconfig)
@@ -325,7 +317,7 @@ class ROMSorterApp:
 
 @log_performance(logger_name="src.ui", operation="app_execution") if ENHANCED_LOGGING else lambda x: x
 def main():
-    """Hauptfunktion zum Starten der Anwendung."""
+    """Main function for starting the application."""
     app = ROMSorterApp()
     try:
         if ENHANCED_LOGGING:

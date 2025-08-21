@@ -1,10 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-ROM Sorter Pro - Logger Module
-
-This module provides a uniform configuration for logging throughout the project.
-"""
+"""Rome Sorter Pro - Logger modules This modules Provides A Uniform Configuration for Logging Through the Project."""
 
 import logging
 import os
@@ -12,16 +8,7 @@ import sys
 from pathlib import Path
 
 def setup_logger(name, level=logging.INFO):
-    """
-    Creates a configured logger.
-
-    Args:
-        name: Name of the logger
-        level: Log level
-
-    Returns:
-        Logger: The configured logger
-    """
+    """Creates a configured logger. ARGS: Name: Name of the Logger Level: Log Level Return: Logger: The Configured Logger"""
     logger = logging.getLogger(name)
     logger.setLevel(level)
 

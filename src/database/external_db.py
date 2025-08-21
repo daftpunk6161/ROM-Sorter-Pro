@@ -1,12 +1,6 @@
 #!/usr/bin/env python3
 # -*-coding: utf-8-*-
-"""
-ROM Sorter Pro - Externes Datenbankmanagement
-
-Dieses Modul enthält Funktionen zur Verwaltung externer ROM-Datenbanken wie No-Intro,
-TOSEC und Redump. Es bietet Funktionen zum Importieren, Aktualisieren und Abfragen
-dieser Datenbanken.
-"""
+"""ROM SARTER PRO - External database management This module contains functions for the management of external ROM databases such as no-intro, Tosec and Redump. It offers functions for importing, updating and querying of these databases."""
 
 import os
 import re
@@ -43,7 +37,7 @@ class ExternalDatabaseManager:
         self._cache_lock = threading.RLock()
 
     def _init_database(self):
-        """Initialisiert SQLite-Database für ROM-Lookups."""
+        """Initialized SQlite Database for Rome Lookups."""
         try:
             with sqlite3.connect(self.sqlite_db) as conn:
                 conn.execute("""
@@ -79,16 +73,7 @@ class ExternalDatabaseManager:
             logger.error(f"SQLite-Fehler beim Initialisieren der Datenbank: {e}")
 
     def import_dat_file(self, dat_file_path: Union[str, Path], database_source: str = "unknown") -> int:
-        """
-        Importiert eine DAT-Datei in die SQLite-Datenbank.
-
-        Args:
-            dat_file_path: Pfad zur DAT-Datei
-            database_source: Quelle der Datenbank (no_intro, tosec, etc.)
-
-        Returns:
-            Anzahl der importierten Einträge
-        """
+        """Import A Dat File Into the SQLite Database. ARGS: DAT_FILE_PATH: Path to the DAT File Database_Source: Source of the Database (No_intro, Tosec, etc.) Return: Number of Imported Entries"""
         try:
             dat_path = Path(dat_file_path)
             if not dat_path.exists():
@@ -171,15 +156,7 @@ class ExternalDatabaseManager:
             return 0
 
     def lookup_rom_by_name(self, rom_name: str) -> Optional[Dict[str, Any]]:
-        """
-        Sucht einen ROM-Eintrag anhand des Namens.
-
-        Args:
-            rom_name: Name der ROM-Datei
-
-        Returns:
-            ROM-Eintrag als Dict oder None, wenn nicht gefunden
-        """
+        """Looking for a Rome Entry Based on the name. Args: Rom_Name: Name of the Rome File Return: Rome Entry as a dict or none, if not found"""
         try:
             # Cache-Lookup
             cache_key = f"name:{rom_name}"
@@ -211,16 +188,7 @@ class ExternalDatabaseManager:
             return None
 
     def lookup_rom_by_hash(self, hash_value: str, hash_type: str = "crc32") -> Optional[Dict[str, Any]]:
-        """
-        Sucht einen ROM-Eintrag anhand eines Hashwerts.
-
-        Args:
-            hash_value: CRC32, MD5 oder SHA1-Hashwert
-            hash_type: Art des Hashes ("crc32", "md5" oder "sha1")
-
-        Returns:
-            ROM-Eintrag als Dict oder None, wenn nicht gefunden
-        """
+        """Find a Rom Entry Based on a Hash Value. Args: hash_value: crc32, md5 or Sha1-hashwert hash_type: Type of hashes ("crc32", "md5" or "Sha1") Return: rom entrry as a dict or none, if not found"""
         try:
 # Validate hash type
             if hash_type not in ["crc32", "md5", "sha1"]:
@@ -256,12 +224,7 @@ class ExternalDatabaseManager:
             return None
 
     def get_database_stats(self) -> Dict[str, Any]:
-        """
-        Gibt Statistiken über die ROM-Datenbank zurück.
-
-        Returns:
-            Dict mit Datenbankstatistiken
-        """
+        """Gives back statistics via the Rome database. Return: Dict with database statistics"""
         try:
             with sqlite3.connect(self.sqlite_db) as conn:
                 cursor = conn.cursor()
@@ -309,15 +272,7 @@ class ExternalDatabaseManager:
             return {"error": str(e)}
 
     def _extract_region(self, filename: str) -> Optional[str]:
-        """
-        Extrahiert die Region aus einem ROM-Namen.
-
-        Args:
-            filename: ROM-Dateiname
-
-        Returns:
-            Extrahierte Region oder None
-        """
+        """Extract the region from a rome name. ARGS: Filename: Rome Date Name Return: Extracted Region Or None"""
 # Typical regions in brackets, e.g. "(USA)", "(Europe)"
         region_match = re.search(r"\((USA|Europe|Japan|World|Germany|France|Spain|Italy|Australia)\)", filename)
         if region_match:
@@ -325,15 +280,7 @@ class ExternalDatabaseManager:
         return None
 
     def _extract_language(self, filename: str) -> Optional[str]:
-        """
-        Extrahiert die Sprache aus einem ROM-Namen.
-
-        Args:
-            filename: ROM-Dateiname
-
-        Returns:
-            Extrahierte Sprache oder None
-        """
+        """Extract the Language from a rome name. Args: Filename: Rome Date Name Return: Extracted Language Or None"""
 # Typical language codes in brackets, e.g. "(en, fr, de)", "yes)"
         lang_match = re.search(r"\(([A-Za-z]{2}(?:,[A-Za-z]{2})*)\)", filename)
         if lang_match:
@@ -341,24 +288,13 @@ class ExternalDatabaseManager:
         return None
 
     def clear_cache(self) -> None:
-        """Leert den Cache der Datenbankabfragen."""
+        """Empty the cache of database queries."""
         with self._cache_lock:
             self._cached_lookups.clear()
             logger.debug("Datenbank-Cache geleert")
 
     def download_database_update(self, source: str) -> bool:
-        """
-        Lädt ein Datenbank-Update von der angegebenen Quelle herunter.
-
-        Diese Funktion ist ein Platzhalter und müsste für jede spezifische Datenquelle
-        implementiert werden, da die meisten ROM-Datenbanken keine direkten Download-Links anbieten.
-
-        Args:
-            source: Datenbank-Quelle ("no_intro", "tosec", "redump")
-
-        Returns:
-            True bei Erfolg, False bei Fehler
-        """
+        """Download A Database Update from the Specified Source. This function is a placeholder and would have to for Each specific data source be implemented beiSt rom databases do not offer direct download left. Args: Source: Database Source ("No_intro", "Tosec", "Redump") Return: True in the event of Success, false in the event of errors"""
 # This function would have to be implemented for each specific data source
         logger.warning(f"Automatische Downloads für {source} sind nicht implementiert")
         return False

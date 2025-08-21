@@ -34,15 +34,7 @@ class ROMDatabase:
 
     def __init__(self, db_path: str = DEFAULT_DB_PATH, cache_path: str = DEFAULT_CACHE_PATH,
                  auto_commit: bool = True, cache_enabled: bool = True):
-        """
-        Initialisiert die Datenbankverbindung.
-
-        Args:
-            db_path: Pfad zur SQLite-Datenbankdatei
-            cache_path: Pfad zum Cache-Verzeichnis
-            auto_commit: Ob Änderungen automatisch committet werden sollen
-            cache_enabled: Ob der Speicher-Cache aktiviert sein soll
-        """
+        """Initialized the database connection. Args: DB_Path: path to the SQLite database file Cache_path: path to the cache directory Auto_Commit: Whether changes should be automatically commented Cache_enabled: Whether the memory cache should be activated"""
         self.db_path = db_path
         self.cache_path = cache_path
         self.auto_commit = auto_commit
@@ -81,7 +73,7 @@ class ROMDatabase:
             os.makedirs(self.cache_path)
 
     def _connect_db(self):
-        """Stellt die Datenbankverbindung her."""
+        """Make the database connection."""
         try:
             if self.conn:
                 self.conn.close()
@@ -271,12 +263,7 @@ class ROMDatabase:
             )
 
     def _migrate_schema(self, current_version: str):
-        """
-        Performs a migration of the database schema.
-
-        Args:
-            current_version: The current version of the schema
-        """
+        """Performs A Migration of the Database Scheme. Args: Current_Version: The Current version of the Schema"""
         # Create backup
         backup_path = f"{self.db_path}.backup-{current_version}"
         shutil.copy2(self.db_path, backup_path)
@@ -300,22 +287,7 @@ class ROMDatabase:
                 size: Optional[int] = None, crc32: Optional[str] = None,
                 md5: Optional[str] = None, sha1: Optional[str] = None,
                 metadata: Optional[Dict[str, str]] = None) -> int:
-        """
-        Fügt ein neues ROM zur Datenbank hinzu oder aktualisiert ein existierendes.
-
-        Args:
-            name: Name of the ROM file
-            system_id: ID of the associated system
-            file_path: Optional path to the file
-            size: Optional file size
-            crc32: Optional CRC32 checksum
-            md5: Optional MD5 checksum
-            sha1: Optional SHA1 checksum
-            metadata: Optional dictionary with metadata
-
-        Returns:
-            ID of the added or updated ROM
-        """
+        """Add a new rome to the database or update to existing one. ARGS: Name: Name of the Rome File System_ID: ID of the Associated System File_Path: Optional Path to the File Size: Optional File Size Crc32: Optional CRC32 Checksum MD5: Optional MD5 Checks Sha1: Optional SHA1 Checks Metadata: Optional Dictionary with Metadata Return: Id of the Added Or Updated Rome"""
         with self._lock:
             try:
 # Check IF ROM Already Exist (Based on Crc32)
@@ -373,16 +345,7 @@ class ROMDatabase:
                 raise
 
     def get_rom_by_crc(self, crc32: str, system_id: Optional[int] = None) -> Optional[Dict]:
-        """
-        Searches for a ROM by its CRC32 checksum.
-
-        Args:
-            crc32: CRC32 checksum
-            system_id: Optional system ID to narrow down search
-
-        Returns:
-            ROM information as dictionary or None if not found
-        """
+        """Searches for a rome by Its Crc32 Checksum. ARGS: CRC32: CRC32 Checksum System_ID: Optional System ID to Narrow Down Search Return: Rome Information as Dictionary Or None IF Not Found"""
 # Try to Load from Cache First
         if self.cache_enabled and crc32 in self._cache['roms']:
             cached_rom = self._cache['roms'][crc32]
@@ -428,15 +391,7 @@ class ROMDatabase:
                 return None
 
     def get_rom_by_id(self, rom_id: int) -> Optional[Dict]:
-        """
-        Holt ROM-Informationen anhand der ID.
-
-        Args:
-            rom_id: ROM-ID
-
-        Returns:
-            ROM-Informationen als Dictionary oder None, wenn nicht gefunden
-        """
+        """Get rom information based on the id. ARGS: ROM_ID: ROM ID Return: Rome Information as a dictionary or none, if not found"""
         with self._lock:
             try:
                 self.cursor.execute('''
@@ -470,18 +425,7 @@ class ROMDatabase:
 
     def search_roms(self, query: str, system_id: Optional[int] = None,
                    limit: int = 100, offset: int = 0) -> List[Dict]:
-        """
-        Durchsucht ROMs nach Name oder Metadaten.
-
-        Args:
-            query: Suchbegriff
-            system_id: Optionale System-ID zur Eingrenzung
-            limit: Maximale Anzahl der Ergebnisse
-            offset: Offset für Pagination
-
-        Returns:
-            Liste von ROM-Dictionaries
-        """
+        """Rome searches for name or metadata. Args: query: search term System_id: Optional system ID for limitation Limit: Maximum number of results Offset: Offset for pagination Return: List of Rome Dictionaries"""
         with self._lock:
             try:
                 search_query = f"%{query}%"
@@ -520,15 +464,7 @@ class ROMDatabase:
                 return []
 
     def get_rom_metadata(self, rom_id: int) -> Dict[str, str]:
-        """
-        Holt alle Metadaten für ein ROM.
-
-        Args:
-            rom_id: ROM-ID
-
-        Returns:
-            Dictionary mit Metadaten (key -> value)
-        """
+        """Get all metadata for a rome. Args: rom_id: rom id return: dictionary with metadata (key -> value)"""
         with self._lock:
             try:
                 self.cursor.execute(
@@ -547,17 +483,7 @@ class ROMDatabase:
                 return {}
 
     def set_rom_metadata(self, rom_id: int, key: str, value: str) -> bool:
-        """
-        Setzt einen Metadaten-Wert für ein ROM.
-
-        Args:
-            rom_id: ROM-ID
-            key: Metadaten-Schlüssel
-            value: Metadaten-Wert
-
-        Returns:
-            True bei Erfolg, False bei Fehler
-        """
+        """Set a metadata value for a rome. ARGS: ROM_ID: ROM ID KEY: Metadata Key Value: Metadata Value Return: True in the Event of Success, False in the event of errors"""
         with self._lock:
             try:
                 now = datetime.now().isoformat()
@@ -588,15 +514,7 @@ class ROMDatabase:
                 return False
 
     def get_system_by_id(self, system_id: int) -> Optional[Dict]:
-        """
-        Holt System-Informationen anhand der ID.
-
-        Args:
-            system_id: System-ID
-
-        Returns:
-            System-Informationen als Dictionary oder None, wenn nicht gefunden
-        """
+        """Get System Information Based on the ID. ARGS: System_id: System ID Return: System Information as a dictionary or none, if not found"""
 # Try to load from the cache first
         if self.cache_enabled and system_id in self._cache['systems']:
             return self._cache['systems'][system_id].copy()
@@ -627,15 +545,7 @@ class ROMDatabase:
                 return None
 
     def get_system_by_name(self, name: str) -> Optional[Dict]:
-        """
-        Holt System-Informationen anhand des Namens.
-
-        Args:
-            name: Systemname
-
-        Returns:
-            System-Informationen als Dictionary oder None, wenn nicht gefunden
-        """
+        """Get System Information Based on the name. ARGS: Name: System Name Return: System Information as a dictionary or none, if not found"""
 # Finding tests from the cache
         if self.cache_enabled:
             for system_id, system in self._cache['systems'].items():
@@ -668,12 +578,7 @@ class ROMDatabase:
                 return None
 
     def get_all_systems(self) -> List[Dict]:
-        """
-        Holt alle verfügbaren Systeme.
-
-        Returns:
-            Liste von System-Dictionaries
-        """
+        """Get all available systems. Return: List of system dictionaries"""
         with self._lock:
             try:
                 self.cursor.execute("SELECT * FROM systems ORDER BY name")
@@ -695,16 +600,7 @@ class ROMDatabase:
                 return []
 
     def create_collection(self, name: str, description: str = "") -> int:
-        """
-        Erstellt eine neue Sammlung.
-
-        Args:
-            name: Name der Sammlung
-            description: Optionale Beschreibung
-
-        Returns:
-            ID der erstellten Sammlung oder -1 bei Fehler
-        """
+        """Creates a new collection. ARGS: Name: Name of the Collection Description: Optional Description Return: ID of the Created Collection Or -1 in the event of errors"""
         with self._lock:
             try:
                 self.cursor.execute(
@@ -734,16 +630,7 @@ class ROMDatabase:
                 return -1
 
     def add_rom_to_collection(self, collection_id: int, rom_id: int) -> bool:
-        """
-        Fügt ein ROM zu einer Sammlung hinzu.
-
-        Args:
-            collection_id: ID der Sammlung
-            rom_id: ID des ROMs
-
-        Returns:
-            True bei Erfolg, False bei Fehler
-        """
+        """Adds a rome to a collection. ARGS: Collection_ID: ID of the Collection Rom_id: Id of the Rome Return: True in the event of Success, False in the event of errors"""
         with self._lock:
             try:
                 self.cursor.execute(
@@ -763,15 +650,7 @@ class ROMDatabase:
                 return False
 
     def get_collection_roms(self, collection_id: int) -> List[Dict]:
-        """
-        Holt alle ROMs in einer Sammlung.
-
-        Args:
-            collection_id: ID der Sammlung
-
-        Returns:
-            Liste von ROM-Dictionaries
-        """
+        """Get all the roms in a collection. ARGS: Collection_ID: ID of the Collection Return: List of Rome Dictionaries"""
         with self._lock:
             try:
                 self.cursor.execute('''
@@ -799,12 +678,7 @@ class ROMDatabase:
                 return []
 
     def get_statistics(self) -> Dict[str, Any]:
-        """
-        Sammelt Statistiken über die Datenbank.
-
-        Returns:
-            Dictionary mit Statistikinformationen
-        """
+        """Collect statistics via the database. Return: Dictionary with statistics information"""
         with self._lock:
             try:
                 stats = {}
@@ -846,16 +720,7 @@ class ROMDatabase:
                 return {}
 
     def backup_database(self, backup_path: Optional[str] = None) -> bool:
-        """
-        Erstellt ein Backup der Datenbank.
-
-        Args:
-            backup_path: Optionaler Pfad für das Backup
-                         (wenn None, wird ein Standardpfad mit Zeitstempel verwendet)
-
-        Returns:
-            True bei Erfolg, False bei Fehler
-        """
+        """Creates a backup of the database. ARGS: Backup_Path: Optional Path for the Backup (If None, A Standard Path with Time Temple is used) Return: True in the Event of Success, False In The Event of Errors"""
         if not backup_path:
             timestamp = time.strftime("%Y%m%d_%H%M%S")
             backup_path = f"{self.db_path}.backup-{timestamp}"

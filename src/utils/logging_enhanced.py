@@ -1,15 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-ROM Sorter Pro - Erweitertes Logging-Modul
-
-Dieses Modul bietet eine verbesserte Logging-Funktionalität mit zusätzlichen Features:
-- Automatische Rotation von Logdateien
-- Farbiges Logging auf der Konsole
-- Strukturiertes JSON-Logging für Maschinenlesbarkeit
-- Leistungsmetriken und Prozessüberwachung
-- Deduplizierung von Lognachrichten
-"""
+"""ROM SARTER PRO - Extended logging module This module offers improved logging functionality with additional features: - Automatic rotation of log files - Colored logging on the console - Structured JSON logging for machine readability - power metrics and process monitoring - Deduplication of log messages"""
 
 import os
 import sys
@@ -33,7 +24,7 @@ VERBOSE = 15  # Between debug and info
 
 
 class ColoredFormatter(logging.Formatter):
-    """Formatter für farbige Konsolenausgabe."""
+    """Formatter for colored console edition."""
 
     # ANSI-Farbcodes
     COLORS = {
@@ -74,15 +65,7 @@ class ColoredFormatter(logging.Formatter):
         self.use_colors = use_colors and sys.stdout.isatty()
 
     def format(self, record: logging.LogRecord) -> str:
-        """
-        Formatiert einen Log-Record mit Farben.
-
-        Args:
-            record: Zu formatierender LogRecord
-
-        Returns:
-            Formatierte Log-Nachricht
-        """
+        """Formats A Log Record with Colors. Args: Record: LogreCord to be formated return: formatted log message"""
         original_msg = super().format(record)
 
         if not self.use_colors:
@@ -93,15 +76,10 @@ class ColoredFormatter(logging.Formatter):
 
 
 class JsonFormatter(logging.Formatter):
-    """Formatter für strukturiertes JSON-Logging."""
+    """Formatter for structured JSON logging."""
 
     def __init__(self, include_extra: bool = True):
-        """
-        Initialisiert den JSON-Formatter.
-
-        Args:
-            include_extra: Ob zusätzliche Felder eingeschlossen werden sollen
-        """
+        """Initialized the JSON formatter. Args: Include_EXtra: Whether additional fields should be included"""
         super().__init__()
         self.include_extra = include_extra
         self.hostname = socket.gethostname()
@@ -114,15 +92,7 @@ class JsonFormatter(logging.Formatter):
         }
 
     def format(self, record: logging.LogRecord) -> str:
-        """
-        Formatiert einen Log-Record als JSON.
-
-        Args:
-            record: Zu formatierender LogRecord
-
-        Returns:
-            JSON-formatierte Log-Nachricht
-        """
+        """Formats A Log Record as a Json. ARGS: Record: LogreCord to be formated return: JSON-Formatted Log Message"""
         log_data = {
             'timestamp': datetime.fromtimestamp(record.created).isoformat(),
             'level': record.levelname,
@@ -155,17 +125,10 @@ class JsonFormatter(logging.Formatter):
 
 
 class DedupHandler(logging.Handler):
-    """Handler, der duplizierte Log-Nachrichten dedupliziert."""
+    """Handler who deducted duplicated log messages."""
 
     def __init__(self, target_handler: logging.Handler, interval: float = 5.0, capacity: int = 1000):
-        """
-        Initialisiert den Deduplizierungs-Handler.
-
-        Args:
-            target_handler: Ziel-Handler für deduplizierte Nachrichten
-            interval: Intervall in Sekunden für die Ausgabe von Zusammenfassungen
-            capacity: Maximale Anzahl von zu speichernden eindeutigen Nachrichten
-        """
+        """Initialized the deduplicated handler. Args: Target_handler: Target handler for deduplicated messages Interval: Intervall in seconds for the edition of summaries capacity: maximum number of clear messages to be saved"""
         super().__init__()
         self.target_handler = target_handler
         self.interval = interval
@@ -176,12 +139,7 @@ class DedupHandler(logging.Handler):
         self.lock = threading.RLock()
 
     def emit(self, record: logging.LogRecord) -> None:
-        """
-        Verarbeitet einen LogRecord.
-
-        Args:
-            record: Zu verarbeitender LogRecord
-        """
+        """Processes A LogreCord. ARGS: Record: LogreCord to be processed"""
         with self.lock:
             # Count message
             message = record.getMessage()
@@ -202,7 +160,7 @@ class DedupHandler(logging.Handler):
                 self._flush_counts()
 
     def _flush_counts(self) -> None:
-        """Gibt Zusammenfassungen für duplizierte Nachrichten aus."""
+        """Spend summaries for duplicated messages."""
         for message, count in self.message_counts.items():
             if count > 1:
                 summary_record = logging.LogRecord(
@@ -221,15 +179,10 @@ class DedupHandler(logging.Handler):
 
 
 class PerformanceMetricsHandler(logging.Handler):
-    """Handler zum Sammeln und Ausgeben von Leistungsmetriken."""
+    """Handler for collecting and spending performance metrics."""
 
     def __init__(self, interval: float = 60.0):
-        """
-        Initialisiert den Leistungsmetriken-Handler.
-
-        Args:
-            interval: Intervall für die Ausgabe von Metriken in Sekunden
-        """
+        """Initialized the power metricist man. Args: Interval: interval for the output of metrics in seconds"""
         super().__init__()
         self.interval = interval
         self.last_metrics_time = time.time()
@@ -242,12 +195,7 @@ class PerformanceMetricsHandler(logging.Handler):
         self.lock = threading.RLock()
 
     def emit(self, record: logging.LogRecord) -> None:
-        """
-        Verarbeitet einen LogRecord und sammelt Metriken.
-
-        Args:
-            record: Zu verarbeitender LogRecord
-        """
+        """Processes A LogreCord and Collects Metrics. ARGS: Record: LogreCord to be processed"""
         with self.lock:
             # Metriken aktualisieren
             self.levels_count[record.levelno] += 1
@@ -312,23 +260,7 @@ def setup_logging(
     metrics_interval: float = 600.0,  # 10 Minuten
     app_name: str = 'rom_sorter'
 ) -> None:
-    """
-    Richtet das erweiterte Logging-System ein.
-
-    Args:
-        log_dir: Verzeichnis für Logdateien
-        log_level: Allgemeines Log-Level
-        console_level: Log-Level für Konsolenausgabe
-        file_level: Log-Level für Dateiausgabe
-        max_file_size: Maximale Größe pro Logdatei
-        backup_count: Anzahl beizubehaltender Logdateien
-        log_json: Ob JSON-Logs geschrieben werden sollen
-        use_colors: Ob farbige Konsolenausgabe verwendet werden soll
-        dedup_messages: Ob Nachrichten dedupliziert werden sollen
-        collect_metrics: Ob Leistungsmetriken gesammelt werden sollen
-        metrics_interval: Intervall für die Ausgabe von Metriken
-        app_name: Name der Anwendung für Logdateien
-    """
+    """Set up the extended logging system. Args: Log_Dir: List for log files Log_Level: General Log level Console_Level: Log level for console edition File_level: Log level for file output Max_File_Size: Maximum size per log file Backup_Count: Number of log files to be treated Log_json: Whether JSON logs should be written use_colors: Whether colored console output should be used Dedup_Messages: Whether messages should be deduced Collect_Metrics: Whether power metrics should be collected Metrics_interval: Intervall for the edition of metrics App_Name: Name of the application for log files"""
     # Benutzerdefinierte Log-Ebenen registrieren
     logging.addLevelName(TRACE, "TRACE")
     logging.addLevelName(VERBOSE, "VERBOSE")
@@ -404,32 +336,14 @@ def setup_logging(
 
 
 class LoggerAdapter(logging.LoggerAdapter):
-    """
-    Adapter für kontextbezogenes Logging.
-    Ermöglicht das Hinzufügen von Kontextinformationen zu allen Log-Nachrichten.
-    """
+    """Adapter for context -related logging. Enables the addition of context information to all log messages."""
 
     def __init__(self, logger: logging.Logger, extra: Dict[str, Any] = None):
-        """
-        Initialisiert den Logger-Adapter mit zusätzlichen Kontextinformationen.
-
-        Args:
-            logger: Basis-Logger
-            extra: Zusätzliche Kontextinformationen
-        """
+        """Initializes the logger adapter with additional context information. Args: Logger: Basic logger Extra: additional context information"""
         super().__init__(logger, extra or {})
 
     def process(self, msg: str, kwargs: Dict[str, Any]) -> Tuple[str, Dict[str, Any]]:
-        """
-        Verarbeitet die Log-Nachricht und fügt Kontextinformationen hinzu.
-
-        Args:
-            msg: Log-Nachricht
-            kwargs: Zusätzliche Argumente für den Logger
-
-        Returns:
-            Tupel aus formatierter Nachricht und Argumenten
-        """
+        """Process the log message and add context information. Args: MSG: Log message Kwargs: Additional arguments for the logger Return: Tupel made of formatted message and arguments"""
         # Add context information in a compact form to the message
         context_str = ' '.join(f"{k}={v}" for k, v in self.extra.items())
         if context_str:
@@ -443,52 +357,21 @@ class LoggerAdapter(logging.LoggerAdapter):
         return msg, kwargs
 
     def trace(self, msg: str, *args, **kwargs) -> None:
-        """
-        Loggt eine Nachricht auf TRACE-Level.
-
-        Args:
-            msg: Log-Nachricht
-            *args: Positionsabhängige Argumente für die Formatierung
-            **kwargs: Zusätzliche Argumente für den Logger
-        """
+        """Logs A Message to Trace Level. ARGS: MSG: Log Message *Args: Position -Dependent Argents for the Formatting ** Kwargs: Additional Argents for the Logger"""
         self.log(TRACE, msg, *args, **kwargs)
 
     def verbose(self, msg: str, *args, **kwargs) -> None:
-        """
-        Loggt eine Nachricht auf VERBOSE-Level.
-
-        Args:
-            msg: Log-Nachricht
-            *args: Positionsabhängige Argumente für die Formatierung
-            **kwargs: Zusätzliche Argumente für den Logger
-        """
+        """Logs A Message to Verbos Level. ARGS: MSG: Log Message *Args: Position -Dependent Argents for the Formatting ** Kwargs: Additional Argents for the Logger"""
         self.log(VERBOSE, msg, *args, **kwargs)
 
 
 def get_logger(name: str, extra: Dict[str, Any] = None) -> LoggerAdapter:
-    """
-    Erstellt einen neuen Logger mit Adapter für kontextbezogenes Logging.
-
-    Args:
-        name: Name des Loggers
-        extra: Zusätzliche Kontextinformationen
-
-    Returns:
-        LoggerAdapter mit den angegebenen Kontextinformationen
-    """
+    """Creates A New Logger with an adapter for context -Gelated logging. ARGS: Name: Name of the Logger Extra: Additional Context Information Return: Logger Adapter with the Specified Context Information"""
     return LoggerAdapter(logging.getLogger(name), extra or {})
 
 
 def with_context(context: Dict[str, Any] = None):
-    """
-    Dekorator für Funktionen, der Kontext zum Logging hinzufügt.
-
-    Args:
-        context: Statischer Kontext für alle aufgerufenen Funktionen
-
-    Returns:
-        Dekorator-Funktion
-    """
+    """Decorator for functions that adds context to logging. Args: Context: Static context for all called functions Return: Decorator function"""
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):

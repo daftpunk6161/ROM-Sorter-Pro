@@ -1,11 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-ROM Sorter Pro - Main Module v2.1.8 (Compatibility Layer)
-
-This is a compatibility wrapper around the main GUI module.
-It redirects to the standard GUI implementation to avoid duplication.
-"""
+"""Rome Sarter Pro - Main Module V2.1.8 (Compatibility Layer) This is a Compatibility Wrapper Around the Main Gui Modules. It redirects to the standard gui implementation to avoid duplication."""
 
 import os
 import sys

@@ -1,24 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""
-ROM Sorter Pro - Web Interface v2.1.8
-
-This module implements a web interface for ROM Sorter Pro that enables
-remote access to the application's functions and provides a modern
-dashboard for ROM management.
-
-Features:
-- RESTful API for ROM management
-- Web-based dashboard
-- Remote access to ROM database
-- Support for file upload and download
-- WebSocket for real-time updates
-
-NOTE: This is a simplified version of the web interface.
-The main implementation is in src/web_interface.py.
-This module provides backward compatibility for old imports.
-"""
+"""Rom Sarter Pro - Web Interface V2.1.8 This module Implements A Web Interface for Rome Sorter Pro that Enables Remote Access to the Application's Functions and Provides A Modern Dashboard for Rome Management. Features: - Restful API for Rome Management - Web -Based Dashboard - Remote Access to Rome Database - Support for File Upload and Download - Websocket for Real -Time Updates Note: This is a Simplified Version of the Web Interface. The main implementation is in SRC/web_interface.py. This module Provides Backward Compatibility for Old Imports."""
 
 # Compatibility imports
 import sys
@@ -103,7 +86,7 @@ class WebInterfaceError(Exception):
 
 
 class WebInterface:
-    """Implements a web interface for ROM Sorter Pro."""
+    """Implements A Web Interface for Rom Sorter Pro."""
 
     def __init__(self, host: str = '127.0.0.1', port: int = 8080, debug: bool = False):
         """
@@ -301,14 +284,8 @@ class WebInterface:
         return app
 
     def _generate_dashboard_template(self) -> str:
-        """
-        Generates a simple dashboard template.
-
-        Returns:
-            HTML template as a string
-        """
-        return '''
-        <!DOCTYPE html>
+        """Generates A Simple Dashboard Template. Return: HTML Template as a String"""
+        return '''<!DOCTYPE html>
         <html lang="en">
         <head>
             <meta charset="UTF-8">
@@ -509,19 +486,10 @@ class WebInterface:
                 });
             </script>
         </body>
-        </html>
-        '''
+        </html>'''
 
     def _generate_login_template(self, error: str = None) -> str:
-        """
-        Generates a simple login template.
-
-        Args:
-            error: Optional error message
-
-        Returns:
-            HTML template as a string
-        """
+        """Generates a simple login template. ARGS: Error: Optional error message return: html template as a string"""
         return f'''
         <!DOCTYPE html>
         <html lang="en">

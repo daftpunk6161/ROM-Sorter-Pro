@@ -21,21 +21,7 @@ logger = logging.getLogger(__name__)
 
 def validate_integer(value: Any, min_value: Optional[int] = None, max_value: Optional[int] = None,
                     field_name: str = "value") -> int:
-    """
-    Validate integer with bounds checking.
-
-    Args:
-        value: Value to validate
-        min_value: Minimum allowed value
-        max_value: Maximum allowed value
-        field_name: Name of field for error messages
-
-    Returns:
-        Validated integer value
-
-    Raises:
-        ValidationError: If value is not a valid integer or outside bounds
-    """
+    """Validate Integer with Bounds Checking. Args: Value: Value to validate min_value: minimum allowed value max_value: Maximum allowed value field_name: name of field for error measurement Return: validated integer value raises: validationeror: if value is not a valid integer or outside bounds"""
     try:
         int_value = int(value)
     except (ValueError, TypeError):
@@ -51,17 +37,7 @@ def validate_integer(value: Any, min_value: Optional[int] = None, max_value: Opt
 
 @dataclass
 class PerformanceConfig(BaseConfigModule):
-    """
-    Configuration settings for application performance.
-
-    Attributes:
-        max_threads: Maximum number of threads for parallel operations
-        memory_limit_mb: Maximum memory usage limit in MB (0 = no limit)
-        cache_size: Size of the cache in entries
-        scan_chunk_size: Number of files to process in a chunk during scanning
-        enable_lazy_loading: Whether to use lazy loading for large datasets
-        optimization_level: Level of optimization (0-3)
-    """
+    """Configuration Settings for Application Performance. Attributes: Max_threads: Maximum Number of Threads for Parallel Operations Memory_Limit_MB: Maximum Memory Usage Limit in MB (0 = No Limit) Cache_Size: Size of the Cache in Entries Scan_Chunk_Size: Number of Files to Process in A Chunk During Scanning Enable_lazy_Loading: Whether to use Lazy Loading for Large Datasets Optimization_Level: Level of Optimization (0-3)"""
 
     max_threads: int = 0
     memory_limit_mb: int = 0

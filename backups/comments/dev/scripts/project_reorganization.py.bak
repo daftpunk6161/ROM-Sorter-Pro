@@ -1,11 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-ROM-Sorter-Pro - Verzeichnisstruktur Reorganisationsplan
-
-Dieses Skript erstellt eine neue, sauberere Verzeichnisstruktur für das ROM-Sorter-Pro Projekt,
-indem es Dateien in die entsprechenden Verzeichnisse verschiebt und Duplikate beseitigt.
-"""
+"""ROM-SORTER-PRO-directory structure reorganization plan This script creates a new, cleaner directory structure for the Rome sorter-Pro project, by shifting files into the corresponding directories and removing duplicates."""
 
 import os
 import shutil
@@ -84,7 +79,7 @@ DUPLICATE_MODULES = [
 ]
 
 def create_directories():
-    """Erstelle die notwendigen Verzeichnisse"""
+    """Create the necessary directories"""
     for directory in DIRS_TO_CREATE:
         if not directory.exists():
             print(f"Erstelle Verzeichnis: {directory}")
@@ -93,7 +88,7 @@ def create_directories():
             print(f"Verzeichnis existiert bereits: {directory}")
 
 def move_files():
-    """Verschiebe Dateien in die entsprechenden Verzeichnisse"""
+    """Show files to the corresponding directories"""
     # Entwicklungstools
     for file in DEV_TOOLS:
         src = ROOT_DIR / file
@@ -143,12 +138,12 @@ def move_files():
                     shutil.move(str(subitem), str(dst))
 
 def handle_duplicates():
-    """Löse Duplikatprobleme"""
+    """Solve duplicate problems"""
     for keep, remove in DUPLICATE_MODULES:
         if keep.exists() and remove.exists():
             print(f"Behebe Duplikat: Behalte {keep}, entferne {remove}")
             # Sicherstellen, dass alle Importe aktualisiert werden
-            # This would require more complex logic in a real script
+            # This would require More Complex Logic in A Real Script
             remove.unlink()
         elif not keep.exists() and remove.exists():
             print(f"Warnung: Original {keep} existiert nicht, verschiebe {remove} nach {keep}")
@@ -157,61 +152,15 @@ def handle_duplicates():
             print(f"Keine Aktion notwendig für {keep} und {remove}")
 
 def create_readme():
-    """Erstelle eine README-Datei mit Projektstrukturinformationen"""
-    readme_content = """# ROM-Sorter-Pro
-
-Ein universelles Tool zum Organisieren und Sortieren von ROM-Dateien für verschiedene Konsolen.
-
-## Projektstruktur
-
-- `src/` - Quellcode der Anwendung
-  - `cli/` - Kommandozeilen-Interface
-  - `config/` - Konfigurationsmanagement
-  - `core/` - Kern-Funktionalität
-  - `database/` - Datenbankintegration
-  - `detectors/` - ROM-Erkennungsmodule
-  - `reporting/` - Berichterstattung
-  - `scanning/` - ROM-Scanmodule
-  - `security/` - Sicherheitsfunktionen
-  - `ui/` - Benutzeroberflächen
-  - `utils/` - Hilfsfunktionen
-  - `web/` - Webschnittstelle
-
-- `data/` - Anwendungsdaten
-  - `rom_databases/` - ROM-Datenbanken
-
-- `dev/` - Entwicklungsressourcen (nicht im Release enthalten)
-  - `tools/` - Entwicklungswerkzeuge
-  - `scripts/` - Hilfsskripte
-  - `tests/` - Testdateien
-  - `docs/` - Entwicklerdokumentation
-
-- `dist/` - Distributionspakete und Releases
-
-- `logs/` - Logdateien
-
-- `temp/` - Temporäre Dateien
-
-## Startdateien
-
-- `start_rom_sorter.py` - Hauptstartskript
-- `start_rom_sorter.bat` - Windows-Startskript
-- `start_rom_sorter.sh` - Linux/Mac-Startskript
-- `simple_rom_sorter.py` - Vereinfachte Version
-- `install_dependencies.py` - Abhängigkeitsinstallation
-
-## Entwicklung
-
-Entwicklungswerkzeuge und -ressourcen befinden sich im `dev`-Verzeichnis und sind nicht Teil des Releases.
-
-"""
+    """Create a readme file with project structure information"""
+    readme_content = """# ROM sorter-Pro A universal tool for organizing and sorting ROM files for different consoles. ## project structure - `SRC/` - Source code of the application - `Cli/` - command line interface - `config/` - configuration management - `core/` - core functionality - `database/` - database integration - `Detectors/` - Rome recognition modules - `Reporting/` - Reporting - `Scanning/` - ROM scan modules - `Security/` security functions - `ui/` - user interfaces - `Utils/` - aid functions - `web/` - web interface - `data/` - application data - `rom_databases/` - Rome databases - `Dev/` - Development resources (not included in the release) - `Tools/` - Development tools - `scripts/` - auxiliary scripts - `tests/` - test files - `Docs/` - Developer documentation - `Dist/` - Distribution packages and releases - `Logs/` - Log files - `temporary files ## start files - `Start_rom_sorter.py` - Main starting script - `Start_rom_sorter.bat` - Windows starting script - `Start_rom_sorter.SH` - Linux/Mac -Startskript - `simple_rom_sorter.py` - simplified version - `install_dependencies.py` - dependency installation ## Development Development tools and resources are located in the `Dev` directory and are not part of the release."""
     readme_path = ROOT_DIR / "README.md"
     with open(readme_path, 'w', encoding='utf-8') as f:
         f.write(readme_content)
     print(f"README erstellt: {readme_path}")
 
 def main():
-    """Hauptfunktion zur Ausführung der Reorganisation"""
+    """Main function for execution of the reorganization"""
     print("Starte Projektreorganisation...")
 
     # Erstelle Verzeichnisse

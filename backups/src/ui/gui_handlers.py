@@ -252,14 +252,7 @@ def on_files_dropped(parent, files):
 
 
 def process_files(parent, source_dir, dest_dir, stop_event):
-    """Process files in a separate thread.
-
-    Args:
-        parent: Parent GUI instance
-        source_dir: Source directory path
-        dest_dir: Destination directory path
-        stop_event: Event to signal thread termination
-    """
+    """Process files in a separate thread. ARGS: Parent: Parent Gui Instance Source_dir: Source Directory Path Dest_dir: Destination Directory Path Stop_Event: Event to Signal Thread Termination"""
     from datetime import datetime
 
     try:

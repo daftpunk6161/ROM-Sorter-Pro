@@ -114,3 +114,22 @@
 2025-08-21 20:43:23 - performance_stats - INFO - === Performance-Statistiken ===
 2025-08-21 20:43:23,345 - performance_stats - INFO - app_execution: 1 Aufrufe, Durchschnitt: 534.303961s, Min: 534.303961s, Max: 534.303961s
 2025-08-21 20:43:23 - performance_stats - INFO - app_execution: 1 Aufrufe, Durchschnitt: 534.303961s, Min: 534.303961s, Max: 534.303961s
+2025-08-21 22:31:11,318 - logging_integration - INFO - Logging-System initialisiert: Verzeichnis=R:\Code\ROM-Sorter-Pro\logs
+2025-08-21 22:31:11 - logging_integration - INFO - Logging-System initialisiert: Verzeichnis=R:\Code\ROM-Sorter-Pro\logs
+2025-08-21 22:31:11,318 - logging_integration - INFO - Python Version: 3.13.6 (tags/v3.13.6:4e66535, Aug  6 2025, 14:36:00) [MSC v.1944 64 bit (AMD64)]
+2025-08-21 22:31:11 - logging_integration - INFO - Python Version: 3.13.6 (tags/v3.13.6:4e66535, Aug  6 2025, 14:36:00) [MSC v.1944 64 bit (AMD64)]
+2025-08-21 22:31:11,319 - logging_integration - INFO - Plattform: win32
+2025-08-21 22:31:11 - logging_integration - INFO - Plattform: win32
+2025-08-21 22:31:11,319 - src.ui.app - INFO - Erweitertes Logging-System initialisiert
+2025-08-21 22:31:11,319 - src.ui.app - INFO - Erweitertes Logging-System initialisiert
+2025-08-21 22:31:11 - src.ui.app - INFO - Erweitertes Logging-System initialisiert
+2025-08-21 22:31:11 - root - INFO - Konfiguration aus r:\Code\ROM-Sorter-Pro\src\ui\..\config.json geladen
+2025-08-21 22:31:11 - root - INFO - ROM Sorter main window created
+2025-08-21 22:31:11,389 - src.ui.enhanced_theme - INFO - Theme-System initialisiert
+2025-08-21 22:31:11 - src.ui.enhanced_theme - INFO - Theme-System initialisiert
+2025-08-21 22:31:11 - root - INFO - Theme-System initialisiert mit Theme-Typ: system
+2025-08-21 22:31:29 - __main__ - INFO - ROM Sorter Pro terminated.
+2025-08-21 22:31:29,886 - performance_stats - INFO - === Performance-Statistiken ===
+2025-08-21 22:31:29 - performance_stats - INFO - === Performance-Statistiken ===
+2025-08-21 22:31:29,886 - performance_stats - INFO - app_execution: 1 Aufrufe, Durchschnitt: 18.567493s, Min: 18.567493s, Max: 18.567493s
+2025-08-21 22:31:29 - performance_stats - INFO - app_execution: 1 Aufrufe, Durchschnitt: 18.567493s, Min: 18.567493s, Max: 18.567493s

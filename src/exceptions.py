@@ -44,7 +44,7 @@ class SecurityError(BaseError):
 
 
 class PathTraversalError(SecurityError):
-    """Raised when a path traversal attack is detected."""
+    """Raized when a Path Traversal Attack is Detected."""
 
     def __init__(self, message: str, path: Optional[str] = None,
                  details: Optional[Dict[str, Any]] = None):

@@ -131,7 +131,7 @@ class ConnectionPool:
         self._active_connections = 0
 
     def get_connection(self) -> sqlite3.Connection:
-        """Get a database connection from the pool with security checks."""
+        """Get a Database Connection from the pool with security checks."""
         with self._lock:
             if self._pool:
                 return self._pool.popleft()
@@ -150,7 +150,7 @@ class ConnectionPool:
             return self._create_connection()
 
     def return_connection(self, conn: sqlite3.Connection):
-        """Return a connection to the pool."""
+        """Return a Connection to the pool."""
         with self._lock:
             if len(self._pool) < self.max_connections:
                 self._pool.append(conn)
@@ -159,7 +159,7 @@ class ConnectionPool:
                 self._active_connections -= 1
 
     def _create_connection(self) -> sqlite3.Connection:
-        """Create a secure database connection."""
+        """Create a Secure Database Connection."""
         try:
             conn = sqlite3.connect(
                 self.db_path,

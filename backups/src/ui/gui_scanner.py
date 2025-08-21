@@ -48,14 +48,7 @@ def setup_scanner_components(parent):
 
 
 def create_log_widget(parent):
-    """Create a log display widget.
-
-    Args:
-        parent: Parent GUI instance
-
-    Returns:
-        Frame: The log widget frame
-    """
+    """Create a log display widget. Args: Parent: Parent Gui Instance Return: Frame: The Log Widget Frame"""
     frame = Frame(parent)
 
     # Label
@@ -85,14 +78,7 @@ def create_log_widget(parent):
 
 
 def create_stats_widget(parent):
-    """Create a statistics display widget.
-
-    Args:
-        parent: Parent GUI instance
-
-    Returns:
-        Frame: The stats widget frame
-    """
+    """Create a statistics display widget. Args: Parent: Parent Gui Instance Return: Frame: The Stats Widget Frame"""
     frame = Frame(parent)
 
     # Label
@@ -115,12 +101,7 @@ def create_stats_widget(parent):
 
 
 def setup_gui_logging_handler(parent, log_text):
-    """Set up a handler to redirect logs to the GUI.
-
-    Args:
-        parent: Parent GUI instance
-        log_text: Text widget for log display
-    """
+    """Set up a Handler to Redirect Logs to the GUI. ARGS: Parent: Parent Gui Instance Log_Text: Text Widget for Log Display"""
     class TextHandler(logging.Handler):
         def __init__(self, text_widget):
             super().__init__()
@@ -230,16 +211,7 @@ class FastFileScanner:
         self.scan_thread = None
 
     def scan_directory(self, directory_path, recursive=True, extensions=None):
-        """Scan a directory for files.
-
-        Args:
-            directory_path: Directory path to scan
-            recursive: Whether to scan subdirectories
-            extensions: List of file extensions to filter for
-
-        Returns:
-            Generator yielding file paths
-        """
+        """Scan a Directory for Files. ARGS: Directory_Path: Directory Path to Scan Recursive: Whether to Scan Subdirectories Extensions: List of File Extensions to Filter for Return: Generator Yielding File Paths"""
         # Check cache first
         cache_key = (directory_path, recursive, str(extensions))
         with self._cache_lock:
@@ -308,17 +280,7 @@ class FastFileScanner:
             }
 
     def start_scan(self, directory_path, callback, recursive=True, extensions=None):
-        """Start scanning in a separate thread.
-
-        Args:
-            directory_path: Directory to scan
-            callback: Function to call with results
-            recursive: Whether to scan subdirectories
-            extensions: List of file extensions to filter for
-
-        Returns:
-            True if scan started, False otherwise
-        """
+        """Start scanning in a separate thread. ARGS: Directory_Path: Directory to Scan Callback: Function to Call With Results Recursive: Whether to Scan Subdirectories Extensions: List of File Extensions for Return: True IF Scan Started, False OTHERWISE"""
         if self.scan_thread and self.scan_thread.is_alive():
             logger.warning("A scan is already in progress")
             return False

@@ -38,15 +38,7 @@ CREATE INDEX IF NOT EXISTS idx_roms_console ON roms(console);
 """
 
 def initialize_database(db_path):
-    """
-    Initialisiert die Datenbank und erstellt alle erforderlichen Tabellen.
-
-    Args:
-        db_path: Pfad zur SQLite-Datenbank
-
-    Returns:
-        True bei Erfolg, False bei Fehler
-    """
+    """Initializes the database and creates all the necessary tables. Args: db_path: path to the SQLite database Return: True in the event of success, false in the event of errors"""
     try:
 # Make sure the database folder exists
         db_dir = os.path.dirname(db_path)
@@ -87,12 +79,12 @@ def initialize_database(db_path):
         return False
 
 def get_database_path():
-    """Gibt den Standardpfad zur Database zurück."""
+    """Gives back the standard path to the database."""
     return os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                         'rom_databases', 'rom_database.sqlite')
 
 def _display_database_status(self):
-    """Zeigt den Status der ROM-Datenbank in der Statusleisle an."""
+    """Displays the status of the Rome database in the Status Leisle."""
     try:
 # Import the debug function
         from src.database.db_debug import debug_database_initialization
@@ -150,7 +142,7 @@ def _display_database_status(self):
         self.status_bar.config(text="ROM Sorter Pro v2.1.4 - Memory Optimized")
 
 def _show_database_manager(self):
-    """Öffnet den Dialog zur Verwaltung der ROM-Database."""
+    """Opens the dialogue to manage the ROM database."""
     try:
         from src.database.database_gui import DatabaseManagerDialog
         dialog = DatabaseManagerDialog(self.root)
@@ -163,7 +155,7 @@ def _show_database_manager(self):
         messagebox.showerror("Fehler", f"Fehler beim Öffnen des Datenbank-Managers: {e}")
 
 def _show_database_docs(self):
-    """Zeigt die Dokumentation zu Datenbanken an."""
+    """Displays the documentation to databases."""
     try:
         doc_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                                'docs', 'ERWEITERTE_ERKENNUNG.md')
@@ -188,7 +180,7 @@ def _show_database_docs(self):
         messagebox.showerror("Fehler", f"Fehler beim Öffnen der Dokumentation: {e}")
 
 def _open_log_file(self):
-    """Öffnet die aktuelle Log-File."""
+    """Opens the current log file."""
     try:
         log_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'logs')
 
@@ -214,7 +206,7 @@ def _open_log_file(self):
 
 # Add the functions to the GUI class
 def add_database_methods_to_gui(cls):
-    """Fügt die Database-Methoden zur GUI-Class hinzu."""
+    """Add the database methods to the GUI class."""
 # Initialize the database at the start
     db_path = get_database_path()
 

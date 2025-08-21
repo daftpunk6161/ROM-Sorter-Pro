@@ -1,13 +1,6 @@
 #!/usr/bin/env python3
 # -*-coding: utf-8-*-
-"""
-ROM Sorter Pro - Integrationsbrücke für High-Performance-Scanner
-Phase 1 Implementation: Desktop-Optimierung
-
-Dieses Modul dient als Brücke zwischen dem neuen High-Performance-Scanner und der bestehenden
-Anwendung. Es stellt Adapter-Funktionalität bereit, die es ermöglicht, den neuen Scanner
-in bestehenden Code zu integrieren ohne umfangreiche Änderungen an anderen Modulen vorzunehmen.
-"""
+"""Rom Sarter Pro integration Bridge for High Performance Scanner Phase 1 Implementation: Desktop Optimization This modules Serves AS A Bridge between the New High Performance Scanner and the Existing Application. It Provides Adapter Functionality That Enables the New Scanner Integration In Existing Code Without Making Extensive Changes To Other Module."""
 
 import os
 import sys
@@ -33,18 +26,10 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 class ScannerIntegration:
-    """
-    Integration des High-Performance-Scanners mit der bestehenden Anwendung.
-    Diese Klasse bietet eine einfache API für andere Module, um den neuen Scanner zu nutzen.
-    """
+    """Integration of the high-performance scanner with the existing application. This class offer a simple api for other modules to use the new scanner."""
 
     def __init__(self, config: Optional[ConfigType] = None):
-        """
-        Initialisiert die Scanner-Integration.
-
-        Args:
-            config: Optionale Konfigurationsinstanz. Falls None, wird die Standardkonfiguration verwendet.
-        """
+        """Initialized the scanner integration. Args: Config: Optional configuration instance. If None, the standard configuration is used."""
         self.config = config or Config()
         self.scanner = HighPerformanceScanner(self.config)
         self.callbacks = {}
@@ -53,7 +38,7 @@ class ScannerIntegration:
         self._register_callbacks()
 
     def _register_callbacks(self):
-        """Registriert die Callbacks für den Scanner."""
+        """Register the callbacks for the scanner."""
         self.scanner.on_file_found = lambda path: self._handle_callback('file_found', path)
         self.scanner.on_rom_found = lambda info: self._handle_callback('rom_found', info)
         self.scanner.on_progress = lambda current, total: self._handle_callback('progress', current, total)
@@ -61,13 +46,7 @@ class ScannerIntegration:
         self.scanner.on_error = lambda error: self._handle_callback('error', error)
 
     def _handle_callback(self, event_type: str, *args):
-        """
-        Leitet Ereignisse an registrierte Callbacks weiter.
-
-        Args:
-            event_type: Art des Ereignisses ('file_found', 'rom_found', etc.)
-            *args: Argumente, die an den Callback weitergegeben werden
-        """
+        """Forwards events to registered callbacks. Args: Event_type: Type of the event ('File_found', 'Rom_found', etc.) *Args: Arguments that are passed on to the callback"""
         if event_type in self.callbacks:
             for callback in self.callbacks.get(event_type, []):
                 try:
@@ -76,34 +55,14 @@ class ScannerIntegration:
                     logger.error(f"Fehler im {event_type} Callback: {str(e)}")
 
     def register_callback(self, event_type: str, callback: Callable):
-        """
-        Registriert einen Callback für ein bestimmtes Ereignis.
-
-        Args:
-            event_type: Art des Ereignisses ('file_found', 'rom_found', 'progress', 'complete', 'error')
-            callback: Funktion, die aufgerufen wird, wenn das Ereignis eintritt
-        """
+        """Register A Callback for A Specific Event. ARGS: Event_type: Type of the event ('File_found', 'Rom_found', 'Progress', 'Complete', 'Error') Callback: Function that is called When the event Occurs"""
         if event_type not in self.callbacks:
             self.callbacks[event_type] = []
         self.callbacks[event_type].append(callback)
 
     def scan_directory(self, directory: str, recursive: bool = True, file_types: Optional[List[str]] = None,
                       max_depth: int = -1, follow_symlinks: bool = False, use_cache: bool = True):
-        """
-        Startet einen asynchronen Scan des angegebenen Verzeichnisses.
-
-        Args:
-            directory: Das zu durchsuchende Verzeichnis
-            recursive: Ob Unterverzeichnisse durchsucht werden sollen
-            file_types: Liste von Dateierweiterungen, die gesucht werden sollen
-                        (None für alle bekannten ROM-Typen)
-            max_depth: Maximale Rekursionstiefe (-1 für unbegrenzt)
-            follow_symlinks: Ob symbolischen Links gefolgt werden soll
-            use_cache: Ob Cache-Daten verwendet werden sollen
-
-        Returns:
-            Scan-ID, die zur Identifizierung des Scans verwendet werden kann
-        """
+        """Starts an asynchronous scan of the specified directory. Args: Directory: The directory to be searched Recursive: Whether subdirectaries should be searched File_types: List of file extensions that are to be searched (None for all known Rome types) Max_depth: Maximum depth of recursion (-1 for unlimited) Follow_symlinks: Whether symbolic links should be followed use_cache: Whether cache data should be used Return: Scan-ID that can be used to identify the scan"""
 # Check whether the directory exists
         if not os.path.isdir(directory):
             self._handle_callback('error', f"Verzeichnis existiert nicht: {directory}")
@@ -133,18 +92,7 @@ class ScannerIntegration:
 
     def _run_scan(self, scan_id: str, directory: str, recursive: bool, file_types: Optional[List[str]],
                  max_depth: int, follow_symlinks: bool, use_cache: bool):
-        """
-        Führt den eigentlichen Scan im Thread aus.
-
-        Args:
-            scan_id: ID des Scans
-            directory: Das zu durchsuchende Verzeichnis
-            recursive: Ob Unterverzeichnisse durchsucht werden sollen
-            file_types: Liste von Dateierweiterungen, die gesucht werden sollen
-            max_depth: Maximale Rekursionstiefe
-            follow_symlinks: Ob symbolischen Links gefolgt werden soll
-            use_cache: Ob Cache-Daten verwendet werden sollen
-        """
+        """Performs the actual scan in the thread. Args: Scan_id: ID of the scan Directory: The directory to be searched Recursive: Whether subdirectaries should be searched File_types: List of file extensions that are to be searched Max_depth: Maximum depth of recursion Follow_symlinks: Whether symbolic links should be followed use_cache: Whether cache data should be used"""
         try:
             self.active_scans[scan_id]['status'] = 'running'
 
@@ -168,15 +116,7 @@ class ScannerIntegration:
             self._handle_callback('error', error_msg)
 
     def pause_scan(self, scan_id: Optional[str] = None):
-        """
-        Pausiert einen laufenden Scan.
-
-        Args:
-            scan_id: ID des zu pausierenden Scans oder None für alle Scans
-
-        Returns:
-            True wenn mindestens ein Scan erfolgreich pausiert wurde, False sonst
-        """
+        """Pauses A Running Scan. ARGS: Scan_id: Id of the Scan Or None to Be Paused for All Scans Return: True IF at Least One Scan was successfully paused, OtherWise False"""
         if scan_id is not None:
             if scan_id in self.active_scans and self.active_scans[scan_id]['status'] == 'running':
                 result = self.scanner.pause()
@@ -195,15 +135,7 @@ class ScannerIntegration:
             return paused_any
 
     def resume_scan(self, scan_id: Optional[str] = None):
-        """
-        Setzt einen pausierten Scan fort.
-
-        Args:
-            scan_id: ID des fortzusetzenden Scans oder None für alle Scans
-
-        Returns:
-            True wenn mindestens ein Scan erfolgreich fortgesetzt wurde, False sonst
-        """
+        """Stop a paused scan. ARGS: Scan_id: Id of Continuing Scans Or None for All Scans Return: True IF at Least One Scan was Successfully Continued, OtherWise False"""
         if scan_id is not None:
             if scan_id in self.active_scans and self.active_scans[scan_id]['status'] == 'paused':
                 result = self.scanner.resume()
@@ -222,15 +154,7 @@ class ScannerIntegration:
             return resumed_any
 
     def stop_scan(self, scan_id: Optional[str] = None):
-        """
-        Stoppt einen laufenden Scan.
-
-        Args:
-            scan_id: ID des zu stoppenden Scans oder None für alle Scans
-
-        Returns:
-            True wenn mindestens ein Scan erfolgreich gestoppt wurde, False sonst
-        """
+        """Stop a running scan. ARGS: Scan_id: Id of the Scan to Be Stoped Or None for All Scans Return: True IF at Least One Scan Was Successfully Stoped, OtherWise False"""
         if scan_id is not None:
             if scan_id in self.active_scans and self.active_scans[scan_id]['status'] in ['running', 'paused']:
                 result = self.scanner.stop()
@@ -249,16 +173,7 @@ class ScannerIntegration:
             return stopped_any
 
     def get_scan_status(self, scan_id: Optional[str] = None) -> Union[Dict, List[Dict]]:
-        """
-        Gibt den Status eines oder aller Scans zurück.
-
-        Args:
-            scan_id: ID des Scans oder None für alle Scans
-
-        Returns:
-            Wenn scan_id angegeben ist, ein Dictionary mit Status-Informationen
-            Wenn scan_id None ist, eine Liste von Dictionaries mit Status-Informationen für alle Scans
-        """
+        """Gives back the status of a or all scan. ARGS: Scan_id: Id of the Scan Or None for All Scans Return: If Scan_id is Given, A dictionary with status information if scan_id none is a list of dictionaries with status information for all scans"""
         if scan_id is not None:
             if scan_id in self.active_scans:
                 return self.active_scans[scan_id].copy()
@@ -267,12 +182,7 @@ class ScannerIntegration:
             return [scan.copy() for scan in self.active_scans.values()]
 
     def cleanup_completed_scans(self):
-        """
-        Entfernt abgeschlossene Scans aus der Liste der aktiven Scans.
-
-        Returns:
-            Anzahl der bereinigten Scans
-        """
+        """Removed completed scans from the list of active scans. Return: Number of adjusted scans"""
         completed_scans = []
 
         for scan_id, scan_info in self.active_scans.items():
@@ -287,7 +197,7 @@ class ScannerIntegration:
 
 # Main function for test purposes
 def main():
-    """Testfunktion für die Scanner-Integration."""
+    """Test function for scanner integration."""
     import argparse
 
 # Configure logging

@@ -1,11 +1,6 @@
 #!/usr/bin/env python3
 # -*-coding: utf-8-*-
-"""
-ROM Sorter Pro - Datenbank-Verbindungspool
-
-Dieses Modul bietet einen sicheren Verbindungspool für Datenbankoperationen.
-Es stellt sicher, dass alle Verbindungen ordnungsgemäß geschlossen werden.
-"""
+"""Rome Sarter Pro - Database Connection Pool This modules Offers A Secure Connection Pool for Database Operations. It ensures that All Connections are Properly Closed."""
 
 import os
 import sqlite3
@@ -26,21 +21,21 @@ ROM_DATABASE_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath
                                'rom_databases', 'rom_database.sqlite')
 
 class DatabaseConnectionPool:
-    """Sicherer und effizienter Datenbankverbindungs-Pool."""
+    """Safe and efficient database connection pool."""
 
     _instance = None
     _lock = threading.RLock()
 
     @classmethod
     def get_instance(cls, db_path: str = ROM_DATABASE_PATH, max_connections: int = 10):
-        """Gibt die Singleton-Instanz des Verbindungspools zurück."""
+        """Gives back the singleton instance of the connecting pool."""
         with cls._lock:
             if cls._instance is None:
                 cls._instance = DatabaseConnectionPool(db_path, max_connections)
             return cls._instance
 
     def __init__(self, db_path: str, max_connections: int = 10):
-        """Initialisiert den Verbindungspool mit Sicherheitsvalidierung."""
+        """Initialized the connecting pool with security validation."""
 # Validate the database path
         self.db_path = str(sanitize_path(db_path))
 
@@ -52,7 +47,7 @@ class DatabaseConnectionPool:
         self._active_connections = 0
 
     def get_connection(self) -> sqlite3.Connection:
-        """Holt eine Datenbankverbindung aus dem Pool mit Sicherheitschecks."""
+        """Get a Database Connection from the pool with security checks."""
         with self._lock:
             if self._pool:
                 return self._pool.popleft()
@@ -71,7 +66,7 @@ class DatabaseConnectionPool:
             return self._create_connection()
 
     def return_connection(self, conn: sqlite3.Connection):
-        """Gibt eine Verbindung zum Pool zurück."""
+        """Gives Back a Connection to the pool."""
         with self._lock:
             try:
 # Check whether the connection is still valid
@@ -94,7 +89,7 @@ class DatabaseConnectionPool:
                 self._active_connections -= 1
 
     def _create_connection(self) -> sqlite3.Connection:
-        """Erstellt eine sichere und optimierte Datenbankverbindung."""
+        """Creates a Secure and Optimized Database Connection."""
         try:
             conn = sqlite3.connect(
                 self.db_path,
@@ -127,7 +122,7 @@ class DatabaseConnectionPool:
             raise
 
     def close_all(self):
-        """Schließt alle Verbindungen im Pool."""
+        """Closes all connections in the pool."""
         with self._lock:
             while self._pool:
                 conn = self._pool.popleft()
@@ -140,17 +135,7 @@ class DatabaseConnectionPool:
 
 @contextmanager
 def database_connection(db_path: str = ROM_DATABASE_PATH):
-    """
-    Context-Manager für sichere Datenbankverbindungen.
-
-    Verwendung:
-        with database_connection() as conn:
-            cursor = conn.cursor()
-# Carry out SQL operations
-            cursor.execute("SELECT * FROM table")
-
-    Die Verbindung wird automatisch zum Pool zurückgegeben, wenn der Block verlassen wird.
-    """
+    """Context manager for secure database connections. Use: With database_connection () as Conn: Cursor = Conn.cursor () # Carry Out SQL Operations cursor.execute ("select * from table") The connection is automatically returned to the pool when the block is left."""
     pool = DatabaseConnectionPool.get_instance(db_path)
     conn = None
     try:

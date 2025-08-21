@@ -1,12 +1,6 @@
 #!/usr/bin/env python3
 # -*-coding: utf-8-*-
-"""
-ROM Sorter Pro v2.1.8 - Desktop-Integration Startpunkt
-Phase 1 Implementation: Desktop-Optimierung und Integration
-
-This module serves as the main entry point for the new desktop version
-with Qt-UI and integrated high-performance scanner.
-"""
+"""Rome Sorter Pro V2.1.8 - Desktop integration starting point Phase 1 Implementation: Desktop optimization and integration This module Serves as the Main Entry Point for the New Desktop Version With Qt-Ui and Integrated High Performance Scanner."""
 
 import os
 import sys
@@ -73,7 +67,7 @@ def ensure_dependencies():
     return qt_available
 
 def main():
-    """Hauptfunktion zum Starten der Anwendung."""
+    """Main function for starting the application."""
     parser = argparse.ArgumentParser(description="ROM Sorter Pro - Desktop Edition")
     parser.add_argument('--debug', action='store_true', help='Debug-Modus aktivieren')
     parser.add_argument('--config', help='Pfad zur Konfigurationsdatei')

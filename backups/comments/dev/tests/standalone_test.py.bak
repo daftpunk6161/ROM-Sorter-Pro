@@ -1,0 +1,116 @@
+#!/usr/bin/env python3
+"""
+Test script for console mappings - standalone version
+"""
+
+# Dictionary mapping
+CONSOLE_MAP = {
+    # Nintendo Handhelds
+    '.gb': 'Nintendo_Game_Boy',
+    '.sgb': 'Nintendo_Game_Boy',
+    '.dmg': 'Nintendo_Game_Boy',
+    '.gbc': 'Nintendo_Game_Boy_Color',
+    '.gba': 'Nintendo_Game_Boy_Advance',
+    '.agb': 'Nintendo_Game_Boy_Advance',
+    '.mb': 'Nintendo_Game_Boy_Advance',
+    '.nds': 'Nintendo_DS',
+    '.dsi': 'Nintendo_DS',
+    '.3ds': 'Nintendo_3DS',
+    '.cia': 'Nintendo_3DS',
+    '.3dsx': 'Nintendo_3DS',
+    '.cci': 'Nintendo_3DS',
+    '.cxi': 'Nintendo_3DS',
+    '.app': 'Nintendo_3DS',
+
+    # Nintendo Home Consoles
+    '.nes': 'Nintendo_NES',
+    '.unf': 'Nintendo_NES',
+    '.unif': 'Nintendo_NES',
+    '.fds': 'Nintendo_NES',
+    '.nsf': 'Nintendo_NES',
+    '.qd': 'Nintendo_NES',
+}
+
+# Extensions with multiple possible console types
+EXTENSION_PRIORITY_MAP = {
+    # PlayStation/PlayStation 2
+    '.bin': {
+        'priority': ['PlayStation', 'Atari_2600'],
+        'detection_hints': {
+            'PlayStation': ['SCEI', 'BOOT', 'system.cnf', 'SYSTEM.CNF'],
+            'Atari_2600': ['STELLA', '2600', 'ATARI']
+        }
+    },
+
+    # PlayStation Portable/PlayStation 2
+    '.cso': {
+        'priority': ['PlayStation_Portable', 'PlayStation_2'],
+        'detection_hints': {
+            'PlayStation_Portable': ['PSP', 'ULES', 'ULUS', 'UCUS', 'UCJS'],
+            'PlayStation_2': ['PS2', 'SLUS', 'SLES', 'SLPS']
+        }
+    },
+
+    # Sega Dreamcast/PlayStation 2
+    '.chd': {
+        'priority': ['Sega_Dreamcast', 'PlayStation_2'],
+        'detection_hints': {
+            'Sega_Dreamcast': ['SEGA', 'GD-ROM', 'DREAMCAST'],
+            'PlayStation_2': ['PS2', 'SLUS', 'SLES', 'SLPS']
+        }
+    }
+}
+
+def get_console_for_extension(ext, file_content=None, filename=None):
+    """Get console type for a file extension, using content analysis for ambiguous extensions. Args: Ext: File Extension (with leading dot) File_Content: Optional File Content for Further Analysis Filename: Optional Filename for Further Analysis Return: Str: Console Type Identifier or 'Unknown' if not Recognizedized"""
+    ext = ext.lower()
+
+    # Direct mapping
+    if ext in CONSOLE_MAP:
+        return CONSOLE_MAP[ext]
+
+    # Ambiguous extension that needs resolution
+    if ext in EXTENSION_PRIORITY_MAP:
+        mapping = EXTENSION_PRIORITY_MAP[ext]
+
+        # If we have content or filename for analysis
+        if file_content or filename:
+            for console in mapping['priority']:
+                hints = mapping['detection_hints'].get(console, [])
+
+                # Check if any hints match the content or filename
+                if any(hint in str(file_content or '') for hint in hints) or \
+                   (filename and any(hint in filename for hint in hints)):
+                    return console
+
+        # Default to first priority if no detection possible
+        return mapping['priority'][0]
+
+    # Unknown extension
+    return 'Unknown'
+
+# Test basic extensions
+print("\nBasic extension mapping:")
+print(f"NES: {get_console_for_extension('.nes')}")
+print(f"GBA: {get_console_for_extension('.gba')}")
+
+# Test ambiguous extensions
+print("\nAmbiguous extension mapping (default):")
+print(f"BIN (PS1/Atari): {get_console_for_extension('.bin')}")
+print(f"CSO (PSP/PS2): {get_console_for_extension('.cso')}")
+print(f"CHD (PS2/Dreamcast): {get_console_for_extension('.chd')}")
+
+# Test with content analysis
+print("\nAmbiguous extension mapping (with content analysis):")
+print(f"CSO with PSP hint: {get_console_for_extension('.cso', filename='Ridge_Racer_ULES00001.cso')}")
+print(f"CSO with PS2 hint: {get_console_for_extension('.cso', filename='Gran_Turismo_4_SLUS20911.cso')}")
+
+print(f"BIN with PS1 hint: {get_console_for_extension('.bin', filename='Crash_Bandicoot.bin')}")
+print(f"BIN with Atari hint: {get_console_for_extension('.bin', filename='Asteroids_2600.bin')}")
+
+# Print stats
+print("\nStatistics:")
+print(f"Total unique extensions: {len(CONSOLE_MAP)}")
+print(f"Ambiguous extensions: {len(EXTENSION_PRIORITY_MAP)}")
+unique_consoles = set(CONSOLE_MAP.values())
+print(f"Unique console types: {len(unique_consoles)}")

@@ -8,7 +8,7 @@ import threading
 from .base import STYLE, BaseApp, create_tooltip
 
 class FolderSelector(tk.Frame):
-    """Widget zur Auswahl eines Ordners mit Label und Button."""
+    """Widget to select a folder with label and button."""
 
     def __init__(
         self,
@@ -19,17 +19,7 @@ class FolderSelector(tk.Frame):
         command: Optional[Callable] = None,
         tooltip: Optional[str] = None
     ):
-        """
-        Initialisiere den Ordnerauswahl-Widget.
-
-        Args:
-            parent: Das übergeordnete Widget
-            label_text: Der anzuzeigende Label-Text
-            button_text: Der Text auf dem Durchsuchen-Button
-            var: Die StringVar für den Pfadwert (wird erstellt, wenn None)
-            command: Optionale Callback-Funktion für Änderungen
-            tooltip: Optionaler Tooltip-Text
-        """
+        """Initialize the folder selection widget. Args: Parent: The overarching widget Label_Text: The label text to be displayed Button_Text: The text on the search button VAR: The string var for the scout (is created when None) Command: Optional callback function for changes Toltip: Optional Toltip-Text"""
         super().__init__(parent, bg=STYLE.colors.bg_primary)
 
         # Variablen
@@ -80,7 +70,7 @@ class FolderSelector(tk.Frame):
             create_tooltip(self.entry, tooltip)
 
     def _select_folder(self):
-        """Öffne den Ordnerauswahldialog."""
+        """Open the folder selection dialog."""
         folder = filedialog.askdirectory(
             title="Ordner auswählen",
             initialdir=self.var.get() if self.var.get() else os.path.expanduser("~")
@@ -92,7 +82,7 @@ class FolderSelector(tk.Frame):
                 self.callback()
 
     def get(self) -> str:
-        """Gib den aktuellen Pfadwert zurück."""
+        """Give back the current scout."""
         return self.var.get()
 
     def set(self, value: str) -> None:
@@ -101,7 +91,7 @@ class FolderSelector(tk.Frame):
 
 
 class ToggleSwitch(tk.Frame):
-    """Ein umschaltbarer Schalter (Toggle Switch) für Ja/Nein-Optionen."""
+    """A Switchable Switch (Toggle Switch) for Yes/No Options."""
 
     def __init__(
         self,
@@ -111,16 +101,7 @@ class ToggleSwitch(tk.Frame):
         command: Optional[Callable] = None,
         tooltip: Optional[str] = None
     ):
-        """
-        Initialisiere den Toggle-Switch.
-
-        Args:
-            parent: Das übergeordnete Widget
-            text: Der anzuzeigende Text
-            var: Die BooleanVar für den Wert (wird erstellt, wenn None)
-            command: Optionale Callback-Funktion für Änderungen
-            tooltip: Optionaler Tooltip-Text
-        """
+        """Initialize the Toggle switch. Args: Parent: The overarching widget Text: The text to be displayed Var: The Booleanvar for the value (is created when None) Command: Optional callback function for changes Toltip: Optional Toltip-Text"""
         super().__init__(parent, bg=STYLE.colors.bg_primary)
 
         # Variablen
@@ -180,7 +161,7 @@ class ToggleSwitch(tk.Frame):
             self.callback()
 
     def _update_appearance(self):
-        """Aktualisiere das Erscheinungsbild basierend auf dem aktuellen Wert."""
+        """Update the appearance based on the current value."""
         self.button.place_forget()
 
         if self.var.get():
@@ -199,7 +180,7 @@ class ToggleSwitch(tk.Frame):
         self.var.set(not self.var.get())
 
     def get(self) -> bool:
-        """Gib den aktuellen Value zurück."""
+        """Give back the current value."""
         return self.var.get()
 
     def set(self, value: bool) -> None:
@@ -208,7 +189,7 @@ class ToggleSwitch(tk.Frame):
 
 
 class FileListBox(tk.Frame):
-    """Ein erweitertes Listbox-Widget zur Anzeige von Dateien mit Sortierung und Filterung."""
+    """An extended list box widget for displaying files with sorting and filtering."""
 
     def __init__(
         self,
@@ -218,16 +199,7 @@ class FileListBox(tk.Frame):
         width: int = 40,
         tooltip: Optional[str] = None
     ):
-        """
-        Initialisiere die Dateiliste.
-
-        Args:
-            parent: Das übergeordnete Widget
-            title: Der Titel für die Liste
-            height: Die Höhe der Liste in Zeilen
-            width: Die Breite der Liste in Zeichen
-            tooltip: Optionaler Tooltip-Text
-        """
+        """Initialize the file list. Args: Parent: The overarching widget Title: The title for the list Height: The amount of the list in lines Width: The width of the list in signs Toltip: Optional Toltip-Text"""
         super().__init__(parent, bg=STYLE.colors.bg_primary)
 
         # Variablen
@@ -304,18 +276,18 @@ class FileListBox(tk.Frame):
             create_tooltip(self.title_label, tooltip)
 
     def _on_filter_changed(self, event=None):
-        """Handle Änderungen am Filtertext."""
+        """Handle changes to the filter text."""
         self.filter_text = self.filter_entry.get().lower()
         self._apply_filter()
 
     def _clear_filter(self):
-        """Lösche den Filter."""
+        """Delete the filter."""
         self.filter_entry.delete(0, tk.END)
         self.filter_text = ""
         self._apply_filter()
 
     def _apply_filter(self):
-        """Wende den Filter auf die Elemente an."""
+        """Apply the filter to the elements."""
         self.filtered_items = [
             item for item in self.items
             if self.filter_text in item.lower()
@@ -327,57 +299,42 @@ class FileListBox(tk.Frame):
             self.listbox.insert(tk.END, item)
 
     def _on_selection_changed(self, event=None):
-        """Handle Änderungen an der Auswahl."""
+        """Handle changes to the selection."""
         selected_indices = self.listbox.curselection()
         self.selected_items = [self.filtered_items[i] for i in selected_indices]
 
     def add_item(self, item: str) -> None:
-        """
-        Füge ein Element zur Liste hinzu.
-
-        Args:
-            item: Das hinzuzufügende Element
-        """
+        """Add an element to the list. Args: Item: The element to be added"""
         if item not in self.items:
             self.items.append(item)
             self._apply_filter()
 
     def add_items(self, items: List[str]) -> None:
-        """
-        Füge mehrere Elemente zur Liste hinzu.
-
-        Args:
-            items: Die hinzuzufügenden Elemente
-        """
+        """Add several elements to the list. Args: Items: The elements to be added"""
         for item in items:
             if item not in self.items:
                 self.items.append(item)
         self._apply_filter()
 
     def remove_item(self, item: str) -> None:
-        """
-        Entferne ein Element aus der Liste.
-
-        Args:
-            item: Das zu entfernende Element
-        """
+        """Remove an element from the list. Args: Item: The element to be removed"""
         if item in self.items:
             self.items.remove(item)
             self._apply_filter()
 
     def clear(self) -> None:
-        """Leere die Liste."""
+        """Empty the list."""
         self.items = []
         self.filtered_items = []
         self.listbox.delete(0, tk.END)
 
     def get_selected(self) -> List[str]:
-        """Gib die ausgewählten Elemente zurück."""
+        """Give back the selected elements."""
         return self.selected_items
 
 
 class ProgressDialog(tk.Toplevel):
-    """Ein Dialog zur Anzeige eines Fortschritts mit der Möglichkeit zum Abbrechen."""
+    """A Dialog for Displaying Progress with the Possibility of Breaking Off."""
 
     def __init__(
         self,
@@ -388,17 +345,7 @@ class ProgressDialog(tk.Toplevel):
         can_cancel: bool = True,
         on_cancel: Optional[Callable] = None
     ):
-        """
-        Initialisiere den Fortschrittsdialog.
-
-        Args:
-            parent: Das übergeordnete Widget
-            title: Der Titel des Dialogs
-            message: Die anzuzeigende Nachricht
-            max_value: Der maximale Fortschrittswert
-            can_cancel: Ob der Dialog abbrechbar ist
-            on_cancel: Callback-Funktion für den Abbruch
-        """
+        """Initialize the progress dialog. Args: Parent: The overarching widget Title: The title of the dialogue Message: the message to be displayed Max_value: The maximum progress value can_cancel: whether the dialog can be stopped On_Cancel: Callback function for demolition"""
         super().__init__(parent)
         self.title(title)
         self.geometry("400x150")
@@ -431,12 +378,7 @@ class ProgressDialog(tk.Toplevel):
         self._create_ui(message)
 
     def _create_ui(self, message: str):
-        """
-        Erstelle die UI-Komponenten.
-
-        Args:
-            message: Die anzuzeigende Nachricht
-        """
+        """Create the UI components. Args: Message: the message to be displayed"""
         main_frame = tk.Frame(self, padx=20, pady=20)
         main_frame.pack(fill='both', expand=True)
 
@@ -486,7 +428,7 @@ class ProgressDialog(tk.Toplevel):
             self.cancel_button.pack(side='right')
 
     def _on_close(self):
-        """Verarbeite das Schließen-Event."""
+        """Process the closing event."""
         if not self.is_complete and self.can_cancel:
             self._on_cancel()
 
@@ -498,13 +440,7 @@ class ProgressDialog(tk.Toplevel):
         self.destroy()
 
     def update_progress(self, value: int, message: Optional[str] = None) -> None:
-        """
-        Aktualisiere den Fortschritt.
-
-        Args:
-            value: Der neue Fortschrittswert
-            message: Optionale neue Nachricht
-        """
+        """Update progress. Args: Value: The new progress value Message: optional new message"""
         self.current_value = min(value, self.max_value)
         percent = (self.current_value / self.max_value) * 100
 
@@ -522,12 +458,7 @@ class ProgressDialog(tk.Toplevel):
             self.is_complete = True
 
     def complete(self, message: str = "Abgeschlossen!") -> None:
-        """
-        Markiere den Fortschritt als abgeschlossen.
-
-        Args:
-            message: Die abschließende Nachricht
-        """
+        """Mark the progress as completed. Args: Message: The final message"""
         self.update_progress(self.max_value, message)
 
         # Change the cancellation button to an OK button

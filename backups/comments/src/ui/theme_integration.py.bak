@@ -1,13 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""
-ROM Sorter Pro - GUI Theme Integration
-
-Dieses Modul integriert das Theme-System in die GUI von ROM Sorter Pro.
-Es stellt Funktionen bereit, um Themes auf die GUI anzuwenden und
-ermöglicht den Benutzern, Themes zu wählen und anzupassen.
-"""
+"""ROM SARTER PRO - GUI Theme Integration This module integrates the theme system into the GUI of ROM SARTER Pro. It provides functions to apply themes to the GUI and enables users to choose and adapt themes."""
 
 import os
 import sys
@@ -24,7 +18,7 @@ from datetime import datetime
 # Import theme settings and utilities
 from src.config.theme_settings import THEME_SETTINGS, CUSTOM_THEME_PATH
 
-# Versuche, das erweiterte Logging-System zu importieren
+# Attempts to import the extended logging system
 try:
     from src.utils.logging_integration import (
         get_logger, log_context, log_performance, log_exception
@@ -46,15 +40,10 @@ from .theme_manager import ThemeManager, Theme, ThemeType, ColorScheme
 
 
 class ThemeIntegrator:
-    """Klasse zur Integration des Theme-Systems in die GUI."""
+    """Class for integrating the theme system into the GUI."""
 
     def __init__(self, gui_instance):
-        """
-        Initialisiert den ThemeIntegrator.
-
-        Args:
-            gui_instance: Instanz der GUI-Klasse
-        """
+        """Initialized the themeintegrator. Args: Gui_Instance: Instance of the GUI class"""
         self.gui = gui_instance
         self.theme_manager = ThemeManager()
         self.current_theme = self.theme_manager.get_theme()
@@ -66,12 +55,7 @@ class ThemeIntegrator:
         self.apply_theme()
 
     def _capture_original_styles(self) -> Dict[str, Dict[str, Any]]:
-        """
-        Erfasst die ursprünglichen Stile der GUI-Elemente.
-
-        Returns:
-            Dictionary mit originalen Stileigenschaften
-        """
+        """Captures the original styles of the GUI elements. Return: Dictionary with original style properties"""
         styles = {}
 
         try:
@@ -112,12 +96,7 @@ class ThemeIntegrator:
 
     @log_performance(operation="apply_theme") if ENHANCED_LOGGING else lambda x: x
     def apply_theme(self) -> bool:
-        """
-        Wendet das aktuelle Theme auf die GUI an.
-
-        Returns:
-            True bei Erfolg, False bei Fehler
-        """
+        """Use the current theme to the GUI. Return: True in the event of success, false in the event of errors"""
         try:
             theme = self.theme_manager.get_theme()
             self.current_theme = theme
@@ -140,12 +119,7 @@ class ThemeIntegrator:
             return False
 
     def _apply_ttk_styles(self, theme: Theme) -> None:
-        """
-        Wendet das Theme auf ttk-Stile an.
-
-        Args:
-            theme: Anzuwendendes Theme
-        """
+        """Use the theme to TTK styles. Args: Theme: Using theme"""
         style = ttk.Style()
         colors = theme.colors
 
@@ -213,12 +187,7 @@ class ThemeIntegrator:
                        arrowcolor=fg)
 
     def _apply_to_root(self, theme: Theme) -> None:
-        """
-        Wendet das Theme auf das Root-Fenster an.
-
-        Args:
-            theme: Anzuwendendes Theme
-        """
+        """Use the theme to the root window. Args: Theme: Using theme"""
         if hasattr(self.gui, 'root'):
             colors = theme.colors
 
@@ -235,12 +204,7 @@ class ThemeIntegrator:
                 pass
 
     def _apply_to_existing_widgets(self, theme: Theme) -> None:
-        """
-        Wendet das Theme auf bestehende Widgets an.
-
-        Args:
-            theme: Anzuwendendes Theme
-        """
+        """Use the theme to existing widgets. Args: Theme: Using theme"""
         colors = theme.colors
 
         # Rekursive Anwendung auf alle Widgets
@@ -308,17 +272,7 @@ class ThemeIntegrator:
         apply_to_widget(self.gui.root)
 
     def _lighten_or_darken(self, hex_color: str, amount: float, theme: Theme) -> str:
-        """
-        Hellt eine Farbe auf oder dunkelt sie ab.
-
-        Args:
-            hex_color: Hex-Farbcode (z.B. "#ffffff")
-            amount: Betrag der Änderung (positiv zum Aufhellen, negativ zum Abdunkeln)
-            theme: Theme-Instanz für Kontextinformationen
-
-        Returns:
-            Angepasster Hex-Farbcode
-        """
+        """Holds up a color or darkens it. Args: hex_color: hex color code (e.g. "#ffffffff") Amount: amount of the change (positive for lightening, negative for darkening) Theme: Theme instance for context information Return: Adapted hex color code"""
         # Remove the #symbol and convert to RGB
         hex_color = hex_color.lstrip('#')
         r, g, b = int(hex_color[0:2], 16) / 255.0, int(hex_color[2:4], 16) / 255.0, int(hex_color[4:6], 16) / 255.0
@@ -337,7 +291,7 @@ class ThemeIntegrator:
         return f"#{r:02x}{g:02x}{b:02x}"
 
     def restore_original_style(self) -> None:
-        """Stellt die ursprünglichen Stile wieder her."""
+        """Restore the original styles."""
         try:
             style = ttk.Style()
 
@@ -359,15 +313,7 @@ class ThemeIntegrator:
             logger.error(f"Fehler beim Wiederherstellen der originalen Stile: {e}")
 
     def get_theme_selection_frame(self, parent) -> tk.Frame:
-        """
-        Erstellt ein Frame zur Theme-Auswahl.
-
-        Args:
-            parent: Eltern-Widget
-
-        Returns:
-            Frame mit Theme-Auswahloptionen
-        """
+        """Creates a frame for the theme selection. Args: Parent: parental widget Return: Frame with theme selection options"""
         frame = tk.Frame(parent, bg=self.current_theme.colors.background)
 
         # Erstelle Label
@@ -395,12 +341,7 @@ class ThemeIntegrator:
         return frame
 
     def _change_theme(self, theme_name: str) -> None:
-        """
-        Ändert das aktuelle Theme.
-
-        Args:
-            theme_name: Name des zu verwendenden Themes
-        """
+        """Changes the current theme. Args: Theme_Name: Name of the theme to be used"""
         success = self.theme_manager.set_current_theme(theme_name)
         if success:
             self.apply_theme()

@@ -17,14 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 def create_drop_zone(parent):
-    """Create a drop zone for drag and drop functionality.
-
-    Args:
-        parent: Parent widget or window
-
-    Returns:
-        Frame: The drop zone frame
-    """
+    """Create a drop zone for drag and drop functionality. Args: Parent: Parent Widget Or Window Return: Frame: The Drop Zone Frame"""
     frame = Frame(parent, bg="#f0f0f0", bd=2, relief=tk.GROOVE)
 
     # Main label
@@ -46,14 +39,7 @@ def create_drop_zone(parent):
 
 
 def create_progress_bar(parent):
-    """Create a progress bar with a label.
-
-    Args:
-        parent: Parent widget or window
-
-    Returns:
-        tuple: (progressbar, label)
-    """
+    """CREATE A Progress Bar with a label. Args: Parent: Parent Widget Or Window Return: Tulle: (Progressable, Label)"""
     frame = Frame(parent)
 
     # Progress bar
@@ -76,14 +62,7 @@ def create_progress_bar(parent):
 
 
 def create_button_panel(parent):
-    """Create a panel with action buttons.
-
-    Args:
-        parent: Parent widget or window
-
-    Returns:
-        Frame: The button panel frame
-    """
+    """Create a Panel with action buttons. Args: Parent: Parent Widget Or Window Return: Frame: The Button Panel Frame"""
     frame = Frame(parent)
 
     # Scan button
@@ -191,12 +170,7 @@ class EfficientLogWidget(tk.Frame):
         self._scheduled_update = None
 
     def log(self, message, level="INFO"):
-        """Add a message to the log.
-
-        Args:
-            message: The message to log
-            level: Log level (INFO, WARNING, ERROR, SUCCESS)
-        """
+        """ADD A Message to the Log. ARGS: Message: The Message to Log Level: Log Level (Info, Warning, Error, Success)"""
         with self.buffer_lock:
             timestamp = time.strftime("%H:%M:%S", time.localtime())
             entry = f"[{timestamp}] {message}"

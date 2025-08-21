@@ -1,8 +1,4 @@
-"""
-ROM Sorter Pro - Utils Modul
-
-Dieses Paket enthält Utility-Funktionen und -Klassen für die ROM-Sorter-Pro-Anwendung.
-"""
+"""Rome Sorter Pro Utils module This package contains utility functions and classes for the ROM sorter-pro application."""
 
 from functools import lru_cache
 from pathlib import Path
@@ -44,18 +40,7 @@ logger.info("Utils-Modul mit Wrapper-Funktionen geladen")
 
 @lru_cache(maxsize=1000)
 def detect_console_by_extension_cached(filename: str) -> str:
-    """
-    Erkennt die Konsole anhand der Dateiendung mit Caching.
-
-    Diese Funktion ist ein Wrapper, der die Funktionalität von src.utils.detect_console_by_extension_cached
-    repliziert und die Migration erleichtert.
-
-    Args:
-        filename: Der Dateiname oder Pfad
-
-    Returns:
-        Erkannte Konsole oder "Unknown"
-    """
+    """Recognize the console based on the file extension with caching. This function is a wrapper that is the functionality of src.utils.detect_console_by_extension_cached Replicated and migration is relieved. Args: Filename: the file name or path Return: Recognized console or "unknown\""""
     path_obj = Path(filename)
     extension = path_obj.suffix.lower()
 
@@ -65,97 +50,33 @@ def detect_console_by_extension_cached(filename: str) -> str:
     return console if console else "Unknown"
 
 def get_all_rom_extensions(include_dot: bool = False) -> List[str]:
-    """
-    Wrapper zu core.rom_utils.get_all_rom_extensions für Abwärtskompatibilität.
-
-    Args:
-        include_dot: Ob der Punkt am Anfang der Erweiterung enthalten sein soll
-
-    Returns:
-        Liste aller unterstützten Dateierweiterungen
-    """
+    """Wrapper to Core.rom_Utils.get_all_Rom_Extensions for downward compatibility. Args: Include_dot: Whether the point should be included at the beginning of the expansion Return: List of all supported file extensions"""
     from src.core.rom_utils import get_all_rom_extensions as _get_all_rom_extensions
     return _get_all_rom_extensions(include_dot)
 
 @lru_cache(maxsize=1000)
 def detect_console_fast(filename: str, file_path: Optional[str] = None) -> Tuple[str, float]:
-    """
-    Schnelle Konsolenerkennung basierend auf Dateiname und Dateiendung.
-
-    Diese Funktion ist ein Wrapper zur Funktion in console_detector.py und ermöglicht eine
-    konsistente Importstruktur über das gesamte Projekt.
-
-    Args:
-        filename: ROM-Dateiname
-        file_path: Optionaler vollständiger Dateipfad
-
-    Returns:
-        Tupel mit (Konsolenname, Konfidenzwert)
-    """
+    """Fast console detection based on the file name and file extension. This function is a wrapper for the function in console_detector.py and enables one Consistent import structure over the entire project. Args: Filename: Rome date name File_Path: Optional full file path Return: Tupel with (console name, confidence value)"""
     from src.detectors.console_detector import detect_console_fast as _detect_console_fast
     return _detect_console_fast(filename, file_path)
 
 def is_chd_file(file_path: str) -> bool:
-    """
-    Checks if a file is in CHD format.
-
-    This function is a wrapper for the function in chd_detector.py and enables a
-    consistent import structure throughout the project.
-
-    Args:
-        file_path: Path to the file to check
-
-    Returns:
-        True if it's a CHD file, otherwise False
-    """
+    """Checks if a file is in CHD format. This function is a wrapper for the function in chd_detector.py and enables a Consistent Import Structure Throughout the Project. Args: File_Path: Path to the File to Check Return: True if it's a chd file, OtherWise False"""
     from src.detectors.chd_detector import is_chd_file as _is_chd_file
     return _is_chd_file(file_path)
 
 def detect_console_from_chd(file_path: str) -> Tuple[str, float]:
-    """
-    Erkennt die Konsole aus einer CHD-Datei.
-
-    Diese Funktion ist ein Wrapper zur Funktion in chd_detector.py und ermöglicht eine
-    konsistente Importstruktur über das gesamte Projekt.
-
-    Args:
-        file_path: Pfad zur CHD-Datei
-
-    Returns:
-        Tuple aus (console_name, confidence)
-    """
+    """Recognize the console from a CHD file. This function is a wrapper for the function in chd_detector.py and enables one Consistent import structure over the entire project. Args: File_Path: path to the CHD file Return: Tuble from (console_name, confidence)"""
     from src.detectors.chd_detector import detect_console_from_chd as _detect_console_from_chd
     return _detect_console_from_chd(file_path)
 
 def is_archive_file(file_path: str) -> bool:
-    """
-    Checks if a file is an archive.
-
-    This function is a wrapper for the function in archive_detector.py and enables a
-    consistent import structure throughout the project.
-
-    Args:
-        file_path: Path to the file to check
-
-    Returns:
-        True wenn es sich um ein Archiv handelt, sonst False
-    """
+    """Checks if a file is an archive. This function is a wrapper for the function in archive_detector.py and enables a Consistent Import Structure Throughout the Project. Args: File_Path: Path to the File to Check Return: True if it is an archive, otherwise false"""
     from src.detectors.archive_detector import is_archive_file as _is_archive_file
     return _is_archive_file(file_path)
 
 def detect_console_from_archive(file_path: str) -> Tuple[str, float]:
-    """
-    Erkennt die Konsole aus einem Archiv.
-
-    Diese Funktion ist ein Wrapper zur Funktion in archive_detector.py und ermöglicht eine
-    konsistente Importstruktur über das gesamte Projekt.
-
-    Args:
-        file_path: Pfad zum Archiv
-
-    Returns:
-        Tuple aus (console_name, confidence)
-    """
+    """Recognizes the console from an archive. This function is a wrapper for the function in archive_detector.py and enables one Consistent import structure over the entire project. Args: File_Path: path to the archive Return: Tuble from (console_name, confidence)"""
     from src.detectors.archive_detector import detect_console_from_archive as _detect_console_from_archive
     return _detect_console_from_archive(file_path)
 

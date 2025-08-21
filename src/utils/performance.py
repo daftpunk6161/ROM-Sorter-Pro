@@ -1,19 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-ROM Sorter Pro - Performance Monitoring and Metrics Module
-
-This file is a consolidated version of performance monitoring tools.
-It combines functionality from src/core/performance.py and src/utils/performance.py
-for better maintainability and reduced redundancy.
-
-Enhanced features:
-- Optimized memory usage
-- Improved thread safety
-- Extended metrics tracking
-- Unified API for all components
-- Automatic resource release
-"""
+"""Rome Sarter Pro - Performance Monitoring and Metrics modules This file is a consolidated version of performance monitoring tools. IT COMBES Functionality from SRC/Core/Performance.PY and SRC/Utils/Performance.Py for Better Maintainability and Reduced Redundancy. Enhanced Features: - Optimized Memory Usage - Improved Thread Safety - Extended Metrics Tracking - Unified API for All Components - Automatic Resource Release"""
 
 import os
 import time
@@ -42,17 +29,7 @@ logger = logging.getLogger(__name__)
 
 
 def measure_time(func=None, name=None, log_level=logging.DEBUG):
-    """
-    Optimierter Dekorator zur Messung der Ausführungszeit einer Funktion.
-
-    Args:
-        func: Die zu dekorierende Funktion
-        name: Optionaler Name für das Logging (Standard: Funktionsname)
-        log_level: Das Log-Level für die Zeitmessung
-
-    Returns:
-        Die dekorierte Funktion
-    """
+    """Optimized Decorator for Measuring the Execution Time of a Function. ARGS: Func: The Function to Be Decorated Name: Optional Name for Logging (Standard: Function Name) Log_level: The Log Level for Time Measurement Return: The Decorated Function"""
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
@@ -81,16 +58,10 @@ def measure_time(func=None, name=None, log_level=logging.DEBUG):
 
 
 class PerformanceMetric:
-    """Speichert Leistungsmetriken für eine Operation."""
+    """Saving power metrics for surgery."""
 
     def __init__(self, name: str, max_samples: int = 100):
-        """
-        Initialisiert eine neue Leistungsmetrik.
-
-        Args:
-            name: Name der Metrik
-            max_samples: Maximale Anzahl zu speichernder Samples
-        """
+        """Initialized a new metricist. ARGS: Name: Name of the Metrik Max_samples: Maximum number to be saved"""
         self.name = name
         self.max_samples = max_samples
         self.durations = deque(maxlen=max_samples)
@@ -110,15 +81,7 @@ class PerformanceMetric:
         self.current_phase = None
 
     def start(self, key: Optional[Any] = None) -> float:
-        """
-        Startet die Zeitmessung.
-
-        Args:
-            key: Optionaler Schlüssel für mehrere parallele Messungen
-
-        Returns:
-            Aktuelle Zeit als Startzeit
-        """
+        """Starts the time measurement. Args: Key: Optional key for several parallel measurements Return: Current time as start time"""
         key = key if key is not None else 'default'
         with self.lock:
             start_time = time.perf_counter()
@@ -126,19 +89,7 @@ class PerformanceMetric:
             return start_time
 
     def stop(self, key: Optional[Any] = None, success: bool = True) -> float:
-        """
-        Stoppt die Zeitmessung und speichert die Dauer.
-
-        Args:
-            key: Schlüssel der gestarteten Messung
-            success: Ob die Operation erfolgreich war
-
-        Returns:
-            Dauer in Sekunden
-
-        Raises:
-            KeyError: Wenn kein Start für den angegebenen Schlüssel existiert
-        """
+        """Stop the time measurement and save the duration. Args: Key: Key of the measurement started Success: whether the operation was successful Return: Duration in seconds Raises: Keyerror: If there is no start for the specified key"""
         key = key if key is not None else 'default'
         with self.lock:
             if key not in self.start_times:
@@ -166,17 +117,14 @@ class PerformanceMetric:
 
 
 class PerformanceMonitor:
-    """
-    Optimierter und konsolidierter Leistungsmonitor für ROM Sorter Pro.
-    Singleton-Implementierung für den einfachen Zugriff aus allen Komponenten.
-    """
+    """Optimized and consolidated performance monitor for Rome Sorter Pro. Singleton implementation for easy access from all components."""
 
     _instance = None
     _lock = threading.RLock()
 
     @classmethod
     def get_instance(cls):
-        """Gibt die Singleton-Instanz des Monitors zurück."""
+        """Gives back the monitor's singleton instance."""
         with cls._lock:
             if cls._instance is None:
                 cls._instance = PerformanceMonitor()
@@ -200,13 +148,7 @@ class PerformanceMonitor:
         self._update_memory_usage()
 
     def record_operation_time(self, operation_name: str, duration: float) -> None:
-        """
-        Zeichnet die Zeit einer Operation auf.
-
-        Args:
-            operation_name: Name der Operation
-            duration: Dauer in Sekunden
-        """
+        """Records the time of an operation. Args: Operation_Name: Name of the Operation Duration: Duration in seconds"""
         with self._lock:
             self.operation_times[operation_name].append(duration)
             self.operation_counts[operation_name] += 1
@@ -218,15 +160,7 @@ class PerformanceMonitor:
                 self._last_memory_check = current_time
 
     def start_operation(self, operation_name: str) -> float:
-        """
-        Beginnt die Zeitmessung für eine Operation.
-
-        Args:
-            operation_name: Name der Operation
-
-        Returns:
-            Startzeit in Sekunden
-        """
+        """The time measurement for an operation begins. Args: Operation_Name: Name of the Operation Return: Start time in seconds"""
         start_time = time.perf_counter()
         with self._lock:
             if operation_name not in self.metrics:
@@ -235,16 +169,7 @@ class PerformanceMonitor:
         return start_time
 
     def end_operation(self, operation_name: str, start_time: float = None) -> float:
-        """
-        Beendet die Zeitmessung für eine Operation.
-
-        Args:
-            operation_name: Name der Operation
-            start_time: Optional, wenn nicht über start_operation gestartet
-
-        Returns:
-            Dauer in Sekunden
-        """
+        """Ends the time measurement for an operation. Args: Operation_Name: Name of the Operation Start_Time: Optional, if not started via Start_Operation Return: Duration in seconds"""
         end_time = time.perf_counter()
 
         with self._lock:
@@ -259,12 +184,7 @@ class PerformanceMonitor:
         return duration
 
     def _update_memory_usage(self) -> Dict[str, Any]:
-        """
-        Aktualisiert die Speichernutzungsstatistik.
-
-        Returns:
-            Speichernutzungsinformationen
-        """
+        """Updates the storage use statistics. Return: Save usage information"""
         memory_info = {}
 
         # Grundlegende Python-Speichernutzung
@@ -302,12 +222,7 @@ class PerformanceMonitor:
         return memory_info
 
     def get_summary(self) -> Dict[str, Any]:
-        """
-        Gibt eine Zusammenfassung der Performance-Metriken zurück.
-
-        Returns:
-            Zusammenfassung aller Performance-Metriken
-        """
+        """A Summary of the Performance Metrics Returns. Return: Summary of All Performance Metrics"""
         with self._lock:
             total_runtime = time.perf_counter() - self.start_time
 
@@ -344,13 +259,7 @@ class PerformanceMonitor:
 
 @contextmanager
 def measure_block(name: str, log_level: int = logging.DEBUG):
-    """
-    Context-Manager zum Messen eines Codeblocks.
-
-    Args:
-        name: Name des Blocks
-        log_level: Log-Level für die Ausgabe
-    """
+    """Context Managers for Measuring A Code Block. ARGS: Name: Name of the Block Log_Level: Log Level for the Output"""
     monitor = PerformanceMonitor.get_instance()
     start_time = monitor.start_operation(name)
 

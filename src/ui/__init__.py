@@ -1,27 +1,11 @@
-"""
-ROM-Sorter UI-Package v2.1.8 - BEREINIGT
-
-Dieses Paket enthält die Benutzeroberflächen-Komponenten für die ROM-Sorter-Anwendung.
-Die UI wurde modular aufgebaut, um die Wartbarkeit und Erweiterbarkeit zu verbessern.
-
-Kernmodule:
-- app.py: Hauptanwendungsklasse, die GUI und Logik verbindet
-- base.py: Grundlegende UI-Komponenten und Stile
-- main_window.py: Definition des Hauptfensters
-- widgets.py: Wiederverwendbare UI-Widgets
-- custom_widgets.py: Erweiterte Widgets mit zusätzlichen Funktionen
-- panels.py: Tab-Panels und andere Panel-Komponenten
-- dialogs.py: Spezialisierte Dialogfenster
-- theme_manager.py: Theme-Management mit Unterstützung für helle/dunkle Themes
-- enhanced_theme.py: Vereinfachte Theme-API
-"""
+"""Rom sorter Ui-package V2.1.8-Adjusted This package contains the user interface components for the ROM sorter application. The UI was modular to improve the maintenance and expandability. Core modules: - App.py: Main application class that connects GUI and logic - base.py: basic UI components and styles - Main_window.py: Definition of the main window - Widgets.py: Reusable Ui-Widgets - Custom_widgets.py: Extended widgets with additional functions -Panels.py: Tab panels and other panel components - Dialogs.py: Specialized dialog boxes - Theme_manager.py: Theme management with support for Helle/Dark Themes - enhanced_theme.py: simplified theme-api"""
 
 # Grundlegende UI-Komponenten
 from .base import STYLE, BaseApp, center_window, create_tooltip
 from .main_window import ROMSorterWindow
 from .app import ROMSorterApp, main
 
-# Widgets und UI-Elemente
+# Widgets and Ui elements
 from .widgets import FolderSelector, ToggleSwitch, FileListBox, ProgressDialog
 from .panels import TabPanel, OptionsPanel, StatisticsPanel, LogPanel
 from .custom_widgets import DragDropSupport, CustomTreeview

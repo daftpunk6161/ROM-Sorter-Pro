@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""
-ROM Sorter Pro - GUI Drag and Drop Module
-
-This module contains drag and drop functionality for the ROM Sorter Pro GUI.
-It provides a simplified DND interface that works with or without tkinterdnd2.
-"""
+"""Rome Sorter Pro - Gui Drag and Drop Module This Modules Contains Drag and Drop Functionality for the Rome Sorter Pro GUI. It provides a simplified dnd interface that works with or with tkinterdnd2."""
 
 import logging
 import os
@@ -154,16 +149,7 @@ def on_files_dropped(parent, files):
 
 
 def open_file_dialog(multiple=False, file_types=None, initial_dir=None):
-    """Open a file dialog and return selected files.
-
-    Args:
-        multiple: Whether to allow multiple file selection
-        file_types: List of file types to filter by
-        initial_dir: Initial directory to open
-
-    Returns:
-        List of selected file paths or None if cancelled
-    """
+    """Open a File Dialog and Return Selected Files. ARGS: Multiple: Whether to Allow Multiple File Selection File_Types: List of File Types to Filter by Initial_dir: Initial Directory to Open Return: List of Selected File Paths Or None IF Cancelled"""
     if file_types is None:
         file_types = [
             ("ROM Files", "*.rom *.bin *.iso *.zip *.7z *.rar *.gz"),

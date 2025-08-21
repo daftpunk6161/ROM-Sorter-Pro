@@ -1,11 +1,6 @@
 #!/usr/bin/env python3
 # -*-coding: utf-8-*-
-"""
-ROM Sorter Pro - Sicherheitsvalidierung
-
-Dieses Modul enthält Funktionen zur sicheren Validierung von Pfaden
-und Benutzereingaben, um Directory-Traversal und andere Angriffe zu verhindern.
-"""
+"""ROM SARTER PRO - Safety validation This module contains functions for the safe validation of paths And user inputs to prevent directory traversal and other attacks."""
 
 import os
 import re
@@ -18,29 +13,17 @@ logger = logging.getLogger(__name__)
 
 
 class SecurityError(Exception):
-    """Basisklasse für sicherheitsrelevante Error."""
+    """Basic class for safety -relevant error."""
     pass
 
 
 class InvalidPathError(SecurityError):
-    """Error bei ungültigen oder unsicheren Pfaden."""
+    """Error in invalid or uncertain paths."""
     pass
 
 
 def sanitize_filename(filename: str, max_length: int = 255) -> str:
-    """
-    Bereinigt Dateinamen für die sichere Verwendung in verschiedenen Dateisystemen.
-
-    Args:
-        filename: Originaler Dateiname
-        max_length: Maximal erlaubte Länge
-
-    Returns:
-        Bereinigter Dateiname
-
-    Raises:
-        ValueError: Wenn der Dateiname leer ist
-    """
+    """Adjusted file names for safe use in different file systems. Args: Filename: original file name Max_Length: Maximum permitted length Return: Cleaning file name Raises: VALUEROR: When the file name is empty"""
     if not filename:
         raise ValueError("Dateiname darf nicht leer sein")
 
@@ -71,20 +54,7 @@ def sanitize_filename(filename: str, max_length: int = 255) -> str:
 
 def validate_file_operation(source: Union[str, Path], destination: Union[str, Path],
                           allowed_base_dirs: Optional[List[Union[str, Path]]] = None) -> Tuple[Path, Path]:
-    """
-    Validiert Dateioperation-Pfade für Sicherheit.
-
-    Args:
-        source: Quelldateipfad
-        destination: Zieldateipfad
-        allowed_base_dirs: Optionale Liste erlaubter Basisverzeichnisse
-
-    Returns:
-        Tuple aus validierten (source_path, destination_path)
-
-    Raises:
-        SecurityError: Wenn die Validierung fehlschlägt
-    """
+    """Validated file surgery path for security. Args: Source: source file path Destination: target file path allowed_base_dirs: Optional list of permitted basic directories Return: Tuple from validated (source_path, destination_path) Raises: Security terror: If the validation fails"""
     try:
         from .security_utils import sanitize_path
 
@@ -111,15 +81,7 @@ def validate_file_operation(source: Union[str, Path], destination: Union[str, Pa
 
 
 def is_path_traversal_attack(path: str) -> bool:
-    """
-    Erkennt Versuche von Path-Traversal-Angriffen.
-
-    Args:
-        path: Zu prüfender Pfad
-
-    Returns:
-        True, wenn ein Path-Traversal-Muster erkannt wurde
-    """
+    """Recognits Attempts from Path-Traversal Attacks. Args: Path: Path to Be Tested Return: True When A Path-Traversal Pattern Was Recognizedized"""
 # Search for typical path-traversal patterns
     suspicious_patterns = [
         r'\.\./', r'\.\.\\',  # Unix and Windows Relative Parent Path
@@ -144,16 +106,7 @@ def is_path_traversal_attack(path: str) -> bool:
 
 
 def validate_extension(filename: str, allowed_extensions: List[str]) -> bool:
-    """
-    Überprüft, ob eine Datei eine zulässige Dateierweiterung hat.
-
-    Args:
-        filename: Dateiname oder Pfad
-        allowed_extensions: Liste der erlaubten Dateierweiterungen (mit oder ohne Punkt)
-
-    Returns:
-        True, wenn die Datei eine zulässige Erweiterung hat
-    """
+    """Check Whether a file has a permissible file extension. ARGS: Filename: File Name or Path Allowed_EXTSTENIONS: List of the Permitted File Extensions (With Or Without Point) Return: True When the File Has A Permissible Extension"""
 # Normalize extensions (make sure you start with dot)
     normalized_extensions = [ext if ext.startswith('.') else f'.{ext}' for ext in allowed_extensions]
 

@@ -1,11 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-ROM-Sorter-Pro - Verzeichnisstruktur Reorganisationsplan
-
-Dieses Skript erstellt eine neue, sauberere Verzeichnisstruktur für das ROM-Sorter-Pro Projekt,
-indem es Dateien in die entsprechenden Verzeichnisse verschiebt und Duplikate beseitigt.
-"""
+"""ROM-SORTER-PRO-Directory Structure Reorganization Plan this script creates a new, Cleaner Directory Structure for the Rome Sorter-Pro Project, by Shifting Files Into the Corresponding Directories and Removing Duplicates."""
 
 import os
 import shutil
@@ -84,7 +79,7 @@ DUPLICATE_MODULES = [
 ]
 
 def create_directories():
-    """Erstelle die notwendigen Verzeichnisse"""
+    """Create the necessary directories"""
     for directory in DIRS_TO_CREATE:
         if not directory.exists():
             print(f"Erstelle Verzeichnis: {directory}")
@@ -93,7 +88,7 @@ def create_directories():
             print(f"Verzeichnis existiert bereits: {directory}")
 
 def move_files():
-    """Verschiebe Dateien in die entsprechenden Verzeichnisse"""
+    """Show files to the corresponding directories"""
     # Entwicklungstools
     for file in DEV_TOOLS:
         src = ROOT_DIR / file
@@ -143,7 +138,7 @@ def move_files():
                     shutil.move(str(subitem), str(dst))
 
 def handle_duplicates():
-    """Löse Duplikatprobleme"""
+    """Solve duplicate problems"""
     for keep, remove in DUPLICATE_MODULES:
         if keep.exists() and remove.exists():
             print(f"Behebe Duplikat: Behalte {keep}, entferne {remove}")
@@ -157,61 +152,15 @@ def handle_duplicates():
             print(f"Keine Aktion notwendig für {keep} und {remove}")
 
 def create_readme():
-    """Erstelle eine README-Datei mit Projektstrukturinformationen"""
-    readme_content = """# ROM-Sorter-Pro
-
-Ein universelles Tool zum Organisieren und Sortieren von ROM-Dateien für verschiedene Konsolen.
-
-## Projektstruktur
-
-- `src/` - Quellcode der Anwendung
-  - `cli/` - Kommandozeilen-Interface
-  - `config/` - Konfigurationsmanagement
-  - `core/` - Kern-Funktionalität
-  - `database/` - Datenbankintegration
-  - `detectors/` - ROM-Erkennungsmodule
-  - `reporting/` - Berichterstattung
-  - `scanning/` - ROM-Scanmodule
-  - `security/` - Sicherheitsfunktionen
-  - `ui/` - Benutzeroberflächen
-  - `utils/` - Hilfsfunktionen
-  - `web/` - Webschnittstelle
-
-- `data/` - Anwendungsdaten
-  - `rom_databases/` - ROM-Datenbanken
-
-- `dev/` - Entwicklungsressourcen (nicht im Release enthalten)
-  - `tools/` - Entwicklungswerkzeuge
-  - `scripts/` - Hilfsskripte
-  - `tests/` - Testdateien
-  - `docs/` - Entwicklerdokumentation
-
-- `dist/` - Distributionspakete und Releases
-
-- `logs/` - Logdateien
-
-- `temp/` - Temporäre Dateien
-
-## Startdateien
-
-- `start_rom_sorter.py` - Hauptstartskript
-- `start_rom_sorter.bat` - Windows-Startskript
-- `start_rom_sorter.sh` - Linux/Mac-Startskript
-- `simple_rom_sorter.py` - Vereinfachte Version
-- `install_dependencies.py` - Abhängigkeitsinstallation
-
-## Entwicklung
-
-Entwicklungswerkzeuge und -ressourcen befinden sich im `dev`-Verzeichnis und sind nicht Teil des Releases.
-
-"""
+    """Create a Readme File with Project Structure Information"""
+    readme_content = """# ROM SARTER-PRO A Universal Tool for Organizing and Sorting Rome Files for Different Consoles. ## Project Structure - `SRC/` - Source Code of the Application - `Cli/` - Command Line Interface - `Config/` - Configuration Management - `Core/` - Core Functionality - `DATABASE/` - DATABASE - `DETECTORS/` - Rome Recognition Modulees - `Reporting/` - Reporting - `Scanning/` - Rom Scan Module - `Security/` Security Functions - `Ui/` - User Interfaces - `Utils/` - AID Functions - `Web/` - Web Interface - `Data/` - Application Data - `Rom_databases/` - Rome Databases - `Dev/` - Development Resources (Not Included in the Release) - `Tools/` - Development Tools - `Scripts/` - Auxiliary Scripts - `Tests/` - Test - `Docs/` - Developer Documentation - `Dist/` - Distribution Packages and Releases - `Logs/` - Log Files - `Temporary Files ## Start Files -` Start_rom_Sorter.py` - Main Staring Script - `Start_Rom_Sorter.bat` - Windows Staring Script -` Start_ROM_Sorter.sh` - Linux/Mac -Startscript - `Simple_rom_sorter.py` - Simplified version -` Install_dependencies.py` - Development Development Tools and Resources are located in the `Dev` Directory and are not part of the release."""
     readme_path = ROOT_DIR / "README.md"
     with open(readme_path, 'w', encoding='utf-8') as f:
         f.write(readme_content)
     print(f"README erstellt: {readme_path}")
 
 def main():
-    """Hauptfunktion zur Ausführung der Reorganisation"""
+    """Main function for execution of the reorganization"""
     print("Starte Projektreorganisation...")
 
     # Erstelle Verzeichnisse

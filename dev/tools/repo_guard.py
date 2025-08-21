@@ -65,7 +65,7 @@ IP_REGEX = re.compile(r"(?:127\.0\.0\.1|192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.
 
 
 class ValidationError:
-    """Represents a validation error found during checks."""
+    """Represents a validation error found checks."""
 
     def __init__(self, check_type: str, filepath: str, message: str, line: Optional[int] = None):
         self.check_type = check_type
@@ -187,18 +187,7 @@ def save_translation_cache(cache: Dict[str, str]) -> None:
         json.dump(cache, file, indent=2, ensure_ascii=False)
 
 def translate_german_to_english(text: str) -> str:
-    """
-    Translate German text to English.
-
-    This is a placeholder function. In a real implementation, this would use
-    a translation service or library.
-
-    Args:
-        text: German text to translate
-
-    Returns:
-        English translation of the text
-    """
+    """Translate German Text to English. This is a placeholder function. In a real implementation, this would use a translation service or library. ARGS: Text: German Text To Translate Return: English Translation of the Text"""
     # In a real implementation, this would use a translation service
     # For this example, we'll just provides a simple mapping for common german phrases
     # This should be replaced with a Proper Translation Service
@@ -504,15 +493,7 @@ def check_duplication(filepaths: List[Path]) -> List[ValidationError]:
 
 
 def fix_german_comments(filepath: Path) -> Tuple[int, List[str]]:
-    """
-    Fix German comments in a Python file by translating them to English.
-
-    Args:
-        filepath: Path to the Python file to fix
-
-    Returns:
-        Tuple of (number of fixed comments, list of fixed lines)
-    """
+    """Fix German Comments in a Python File by Translating Them to English. Args: Filepath: Path to the Python File to Fix Return: Tuple of (Number of Fixed Comments, List of Fixed Lines)"""
     if filepath.suffix != ".py":
         return 0, []
 
@@ -646,35 +627,43 @@ def print_report(errors: List[ValidationError]) -> None:
 
 def fix_comments_in_repository() -> int:
     """
-    Fix German comments in all Python files in the repository.
+    Fix German comments and docstrings in all Python files in the repository.
 
-    This function calls the external translate_comments.py script which provides
-    better translation capabilities using deep-translator library.
+    This function calls the enhanced translate_comments_enhanced.py script which
+    provides better translation capabilities using deep-translator library
+    and handles both comments and docstrings.
 
     Returns:
         Number of fixed files (estimated)
     """
-    logger.info("Fixing German comments in repository using translate_comments.py...")
+    logger.info("Fixing German comments and docstrings in repository...")
 
-    # Path to the translate_comments.py script
-    translate_script = Path(__file__).parent / "translate_comments.py"
+    # Path to the enhanced translation script
+    translate_script = Path(__file__).parent / "translate_comments_enhanced.py"
 
     # Check if the script exists
     if not translate_script.exists():
-        logger.error(f"Translation script not found at {translate_script}")
-        return 0
+        # Try the old script as fallback
+        translate_script = Path(__file__).parent / "translate_comments.py"
+        logger.warning(f"Enhanced translation script not found, falling back to {translate_script}")
+
+        # Check if the fallback exists
+        if not translate_script.exists():
+            logger.error(f"No translation script found at {translate_script}")
+            return 0
 
     try:
         # Import and use the script directly
         import importlib.util
-        spec = importlib.util.spec_from_file_location("translate_comments", translate_script)
+        script_name = translate_script.stem
+        spec = importlib.util.spec_from_file_location(script_name, translate_script)
         translate_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(translate_module)
 
-        # Call the main function from the translate_comments module
+        # Call the main function from the translate module
         translate_module.walk_and_translate(ROOT_DIR)
 
-        return 1  # Return success, actual count is logged by translate_comments.py
+        return 1  # Return success, actual count is logged by the script
     except Exception as e:
         logger.error(f"Error executing translation script: {e}")
 

@@ -1,11 +1,4 @@
-"""
-ROM Sorter UI - Kompatibilitätsmodul
-
-Dieses Modul bietet eine Kompatibilitätsschicht zwischen der alten monolithischen GUI
-und der neuen modularen UI-Struktur. Es ermöglicht eine sanfte Migration,
-indem es die gleiche Schnittstelle wie die alte GUI bietet, aber die neuen
-modularen Komponenten verwendet.
-"""
+"""Rome Sorter UI - Compatibility Module This modules Offers A Compatibility Layer Between the Old Monolithic Gui and the New Modular Ui Structure. It Enables A Gentle Migration, by Offering the Same Interface as The Old Gui, But the New Ones Modular Components Used."""
 
 import sys
 import os
@@ -45,19 +38,16 @@ if UI_MODULES_AVAILABLE:
 
 # Convert old options to new options (if necessary)
     def convert_options(old_options):
-        """Konvertiere alte GUI-Optionen zu neuen UI-Optionen."""
+        """Convert old GUI options to new UI options."""
 # Implementation if necessary the conversion
         return old_options
 
 # Compatibility wrapper for the old GUI interface
     class OptimizedROMSorterGUICompat(ROMSorterApp):
-        """
-        Kompatibilitätsklasse, die die Schnittstelle von OptimizedROMSorterGUI
-        implementiert, aber die neue ROMSorterApp verwendet.
-        """
+        """Compatibility class that the interface of OptimizedRomeSortergui Implemented, but used the new ROMSORTERAPP."""
 
         def __init__(self, *args, **kwargs):
-            """Initialisiere die Kompatibilitätsklasse."""
+            """Initialize the compatibility class."""
             super().__init__()
             logger.info("GUI-Kompatibilitätsmodus aktiviert")
 
@@ -75,29 +65,29 @@ else:
 # If neither the old nor the new GUI is available,
 # Create Dummy implementations that throw mistakes
         class DummyGUI:
-            """Dummy-Implementierung, die einen Fehler wirft, wenn sie verwendet wird."""
+            """Dummy implementation that throws an error when used."""
 
             def __init__(self, *args, **kwargs):
-                """Initialisiere die Dummy-Klasse."""
+                """Initialize the dummy class."""
                 raise ImportError("Keine GUI-Implementierung verfügbar")
 
             def run(self):
-                """Dummy-Implementierung für run-Method."""
+                """Dummy implementation for run method."""
                 raise ImportError("Keine GUI-Implementierung verfügbar")
 
         ROMSorterGUI = DummyGUI
         OptimizedROMSorterGUI = DummyGUI
 
         def launch_gui():
-            """Dummy-Implementierung für launch_gui."""
+            """Dummy implementation for launch_gui."""
             raise ImportError("Keine GUI-Implementierung verfügbar")
 
 def is_ui_available():
-    """Überprüft, ob eine UI-Implementierung verfügbar ist."""
+    """Check Whether a ui implementation is available."""
     return UI_MODULES_AVAILABLE or OLD_GUI_AVAILABLE
 
 def get_ui_mode():
-    """Gibt den aktuellen UI-Modus zurück."""
+    """Gives back the current UI mode."""
     if UI_MODULES_AVAILABLE:
         return "new"
     elif OLD_GUI_AVAILABLE:

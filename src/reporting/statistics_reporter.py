@@ -1,19 +1,7 @@
 #!/usr/bin/env python3
 # -*-coding: utf-8-*-
 
-"""
-ROM Sorter Pro - Erweiterte Statistik- und Berichtsfunktionen
-
-Dieses Modul bietet umfangreiche Analyse- und Berichtsfunktionen für
-ROM-Sammlungen, einschließlich Visualisierungen, Exportmöglichkeiten und
-detaillierte Statistiken.
-
-Features:
-- Detaillierte Sammlungsanalyse (Vollständigkeit, Dubletten)
-- Visualisierung der Sammlungsstatistiken mit Diagrammen
-- Exportfunktionen für Berichte (PDF, HTML, CSV)
-- Benutzerdefinierte Berichte und Dashboards
-"""
+"""ROM SARTER PRO - Extended statistics and reporting functions This module offers extensive analysis and report functions for Rome collections, including visualizations, export options and Detailed statistics. Features: - Detailed collection analysis (completeness, duplication) - Visualization of the collection statistics with diagrams - Export functions for reports (PDF, HTML, CSV) - custom reports and dashboards"""
 
 import os
 import csv
@@ -68,9 +56,7 @@ os.makedirs(CHART_DIR, exist_ok=True)
 
 
 class CollectionAnalyzer:
-    """
-    Analysiert ROM-Sammlungen und generiert detaillierte Statistiken.
-    """
+    """Analyzes Rome collections and generates detailed statistics."""
 
     def __init__(self, db_connection=None):
         """
@@ -87,12 +73,7 @@ class CollectionAnalyzer:
         self.missing_roms = []
 
     def load_data_from_db(self) -> bool:
-        """
-        Lädt ROM-Daten aus der Datenbank.
-
-        Returns:
-            True bei Erfolg, False bei Fehler
-        """
+        """Invites Rome data from the database. Return: True in the event of success, false in the event of errors"""
         if not self.db_connection:
             logger.error("Keine Datenbankverbindung verfügbar")
             return False
@@ -137,16 +118,7 @@ class CollectionAnalyzer:
             return False
 
     def load_data_from_files(self, rom_file: str, console_file: str = None) -> bool:
-        """
-        Lädt ROM-Daten aus JSON- oder CSV-Dateien.
-
-        Args:
-            rom_file: Pfad zur ROM-Datendatei
-            console_file: Pfad zur Konsolen-Datendatei (optional)
-
-        Returns:
-            True bei Erfolg, False bei Fehler
-        """
+        """Invites Rome data from JSON or CSV files. Args: ROM_FILE: path to the Rome Date file Console_file: path to the console data file (optional) Return: True in the event of success, false in the event of errors"""
         try:
 # Rome's shop
             if rom_file.endswith('.json'):
@@ -189,12 +161,7 @@ class CollectionAnalyzer:
             return False
 
     def analyze_collection(self) -> Dict[str, Any]:
-        """
-        Analysiert die ROM-Sammlung und generiert detaillierte Statistiken.
-
-        Returns:
-            Dictionary mit Statistiken
-        """
+        """Analyzes the Rome collection and generates detailed statistics. Return: Dictionary with statistics"""
         if not self.rom_data:
             logger.error("Keine ROM-Daten verfügbar")
             return {}
@@ -263,9 +230,7 @@ class CollectionAnalyzer:
             return {}
 
     def _analyze_missing_roms(self) -> None:
-        """
-        Analysiert fehlende ROMs basierend auf vollständigen Sets in console_data.
-        """
+        """Analyzes missing ROMs based on complete sets in console_data."""
         if not self.console_data:
             return
 
@@ -296,37 +261,20 @@ class CollectionAnalyzer:
                     self.missing_roms.append(missing_rom)
 
     def get_duplicates(self) -> List[List[Dict[str, Any]]]:
-        """
-        Gibt gefundene Duplikate zurück.
-
-        Returns:
-            Liste von Duplikat-Gruppen
-        """
+        """Gives back found duplicates. Return: List of duplicate groups"""
         return self.duplicates
 
     def get_missing_roms(self) -> List[Dict[str, Any]]:
-        """
-        Gibt fehlende ROMs zurück.
-
-        Returns:
-            Liste fehlender ROMs
-        """
+        """Gives back missing ROMs. Return: List of missing ROMs"""
         return self.missing_roms
 
     def get_statistics(self) -> Dict[str, Any]:
-        """
-        Gibt die generierten Statistiken zurück.
-
-        Returns:
-            Statistik-Dictionary
-        """
+        """Gives back the generated statistics. Return: Statistics dictionary"""
         return self.statistics
 
 
 class ReportGenerator:
-    """
-    Generiert Berichte und Visualisierungen aus ROM-Sammlungsstatistiken.
-    """
+    """Generates reports and visualizations from Rome collection statistics."""
 
     def __init__(self, analyzer: Optional[CollectionAnalyzer] = None):
         """
@@ -349,12 +297,7 @@ class ReportGenerator:
         self.analyzer = analyzer
 
     def prepare_report_data(self) -> Dict[str, Any]:
-        """
-        Bereitet die Daten für einen Bericht vor.
-
-        Returns:
-            Dictionary mit aufbereiteten Berichtsdaten
-        """
+        """Prepare the data for a report. Return: Dictionary with Prepared Reporting Data"""
         if not self.analyzer.statistics:
             logger.warning("Keine Statistiken verfügbar, führe Analyse durch")
             self.analyzer.analyze_collection()
@@ -387,15 +330,7 @@ class ReportGenerator:
         return self.report_data
 
     def _format_size(self, size_bytes: int) -> str:
-        """
-        Formatiert eine Größe in Bytes in eine lesbare Form.
-
-        Args:
-            size_bytes: Größe in Bytes
-
-        Returns:
-            Formatierte Größe
-        """
+        """Formats A size in bytes in a Readable form. Args: Size_bytes: Size in Bytes Return: Formatted Size"""
 # Conversion into KB, MB, GB or TB
         units = ['B', 'KB', 'MB', 'GB', 'TB']
         size = float(size_bytes)
@@ -408,12 +343,7 @@ class ReportGenerator:
         return f"{size:.2f} {units[unit_index]}"
 
     def _prepare_duplicates_data(self) -> List[Dict[str, Any]]:
-        """
-        Bereitet Duplikat-Daten für den Bericht auf.
-
-        Returns:
-            Liste mit aufbereiteten Duplikat-Informationen
-        """
+        """Prepare duplicate data for the report. Return: List with prepared duplicate information"""
         duplicates_data = []
 
         for i, dup_group in enumerate(self.analyzer.get_duplicates()[:20]):  # Begrenzen auf 20 Gruppen
@@ -439,12 +369,7 @@ class ReportGenerator:
         return duplicates_data
 
     def _prepare_missing_roms_data(self) -> List[Dict[str, Any]]:
-        """
-        Bereitet Daten zu fehlenden ROMs für den Bericht auf.
-
-        Returns:
-            Liste mit Informationen zu fehlenden ROMs
-        """
+        """Prepares data on the lack of ROMs for the report. Return: List of information about missing ROMs"""
         missing_roms = self.analyzer.get_missing_roms()
 
 # Group According to Console for A Better Reporting Structure
@@ -462,15 +387,7 @@ class ReportGenerator:
         ]
 
     def generate_charts(self, output_dir: str = CHART_DIR) -> Dict[str, str]:
-        """
-        Generiert Diagramme für den Bericht.
-
-        Args:
-            output_dir: Ausgabeverzeichnis für Diagramme
-
-        Returns:
-            Dictionary mit Diagrammpfaden
-        """
+        """Generated diagrams for the report. Args: OutPut_dir: Output directory for diagrams Return: Dictionary with diagram paths"""
         if not HAS_MATPLOTLIB:
             logger.warning("Matplotlib ist nicht installiert, keine Diagramme werden generiert")
             return {}
@@ -506,16 +423,7 @@ class ReportGenerator:
             return {}
 
     def _generate_console_chart(self, output_dir: str, timestamp: str) -> str:
-        """
-        Generiert ein Tortendiagramm für die Konsolenverteilung.
-
-        Args:
-            output_dir: Ausgabeverzeichnis
-            timestamp: Zeitstempel für den Dateinamen
-
-        Returns:
-            Pfad zum generierten Diagramm
-        """
+        """Generates A Cake Diagram for the Console Distribution. Args: Output_dir: Edition Directory Timestamp: Time Stamp for the File Name Return: Path to Generated Diagram"""
 # Prepare data
         consoles = []
         counts = []
@@ -553,16 +461,7 @@ class ReportGenerator:
         return output_file
 
     def _generate_format_chart(self, output_dir: str, timestamp: str) -> str:
-        """
-        Generiert ein Balkendiagramm für die Dateiformatverteilung.
-
-        Args:
-            output_dir: Ausgabeverzeichnis
-            timestamp: Zeitstempel für den Dateinamen
-
-        Returns:
-            Pfad zum generierten Diagramm
-        """
+        """Generates A Bar Diagram for the File Format Distribution. Args: Output_dir: Edition Directory Timestamp: Time Stamp for the File Name Return: Path to Generated Diagram"""
 # Prepare data and sort by number
         format_data = sorted(
             self.report_data['format_data'],
@@ -590,16 +489,7 @@ class ReportGenerator:
         return output_file
 
     def _generate_size_chart(self, output_dir: str, timestamp: str) -> str:
-        """
-        Generiert ein Balkendiagramm für die Größenverteilung.
-
-        Args:
-            output_dir: Ausgabeverzeichnis
-            timestamp: Zeitstempel für den Dateinamen
-
-        Returns:
-            Pfad zum generierten Diagramm
-        """
+        """Generates A Bar Diagram for the Size Distribution. Args: Output_dir: Edition Directory Timestamp: Time Stamp for the File Name Return: Path to Generated Diagram"""
 # Data from the size distribution
         size_distribution = self.report_data['size_distribution']
         categories = ['Klein (<1MB)', 'Mittel (1-10MB)', 'Groß (10-100MB)', 'Sehr groß (>100MB)']
@@ -626,15 +516,7 @@ class ReportGenerator:
         return output_file
 
     def export_csv(self, output_file: str) -> bool:
-        """
-        Exportiert die Statistikdaten als CSV-Datei.
-
-        Args:
-            output_file: Pfad zur Ausgabedatei
-
-        Returns:
-            True bei Erfolg, False bei Fehler
-        """
+        """Export the Statistics Data as a CSV File. Args: Output_file: Path to the Issuing File Return: True in the event of Success, False in the event of errors"""
         if not self.report_data:
             self.prepare_report_data()
 
@@ -690,16 +572,7 @@ class ReportGenerator:
             return False
 
     def export_html(self, output_file: str, include_charts: bool = True) -> bool:
-        """
-        Exportiert einen HTML-Bericht.
-
-        Args:
-            output_file: Pfad zur Ausgabedatei
-            include_charts: Ob Diagramme eingeschlossen werden sollen
-
-        Returns:
-            True bei Erfolg, False bei Fehler
-        """
+        """Exports an HTML report. Args: output_file: path to the issuing file Include_charts: Whether diagrams should be included Return: True in the event of success, false in the event of errors"""
         if not HAS_JINJA:
             logger.error("Jinja2 ist nicht installiert, HTML-Export ist nicht möglich")
             return False
@@ -758,12 +631,7 @@ class ReportGenerator:
             return False
 
     def _get_default_html_template(self) -> str:
-        """
-        Liefert ein Standard-HTML-Template für Berichte.
-
-        Returns:
-            HTML-Template als String
-        """
+        """Delivers A Standard HTML Template for Reports. Return: HTML Template as a String"""
         return """<!DOCTYPE html>
 <html lang="de">
 <head>
@@ -860,7 +728,7 @@ class ReportGenerator:
                     <p>{{ report.summary.total_roms }}</p>
                 </div>
                 <div class="summary-item">
-                    <h3>Gesamtgröße</h3>
+                    <h3>Gesamtgroesse</h3>
                     <p>{{ report.summary.total_size }}</p>
                 </div>
                 <div class="summary-item">
@@ -894,8 +762,8 @@ class ReportGenerator:
 
         {% if charts.size_chart %}
         <div class="chart-container">
-            <h3>ROMs nach Größe</h3>
-            <img src="{{ charts.size_chart }}" alt="Größenverteilung">
+            <h3>ROMs nach Groesse</h3>
+            <img src="{{ charts.size_chart }}" alt="Groessenverteilung">
         </div>
         {% endif %}
         {% endif %}
@@ -947,7 +815,7 @@ class ReportGenerator:
             <thead>
                 <tr>
                     <th>Dateipfad</th>
-                    <th>Größe</th>
+                    <th>Groesse</th>
                 </tr>
             </thead>
             <tbody>
@@ -971,7 +839,7 @@ class ReportGenerator:
             <thead>
                 <tr>
                     <th>ROM-Name</th>
-                    <th>Größe</th>
+                    <th>Groesse</th>
                     <th>Wichtigkeit</th>
                 </tr>
             </thead>
@@ -994,19 +862,10 @@ class ReportGenerator:
         </div>
     </div>
 </body>
-</html>
-"""
+</html>"""
 
     def export_pdf(self, output_file: str) -> bool:
-        """
-        Exportiert einen PDF-Bericht basierend auf dem HTML-Bericht.
-
-        Args:
-            output_file: Pfad zur Ausgabedatei
-
-        Returns:
-            True bei Erfolg, False bei Fehler
-        """
+        """Export A PDF Report Based on the HTML Report. Args: Output_file: Path to the Issuing File Return: True in the event of Success, False in the event of errors"""
         if not HAS_WEASYPRINT:
             logger.error("WeasyPrint ist nicht installiert, PDF-Export ist nicht möglich")
             return False
@@ -1029,15 +888,7 @@ class ReportGenerator:
             return False
 
     def export_json(self, output_file: str) -> bool:
-        """
-        Exportiert die Statistikdaten als JSON-Datei.
-
-        Args:
-            output_file: Pfad zur Ausgabedatei
-
-        Returns:
-            True bei Erfolg, False bei Fehler
-        """
+        """Export the Statistics Data as a Json File. Args: Output_file: Path to the Issuing File Return: True in the event of Success, False in the event of errors"""
         if not self.report_data:
             self.prepare_report_data()
 
@@ -1058,17 +909,7 @@ class ReportGenerator:
 
 def generate_collection_report(db_connection=None, output_dir: str = REPORT_DIR,
                              formats: List[str] = None) -> Dict[str, str]:
-    """
-    Generiert einen Sammlungsbericht in verschiedenen Formaten.
-
-    Args:
-        db_connection: Datenbankverbindung (optional)
-        output_dir: Ausgabeverzeichnis für Berichte
-        formats: Liste der gewünschten Formate ('html', 'pdf', 'csv', 'json')
-
-    Returns:
-        Dictionary mit Pfaden zu den generierten Berichten
-    """
+    """Generates A Collection Report in different formats. ARGS: DB_CONNECTION: DATABASE Connection (optional) Output_Dir: Output Directory for Reports Format: List of the Desired Formats ('HTML', 'PDF', 'CSV', 'JSON') Return: Dictionary with paths to the generated Reports"""
     if formats is None:
         formats = ['html']
 

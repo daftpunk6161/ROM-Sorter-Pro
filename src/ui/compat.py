@@ -1,10 +1,4 @@
-"""
-ROM Sorter Pro - Kompatibilitätsmodul v2.1.8
-
-Dieses Modul bietet eine Kompatibilitätsschicht zwischen der alten und neuen UI-Struktur.
-Es ermöglicht eine sanfte Migration und stellt sicher, dass ältere Code-Teile
-mit der neuen Implementierung arbeiten können.
-"""
+"""Rome Sarter Pro - Compatibility Module V2.1.8 This module Offers A Compatibility Layer Between the Old and New Ui Structure. It Enables Gentle Migration and Ensures That Older Code Parts Can Work With The New Implementation."""
 
 import sys
 import os
@@ -17,7 +11,7 @@ logger = logging.getLogger(__name__)
 # Setze Standard DND_AVAILABLE Variable
 DND_AVAILABLE = False
 
-# Die neuen UI-Module sind jetzt verfügbar
+# The new UI modules are now available
 UI_MODULES_AVAILABLE = True
 try:
     from .main_window import ROMSorterWindow
@@ -28,7 +22,7 @@ except ImportError as e:
     UI_MODULES_AVAILABLE = False
     logger.warning(f"Neue UI-Module nicht verfügbar: {e}")
 
-# Versuche die alte GUI zu importieren (sollte in den meisten Fällen fehlschlagen)
+# Try to import the old GUI (should fail in most cases)
 OLD_GUI_AVAILABLE = False
 try:
     from .gui import OptimizedROMSorterGUI as OldGUI, launch_gui as old_launch_gui
@@ -37,33 +31,33 @@ try:
     logger.info("Alte GUI verfügbar")
 except ImportError as e:
     logger.warning(f"Alte GUI nicht verfügbar: {e}")
-    # Fallback, wenn die alte GUI nicht verfügbar ist
+    # Fallback if the old GUI is not available
 
 # Konvertiere alte Optionen in neue Optionen
 def convert_options(old_options):
-    """Konvertiere alte GUI-Optionen zu neuen UI-Optionen."""
-    # Implementierung der Konvertierung wenn nötig
+    """Convert old GUI options to new UI options."""
+    # Implementation of the conversion if necessary
     return old_options
 
-# Kompatibilitätsklasse für die alte API
+# Compatibility class for the old API
 class OptimizedROMSorterGUICompat(ROMSorterWindow):
-    """Kompatibilitätsklasse für die alte GUI-API."""
+    """Compatibility class for the old GUI-API."""
 
     def __init__(self, *args, **kwargs):
-        """Initialisiere die Kompatibilitätsklasse."""
+        """Initialize the compatibility class."""
         super().__init__()
         logger.info("GUI-Kompatibilitätsklasse initialisiert")
 
     def run(self):
-        """Führe die alte run-Methode aus."""
+        """Carry out the old run method."""
         self.mainloop()
 
 # Exportiere unter dem alten Namen
 OptimizedROMSorterGUI = OptimizedROMSorterGUICompat
 
-# Starte die GUI mit der neuen Implementierung
+# Start the GUI with the new implementation
 def launch_gui():
-    """Starte die GUI mit der neuen Implementierung."""
+    """Start the GUI with the new implementation."""
     app = ROMSorterWindow()
     app.mainloop()
     return 0
@@ -73,26 +67,26 @@ except ImportError as e:
 
     # Fallback-Dummy-Implementierung
     class DummyGUI:
-        """Dummy-Implementierung, die einen Fehler wirft, wenn sie verwendet wird."""
+        """Dummy implementation that throws an error when used."""
 
         def __init__(self, *args, **kwargs):
-            """Initialisiere die Dummy-Klasse."""
+            """Initialize the dummy class."""
             raise ImportError("Keine GUI-Implementierung verfügbar")
 
         def run(self):
-            """Dummy-Implementierung für run-Method."""
+            """Dummy implementation for run method."""
             raise ImportError("Keine GUI-Implementierung verfügbar")
 
     OptimizedROMSorterGUI = DummyGUI
 
     def launch_gui():
-        """Dummy-Implementierung für launch_gui."""
+        """Dummy implementation for launch_gui."""
         raise ImportError("Keine GUI-Implementierung verfügbar")
 
 def is_ui_available():
-    """Überprüft, ob eine UI-Implementierung verfügbar ist."""
+    """Check Whether a ui implementation is available."""
     return UI_MODULES_AVAILABLE
 
 def get_ui_mode():
-    """Gibt den aktuellen UI-Modus zurück."""
+    """Gives back the current UI mode."""
     return "modern" if UI_MODULES_AVAILABLE else "none"

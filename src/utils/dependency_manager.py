@@ -84,7 +84,7 @@ PLATFORM_PACKAGES = {
 
 
 class DependencyManager:
-    """Verwaltet die Abhängigkeiten für ROM Sorter Pro."""
+    """Manages the dependencies for Rome Sorter Pro."""
 
     def __init__(self):
         """Initialisiert den DependencyManager."""
@@ -94,12 +94,7 @@ class DependencyManager:
         logger.debug(f"Installierte Pakete: {len(self.installed_packages)}")
 
     def _get_installed_packages(self) -> Dict[str, str]:
-        """
-        Ermittelt die installierten Python-Pakete und ihre Versionen.
-
-        Returns:
-            Dictionary mit Paketnamen und Versionen
-        """
+        """Determine the installed Python packages and their versions. Return: Dictionary with parcel names and versions"""
         installed = {}
         try:
             # Use PKG_Resources to determine installed packages
@@ -133,31 +128,14 @@ class DependencyManager:
         return installed
 
     def is_package_installed(self, package_name: str) -> bool:
-        """
-        Prüft, ob ein bestimmtes Paket installiert ist.
-
-        Args:
-            package_name: Name des zu prüfenden Pakets
-
-        Returns:
-            True, wenn das Paket installiert ist, sonst False
-        """
+        """Check Whether a certain package is installed. ARGS: Package_Name: Name of the Package to Be Tested Return: True When the Package Is Installed, OtherWise False"""
         # Normalize the package name for comparison
         package_name = package_name.lower().replace('-', '_')
         return package_name in self.installed_packages
 
     def get_missing_packages(self, include_optional: bool = False,
                            optional_groups: List[str] = None) -> List[str]:
-        """
-        Ermittelt fehlende erforderliche und optionale Pakete.
-
-        Args:
-            include_optional: Ob optionale Pakete geprüft werden sollen
-            optional_groups: Liste der optionalen Paketgruppen, die geprüft werden sollen
-
-        Returns:
-            Liste fehlender Pakete
-        """
+        """Determine missing necessary and optional packages. Args: Include_optional: whether optional packages should be checked Optional_Groups: List of optional package groups that are to be checked Return: List missing packages"""
         missing = []
 
         # Checked packages
@@ -191,17 +169,7 @@ class DependencyManager:
 
     def install_packages(self, packages: List[str], upgrade: bool = False,
                        quiet: bool = False) -> bool:
-        """
-        Installiert die angegebenen Pakete mit pip.
-
-        Args:
-            packages: Liste der zu installierenden Pakete
-            upgrade: Ob bestehende Pakete aktualisiert werden sollen
-            quiet: Ob die Ausgabe unterdrückt werden soll
-
-        Returns:
-            True bei Erfolg, False bei Fehler
-        """
+        """Install the specified packages with PIP. Args: Packages: List of packages to be installed Upgrade: Whether existing packages should be updated Quiet: Whether the output should be suppressed Return: True in the event of success, false in the event of errors"""
         if not packages:
             logger.debug("Keine Pakete zu installieren")
             return True
@@ -242,16 +210,7 @@ class DependencyManager:
 
     def ensure_required_dependencies(self, include_platform: bool = True,
                                    auto_install: bool = False) -> bool:
-        """
-        Stellt sicher, dass alle erforderlichen Abhängigkeiten installiert sind.
-
-        Args:
-            include_platform: Ob plattformspezifische Pakete geprüft werden sollen
-            auto_install: Ob fehlende Pakete automatisch installiert werden sollen
-
-        Returns:
-            True, wenn alle erforderlichen Abhängigkeiten vorhanden sind, sonst False
-        """
+        """Make sure that all necessary dependencies are installed. Args: Include_platform: Whether platform -specific packages should be checked Auto_Install: Whether missing packages should be installed automatically Return: True, if all the necessary dependencies are available, otherwise false"""
         # Ermittle fehlende erforderliche Pakete
         missing = self.get_missing_packages(include_optional=False)
 
@@ -274,15 +233,7 @@ class DependencyManager:
         return False
 
     def check_optional_group(self, group: str) -> Tuple[bool, List[str]]:
-        """
-        Prüft, ob alle Pakete einer optionalen Gruppe installiert sind.
-
-        Args:
-            group: Name der optionalen Gruppe
-
-        Returns:
-            Tuple mit (alle_installiert, fehlende_pakete)
-        """
+        """Check whether all packages of an optional group are installed. Args: Group: name of the optional group Return: Tuble with (all_ installed, missing_packets)"""
         if group not in OPTIONAL_PACKAGES:
             logger.warning(f"Unbekannte optionale Gruppe: {group}")
             return False, []
@@ -295,16 +246,7 @@ class DependencyManager:
         return not missing, missing
 
     def ensure_optional_group(self, group: str, auto_install: bool = False) -> bool:
-        """
-        Stellt sicher, dass alle Pakete einer optionalen Gruppe installiert sind.
-
-        Args:
-            group: Name der optionalen Gruppe
-            auto_install: Ob fehlende Pakete automatisch installiert werden sollen
-
-        Returns:
-            True, wenn alle Pakete der Gruppe vorhanden sind, sonst False
-        """
+        """Make sure that all packages of an optional group are installed. Args: Group: name of the optional group Auto_Install: Whether missing packages should be installed automatically Return: True when all packages of the group are available, otherwise false"""
         all_installed, missing = self.check_optional_group(group)
 
         if all_installed:
@@ -320,15 +262,7 @@ class DependencyManager:
         return False
 
     def can_import_module(self, module_name: str) -> bool:
-        """
-        Prüft, ob ein bestimmtes Python-Modul importiert werden kann.
-
-        Args:
-            module_name: Name des zu prüfenden Moduls
-
-        Returns:
-            True, wenn das Modul importiert werden kann, sonst False
-        """
+        """Check Whether a certain python modules can be imported. ARGS: Module_Name: Name of the module to be tested Return: True if the module can be imported, OtherWise False"""
         try:
             spec = importlib.util.find_spec(module_name)
             return spec is not None
@@ -337,29 +271,13 @@ class DependencyManager:
 
 
 def check_dependencies(auto_install: bool = False) -> bool:
-    """
-    Prüft alle erforderlichen Abhängigkeiten und installiert sie bei Bedarf.
-
-    Args:
-        auto_install: Ob fehlende Pakete automatisch installiert werden sollen
-
-    Returns:
-        True, wenn alle erforderlichen Abhängigkeiten vorhanden sind, sonst False
-    """
+    """Check all necessary dependencies and install them if necessary. Args: Auto_Install: Whether missing packages should be installed automatically Return: True, if all the necessary dependencies are available, otherwise false"""
     manager = DependencyManager()
     return manager.ensure_required_dependencies(auto_install=auto_install)
 
 
 def ensure_gui_dependencies(auto_install: bool = False) -> bool:
-    """
-    Stellt sicher, dass alle für die GUI erforderlichen Pakete installiert sind.
-
-    Args:
-        auto_install: Ob fehlende Pakete automatisch installiert werden sollen
-
-    Returns:
-        True, wenn alle GUI-Abhängigkeiten vorhanden sind, sonst False
-    """
+    """Make sure that all packages required for the GUI are installed. Args: Auto_Install: Whether missing packages should be installed automatically Return: True, if all GUI dependencies are available, otherwise false"""
     manager = DependencyManager()
 
     # Check whether PYQT5 is installed
@@ -373,40 +291,19 @@ def ensure_gui_dependencies(auto_install: bool = False) -> bool:
 
 
 def ensure_ml_dependencies(auto_install: bool = False) -> bool:
-    """
-    Stellt sicher, dass alle für ML erforderlichen Pakete installiert sind.
-
-    Args:
-        auto_install: Ob fehlende Pakete automatisch installiert werden sollen
-
-    Returns:
-        True, wenn alle ML-Abhängigkeiten vorhanden sind, sonst False
-    """
+    """Make sure that all packages required for ML are installed. Args: Auto_Install: Whether missing packages should be installed automatically Return: True, if all ML dependencies are available, otherwise false"""
     manager = DependencyManager()
     return manager.ensure_optional_group("ml", auto_install=auto_install)
 
 
 def ensure_ai_dependencies(auto_install: bool = False) -> bool:
-    """
-    Stellt sicher, dass alle für AI erforderlichen Pakete installiert sind.
-
-    Args:
-        auto_install: Ob fehlende Pakete automatisch installiert werden sollen
-
-    Returns:
-        True, wenn alle AI-Abhängigkeiten vorhanden sind, sonst False
-    """
+    """Make sure that all packages required for AI are installed. Args: Auto_Install: Whether missing packages should be installed automatically Return: True, if all AI dependencies are available, otherwise false"""
     manager = DependencyManager()
     return manager.ensure_optional_group("ai", auto_install=auto_install)
 
 
 def has_gpu_support() -> bool:
-    """
-    Prüft, ob GPU-Unterstützung verfügbar ist.
-
-    Returns:
-        True, wenn GPU-Unterstützung verfügbar ist, sonst False
-    """
+    """Check whether GPU support is available. Return: True when GPU support is available, otherwise false"""
     manager = DependencyManager()
 
     # Check whether tensorflow or pytorch is installed

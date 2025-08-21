@@ -26,21 +26,21 @@ from .base import STYLE, BaseApp, center_window
 from .main_window import ROMSorterWindow
 
 class ROMSorterApp:
-    """Hauptanwendungsklasse für ROM Sorter Pro."""
+    """Main application class for Rome Sorter Pro."""
 
     def __init__(self):
-        """Initialisiere die Anwendung."""
+        """Initialize the application."""
         self.window = None
         self.config = {}
         self.config_manager = None
 
-        # Initialisiere das Logging-System
+        # Initialize the logging system
         self._setup_logging()
 
-        # Lade die Konfiguration
+        # Download the configuration
         self._load_config()
 
-        # Erstelle das Hauptfenster
+        # Create the main window
         self._create_window()
 
         # Theme-System initialisieren
@@ -50,12 +50,12 @@ class ROMSorterApp:
         self._process_command_line_args()
 
     def _setup_logging(self):
-        """Initialisiere das Logging-System."""
+        """Initialize the logging system."""
         if ENHANCED_LOGGING:
             try:
                 initialize_logging(log_dir="logs", app_name="rom_sorter")
             except TypeError:
-                # Fallback wenn app_name nicht unterstützt wird
+                # Fallback if App_Name is not supported
                 initialize_logging(log_dir="logs")
             logger = get_logger("src.ui.app")
             logger.info("Erweitertes Logging-System initialisiert")
@@ -70,16 +70,16 @@ class ROMSorterApp:
             )
 
     def _load_config(self):
-        """Lade die Konfiguration."""
-        # Verwende vereinfachten Ansatz mit Standardkonfiguration
+        """Charge the configuration."""
+        # Using simplified approach with standard configuration
         self.config = {"ui": {"theme": "system"}}
 
         try:
-            # Versuche, die Konfiguration zu laden
+            # Try to load the configuration
             import json
             import os
 
-            # Suche nach config.json in Standardorten
+            # Search for config.json in standard locations
             config_paths = [
                 os.path.join(os.path.dirname(__file__), "..", "config.json"),
                 os.path.join(os.path.dirname(__file__), "..", "..", "config.json"),
@@ -96,7 +96,7 @@ class ROMSorterApp:
                     except json.JSONDecodeError:
                         logging.warning(f"Ungültige JSON-Datei: {path}")
 
-            # Erstelle eine einfache Konfigurationsklasse für Kompatibilität
+            # Create a simple configuration class for compatibility
             class SimpleConfigManager:
                 def __init__(self, config):
                     self.config = config
@@ -108,7 +108,7 @@ class ROMSorterApp:
                 def get(self, section, key, default=None):
                     return self.config.get(section, {}).get(key, default)
 
-            # Setze self.config_manager auf die neue Klasse
+            # Place self.config_manager on the new class
             self.config_manager = SimpleConfigManager(self.config)
 
         except Exception as e:
@@ -116,27 +116,27 @@ class ROMSorterApp:
             # Standardkonfiguration wird verwendet
 
     def _create_window(self):
-        """Erstelle das Hauptfenster."""
+        """Create the main window."""
         self.window = ROMSorterWindow()
 
-        # Konfiguration an das Fenster weitergeben (wenn möglich)
+        # Add configuration to the window (if possible)
         if hasattr(self.window, "apply_config"):
             self.window.apply_config(self.config)
 
     def _setup_theme(self):
-        """Initialisiere das Theme-System."""
+        """Initialize the theme system."""
         try:
             from .enhanced_theme import (
                 initialize_theme_system, set_theme
             )
 
-            # Theme-Typ aus der Konfiguration laden
+            # Load theme type from the configuration
             theme_type = self.config.get("ui", {}).get("theme", "system")
 
             # Theme-System initialisieren
             initialize_theme_system(self.window)
 
-            # Nicht das System-Theme setzen, sondern nur wenn explizit angegeben
+            # Do not set the system theme, but only if explicitly stated
             if theme_type != "system":
                 set_theme(theme_type)
 
@@ -158,19 +158,19 @@ class ROMSorterApp:
             elif arg == "--dest" and i + 1 < len(args):
                 self.window.dest_path.set(args[i + 1])
             elif arg == "--auto-start":
-                # Automatischer Start, wenn Quell- und Zielordner gesetzt sind
+                # Automatic start when the source and target folder are set
                 if self.window.source_path.get() and self.window.dest_path.get():
                     self.window.after(1000, self.window._on_start_sorting)
 
     def run(self):
-        """Starte die Anwendung."""
+        """Start the application."""
         self.window.mainloop()
 
     def cleanup(self):
-        """Bereinige Ressourcen bei Beendigung."""
+        """Cleaning resources when ending."""
         # Konfiguration speichern
         try:
-            # Versuche zuerst, save() zu verwenden (EnhancedConfig)
+            # First try to use save () (Enhancedconfig)
             if hasattr(self.config_manager, 'save'):
                 self.config_manager.save()
             # Fallback zur alten Methode
@@ -181,13 +181,13 @@ class ROMSorterApp:
         except Exception as e:
             logging.error(f"Fehler beim Speichern der Konfiguration: {e}")
 
-        # Logger schließen
+        # Close logger
         logging.shutdown()
 
 
-# Dekorator für Performance-Messung, falls verfügbar
+# Decorator for performance measurement, if available
 def performance_decorator(func):
-    """Dekorator für Performance-Messung."""
+    """Decorator for performance measurement."""
     if ENHANCED_LOGGING:
         from ..utils.logging_integration import log_performance
         return log_performance(logger_name="src.ui", operation="app_execution")(func)
@@ -197,16 +197,16 @@ def performance_decorator(func):
 
 @performance_decorator
 def main():
-    """Hauptfunktion zum Starten der Anwendung."""
+    """Main function for starting the application."""
     app = ROMSorterApp()
     try:
         if ENHANCED_LOGGING:
-            # Starte Anwendung mit Context
+            # Start application with context
             from ..utils.logging_integration import log_context
             with log_context(session_id=f"session_{int(time.time())}", mode="gui"):
                 app.run()
         else:
-            # Normale Ausführung
+            # Normal execution
             app.run()
     except Exception as e:
         # Fehlerbehandlung
@@ -224,7 +224,7 @@ def main():
                 f"Ein unerwarteter Fehler ist aufgetreten:\n{e}"
             )
     finally:
-        # Aufräumen
+        # Clean up
         app.cleanup()
 
     return 0

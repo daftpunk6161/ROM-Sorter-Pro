@@ -41,7 +41,7 @@ except ImportError:
         logging.warning("Auch PyQt5 ist nicht verfügbar. Die UI wird nicht verfügbar sein.")
 
 def check_qt_dependencies():
-    """Überprüft, ob die Qt-Abhängigkeiten installiert sind und gibt Anweisungen zur Installation zurück."""
+    """Check whether the QT dependencies are installed and returns to installation."""
     if qt_available:
         return True, f"Qt {qt_version} ist verfügbar."
     else:
@@ -50,15 +50,15 @@ def check_qt_dependencies():
                       f"{install_cmd}")
 
 def can_use_qt():
-    """Gibt zurück, ob Qt verwendet werden kann."""
+    """Gives back whether QT can be used."""
     return qt_available
 
 def get_qt_version():
-    """Gibt die verwendete Qt-Version zurück."""
+    """Returns the QT version used."""
     return qt_version
 
 def start_qt_app(args=None):
-    """Startet die Qt-Anwendung mit den angegebenen Argumenten."""
+    """Starts the QT application with the specified arguments."""
     if not qt_available:
         logging.error("Qt ist nicht verfügbar. Die Anwendung kann nicht gestartet werden.")
         return None
@@ -83,7 +83,7 @@ def start_qt_app(args=None):
     return app
 
 def show_main_window():
-    """Startet die Anwendung und zeigt das Hauptfenster an."""
+    """Starts the application and shows the main window."""
     if not qt_available:
         status, message = check_qt_dependencies()
         print(message)

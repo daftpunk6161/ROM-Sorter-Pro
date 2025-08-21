@@ -11,15 +11,10 @@ from .widgets import ProgressDialog, FolderSelector, ToggleSwitch
 from .panels import StatisticsPanel, LogPanel, OptionsPanel, TabPanel
 
 class DragDropSupport:
-    """Unterstützung für Drag & Drop-Operationen."""
+    """Support for drag & drop operations."""
 
     def __init__(self, widget):
-        """
-        Initialisiere die Drag & Drop-Unterstützung für ein Widget.
-
-        Args:
-            widget: Das Widget, das Drag & Drop unterstützen soll
-        """
+        """Initialize the drag & drop support for a widget. Args: Widget: The Widget that Should Support Drag & Drop"""
         self.widget = widget
         self.canvas_id = None
         self.dragged_item = None
@@ -43,7 +38,7 @@ class DragDropSupport:
             self.start_y = event.y
 
     def on_drag(self, event):
-        """Handle das Ziehen während des Drag-Vorgangs."""
+        """Track the pull during the drag process."""
         if not self.dragged_item:
             return
 
@@ -52,7 +47,7 @@ class DragDropSupport:
         pass
 
     def on_drop(self, event):
-        """Handle das Ablegen nach dem Drag-Vorgang."""
+        """House it after the drag process."""
         if not self.dragged_item:
             return
 
@@ -67,26 +62,15 @@ class DragDropSupport:
         self.dragged_item = None
 
     def _reorder_items(self, source, target):
-        """
-        Sortiere die Items neu, basierend auf der Quelle und dem Ziel.
-
-        Diese Methode muss in Unterklassen implementiert werden, da sie
-        von der spezifischen Widget-Implementierung abhängt.
-        """
+        """Sort the items newly, based on the source and the goal. This method must be implemented in subclasses because they depends on the specific widget implementation."""
         pass
 
 
 class CustomTreeview(ttk.Treeview):
-    """Ein erweitertes Treeview-Widget mit zusätzlichen Funktionen."""
+    """An extended Treview widget with additional functions."""
 
     def __init__(self, parent, **kwargs):
-        """
-        Initialisiere das CustomTreeview-Widget.
-
-        Args:
-            parent: Das übergeordnete Widget
-            **kwargs: Zusätzliche Argumente für das Treeview-Widget
-        """
+        """Initialize the CustomTreeview widget. Args: Parent: The overarching widget ** Kwargs: Additional arguments for the TreeView widget"""
         super().__init__(parent, **kwargs)
 
 # Add drag & drop support
@@ -108,13 +92,13 @@ class CustomTreeview(ttk.Treeview):
         self._initialize_icons()
 
     def _initialize_icons(self):
-        """Initialisiere Icons für verschiedene Dateitypen."""
+        """Initialize icons for different file types."""
 # In a complete implementation, The Icons would be loaded here
 # Placeholder for the actual implementation
         pass
 
     def _create_context_menu(self):
-        """Erstelle das Kontextmenü für das Treeview."""
+        """Create the context menu for the Treeview."""
         self.context_menu = tk.Menu(self, tearoff=0)
 
 # Add menu entries
@@ -127,12 +111,7 @@ class CustomTreeview(ttk.Treeview):
         self.context_menu.add_command(label="Löschen", command=self._on_delete)
 
     def _show_context_menu(self, event):
-        """
-        Zeige das Kontextmenü an der Position des Mausklicks.
-
-        Args:
-            event: Das Event-Objekt mit der Mausposition
-        """
+        """Show the context menu at the position of the mouse click. Args: Event: The event object with the mouse position"""
 # Determine whether an item is under the cursor
         item = self.identify_row(event.y)
 
@@ -147,12 +126,7 @@ class CustomTreeview(ttk.Treeview):
                 self.context_menu.grab_release()
 
     def _on_double_click(self, event):
-        """
-        Handle einen Doppelklick auf ein Item.
-
-        Args:
-            event: Das Event-Objekt mit der Mausposition
-        """
+        """If a double click on an item. ARGS: Event: The event Object with the Mouse Position"""
 # Determine whether an item is under the cursor
         item = self.identify_row(event.y)
 
@@ -161,46 +135,41 @@ class CustomTreeview(ttk.Treeview):
             self._on_open()
 
     def _on_open(self):
-        """Öffne das ausgewählte Item."""
+        """Open the selected item."""
 # In A Complete implementation, The File would be opened here
 # Placeholder for the actual implementation
         pass
 
     def _on_show_in_explorer(self):
-        """Zeige das ausgewählte Item im Explorer an."""
+        """Show the selected item in the Explorer."""
 # In a complete implementation, The Explorer would be opened here
 # Placeholder for the actual implementation
         pass
 
     def _on_copy(self):
-        """Kopiere das ausgewählte Item."""
+        """Copy the selected item."""
 # In A Complete Implementation, The Item would be copied here
 # Placeholder for the actual implementation
         pass
 
     def _on_rename(self):
-        """Benenne das ausgewählte Item um."""
+        """Name the selected item."""
 # In a complete implementation, The Item would be renamed here
 # Placeholder for the actual implementation
         pass
 
     def _on_delete(self):
-        """Lösche das ausgewählte Item."""
+        """Delete the selected item."""
 # In a complete implementation, The Item would be deleted here
 # Placeholder for the actual implementation
         pass
 
 
 class TreeviewDragDropSupport(DragDropSupport):
-    """Spezialisierte Drag & Drop-Unterstützung für Treeview-Widgets."""
+    """Specialized drag & drop support for TreeView widgets."""
 
     def on_drag(self, event):
-        """
-        Handle das Ziehen während des Drag-Vorgangs.
-
-        Args:
-            event: Das Event-Objekt mit der Mausposition
-        """
+        """Track the pull during the drag process. Args: Event: The event object with the mouse position"""
         if not self.dragged_item:
             return
 
@@ -212,13 +181,7 @@ class TreeviewDragDropSupport(DragDropSupport):
             self.widget.see(target_item)  # Scroll to make the goal visible
 
     def _reorder_items(self, source, target):
-        """
-        Sortiere die Items im Treeview neu.
-
-        Args:
-            source: Das zu verschiebende Item
-            target: Das Ziel-Item, vor dem das Source-Item eingefügt werden soll
-        """
+        """Sort the items again in the Treeview. Args: Source: The item to be moved Target: The target item that the source item is to be inserted"""
 # Determine the parentitems
         source_parent = self.widget.parent(source)
         target_parent = self.widget.parent(target)

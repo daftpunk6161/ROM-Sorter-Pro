@@ -1,11 +1,6 @@
 #!/usr/bin/env python3
 # -*-coding: utf-8-*-
-"""
-ROM Sorter Pro v2.1.8 - Test Module for ML Detection
-
-This module provides a simple interface for testing ML-based
-ROM detection.
-"""
+"""Rom Sarter Pro V2.1.8 - Test module for ml detection this modules provides a simple interface for testing ml -base rome detection."""
 
 import os
 from pathlib import Path
@@ -24,15 +19,7 @@ from .detectors.ml_detector import detect_console_with_ml
 DetectionHandler = DetectionManager
 
 def test_detection_pipeline(rom_path: str) -> Tuple[str, float]:
-    """
-    Tests the detection pipeline with a ROM path.
-
-    Args:
-        rom_path: Pfad zur ROM-Datei
-
-    Returns:
-        Tuple aus (Konsolenname, Konfidenz)
-    """
+    """Tests the detection pipeline with a rome path. ARGS: ROM_Path: Path to Rome File Return: Tube from (Console Name, Confidence)"""
     if not os.path.exists(rom_path):
         print(f"Datei nicht gefunden: {rom_path}")
         return "Unknown", 0.0

@@ -1,14 +1,6 @@
 #!/usr/bin/env python3
 # -*-coding: utf-8-*-
-"""
-ROM Sorter Pro - ROM-Scanning-Paket
-
-Dieses Paket enthält Module und Klassen für das effiziente Scannen und Erkennen von ROM-Dateien.
-
-Das Scanning-Modul besteht aus folgenden Komponenten:
-1. scanner.py - Basisklassen für ROM-Scanning und parallele Verarbeitung
-2. adaptive_scanner.py - Erweiterte Scanner mit adaptiver Anpassung an das Dateisystem
-"""
+"""Rome Sorter Pro-Rome scanning package This package contains modules and classes for the efficient scanning and detection of ROM files. The scanning module consists of the following components: 1. Scanner.py basic classes for Rome scanning and parallel workmanship 2. Adaptive_scanner.py - Extended scanner with adaptive adaptation to the file system"""
 
 from .scanner import (
     scan_directory,

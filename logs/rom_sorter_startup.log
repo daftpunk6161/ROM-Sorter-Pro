@@ -54,3 +54,13 @@
 2025-08-21 20:34:29,012 - INFO - Utils-Modul mit Wrapper-Funktionen geladen
 2025-08-21 20:34:29,038 - INFO - Konfiguration aus R:\Code\ROM-Sorter-Pro\src\config\..\config.json geladen
 2025-08-21 20:34:29,038 - INFO - Erweiterte Konfiguration initialisiert
+2025-08-21 22:29:31,193 - INFO - Starting ROM Sorter Pro...
+2025-08-21 22:29:31,233 - INFO - Operating system: Windows 10.0.26100
+2025-08-21 22:29:31,240 - INFO - Starting in GUI mode with refactored UI...
+2025-08-21 22:29:31,331 - ERROR - Error starting the application: unterminated string literal (detected at line 43) (__init__.py, line 43)
+2025-08-21 22:31:11,056 - INFO - Starting ROM Sorter Pro...
+2025-08-21 22:31:11,142 - INFO - Operating system: Windows 10.0.26100
+2025-08-21 22:31:11,150 - INFO - Starting in GUI mode with refactored UI...
+2025-08-21 22:31:11,251 - INFO - Utils-Modul mit Wrapper-Funktionen geladen
+2025-08-21 22:31:11,312 - INFO - Konfiguration aus r:\Code\ROM-Sorter-Pro\src\config\..\config.json geladen
+2025-08-21 22:31:11,313 - INFO - Erweiterte Konfiguration initialisiert

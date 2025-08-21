@@ -1,10 +1,6 @@
 #!/usr/bin/env python3
 # -*-coding: utf-8-*-
-"""
-ROM Sorter Pro - ROM-Scanner
-
-Dieses Modul enthält Klassen und Funktionen zum effizienten Scannen und Erkennen von ROM-Dateien.
-"""
+"""Rome Sorter Pro - Rome scanner This module contains classes and functions for efficient scanning and detecting ROM files."""
 
 # Standard libraries
 import os
@@ -27,17 +23,10 @@ logger = logging.getLogger(__name__)
 
 
 class ROMScanner:
-    """
-    Grundlegende ROM-Scanner-Klasse, die Verzeichnisse nach ROM-Dateien durchsucht.
-    """
+    """Basic ROM scanner class, which searched for Rome files."""
 
     def __init__(self, filter_extensions: Optional[List[str]] = None):
-        """
-        Initialisiert einen neuen ROM-Scanner.
-
-        Args:
-            filter_extensions: Optionale Liste von Dateierweiterungen zum Filtern (ohne Punkt)
-        """
+        """Initialized A New Rome Scanner. ARGS: Filter_Extensions: Optional List of File Extensions for Filtering (Without Point)"""
         self.filter_extensions = filter_extensions or get_all_rom_extensions(include_dot=False)
         self._normalize_extensions()
         self.stats = {
@@ -48,20 +37,11 @@ class ROMScanner:
         }
 
     def _normalize_extensions(self) -> None:
-        """Normalisiert alle Erweiterungen, um ohne Punkt konsistent zu sein."""
+        """Normalizes all extensions to be consistent without a point."""
         self.filter_extensions = [ext.lstrip('.').lower() for ext in self.filter_extensions]
 
     def scan_directory(self, directory_path: Union[str, Path], recursive: bool = False) -> List[ROMMetadata]:
-        """
-        Durchsucht ein Verzeichnis nach ROM-Dateien und gibt eine Liste von ROM-Metadaten zurück.
-
-        Args:
-            directory_path: Zu durchsuchendes Verzeichnis
-            recursive: Ob Unterverzeichnisse rekursiv durchsucht werden sollen
-
-        Returns:
-            Liste von ROMMetadata-Objekten
-        """
+        """Searches A List of Rome Files and Returns A List of Rome Metadata. ARGS: Directory_Path: Recursive: Whether subdirectaries should be searched for recursively return: List of Rummy Objects"""
         path_obj = Path(directory_path)
         if not path_obj.exists() or not path_obj.is_dir():
             logger.error(f"Verzeichnis existiert nicht oder ist kein Verzeichnis: {directory_path}")
@@ -96,15 +76,7 @@ class ROMScanner:
         return roms_list
 
     def _create_rom_metadata(self, file_path: Path) -> Optional[ROMMetadata]:
-        """
-        Erstellt ROM-Metadaten für eine Datei.
-
-        Args:
-            file_path: Pfad zur ROM-Datei
-
-        Returns:
-            ROMMetadata-Objekt oder None, falls die Datei keine gültige ROM ist
-        """
+        """Creates rom metadata for a file. ARGS: File_Path: Path to the Rome File Return: Rommetadata Object Or None IF the File is not a valid rome"""
         detection_start = time.time()
 
 # Recognize console
@@ -126,28 +98,15 @@ class ROMScanner:
         return rom_metadata
 
     def get_stats(self) -> Dict[str, Any]:
-        """
-        Gibt die aktuellen Scanner-Statistiken zurück.
-
-        Returns:
-            Dict mit Scanner-Statistiken
-        """
+        """Returns the current scanner statistics. Return: Dict with scanner statistics"""
         return self.stats
 
 
 class OptimizedScanner(ROMScanner):
-    """
-    Optimierter ROM-Scanner mit paralleler Verarbeitung und fortgeschrittenen Funktionen.
-    """
+    """Optimized ROM scanner with parallel processing and advanced functions."""
 
     def __init__(self, filter_extensions: Optional[List[str]] = None, max_workers: int = None):
-        """
-        Initialisiert einen neuen optimierten ROM-Scanner.
-
-        Args:
-            filter_extensions: Optionale Liste von Dateierweiterungen zum Filtern (ohne Punkt)
-            max_workers: Maximale Anzahl an Worker-Threads (None für automatische Bestimmung)
-        """
+        """Initialized A New Optimized Rome Scanner. ARGS: Filter_extensions: Optional List of File Extensions for Filtering (Without Point) Max_Workers: Maximum Number of Worker Threads (None for Automatic Determination)"""
         super().__init__(filter_extensions)
         self.max_workers = max_workers or min(32, (os.cpu_count() or 4) + 4)
         self._processed_files = set()
@@ -162,16 +121,7 @@ class OptimizedScanner(ROMScanner):
         })
 
     def scan_directory_parallel(self, directory_path: Union[str, Path], recursive: bool = False) -> List[ROMMetadata]:
-        """
-        Durchsucht ein Verzeichnis parallel nach ROM-Dateien.
-
-        Args:
-            directory_path: Zu durchsuchendes Verzeichnis
-            recursive: Ob Unterverzeichnisse rekursiv durchsucht werden sollen
-
-        Returns:
-            Liste von ROMMetadata-Objekten
-        """
+        """Searches A Directory in parallel for Rome files. ARGS: Directory_Path: Recursive: Whether subdirectaries should be searched for recursively return: List of Rummy Objects"""
         path_obj = Path(directory_path)
         if not path_obj.exists() or not path_obj.is_dir():
             logger.error(f"Verzeichnis existiert nicht oder ist kein Verzeichnis: {directory_path}")
@@ -211,15 +161,7 @@ class OptimizedScanner(ROMScanner):
         return roms_list
 
     def _process_file(self, file_path: Path) -> Optional[ROMMetadata]:
-        """
-        Verarbeitet eine einzelne Datei und erstellt ROM-Metadaten.
-
-        Args:
-            file_path: Pfad zur Datei
-
-        Returns:
-            ROMMetadata-Objekt oder None
-        """
+        """Processes A Single File and Creates Rome Metadata. Args: File_Path: Path to the File Return: Rommetadata Object Or None"""
 # Check on duplicates with thread security
         with self._lock:
             if file_path in self._processed_files:
@@ -257,18 +199,7 @@ class OptimizedScanner(ROMScanner):
     def scan_with_progress_callback(self, directory_path: Union[str, Path],
                                    progress_callback: Callable[[int, int, float], None],
                                    recursive: bool = False) -> List[ROMMetadata]:
-        """
-        Durchsucht ein Verzeichnis mit Fortschrittsrückmeldung.
-
-        Args:
-            directory_path: Zu durchsuchendes Verzeichnis
-            progress_callback: Callback-Funktion für Fortschrittsbenachrichtigungen
-                              (abgeschlossen, gesamt, prozentsatz)
-            recursive: Ob Unterverzeichnisse rekursiv durchsucht werden sollen
-
-        Returns:
-            Liste von ROMMetadata-Objekten
-        """
+        """Searches for a List of Progress Feedback. ARGS: Directory_Path: Progress_callback: Callback Function for Progress Notifications (Completed, Total, Percentage) Recursive: Whether subdirectaries Should Be Searched for Recursively Return: List of Rummy Objects"""
         path_obj = Path(directory_path)
         if not path_obj.exists() or not path_obj.is_dir():
             logger.error(f"Verzeichnis existiert nicht oder ist kein Verzeichnis: {directory_path}")
@@ -323,17 +254,7 @@ class OptimizedScanner(ROMScanner):
 
 def scan_directory(directory_path: Union[str, Path], recursive: bool = False,
                   filter_extensions: Optional[List[str]] = None) -> List[ROMMetadata]:
-    """
-    Durchsucht ein Verzeichnis nach ROM-Dateien (Komfortfunktion).
-
-    Args:
-        directory_path: Zu durchsuchendes Verzeichnis
-        recursive: Ob Unterverzeichnisse rekursiv durchsucht werden sollen
-        filter_extensions: Optionale Liste von Dateierweiterungen zum Filtern
-
-    Returns:
-        Liste von ROMMetadata-Objekten
-    """
+    """Searches for a Directory for Rome Files (Comfort Function). ARGS: Directory_Path: Recursive: Whether subdirectaries Should be searched for recursively filter_extensions: Optional List of File Extensions for Filtering Return: List of Rummy Objects"""
     scanner = ROMScanner(filter_extensions)
     return scanner.scan_directory(directory_path, recursive)
 
@@ -341,32 +262,12 @@ def scan_directory(directory_path: Union[str, Path], recursive: bool = False,
 def scan_directory_parallel(directory_path: Union[str, Path], recursive: bool = False,
                            filter_extensions: Optional[List[str]] = None,
                            max_workers: int = None) -> List[ROMMetadata]:
-    """
-    Durchsucht ein Verzeichnis parallel nach ROM-Dateien (Komfortfunktion).
-
-    Args:
-        directory_path: Zu durchsuchendes Verzeichnis
-        recursive: Ob Unterverzeichnisse rekursiv durchsucht werden sollen
-        filter_extensions: Optionale Liste von Dateierweiterungen zum Filtern
-        max_workers: Maximale Anzahl an Worker-Threads
-
-    Returns:
-        Liste von ROMMetadata-Objekten
-    """
+    """Searches A Directory in parallel for Rome files (Comfort Function). ARGS: Directory_Path: Recursive: Whether subdirectaries Should be searched for recursively filter_extensions: Optional List of File Extensions for Filtering Max_Workers: Maximum Number of Worker Threads Return: List of Rummy Objects"""
     scanner = OptimizedScanner(filter_extensions, max_workers)
     return scanner.scan_directory_parallel(directory_path, recursive)
 
 
 def scan_directory_recursive(directory_path: Union[str, Path],
                             filter_extensions: Optional[List[str]] = None) -> List[ROMMetadata]:
-    """
-    Durchsucht ein Verzeichnis rekursiv nach ROM-Dateien (Komfortfunktion).
-
-    Args:
-        directory_path: Zu durchsuchendes Verzeichnis
-        filter_extensions: Optionale Liste von Dateierweiterungen zum Filtern
-
-    Returns:
-        Liste von ROMMetadata-Objekten
-    """
+    """Searches for a List for Rome Files (Comfort Function). ARGS: Directory_Path: Filter_Extensions: Optional List of File Extensions for Filtering Return: List of Rummy Objects"""
     return scan_directory(directory_path, recursive=True, filter_extensions=filter_extensions)

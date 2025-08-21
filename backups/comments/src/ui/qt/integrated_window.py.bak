@@ -1,0 +1,364 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""Rome Sorter Pro-QT-UI integration Phase 1 Implementation: Desktop optimization and integration This module connects the QT-UI with the high-performance scanner and other backend components via the QT-Bridge integration."""
+
+import os
+import sys
+import logging
+from pathlib import Path
+
+from ..qt import can_use_qt, get_qt_version
+
+# Try to import pyqt based on the available version
+if not can_use_qt():
+    logging.critical("Keine Qt-Bibliothek verfügbar! Die UI wird nicht funktionieren.")
+    sys.exit(1)
+
+qt_version = get_qt_version()
+if qt_version == 6:
+    try:
+        from PyQt6.QtWidgets import (QMessageBox, QFileDialog, QTableWidgetItem, QApplication)
+        from PyQt6.QtCore import QTimer
+        logging.info("PyQt6 erfolgreich importiert")
+    except ImportError:
+        logging.critical("PyQt6 konnte trotz vorheriger Prüfung nicht importiert werden!")
+        sys.exit(1)
+elif qt_version == 5:
+    try:
+        from PyQt5.QtWidgets import (QMessageBox, QFileDialog, QTableWidgetItem, QApplication)
+        from PyQt5.QtCore import QTimer
+        logging.info("PyQt5 als Fallback erfolgreich importiert")
+    except ImportError:
+        logging.critical("PyQt5 konnte trotz vorheriger Prüfung nicht importiert werden!")
+        sys.exit(1)
+else:
+    logging.critical("Keine unterstützte Qt-Version verfügbar!")
+    sys.exit(1)
+
+# Lokale Importe
+from .main_window import ROMSorterMainWindow
+from .qt_bridge import get_bridge
+
+# Importe get_enhanced_config with robust error handling
+try:
+    from ...config.enhanced_config import get_enhanced_config
+except ImportError:
+    try:
+        import sys
+        from pathlib import Path
+
+        # Add the main directory to the path, if necessary
+        src_dir = Path(__file__).resolve().parent.parent.parent
+        if str(src_dir) not in sys.path:
+            sys.path.insert(0, str(src_dir))
+
+        from config.enhanced_config import get_enhanced_config
+    except ImportError:
+        # Fallback option in the event that the module cannot be found
+        logging.error("Konnte enhanced_config nicht importieren! Verwende Mock-Implementierung.")
+
+        class SimpleConfig:
+            """Einfache Konfigurationsklasse als Fallback."""
+            def __init__(self):
+                self.values = {}
+
+            def get(self, key, default=None):
+                return self.values.get(key, default)
+
+            def set(self, key, value):
+                self.values[key] = value
+
+            def save(self):
+                pass
+
+        def get_enhanced_config(*args, **kwargs):
+            """Mock implementation if the real one is not available."""
+            return SimpleConfig()
+
+# Logging einrichten
+logger = logging.getLogger(__name__)
+
+class IntegratedMainWindow(ROMSorterMainWindow):
+    """Extended main window class, which implemented the integration with the backend. Inherits from the existing RomeSortermainwindow class and expand them The connection with the high-performance scanner and other backend components."""
+
+    def __init__(self):
+        """Initialized the integrated main window."""
+        # Get the extended configuration
+        self.enhanced_config = get_enhanced_config()
+
+        # Initialize the basic window
+        super().__init__(self.enhanced_config)
+
+        # Get the bridge instance
+        self.bridge = get_bridge()
+
+        # Connect the signals
+        self._connect_bridge_signals()
+
+        # Erweiterte UI-Elemente initialisieren
+        self._init_extended_ui()
+
+        logger.info("Integriertes Hauptfenster initialisiert")
+
+    def _connect_bridge_signals(self):
+        """Connect the signals of the bridge with the corresponding UI elements."""
+        # Scanner-Signale verbinden
+        self.bridge.scanner_signals.file_found.connect(self._on_file_found)
+        self.bridge.scanner_signals.rom_found.connect(self._on_rom_found)
+        self.bridge.scanner_signals.progress_updated.connect(self._on_scan_progress)
+        self.bridge.scanner_signals.scan_completed.connect(self._on_scan_completed)
+        self.bridge.scanner_signals.error_occurred.connect(self._on_scan_error)
+
+        # Datenbank-Signale verbinden
+        self.bridge.database_signals.query_completed.connect(self._on_query_completed)
+        self.bridge.database_signals.update_completed.connect(self._on_update_completed)
+        self.bridge.database_signals.error_occurred.connect(self._on_db_error)
+        self.bridge.database_signals.import_progress.connect(self._on_import_progress)
+        self.bridge.database_signals.export_progress.connect(self._on_export_progress)
+
+    def _init_extended_ui(self):
+        """Initialized extended UI elements for integration."""
+        # Here we could create additional UI elements
+        # But since we use the existing components,
+        # Let's focus on the connection of the actions
+
+        # Connect menu actions if available
+        try:
+            # Connect the scan campaign to our new handler
+            if hasattr(self, 'action_scan'):
+                self.action_scan.triggered.disconnect()  # Trenne alte Verbindung
+                self.action_scan.triggered.connect(self._on_scan_action)
+
+            # Connect the import campaign to our new handler
+            if hasattr(self, 'action_import'):
+                self.action_import.triggered.disconnect()
+                self.action_import.triggered.connect(self._on_import_action)
+
+            # Connect the export campaign to our new handler
+            if hasattr(self, 'action_export'):
+                self.action_export.triggered.disconnect()
+                self.action_export.triggered.connect(self._on_export_action)
+
+        except (AttributeError, TypeError) as e:
+            # Fall back elegantly if the actions do not exist or cannot be connected
+            logger.warning(f"Konnte nicht alle UI-Aktionen verbinden: {e}")
+
+    # ======================================================================
+    # Scanner Integration Methoden
+    # ======================================================================
+
+    def _on_scan_action(self):
+        """Handler for the scan campaign in the menu."""
+        # Open A Directory Selection Dialogue
+        directory = QFileDialog.getExistingDirectory(
+            self, "ROM-Verzeichnis auswählen", "",
+            QFileDialog.Option.ShowDirsOnly | QFileDialog.Option.DontResolveSymlinks
+        )
+
+        if directory:
+            self._start_scan(directory)
+
+    def _start_scan(self, directory):
+        """Startet einen Scan-Vorgang."""
+        try:
+            # Hole scanner configuration from the extended configuration
+            scanner_config = self.enhanced_config.get_scanner_config()
+
+            # Create the options for the scan
+            options = {
+                'recursive': scanner_config.get('recursive', True),
+                'max_depth': scanner_config.get('max_depth', -1),
+                'follow_symlinks': scanner_config.get('follow_symlinks', False),
+                'use_cache': scanner_config.get('use_cache', True)
+            }
+
+            # Start the scan and save the worker ID
+            self.current_scan_id = self.bridge.start_scan(directory, options)
+
+            # Update the UI
+            self.statusBar().showMessage(f"Scannen von {directory}...")
+
+            # Activate the cancellation button if available
+            if hasattr(self, 'btn_cancel_scan'):
+                self.btn_cancel_scan.setEnabled(True)
+
+            # Zeige den Fortschrittsbalken, wenn vorhanden
+            if hasattr(self, 'progress_bar'):
+                self.progress_bar.setValue(0)
+                self.progress_bar.setVisible(True)
+
+        except Exception as e:
+            logger.error(f"Fehler beim Starten des Scans: {e}")
+            QMessageBox.critical(self, "Scan-Fehler",
+                                f"Der Scan konnte nicht gestartet werden:\n{str(e)}")
+
+    def _on_file_found(self, path):
+        """Handler for the signal when a file has been found."""
+        # Update the status bar
+        self.statusBar().showMessage(f"Verarbeite: {path}")
+
+    def _on_rom_found(self, rom_info):
+        """Handler for the signal when a Rome has been found."""
+        # Add the Rome to the table if available
+        if hasattr(self, 'roms_table'):
+            self._add_rom_to_table(rom_info)
+
+    def _on_scan_progress(self, current, total):
+        """Handler for the progress signal of the scan."""
+        # Aktualisiere den Fortschrittsbalken, wenn vorhanden
+        if hasattr(self, 'progress_bar'):
+            self.progress_bar.setMaximum(total)
+            self.progress_bar.setValue(current)
+
+    def _on_scan_completed(self, stats):
+        """Handler for the signal when a scan is complete."""
+        # Update the UI
+        self.statusBar().showMessage(f"Scan abgeschlossen: {stats.get('roms_found', 0)} ROMs gefunden in {stats.get('duration_seconds', 0)} Sekunden")
+
+        # Deactivate the cancellation button if available
+        if hasattr(self, 'btn_cancel_scan'):
+            self.btn_cancel_scan.setEnabled(False)
+
+        # Hide the progress bar with delay, if available
+        if hasattr(self, 'progress_bar'):
+            QTimer.singleShot(3000, lambda: self.progress_bar.setVisible(False))
+
+        # Zeige eine Zusammenfassung an
+        QMessageBox.information(
+            self,
+            "Scan abgeschlossen",
+            f"""Scan-Ergebnisse:
+
+            Dateien verarbeitet: {stats.get('total_files', 0)}
+            ROMs gefunden: {stats.get('roms_found', 0)}
+            Dauer: {stats.get('duration_seconds', 0)} Sekunden"""
+        )
+
+    def _on_scan_error(self, error):
+        """Handler for error during the scan."""
+        logger.error(f"Scan-Fehler: {error}")
+        QMessageBox.critical(self, "Scan-Fehler", f"Ein Fehler ist aufgetreten:\n{error}")
+
+    def _add_rom_to_table(self, rom_info):
+        """Add a Rome to the table."""
+        try:
+            if not hasattr(self, 'roms_table'):
+                return
+
+            # Add a new line
+            row = self.roms_table.rowCount()
+            self.roms_table.insertRow(row)
+
+            # Fill the line with data
+            columns = {
+                0: rom_info.get('name', ''),
+                1: rom_info.get('system', ''),
+                2: self._format_size(rom_info.get('size', 0)),
+                3: rom_info.get('crc32', ''),
+                4: rom_info.get('path', '')
+            }
+
+            for col, value in columns.items():
+                if col < self.roms_table.columnCount():
+                    self.roms_table.setItem(row, col, QTableWidgetItem(str(value)))
+
+            # Save the complete ROM information for later access
+            self.roms_table_data.append(rom_info)
+
+        except Exception as e:
+            logger.error(f"Fehler beim Hinzufügen der ROM zur Tabelle: {e}")
+
+    def _format_size(self, size_bytes):
+        """Formats a size in bytes in a readable form."""
+        if size_bytes < 1024:
+            return f"{size_bytes} B"
+        elif size_bytes < 1024 * 1024:
+            return f"{size_bytes / 1024:.1f} KB"
+        elif size_bytes < 1024 * 1024 * 1024:
+            return f"{size_bytes / (1024 * 1024):.1f} MB"
+        else:
+            return f"{size_bytes / (1024 * 1024 * 1024):.1f} GB"
+
+    # ======================================================================
+    # Datenbank Integration Methoden
+    # ======================================================================
+
+    def _on_query_completed(self, results):
+        """Handler for completed database queries."""
+        # This method would be implemented to the results
+        # to display in the UI, e.G. In A Table Or List
+        logger.debug(f"Abfrage abgeschlossen: {len(results)} Ergebnisse")
+
+    def _on_update_completed(self, success, message):
+        """Handler for completed database updates."""
+        if success:
+            self.statusBar().showMessage(message, 3000)
+        else:
+            QMessageBox.warning(self, "Update-Fehler", message)
+
+    def _on_db_error(self, error):
+        """Handler for database errors."""
+        logger.error(f"Datenbankfehler: {error}")
+        QMessageBox.critical(self, "Datenbankfehler", f"Ein Fehler ist aufgetreten:\n{error}")
+
+    def _on_import_progress(self, current, total):
+        """Handler for progress in database import."""
+        # Aktualisiere den Fortschrittsbalken, wenn vorhanden
+        if hasattr(self, 'progress_bar'):
+            self.progress_bar.setMaximum(total)
+            self.progress_bar.setValue(current)
+            self.progress_bar.setVisible(True)
+
+    def _on_export_progress(self, current, total):
+        """Handler for progress in database export."""
+        # Aktualisiere den Fortschrittsbalken, wenn vorhanden
+        if hasattr(self, 'progress_bar'):
+            self.progress_bar.setMaximum(total)
+            self.progress_bar.setValue(current)
+            self.progress_bar.setVisible(True)
+
+    def _on_import_action(self):
+        """Handler for the import campaign in the menu."""
+        # This Method would be implemented to a file selection dialogue
+        # to open and start a database import
+        pass
+
+    def _on_export_action(self):
+        """Handler for the export campaign in the menu."""
+        # This Method would be implemented to a file selection dialogue
+        # to open and start database export
+        pass
+
+    # ======================================================================
+    # Overwritten methods
+    # ======================================================================
+
+    def closeEvent(self, event):
+        """Is called when the window is closed."""
+        try:
+            # Bereinige Ressourcen
+            if hasattr(self, 'bridge'):
+                self.bridge.cleanup()
+
+            # Call the basic implementation
+            super().closeEvent(event)
+
+        except Exception as e:
+            logger.error(f"Fehler beim Schließen des Fensters: {e}")
+            # Let the window close anyway
+            event.accept()
+
+# Create a function to start the application
+def start_integrated_ui():
+    """Starts the integrated UI."""
+    app = QApplication(sys.argv)
+    window = IntegratedMainWindow()
+    window.show()
+    sys.exit(app.exec())
+
+if __name__ == "__main__":
+    # Konfiguriere Logging
+    logging.basicConfig(level=logging.INFO)
+
+    # Start the application
+    start_integrated_ui()

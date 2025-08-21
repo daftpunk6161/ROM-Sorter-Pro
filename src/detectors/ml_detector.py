@@ -1,12 +1,6 @@
 #!/usr/bin/env python3
 # -*-coding: utf-8-*-
-"""
-ROM Sorter Pro - Regelbasierte Konsolenerkennung (ML-Ersatz)
-
-Diese Version wurde optimiert, um ohne externe ML-Abhängigkeiten zu funktionieren.
-Sie bietet eine robuste regelbasierte Erkennung mit der gleichen API wie
-die ML-basierte Version, sodass bestehender Code weiterhin funktioniert.
-"""
+"""Rome Sarter Pro - Rule -Based Console Detection (ML Replacement) This version was optimized to function without external ml descendencies. It Offers a Robust Rule -Based Detection with the same api as the ML -Based version, so that existing code continues to work."""
 
 import os
 import re
@@ -100,13 +94,7 @@ MAGIC_BYTES = {
 _ml_detector_instance = None
 
 def get_ml_detector() -> 'MLEnhancedConsoleDetector':
-    """
-    Gibt eine Instanz des MLEnhancedConsoleDetector zurück.
-    Verwendet ein Singleton-Pattern für effiziente Wiederverwendung.
-
-    Returns:
-        MLEnhancedConsoleDetector: Eine Instanz des regelbasierten Detektors
-    """
+    """Returns to Instance of the Mlenhanedconsoledetetector. Use a singleton pattern for efficient reuse. Return: Mlenhanconsoledetetector: to Instance of the Regular -Based Detector"""
     global _ml_detector_instance
     if _ml_detector_instance is None:
         _ml_detector_instance = MLEnhancedConsoleDetector()
@@ -116,18 +104,7 @@ def get_ml_detector() -> 'MLEnhancedConsoleDetector':
     return _ml_detector_instance
 
 def detect_console_with_ml(file_path: str) -> DetectionResult:
-    """
-    Führt regelbasierte Konsolenerkennung für eine ROM-Datei durch.
-
-    Diese Funktion dient als einfache Schnittstelle für die Konsolenerkennung
-    und verbirgt die Komplexität des Systems.
-
-    Args:
-        file_path: Pfad zur ROM-Datei
-
-    Returns:
-        DetectionResult: Erkennungsergebnis mit Konsole und Konfidenz
-    """
+    """Carries Out Regular Console Detection for a Rome File. This function Serves as a Simple Interface for Console Detection and Hides the Complexity of the System. Args: File_Path: Path to the Rome File Return: Detection Result with Console and Confidence"""
     try:
 # Validate the file path
         if not os.path.exists(file_path):
@@ -161,13 +138,7 @@ def detect_console_with_ml(file_path: str) -> DetectionResult:
 
 
 class MLEnhancedConsoleDetector(BaseDetector):
-    """
-    Regelbasierte Konsolenerkennung mit erweiterter Heuristik.
-
-    Diese Klasse implementiert eine robuste Konsolen-Erkennungsmethode,
-    die ohne externe Abhängigkeiten funktioniert, aber die gleiche API
-    wie die ML-basierte Version bietet.
-    """
+    """Regular -Based Console Detection with Extended Heuristic. This class implements a robust console Recognition Method, that Works Without External Dependencies, but the same api as the ml-based version offer."""
 
     def __init__(self):
         self.feature_extractor = DefaultFeatureExtractor()
@@ -189,12 +160,7 @@ class MLEnhancedConsoleDetector(BaseDetector):
         self.console_patterns = self._load_console_patterns()
 
     def _load_console_patterns(self) -> Dict[str, List[str]]:
-        """
-        Lädt erweiterte Konsolen-Erkennungsmuster.
-
-        Returns:
-            Dict mit Konsolen-Regex-Mustern
-        """
+        """Lades extended console recognition patterns. Return: Dict with console regex patterns"""
         patterns_file = DEFAULT_MODEL_PATH / "console_patterns.json"
 
         if patterns_file.exists():
@@ -257,15 +223,7 @@ class MLEnhancedConsoleDetector(BaseDetector):
         }
 
     def predict_console(self, file_path: str) -> Tuple[str, float, Dict[str, Any]]:
-        """
-        Führt die regelbasierte Konsolenerkennung durch.
-
-        Args:
-            file_path: Pfad zur ROM-Datei
-
-        Returns:
-            Tuple bestehend aus (Konsolenname, Konfidenz, Metadaten)
-        """
+        """Carries out the rule -based console detection. Args: File_Path: path to the Rome file Return: Tuble consisting of (console name, confidence, metadata)"""
         file_path_obj = validate_path(file_path)
 
 # Check the cache
@@ -303,16 +261,7 @@ class MLEnhancedConsoleDetector(BaseDetector):
         return result
 
     def _rule_based_detection(self, filename: str, features: Dict[str, Any]) -> Tuple[str, float, str]:
-        """
-        Regelbasierte Erkennung mit mehreren Methoden.
-
-        Args:
-            filename: Dateiname der ROM-Datei
-            features: Extrahierte Features
-
-        Returns:
-            Tuple aus (Konsolenname, Konfidenz, Erkennungsmethode)
-        """
+        """Rule -based detection with several methods. Args: Filename: File name of the Rome file Features: Extracted features Return: Tuble from (console name, confidence, identification method)"""
 # 1. Check Magic Bytes first (highest confidence)
         identified_format = features.get('identified_format')
         if identified_format and identified_format != "Various":
@@ -393,10 +342,7 @@ class MLEnhancedConsoleDetector(BaseDetector):
         return "Unknown", 0.0, "no_match"
 
     def load_models(self):
-        """
-        Lädt die Konsolen-Muster aus der JSON-Datei.
-        Diese Methode ist für API-Kompatibilität mit der ML-Version.
-        """
+        """Loads the console patterns from the JSON file. This method is for API compatibility with the ML version."""
         model_path = Path(DEFAULT_MODEL_PATH)
         patterns_file = model_path / "console_patterns.json"
 
@@ -409,10 +355,7 @@ class MLEnhancedConsoleDetector(BaseDetector):
                 logger.error(f"Fehler beim Laden der Konsolenmuster: {e}")
 
     def save_models(self):
-        """
-        Speichert die Konsolen-Muster in einer JSON-Datei.
-        Diese Methode ist für API-Kompatibilität mit der ML-Version.
-        """
+        """Saves the Console Patterns in A Json File. This method is for api compatibility with the ml version."""
         model_path = Path(DEFAULT_MODEL_PATH)
         model_path.mkdir(parents=True, exist_ok=True)
 
@@ -425,11 +368,7 @@ class MLEnhancedConsoleDetector(BaseDetector):
             logger.error(f"Fehler beim Speichern der Konsolenmuster: {e}")
 
     def _get_file_hash(self, file_path: Path) -> str:
-        """
-        Berechnet einen Datei-Hash für den Cache.
-
-        Für größere Dateien wird nur ein Teil gelesen, um die Leistung zu verbessern.
-        """
+        """Calculate a file hash for the cache. ONLY A Part is Read for Larger Files to Improve Performance."""
         try:
             file_size = file_path.stat().st_size
             if file_size > 1024 * 1024:  # For files> 1 MB
@@ -453,18 +392,14 @@ class MLEnhancedConsoleDetector(BaseDetector):
 
 
 class DefaultFeatureExtractor:
-    """
-    Feature-Extraktor für ROM-Dateien.
-
-    Diese Klasse ist für die Extraktion von Features aus ROM-Dateien verantwortlich.
-    """
+    """Feature extractor for ROM files. This class is responsible for the extraction of features from Rome files."""
 
     def __init__(self):
         self.n_gram_range = (1, 3)  # Uni, bi- and trigrams
         self._keyword_patterns = self._compile_keyword_patterns()
 
     def _compile_keyword_patterns(self) -> Dict[str, re.Pattern]:
-        """Kompiliert Regex-Muster für Schlüsselwörter."""
+        """Compiled regex pattern for keywords."""
         return {
             'region': re.compile(r'\((USA|EUR|JPN|World|Europe|Japan|Germany|France|Italy|Spain|Australia|Korea)\)'),
             'version': re.compile(r'\b(v[0-9.]+|rev[0-9.]+|final|beta|alpha|demo|prototype|sample)\b', re.IGNORECASE),
@@ -474,15 +409,7 @@ class DefaultFeatureExtractor:
         }
 
     def extract_features(self, file_path: Union[str, Path]) -> Dict[str, Any]:
-        """
-        Extrahiert alle verfügbaren Features aus einer ROM-Datei.
-
-        Args:
-            file_path: Pfad zur ROM-Datei
-
-        Returns:
-            Dict mit extrahierten Features
-        """
+        """Extract all available features from a rome file. ARGS: File_Path: Path to the Rome File Return: Dict With Extracted Features"""
         file_path = validate_path(file_path)
         features = {}
 
@@ -498,7 +425,7 @@ class DefaultFeatureExtractor:
         return features
 
     def _extract_filename_features(self, file_path: Path) -> Dict[str, Any]:
-        """Extrahiert Features aus dem Dateinamen."""
+        """Extract features from the file name."""
         filename = file_path.name
         stem = file_path.stem  # Name without expansion
         extension = file_path.suffix.lower()
@@ -524,7 +451,7 @@ class DefaultFeatureExtractor:
         return features
 
     def _extract_n_grams(self, text: str) -> List[str]:
-        """Extrahiert N-Gramme aus einem Text."""
+        """Extracts n-grams from a text."""
         text = re.sub(r'[^\w\s]', ' ', text)  # Entferne Satzzeichen
         words = text.split()
 
@@ -536,7 +463,7 @@ class DefaultFeatureExtractor:
         return n_grams
 
     def _extract_header_features(self, file_path: Path) -> Dict[str, Any]:
-        """Extrahiert Features aus dem Datei-Header."""
+        """Extract features from the file header."""
         features = {
             'header_signature': None,
             'identified_format': None,
@@ -581,7 +508,7 @@ class DefaultFeatureExtractor:
         return features
 
     def _extract_size_features(self, file_path: Path) -> Dict[str, Any]:
-        """Extrahiert Features basierend auf der Dateigröße."""
+        """Extract features based on the file size."""
         features = {}
 
         try:
@@ -603,12 +530,12 @@ class DefaultFeatureExtractor:
 
 # Alias functions for compatibility with older API calls
 def train_model(*args, **kwargs):
-    """Dummy-Function für API-Kompatibilität."""
+    """Dummy Function for API compatibility."""
     logger.info("ML-Training nicht verfügbar in der regelbasierten Version")
     return {"success": False, "reason": "ML-Training nicht verfügbar"}
 
 def evaluate_model(*args, **kwargs):
-    """Dummy-Function für API-Kompatibilität."""
+    """Dummy Function for API compatibility."""
     logger.info("ML-Evaluation nicht verfügbar in der regelbasierten Version")
     return {"accuracy": 0.0, "model_type": "rule-based"}
 
@@ -616,14 +543,6 @@ def evaluate_model(*args, **kwargs):
 # Fast cache function for repeated views
 @lru_cache(maxsize=1000)
 def cached_detect_console(file_path: str) -> Tuple[str, float]:
-    """
-    Gecachte Version der Konsolenerkennung für bessere Performance.
-
-    Args:
-        file_path: Pfad zur ROM-Datei
-
-    Returns:
-        Tuple mit (Konsolenname, Konfidenz)
-    """
+    """Cached version of console detection for better performance. Args: File_Path: path to the Rome file Return: Tuple with (console name, confidence)"""
     result = detect_console_with_ml(file_path)
     return result.console, result.confidence

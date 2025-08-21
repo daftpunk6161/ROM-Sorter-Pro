@@ -1,11 +1,4 @@
-"""
-ROM Sorter Pro - Erweiterte Theme Integration
-
-Dieses Modul verbessert die Theme-Integration, indem es sicherstellt,
-dass alle UI-Komponenten ein einheitliches Erscheinungsbild haben.
-Es überwacht Änderungen am aktiven Theme und wendet diese auf alle
-registrierten Widgets an.
-"""
+"""Rom Sarter Pro - Extended Theme Integration This Module IMPROVES Theme Integration by Ensuring that that all ui components have a uniform appearance. It Monitors Changes to the Active Theme and Turns Theme to All Registered Widgets."""
 
 import tkinter as tk
 from tkinter import ttk
@@ -34,23 +27,12 @@ _global_theme_manager = ThemeManager()
 
 
 def get_current_theme() -> Theme:
-    """
-    Gibt das aktuell aktive Theme zurück.
-
-    Returns:
-        Das aktuelle Theme
-    """
+    """Is the currently active theme back. Return: The current theme"""
     return _global_theme_manager.get_theme()
 
 
 def apply_theme_to_widget(widget: tk.Widget, theme: Optional[Theme] = None) -> None:
-    """
-    Wendet ein Theme auf ein Widget und seine Kinder an.
-
-    Args:
-        widget: Das Widget, auf das das Theme angewendet werden soll
-        theme: Optionales Theme, standardmäßig das aktuelle Theme
-    """
+    """Use a theme to a widget and his children. Args: Widget: The Widget on which the theme is to be Applied Theme: Optional Theme, by Default the Current Theme"""
     if theme is None:
         theme = get_current_theme()
 
@@ -63,36 +45,18 @@ def apply_theme_to_widget(widget: tk.Widget, theme: Optional[Theme] = None) -> N
 
 
 def register_for_theme_updates(widget: tk.Widget) -> None:
-    """
-    Registriert ein Widget für automatische Theme-Updates.
-
-    Args:
-        widget: Das Widget, das bei Theme-Änderungen aktualisiert werden soll
-    """
+    """Register A Widget for automatic theme updates. Args: Widget: The Widget that is to be updated in the event of changes"""
     # Use weak reference to avoid memory leaks
     _widget_registry.add(weakref.ref(widget))
 
 
 def register_theme_callback(callback: Callable[[Theme], None]) -> None:
-    """
-    Registriert einen Callback, der bei Theme-Änderungen aufgerufen wird.
-
-    Args:
-        callback: Die Funktion, die aufgerufen werden soll
-    """
+    """Register a callback that is called up when changing themes. Args: Callback: The Function That Is To Be Called"""
     _theme_callbacks.append(callback)
 
 
 def set_theme(theme_name: str) -> bool:
-    """
-    Setzt ein neues Theme und wendet es auf alle registrierten Widgets an.
-
-    Args:
-        theme_name: Der Name des Themes ('light', 'dark', 'custom', etc.)
-
-    Returns:
-        True bei Erfolg, False bei Fehler
-    """
+    """Set A New Theme and Apply to All Registered Widgets. ARGS: Theme_Name: The Name of the Theme ('Light', 'Dark', 'Custom', etc.) Return: True in the event of Success, False in the event of errors"""
     try:
         # Theme im Theme-Manager setzen
         if _global_theme_manager.set_active_theme(theme_name):
@@ -118,12 +82,7 @@ def set_theme(theme_name: str) -> bool:
 
 
 def _update_all_registered_widgets(theme: Theme) -> None:
-    """
-    Aktualisiert alle registrierten Widgets mit dem neuen Theme.
-
-    Args:
-        theme: Das anzuwendende Theme
-    """
+    """Updates all registered widgets with the new theme. Args: Theme: the user theme"""
     # Remove invalid references and update valid widgets
     global _widget_registry
     valid_refs = set()
@@ -145,13 +104,7 @@ def _update_all_registered_widgets(theme: Theme) -> None:
 
 
 def _apply_theme_to_single_widget(widget: tk.Widget, theme: Theme) -> None:
-    """
-    Wendet ein Theme auf ein einzelnes Widget an.
-
-    Args:
-        widget: Das Widget, auf das das Theme angewendet werden soll
-        theme: Das anzuwendende Theme
-    """
+    """Use a theme to a single widget. Args: Widget: The Widget on which the theme is to be Applied Theme: The User Theme"""
     try:
         widget_class = widget.__class__.__name__
 
@@ -211,16 +164,7 @@ def _apply_theme_to_single_widget(widget: tk.Widget, theme: Theme) -> None:
 
 
 def _adjust_color(color: str, factor: float) -> str:
-    """
-    Passt eine Farbe an (heller/dunkler).
-
-    Args:
-        color: Hex-Farbcode (z.B. "#3498db")
-        factor: Faktor > 1.0 für hellere, < 1.0 für dunklere Farbe
-
-    Returns:
-        Angepasster Hex-Farbcode
-    """
+    """Hit A Color (Brighter/Darker). ARGS: Color: Hex Color Code (e.G. "#3498db") Factor: Factor> 1.0 for Lighter, <1.0 For Darker Color Return: Adapted Hex Color Code"""
     try:
         # Convert hex to rgb
         r = int(color[1:3], 16)
@@ -239,12 +183,7 @@ def _adjust_color(color: str, factor: float) -> str:
 
 
 def initialize_theme_system(root_widget: tk.Widget) -> None:
-    """
-    Initialisiert das Theme-System und wendet das Standardtheme an.
-
-    Args:
-        root_widget: Das Root-Widget der Anwendung
-    """
+    """Initialized the theme system and uses the standard. Args: root_widget: The root widget of the application"""
     # Register the root widget for theme updates
     register_for_theme_updates(root_widget)
 

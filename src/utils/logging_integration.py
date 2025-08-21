@@ -1,18 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-ROM Sorter Pro - Logging Integration
-
-Dieses Modul integriert die verschiedenen Logging-Mechanismen des Projekts
-und stellt eine einheitliche Schnittstelle für alle Subsysteme bereit.
-
-Es nutzt die bestehenden Module:
-- src.utils.logger: Einfaches Logging
-- src.utils.logging_enhanced: Erweiterte Logging-Funktionen
-- src.logging_config: Leistungsoptimiertes Logging
-
-Und bietet eine zentrale Konfiguration für alle Subsysteme.
-"""
+"""Rom Sarter Pro - Logging Integration This Module Integrates The Various Logging Mechanisms of the Project and Provides A Uniform Interface for All Subsystems. It uses the existing module: - SRC.UTILS.LOGGER: Simple Logging - SRC.Utils.logging_enhanced: Extended Logging Functions - Src.Logging_config: Performance -Optimized Logging and Offers A Central Configuration for All Subsystems."""
 
 import os
 import sys
@@ -80,19 +68,7 @@ def initialize_logging(log_dir: Optional[str] = None,
                        use_colors: bool = True,
                        use_json: bool = False,
                        subsystem_levels: Optional[Dict[str, int]] = None) -> bool:
-    """
-    Initialisiert das integrierte Logging-System.
-
-    Args:
-        log_dir: Verzeichnis für Log-Dateien (Standard: 'logs')
-        level: Allgemeines Log-Level (Standard: INFO)
-        use_colors: Farbige Konsolenausgabe aktivieren
-        use_json: JSON-Logging für Dateiausgabe aktivieren
-        subsystem_levels: Spezifische Log-Level für Subsysteme
-
-    Returns:
-        True bei erfolgreicher Initialisierung, sonst False
-    """
+    """Initialized the integrated logging system. Args: Log_dir: List for log files (standard: 'logs') Level: General Log level (Standard: Info) use_colors: Activate colored console output use_json: Activate JSON logging for file output Subsystem_Levels: specific log levels for subsystems Return: True with successful initialization, otherwise false"""
     global _initialized, _log_dir, _subsystem_levels
 
     if _initialized:
@@ -204,15 +180,7 @@ def initialize_logging(log_dir: Optional[str] = None,
 
 
 def get_logger(name: str) -> logging.Logger:
-    """
-    Returns a configured logger for the specified subsystem.
-
-    Args:
-        name: Name of the subsystem/logger
-
-    Returns:
-        Configured logger
-    """
+    """Returns A Configured Logger for the Specified Subsystem. ARGS: Name: Name of the Subsystem/Logger Return: Configured Logger"""
     # Check if the logger has already been created
     if name in _loggers:
         return _loggers[name]
@@ -241,12 +209,7 @@ def get_logger(name: str) -> logging.Logger:
 
 @contextmanager
 def log_context(**kwargs) -> None:
-    """
-    Context Manager zum Setzen von Thread-lokalem Kontext für Logging.
-
-    Args:
-        **kwargs: Schlüssel-Wert-Paare für den Kontext
-    """
+    """Context Manager for setting thread local context for logging. Args: ** Kwargs: key value pairs for the context"""
     # Alten Kontext speichern
     if not hasattr(_context_local, 'context'):
         _context_local.context = {}
@@ -263,14 +226,7 @@ def log_context(**kwargs) -> None:
 
 
 def log_performance(logger_name: str = None, operation: str = None, level: int = logging.DEBUG):
-    """
-    Dekorator zur Leistungsmessung von Funktionen.
-
-    Args:
-        logger_name: Name des zu verwendenden Loggers
-        operation: Name der Operation (Standard: Funktionsname)
-        level: Log-Level für die Performance-Meldung
-    """
+    """Decorator for the performance measurement of functions. Args: Logger_Name: Name of the logger to be used Operation: Name of the Operation (Standard: Function Name) Level: Log level for the performance report"""
     def decorator(func):
         nonlocal logger_name, operation
 
@@ -319,14 +275,7 @@ def log_performance(logger_name: str = None, operation: str = None, level: int =
 
 
 def log_exception(logger_name: str = None, level: int = logging.ERROR, reraise: bool = True):
-    """
-    Dekorator zum Loggen von Ausnahmen.
-
-    Args:
-        logger_name: Name des zu verwendenden Loggers
-        level: Log-Level für die Ausnahme
-        reraise: Ob die Ausnahme weitergeworfen werden soll
-    """
+    """Decorator for logging exceptions. Args: Logger_Name: Name of the logger to be used Level: Log level for the exception Reraise: Whether the exception should be continued"""
     def decorator(func):
         nonlocal logger_name
 
@@ -354,12 +303,7 @@ def log_exception(logger_name: str = None, level: int = logging.ERROR, reraise: 
 
 
 def get_performance_stats() -> Dict[str, Dict[str, Any]]:
-    """
-    Gibt die gesammelten Performance-Statistiken zurück.
-
-    Returns:
-        Dict mit Performance-Statistiken pro Operation
-    """
+    """Gives back the collected performance statistics. Return: Dict with performance statistics per operation"""
     with _stats_lock:
         stats = {}
         for op, op_stats in _performance_stats.items():
@@ -375,7 +319,7 @@ def get_performance_stats() -> Dict[str, Dict[str, Any]]:
 
 
 def log_stats():
-    """Loggt die gesammelten Performance-Statistiken."""
+    """Logs the collected performance statistics."""
     stats = get_performance_stats()
     if not stats:
         return

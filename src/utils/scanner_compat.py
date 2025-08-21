@@ -1,16 +1,4 @@
-"""
-Wrapper-Funktionen für die veralteten Aufrufe aus optimized_scanner.py
-
-Dieses Modul bietet eine Kompatibilitätsschicht zwischen dem veralteten
-optimized_scanner.py und der neuen AdaptiveScanner-Implementierung.
-
-OPTIMIERUNGEN:
-- Verzögerte Importe für bessere Startzeit
-- Effiziente Speichernutzung durch Lazy Initialization
-- Verbesserte Cache-Nutzung und -Verwaltung
-- Erweiterte Fehlerbehandlung und Logging
-- Performance-Monitoring-Integration
-"""
+"""Wrapper Functions for Outdated Views from Optimized_Scanner.py This module offer a compatibility layer between the outdated optimized_scanner.py and the new adaptive scanner implementation. Optimizations: - Delayed Imports for Better Start Time - Efficient Storage Use BY Lazy Initialization -Improved Cache Use and Management - Extended Error Treatment and Logging -Performance Monitoring Integration"""
 
 import warnings
 import logging
@@ -30,7 +18,7 @@ _lazy_imports = {}
 _import_lock = threading.RLock()
 
 def _import_scanner():
-    """Importiert die Scanner-Module mit Fehlerbehandlung"""
+    """Imports the scanner modules with error treatment"""
     try:
         with _import_lock:
             if 'scanner' not in _lazy_imports:
@@ -67,7 +55,7 @@ def _import_scanner():
             }
 
 def _import_performance():
-    """Importiert die Performance-Module mit Fehlerbehandlung"""
+    """Imports the performance modules with error treatment"""
     try:
         with _import_lock:
             if 'performance' not in _lazy_imports:
@@ -96,7 +84,7 @@ def _import_performance():
         }
 
 def with_performance_tracking(func):
-    """Dekorator für Performance-Tracking"""
+    """Decorator for performance tracking"""
     @wraps(func)
     def wrapper(*args, **kwargs):
         start_time = time.perf_counter()
@@ -117,18 +105,7 @@ def with_performance_tracking(func):
 
 @with_performance_tracking
 def scan_directory(directory: str, progress_callback=None, stop_event=None, use_cache=True) -> List[Path]:
-    """
-    Wrapper für den veralteten scan_directory-Aufruf aus optimized_scanner.py.
-
-    Args:
-        directory: Zu durchsuchendes Verzeichnis
-        progress_callback: Callback-Funktion für Fortschrittsbenachrichtigungen
-        stop_event: Event zum Stoppen des Scans
-        use_cache: Ob der Cache verwendet werden soll
-
-    Returns:
-        Liste von ROM-Dateipfaden
-    """
+    """Wrapper for the outdated scan_directory call from Optimized_Scanner.py. Args: Directory: Directory to be searched Progress_Callback: Callback function for progress notifications Stop_event: Event to stop the scan use_cache: Whether the cache should be used Return: List of ROM file paths"""
     warnings.warn(
         "Die Verwendung von optimized_scanner.py ist veraltet. "
         "Bitte verwenden Sie stattdessen src.scanning.scan_directory_adaptive.",
@@ -176,9 +153,7 @@ def scan_directory(directory: str, progress_callback=None, stop_event=None, use_
 
 @with_performance_tracking
 def clear_cache():
-    """
-    Wrapper für den veralteten clear_cache-Aufruf aus optimized_scanner.py.
-    """
+    """Wrapper for the outdated Clear_Cache call from Optimized_Scanner.py."""
     warnings.warn(
         "Die Verwendung von optimized_scanner.py ist veraltet. "
         "Bitte verwenden Sie stattdessen src.scanning.AdaptiveScanner.clear_cache.",
@@ -198,12 +173,7 @@ def clear_cache():
 
 @with_performance_tracking
 def get_cache_stats() -> Dict[str, Any]:
-    """
-    Wrapper für den veralteten cache_stats-Aufruf aus optimized_scanner.py.
-
-    Returns:
-        Dict mit Cache-Statistiken
-    """
+    """Wrapper for the outdated Cache_Stats call from Optimized_Scanner.py. Return: Dict with cache statistics"""
     warnings.warn(
         "Die Verwendung von optimized_scanner.py ist veraltet. "
         "Bitte verwenden Sie stattdessen src.scanning.get_scanner_performance_stats.",
@@ -229,24 +199,10 @@ def get_cache_stats() -> Dict[str, Any]:
         }
 
 class OptimizedFileScanner:
-    """
-    Veraltete OptimizedFileScanner-Klasse aus optimized_scanner.py.
-    Diese Klasse dient nur als Wrapper und sollte nicht mehr verwendet werden.
-    
-    OPTIMIERUNGEN:
-    - Lazy-Loading der Abhängigkeiten
-    - Effizientere Speichernutzung
-    - Verbesserte Fehlerbehandlung
-    - Intelligent Caching für bessere Performance
-    """
+    """Outdated Optimized Files Scanner Class from Optimized_Scanner.py. This Class ONLY SERVES AS A Wrapper and Should no Longer Be used. Optimizations: - Lazy Loading of Dependencies - More Efficient Storage Use - Improved Error Treatment - Intelligent Caching for Better Performance"""
 
     def __init__(self, extensions=None):
-        """
-        Initialisiert einen neuen OptimizedFileScanner (Wrapper).
-
-        Args:
-            extensions: Optionale Liste von Dateierweiterungen zum Filtern
-        """
+        """Initialized a new optimized file scanner (wrapper). ARGS: Extensions: Optional List of File Extensions for Filtering"""
         warnings.warn(
             "Die OptimizedFileScanner-Klasse ist veraltet. "
             "Bitte verwenden Sie stattdessen src.scanning.AdaptiveScanner.",
@@ -264,18 +220,7 @@ class OptimizedFileScanner:
 
     @with_performance_tracking
     def scan_directory(self, directory: str, progress_callback=None, stop_event=None, use_cache=True) -> List[Path]:
-        """
-        Scannt ein Verzeichnis (Wrapper-Methode).
-
-        Args:
-            directory: Zu durchsuchendes Verzeichnis
-            progress_callback: Callback-Funktion für Fortschrittsbenachrichtigungen
-            stop_event: Event zum Stoppen des Scans
-            use_cache: Ob der Cache verwendet werden soll
-
-        Returns:
-            Liste von ROM-Dateipfaden
-        """
+        """Scan a Directory (wrapper method). ARGS: Directory: Directory to Be Searched Progress_Callback: Callback Function for Progress Notifications Stop_event: Event to stop the scan use_cache: Whather the Cache Should be used: List of Rom File Paths"""
         try:
             # Delegiers to the global wrapper function
             return scan_directory(directory, progress_callback, stop_event, use_cache)
@@ -286,16 +231,11 @@ class OptimizedFileScanner:
     @classmethod
     @with_performance_tracking
     def clear_cache(cls):
-        """Löscht den Scanner-Cache (Wrapper-Method)."""
+        """Deletes the scanner cache (wrapper method)."""
         clear_cache()
 
     @property
     @with_performance_tracking
     def cache_stats(self):
-        """
-        Gibt Cache-Statistiken zurück (Wrapper-Methode).
-
-        Returns:
-            Dict mit Cache-Statistiken
-        """
+        """Gives back cache statistics (wrapper method). Return: Dict with cache statistics"""
         return get_cache_stats()

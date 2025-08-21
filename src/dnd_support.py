@@ -1,11 +1,4 @@
-"""
-Native Drag & Drop Support for ROM Sorter
------------------------------------------
-
-This module implements a cross-platform Drag & Drop support for Tkinter
-without external dependencies. On Windows, it uses the Win32-API via ctypes,
-while on other operating systems, alternative mechanisms are employed.
-"""
+"""Native Drag & Drop Support for Rome Sorter ----------------------------------- This modules Implements A Cross-Platform Drag & Drop Support for Tkinter Without external dependencies. On windows, it uses the Win32-API via CTYPES, While on other operating systems, alternative mechanisms are employed."""
 
 import os
 import sys
@@ -37,12 +30,7 @@ _drop_callbacks = {}
 
 
 def enable_native_dnd() -> bool:
-    """
-    Aktiviert die native Drag & Drop-Unterstützung für das aktuelle Betriebssystem.
-
-    Returns:
-        bool: True, wenn die Unterstützung aktiviert werden konnte, sonst False
-    """
+    """Activates the native drag & drop support for the current operating system. Return: Bool: True, if the support could be activated, otherwise false"""
     global DND_AVAILABLE, DND_MODE
 
     try:
@@ -104,12 +92,7 @@ if WINDOWS:
         _DragQueryPoint = None
 
 def _setup_windows_dnd() -> bool:
-    """
-    Richtet Windows-spezifische Drag & Drop-Funktionalität ein.
-
-    Returns:
-        bool: True bei Erfolg, False bei Fehler
-    """
+    """Set up Windows-specific drag & drop functionality. Return: BOOL: True if successful, false in the event of errors"""
     if not WINDOWS:
         return False
 
@@ -138,12 +121,7 @@ TkinterDnD = None
 DND_FILES = None
 
 def _setup_tkinterdnd() -> bool:
-    """
-    Versucht, tkinterdnd2 zu importieren und zu initialisieren.
-
-    Returns:
-        bool: True bei Erfolg, False bei Fehler
-    """
+    """Try to import and initialize Tkinterdnd2. Return: BOOL: True if successful, false in the event of errors"""
     global TkinterDnD, DND_FILES
 
     try:
@@ -180,15 +158,7 @@ class DragDropMixin:
         self._callbacks = set()
 
     def register_drop_target(self, callback: Callable[[List[str]], None]) -> bool:
-        """
-        Registriert dieses Widget als Drop-Ziel für Dateien.
-
-        Args:
-            callback: Funktion, die mit einer Liste von Dateipfaden aufgerufen wird, wenn Dateien gedroppt werden
-
-        Returns:
-            bool: True, wenn die Registrierung erfolgreich war, sonst False
-        """
+        """Register this widget as a drop goal for files. Args: Callback: Function that is called with a list of file paths when files are dropped Return: BOOL: True, if the registration was successful, otherwise false"""
         global _drop_callbacks
 
         try:
@@ -217,7 +187,7 @@ class DragDropMixin:
             return False
 
     def _register_windows_drop_target(self) -> bool:
-        """Registriert das Widget als Drop-Ziel unter Windows."""
+        """Register the widget as a drop goal under Windows."""
         try:
 # Set A Flag to Prevent the Widget from Being Registered Twice
             if hasattr(self, '_drop_target_registered') and self._drop_target_registered:
@@ -345,7 +315,7 @@ class DragDropMixin:
             return False
 
 def _extract_drop_file_paths(hdrop) -> List[str]:
-    """Extrahiert Dateipfade aus einem Windows-Drop-Handle."""
+    """Extract file paths from a Windows drop handle."""
     try:
 # Determine the number of dropped files
         file_count = _DragQueryFileW(hdrop, 0xFFFFFFFF, None, 0)
@@ -369,7 +339,7 @@ def _extract_drop_file_paths(hdrop) -> List[str]:
         return []
 
     def _register_tkdnd_drop_target(self) -> bool:
-        """Registriert das Widget als Drop-Ziel mit TkinterDnD."""
+        """Register the widget as a drop goal with a tkinterdnd."""
         try:
 # Use tkinterdnd methods
             self.drop_target_register(DND_FILES)
@@ -436,15 +406,7 @@ def _extract_drop_file_paths(hdrop) -> List[str]:
             logger.error(f"Fehler bei der TkinterDnD DragLeave-Verarbeitung: {e}")
 
     def _extract_paths_from_data(self, data) -> List[str]:
-        """
-        Extrahiert Dateipfade aus TkinterDnD-Daten.
-
-        Args:
-            data: Event-Daten von TkinterDnD
-
-        Returns:
-            Liste von Dateipfaden
-        """
+        """Extracted file paths from tkinterdnd data. Args: Data: Event data from Tkinterdnd Return: List of file paths"""
         paths = []
 
         if not data:
@@ -515,7 +477,7 @@ def _extract_drop_file_paths(hdrop) -> List[str]:
 
 
 class DropFrame(tk.Frame, DragDropMixin):
-    """A Tkinter Frame with Drag & Drop support."""
+    """A tkinter frame with drag & drop support."""
 
     def __init__(self, master=None, drop_callback=None, on_drop=None, **kwargs):
         tk.Frame.__init__(self, master, **kwargs)
@@ -529,26 +491,12 @@ class DropFrame(tk.Frame, DragDropMixin):
 
 
 def init_drag_drop():
-    """
-    Initialisiert die Drag & Drop-Unterstützung.
-    Muss vor der Erstellung des Hauptfensters aufgerufen werden.
-
-    Returns:
-        bool: True wenn Drag & Drop verfügbar ist, sonst False
-    """
+    """Initialized the drag & drop support. Must be called before the main window is created. Return: BOOL: True when drag & drop is available, otherwise false"""
     return enable_native_dnd()
 
 
 def patch_tkinter_root(root):
-    """
-    Patcht ein bestehendes Tkinter-Root-Fenster mit Drag & Drop-Funktionalität.
-
-    Args:
-        root: Tkinter Root-Fenster
-
-    Returns:
-        bool: True bei Erfolg, sonst False
-    """
+    """Patch an existing tkinter root window with drag & drop functionality. Args: Root: Tkinter Root window Return: Bool: True if successful, otherwise false"""
     try:
         if DND_MODE == "tkdnd":
 # Activate the tkinterdnd for the root window
@@ -567,20 +515,10 @@ def patch_tkinter_root(root):
 
 
 def is_dnd_available():
-    """
-    Prüft, ob Drag & Drop verfügbar ist.
-
-    Returns:
-        bool: True wenn verfügbar, sonst False
-    """
+    """Check whether drag & drop is available. Return: BOOL: True if available, otherwise false"""
     return DND_AVAILABLE
 
 
 def get_dnd_mode():
-    """
-    Gibt den aktuellen Drag & Drop-Modus zurück.
-
-    Returns:
-        str: "native", "tkdnd" oder "none"
-    """
+    """Gives back the current drag & drop mode. Return: Str: "Native", "Tkdnd" or "None""""
     return DND_MODE

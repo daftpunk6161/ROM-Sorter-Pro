@@ -189,17 +189,7 @@ EXTENSION_PRIORITY_MAP = {
 
 # Function to resolve file extension to console type
 def get_console_for_extension(ext, file_content=None, filename=None):
-    """
-    Get console type for a file extension, using content analysis for ambiguous extensions.
-
-    Args:
-        ext: File extension (with leading dot)
-        file_content: Optional file content for further analysis
-        filename: Optional filename for further analysis
-
-    Returns:
-        str: Console type identifier or 'Unknown' if not recognized
-    """
+    """Get console type for a file extension, using content analysis for ambiguous extensions. ARGS: Ext: File Extension (With Leading Dot) File_Content: Optional File Content for Further Analysis Filename: Optional Filename for Further Analysis Return: Str: Console Type Identifier or 'Unknown' if not Recognizedizedizedizedized"""
     ext = ext.lower()
 
     # Direct mapping

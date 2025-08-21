@@ -1,39 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""
-ROM Sorter Pro - Consolidated Configuration Module v2.1.8
-
-CONSOLIDATION v2.1.8:
-- ADDED: Validation functions for lists and dictionaries
-- IMPROVED: Enhanced validation functions for complex data types
-- OPTIMIZED: Improved type checking and error handling
-- UPDATED: Version consistency across the application
-- UNIFIED: config.py and config_utils.py into a single file
-- IMPROVED: Central error handling with exceptions.py
-- OPTIMIZED: Reduction of code duplication and dependencies
-- STRENGTHENED: Consistent validation methods
-- FIXED: Input validation with proper type checking and bounds
-- ENHANCED: Property-based configuration validation
-- IMPROVED: Error handling with detailed validation messages
-- ADDED: Configuration schema validation with secure defaults
-- STRENGTHENED: Thread-safe configuration with proper bounds checking
-- High-performance JSON processing with streaming
-- Advanced schema validation with caching
-- Intelligent configuration repair and migration
-- Enhanced backup and restore functionality
-- Optimized validation with minimal overhead
-- Comprehensive error handling and recovery
-
-Project:        ROM Sorter Pro
-File:           src/config.py (consolidated with config_utils.py)
-Version:        2.1.8 - Consolidated Version
-Author:         cemal / daftpunk6161
-Created:        2024
-Updated:        10.08.2025
-License:        MIT License
-Python:         3.8+
-"""
+"""Rom Sarter Pro - Consolidated Configuration Module V2.1.8 Consolidation V2.1.8: - Added: Validation Functions for Lists and Dictionaries - Improved: Enhanced Validation Function for Complex Data Types - Optimized: Improved Type Handling - Updated: Application - Unified: config.py and config_Utils.py Into a Single File - Improved: Central Error Handling with Exceptions.py - Optimized: Reduction of Code Duplication and Dependencies - Strenghened: Consistent Validation Methods - Fixed and Fixed and Bounds - Enhanced: Property -Based Configuration Validation - Improved: Error Handling With Detailed Validation Messages - Added: Configuration Scheme Validation with Secure Defaults - Strenghened: Thread -Safe Configuration With Proper BoUnds Checking - High Performance Json Processing With Streaming - Advanced scheme validation with caching - Intelligent Configuration Repair and Migration - Enhanced Backup and Restore Functionality - Optimized Validation with Minimal Overhead - Comprehensive Error Handling and Rome Sorter Pro File: SRC/Config.PY config_utils.py) version: 2.1.8 - Consolidated version Author: Cemal / Daftpunk6161 Created: 2024 updated: 10.08.2025 License: with License Python: 3.8+"""
 
 # ============================================================================
 # OPTIMIZED IMPORTS
@@ -241,18 +209,7 @@ class EnhancedConfigValidator:
 
     def validate_nested_structure(self, data: Any, max_depth: int = 5,
                               max_array_size: int = 1000, path: str = "") -> List[Dict[str, Any]]:
-        """
-        Advanced validation for nested structures with detailed error reporting.
-
-        Args:
-            data: The data structure to validate
-            max_depth: Maximum allowed nesting depth
-            max_array_size: Maximum allowed array size
-            path: Current JSON path (for error reporting)
-
-        Returns:
-            List of issues found (each as a dict with details)
-        """
+        """Advanced Validation for Nested Structures with detailed error reporting. Args: Data: The Data Structure to Validate Max_Depth: Maximum Allowed Nesting Depth Max_array_Size: Maximum Allowed Array Size Path: Current Json Path (For Error Reporting) Return: List of Issues Found (Each AS A DITH DEALTS)"""
         issues = []
         current_depth = len(path.split('.')) if path else 0
 
@@ -452,7 +409,7 @@ class EnhancedConfigValidator:
             return False, f"Validation error: {e}", {'error_type': type(e).__name__}
 
     def _format_schema_error(self, error) -> Dict[str, Any]:
-        """Format a jsonschema ValidationError into a structured dictionary."""
+        """Format A JSONSCHEMA Validationeror Into a Structured Dictionary."""
         return {
             'message': error.message,
             'path': list(error.absolute_path) if hasattr(error, 'absolute_path') else [],
@@ -529,7 +486,7 @@ class EnhancedConfigValidator:
         return repaired
 
     def _find_property_schema(self, schema: Dict[str, Any], path: List[str], property_name: str) -> Optional[Dict[str, Any]]:
-        """Find the schema for a specific property within a nested schema."""
+        """Find the scheme for a specific property with a nested schema."""
         # Start at the root schema
         current_schema = schema
 
@@ -554,7 +511,7 @@ class EnhancedConfigValidator:
         return None
 
     def _get_default_value(self, schema: Dict[str, Any]) -> Any:
-        """Get a default value based on a schema definition."""
+        """Get a default value based on a scheme definition."""
         # Use explicit default if provided
         if 'default' in schema:
             return schema['default']

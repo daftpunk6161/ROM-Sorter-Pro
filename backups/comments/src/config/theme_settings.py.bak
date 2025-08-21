@@ -1,10 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-ROM Sorter Pro - Theme-Einstellungen
-
-Dieses Modul definiert die Standard-Themes und Pfade für benutzerdefinierte Themes.
-"""
+"""ROM SARTER PRO THE SETTIONS This module defines the standard themes and paths for custom themes."""
 
 import os
 from pathlib import Path
@@ -43,26 +39,13 @@ THEME_SETTINGS = {
 }
 
 def get_theme_path():
-    """
-    Gibt den Pfad zum Theme-Verzeichnis zurück und erstellt es bei Bedarf
-
-    Returns:
-        Path: Pfad zum Theme-Verzeichnis
-    """
+    """Gives back the path to the theme directory and creates it if necessary Return: Path: path to the theme directory"""
     theme_dir = Path(os.path.expanduser("~")) / ".rom_sorter_pro" / "themes"
     theme_dir.mkdir(parents=True, exist_ok=True)
     return theme_dir
 
 def get_default_theme_settings(theme_name="system"):
-    """
-    Gibt die Standard-Theme-Einstellungen für ein bestimmtes Theme zurück
-
-    Args:
-        theme_name: Name des Themes ('light', 'dark' oder 'system')
-
-    Returns:
-        dict: Theme-Einstellungen
-    """
+    """Gives back the standard theme settings for a specific theme Args: Theme_Name: Name of the Themes ('Light', 'Dark' or 'System') Return: dict: theme settings"""
     if theme_name == "system":
         # Systemeinstellung ermitteln
         import platform
@@ -76,7 +59,7 @@ def get_default_theme_settings(theme_name="system"):
             except:
                 pass
 
-        # Fallback, wenn die Systemeinstellung nicht ermittelt werden kann
+        # Fallback if the system setting cannot be determined
         return THEME_SETTINGS["light"]
 
     elif theme_name in THEME_SETTINGS:

@@ -1,10 +1,6 @@
 #!/usr/bin/env python3
 # -*-coding: utf-8-*-
-"""
-ROM Sorter Pro - Adaptive Scanner
-
-Dieses Modul enthält adaptive Scanning-Klassen und -Funktionen für hochoptimierte ROM-Dateierkennung.
-"""
+"""Rome Sorter Pro - Adaptive Scanner This module contains adaptive scanning classes and functions for highly optimized ROM file detection."""
 
 import os
 import time
@@ -33,10 +29,7 @@ logger = logging.getLogger(__name__)
 
 
 class AdaptiveScanner(OptimizedScanner):
-    """
-    Erweiterte ROM-Scanner-Klasse mit adaptiver Anpassung an Dateisystemleistung und intelligenten
-    Caching-Mechanismen.
-    """
+    """Extended ROM scanner class with adaptive adaptation to file system performance and intelligent Caching mechanisms."""
 
 # Class level cache for improved memory efficiency
     _scan_cache = {}
@@ -72,13 +65,7 @@ class AdaptiveScanner(OptimizedScanner):
     }
 
     def __init__(self, filter_extensions: Optional[List[str]] = None, max_workers: int = None):
-        """
-        Initialisiert einen neuen adaptiven ROM-Scanner.
-
-        Args:
-            filter_extensions: Optionale Liste von Dateierweiterungen zum Filtern (ohne Punkt)
-            max_workers: Maximale Anzahl an Worker-Threads (None für automatische Bestimmung)
-        """
+        """Initialized A New Adaptive Rome Scanner. ARGS: Filter_extensions: Optional List of File Extensions for Filtering (Without Point) Max_Workers: Maximum Number of Worker Threads (None for Automatic Determination)"""
         super().__init__(filter_extensions, max_workers)
 
 # Extended statistics
@@ -108,17 +95,7 @@ class AdaptiveScanner(OptimizedScanner):
     def scan_directory_adaptive(self, directory_path: Union[str, Path],
                                recursive: bool = False,
                                use_cache: bool = True) -> List[ROMMetadata]:
-        """
-        Durchsucht ein Verzeichnis mit adaptiver Leistungsanpassung nach ROM-Dateien.
-
-        Args:
-            directory_path: Zu durchsuchendes Verzeichnis
-            recursive: Ob Unterverzeichnisse rekursiv durchsucht werden sollen
-            use_cache: Ob der Cache verwendet werden soll
-
-        Returns:
-            Liste von ROMMetadata-Objekten
-        """
+        """Searches for a Directory with adaptive performance adjustment according to rome files. ARGS: Directory_Path: Recursive: Whether subdirectaries should be searched for recursively use_cache: Whether the cache should be used: List of rummy objects"""
         path_obj = Path(directory_path)
         if not path_obj.exists() or not path_obj.is_dir():
             logger.error(f"Verzeichnis existiert nicht oder ist kein Verzeichnis: {directory_path}")
@@ -183,12 +160,7 @@ class AdaptiveScanner(OptimizedScanner):
         return results
 
     def _measure_filesystem_performance(self, directory_path: Path) -> None:
-        """
-        Misst die Dateisystemleistung für optimale Anpassung.
-
-        Args:
-            directory_path: Zu testendes Verzeichnis
-        """
+        """Measures the file system performance for optimal adjustment. Args: Directory_Path: Directory to be tested"""
         try:
 # Small sample of file access for latency estimate
             sample_size = min(20, sum(1 for _ in directory_path.iterdir()))
@@ -225,15 +197,7 @@ class AdaptiveScanner(OptimizedScanner):
             logger.warning(f"Fehler bei der Dateisystem-Leistungsmessung: {e}")
 
     def _should_use_threading(self, directory_path: Path) -> bool:
-        """
-        Entscheidet, ob Threading basierend auf Verzeichnisgröße und Dateisystemleistung verwendet werden soll.
-
-        Args:
-            directory_path: Zu analysierendes Verzeichnis
-
-        Returns:
-            True, wenn Threading verwendet werden soll, sonst False
-        """
+        """Decide whether threading should be used based on directory size and file system performance. Args: Directory_Path: List to analyzing Return: True if threading is to be used, otherwise false"""
 # Better use sequential scanning in slow file systems
         if self._adaptive_params['is_slow_filesystem']:
             return False
@@ -269,27 +233,12 @@ class AdaptiveScanner(OptimizedScanner):
             return False
 
     def _is_valid_extension(self, file_path: Path) -> bool:
-        """
-        Prüft, ob die Datei eine gültige ROM-Erweiterung hat.
-
-        Args:
-            file_path: Zu prüfender Dateipfad
-
-        Returns:
-            True, wenn die Datei eine gültige ROM-Erweiterung hat
-        """
+        """Check Whether the File Has A Valid Rome Extension. Args: File_Path: File Path to Be Examined Return: True When The File Has A Valid Rome Extension"""
         extension = file_path.suffix.lstrip('.').lower()
         return extension in self.filter_extensions
 
     def _adjust_adaptive_parameters(self, files_per_second: float, dirs_scanned: int, total_time: float) -> None:
-        """
-        Passt adaptive Parameter für künftige Scans basierend auf Leistungsmetriken an.
-
-        Args:
-            files_per_second: Durchsatz (Dateien pro Sekunde)
-            dirs_scanned: Anzahl der durchsuchten Verzeichnisse
-            total_time: Gesamtzeit des Scans in Sekunden
-        """
+        """Adaptive parameters for future scans adapts based on power metrics. Args: Files_per_Second: throughput (files per second) Dirs_scanned: Number of searches searched Total_Time: Total time of the scan in seconds"""
         try:
 # Adjust the batch size
             if files_per_second > 1000:
@@ -320,7 +269,7 @@ class AdaptiveScanner(OptimizedScanner):
 
     @classmethod
     def clear_cache(cls) -> None:
-        """Löscht den Scanner-Cache."""
+        """Deletes the scanner cache."""
         with cls._cache_lock:
             cls._scan_cache.clear()
             cls._cache_hit_count = 0
@@ -329,12 +278,7 @@ class AdaptiveScanner(OptimizedScanner):
 
     @property
     def cache_stats(self) -> Dict[str, Any]:
-        """
-        Gibt Cache-Statistiken zurück.
-
-        Returns:
-            Dict mit Cache-Statistiken
-        """
+        """Gives back cache statistics. Return: Dict with cache statistics"""
         with self.__class__._cache_lock:
             hits = self.__class__._cache_hit_count
             misses = self.__class__._cache_miss_count
@@ -349,12 +293,7 @@ class AdaptiveScanner(OptimizedScanner):
             }
 
     def get_performance_profile(self) -> Dict[str, Any]:
-        """
-        Gibt das aktuelle Leistungsprofil des Scanners zurück.
-
-        Returns:
-            Dict mit Leistungsmetriken
-        """
+        """Gives back the current performance profile of the scanner. Return: Dict with power metrics"""
         return {
             'filesystem_latency_ms': self.__class__._performance_metrics['filesystem_latency'] * 1000,
             'last_scan_time': self.__class__._performance_metrics['last_scan_time'],
@@ -369,29 +308,13 @@ def scan_directory_adaptive(directory_path: Union[str, Path],
                            recursive: bool = False,
                            filter_extensions: Optional[List[str]] = None,
                            use_cache: bool = True) -> List[ROMMetadata]:
-    """
-    Durchsucht ein Verzeichnis adaptiv nach ROM-Dateien (Komfortfunktion).
-
-    Args:
-        directory_path: Zu durchsuchendes Verzeichnis
-        recursive: Ob Unterverzeichnisse rekursiv durchsucht werden sollen
-        filter_extensions: Optionale Liste von Dateierweiterungen zum Filtern
-        use_cache: Ob der Cache verwendet werden soll
-
-    Returns:
-        Liste von ROMMetadata-Objekten
-    """
+    """Searches A Directory Adaptive for Rome Files (Comfort Function). ARGS: Directory_Path: Recursive: Whether subdirectaries Should be searched for recursively filter_extensions: Optional list of file extensions for filtering use_cache: Whether the cache should be used Return: List of Rummy Objects"""
     scanner = AdaptiveScanner(filter_extensions)
     return scanner.scan_directory_adaptive(directory_path, recursive, use_cache)
 
 
 def get_scanner_performance_stats() -> Dict[str, Any]:
-    """
-    Gibt die aktuellen Scanner-Leistungsstatistiken zurück.
-
-    Returns:
-        Dict mit kombinierten Cache- und Leistungsmetriken
-    """
+    """Returns the current scanner performance statistics. Return: Dict with combined cache and power metrics"""
     scanner = AdaptiveScanner()
     cache_stats = scanner.cache_stats
     perf_stats = scanner.get_performance_profile()

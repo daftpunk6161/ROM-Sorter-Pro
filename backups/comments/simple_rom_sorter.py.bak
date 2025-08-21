@@ -1,0 +1,138 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""Rome Sorter Pro - Simple Starter (Stand -Salone) V2.1.8 This file Serves as a Simple Entry Point for Rome Sorter Pro Without The Complex Import Dependencies of the Full Application."""
+
+import os
+import sys
+import traceback
+import logging
+import tkinter as tk
+from tkinter import ttk, messagebox
+
+# Configure Logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+class SimpleROMSorterGUI:
+    """Simplified Gui Class for Rome Sorter Pro. This class implements a minimal version of the user interface."""
+
+    def __init__(self):
+        """Initializes the GUI."""
+        # Create the main window
+        self.root = tk.Tk()
+        self.root.title("ROM Sorter Pro v2.1.8")
+        self.root.geometry("800x600")
+        self.root.minsize(800, 600)
+
+        # Create the main components
+        self._create_widgets()
+
+        # Behavior when closing
+        self.root.protocol("WM_DELETE_WINDOW", self._on_close)
+
+        logger.info("SimpleROMSorterGUI initialized")
+
+    def _create_widgets(self):
+        """Creates the UI components."""
+        # Main frame
+        main_frame = ttk.Frame(self.root, padding=10)
+        main_frame.pack(fill=tk.BOTH, expand=True)
+
+        # Heading
+        header = ttk.Label(
+            main_frame,
+            text="ROM Sorter Pro (Refactored Version)",
+            font=("Helvetica", 16)
+        )
+        header.pack(pady=20)
+
+        # Notice
+        message = ttk.Label(
+            main_frame,
+            text="The GUI refactoring has been completed.\n"
+                 "Modules have been split according to the plan.\n\n"
+                 "This simplified GUI serves as a placeholder until\n"
+                 "import dependencies are fully resolved.",
+            font=("Helvetica", 12)
+        )
+        message.pack(pady=20)
+
+        # Module Info
+        modules_frame = ttk.LabelFrame(main_frame, text="Module Status", padding=10)
+        modules_frame.pack(fill=tk.X, pady=20)
+
+        modules = [
+            ("gui_core.py", "Implemented"),
+            ("gui_components.py", "Implemented"),
+            ("gui_scanner.py", "Implemented"),
+            ("gui_dnd.py", "Implemented"),
+            ("gui_handlers.py", "Implemented"),
+            ("gui.py", "Implemented")
+        ]
+
+        for i, (module, status) in enumerate(modules):
+            ttk.Label(modules_frame, text=module, font=("Helvetica", 10, "bold")).grid(
+                row=i, column=0, sticky="w", padx=5, pady=3
+            )
+            ttk.Label(modules_frame, text=status, foreground="green").grid(
+                row=i, column=1, sticky="w", padx=5, pady=3
+            )
+
+        # Buttons
+        button_frame = ttk.Frame(main_frame)
+        button_frame.pack(pady=20)
+
+        ttk.Button(button_frame, text="Exit", command=self._on_close).pack(side=tk.LEFT, padx=10)
+        ttk.Button(button_frame, text="Info", command=self._show_info).pack(side=tk.LEFT, padx=10)
+
+    def _on_close(self):
+        """Called when the window is closed."""
+        logger.info("Application is shutting down")
+        self.root.destroy()
+
+    def _show_info(self):
+        """Shows information about the refactoring."""
+        messagebox.showinfo(
+            "GUI Refactoring",
+            "The GUI has been successfully split into multiple modules:\n\n"
+            "1. gui_components.py: UI components\n"
+            "2. gui_core.py: Core functionality\n"
+            "3. gui_scanner.py: Scanner functionality\n"
+            "4. gui_dnd.py: Drag-and-Drop functionality\n"
+            "5. gui_handlers.py: Event handlers\n"
+            "6. gui.py: Entry point\n\n"
+            "This simplified GUI serves as a placeholder while the "
+            "import dependencies are still being fully resolved."
+        )
+
+    def run(self):
+        """Starts the application."""
+        logger.info("Starting GUI")
+        self.root.mainloop()
+
+
+def main():
+    """Main function."""
+    try:
+        # Start the application
+        app = SimpleROMSorterGUI()
+        app.run()
+    except Exception as e:
+        logger.error(f"Error starting the application: {e}")
+        logger.error(traceback.format_exc())
+
+        try:
+            messagebox.showerror(
+                "Error",
+                f"An error has occurred:\n\n{e}\n\n"
+                f"Details have been written to the log."
+            )
+        except:
+            print(f"Error: {e}")
+
+
+if __name__ == "__main__":
+    main()

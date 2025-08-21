@@ -5,16 +5,10 @@ from tkinter import ttk
 from .base import STYLE, BaseApp
 
 class TabPanel:
-    """Basis für alle Tab-Panels in der Anwendung."""
+    """Basis for all tab panels in the application."""
 
     def __init__(self, parent: ttk.Notebook, title: str):
-        """
-        Initialisiere ein Tab-Panel.
-
-        Args:
-            parent: Das übergeordnete Notebook-Widget
-            title: Der Titel des Tabs
-        """
+        """Initialize a tab panel. ARGS: Parent: The Overarching Notebook Widget Title: The Title of the Tab"""
         self.parent = parent
         self.title = title
 
@@ -33,19 +27,19 @@ class TabPanel:
         self._create_widgets()
 
     def _create_widgets(self):
-        """Erstelle die Widgets für dieses Tab. Diese Method wird von Unterklassen überschrieben."""
+        """Create the widgets for this tab. This method is overwritten by subclasses."""
         pass
 
 
 class OptionsPanel(TabPanel):
-    """Panel für die Konfigurationsoptionen."""
+    """Panel for the configuration options."""
 
     def __init__(self, parent: ttk.Notebook):
-        """Initialisiere das Optionen-Panel."""
+        """Initialize the options panel."""
         super().__init__(parent, "Optionen")
 
     def _create_widgets(self):
-        """Erstelle die Widgets für das Optionen-Panel."""
+        """Create the widgets for the options panel."""
         # Main container with padding
         main_frame = tk.Frame(self.frame, bg=STYLE.colors.bg_primary)
         main_frame.pack(fill='both', expand=True)
@@ -56,7 +50,7 @@ class OptionsPanel(TabPanel):
         self._create_advanced_options(main_frame)
 
     def _create_operation_options(self, parent):
-        """Erstelle die Bereichsoptionen für Operationen."""
+        """Create the area options for operations."""
         # Frame for surgical options
         section_frame = tk.LabelFrame(
             parent,
@@ -71,7 +65,7 @@ class OptionsPanel(TabPanel):
         # Placeholder for the actual implementation
 
     def _create_scanning_options(self, parent):
-        """Erstelle die Bereichsoptionen für das Scannen."""
+        """Create the area options for scanning."""
         # Frame for scan options
         section_frame = tk.LabelFrame(
             parent,
@@ -86,7 +80,7 @@ class OptionsPanel(TabPanel):
         # Placeholder for the actual implementation
 
     def _create_advanced_options(self, parent):
-        """Erstelle die Bereichsoptionen für erweiterte Settings."""
+        """Create the area options for extended settings."""
         # Frame for extended options
         section_frame = tk.LabelFrame(
             parent,
@@ -102,10 +96,10 @@ class OptionsPanel(TabPanel):
 
 
 class StatisticsPanel(TabPanel):
-    """Panel für die Anzeige von Statistiken."""
+    """Panel for the display of statistics."""
 
     def __init__(self, parent: ttk.Notebook):
-        """Initialisiere das Statistik-Panel."""
+        """Initialize the statistics panel."""
         super().__init__(parent, "Statistiken")
 
         # Statistik-Variablen
@@ -122,7 +116,7 @@ class StatisticsPanel(TabPanel):
         self.stat_vars = {k: tk.StringVar(value="0") for k in self.stats}
 
     def _create_widgets(self):
-        """Erstelle die Widgets für das Statistik-Panel."""
+        """Create the widgets for the statistics panel."""
         # Main container with padding
         main_frame = tk.Frame(self.frame, bg=STYLE.colors.bg_primary)
         main_frame.pack(fill='both', expand=True)
@@ -131,7 +125,7 @@ class StatisticsPanel(TabPanel):
         self._create_stats_table(main_frame)
 
     def _create_stats_table(self, parent):
-        """Erstelle eine Tabelle für die Statistik-Anzeige."""
+        """Create a table for the statistics display."""
         # Frame for the statistics table
         table_frame = tk.Frame(
             parent,
@@ -204,12 +198,7 @@ class StatisticsPanel(TabPanel):
             ).pack(side='left')
 
     def update_stats(self, stats_dict: Dict[str, Any]) -> None:
-        """
-        Aktualisiere die Statistikanzeige mit neuen Werten.
-
-        Args:
-            stats_dict: Ein Dictionary mit den zu aktualisierenden Statistiken
-        """
+        """Update the Statistical Display with New Values. ARGS: Stats_dict: A dictionary with the statistics to be updated"""
         for key, value in stats_dict.items():
             if key in self.stat_vars:
                 if key == "saved_space":
@@ -220,15 +209,7 @@ class StatisticsPanel(TabPanel):
 
     @staticmethod
     def _format_size(size_bytes: int) -> str:
-        """
-        Formatiere eine Bytezahl in eine lesbare Größe.
-
-        Args:
-            size_bytes: Die Größe in Bytes
-
-        Returns:
-            str: Die formatierte Größe (z.B. "1.23 MB")
-        """
+        """Format A Byte Number in A Readable Size. Args: Size_bytes: The Size in bytes Return: Str: The Formatted Size (e.G. "1.23 MB"))"""
         for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
             if size_bytes < 1024.0 or unit == 'TB':
                 return f"{size_bytes:.2f} {unit}"
@@ -236,15 +217,15 @@ class StatisticsPanel(TabPanel):
 
 
 class LogPanel(TabPanel):
-    """Panel für die Anzeige von Protokollen."""
+    """Panel for displaying protocols."""
 
     def __init__(self, parent: ttk.Notebook):
-        """Initialisiere das Log-Panel."""
+        """Initialize the log panel."""
         super().__init__(parent, "Protokoll")
         self.max_lines = 1000  # Maximum number of lines to be displayed
 
     def _create_widgets(self):
-        """Erstelle die Widgets für das Log-Panel."""
+        """Create the widgets for the log panel."""
         # Main container with padding
         main_frame = tk.Frame(self.frame, bg=STYLE.colors.bg_primary)
         main_frame.pack(fill='both', expand=True)
@@ -297,13 +278,7 @@ class LogPanel(TabPanel):
         ).pack(side='left', padx=5)
 
     def add_log(self, message: str, level: str = 'INFO') -> None:
-        """
-        Füge eine Nachricht zum Protokoll hinzu.
-
-        Args:
-            message: Die hinzuzufügende Nachricht
-            level: Die Protokollebene (INFO, WARNING, ERROR, DEBUG)
-        """
+        """Add a Message to the Protocol. ARGS: Message: The News To Be Added Level: The Protocol Level (Info, Warning, Error, Debug)"""
         # Activate processing
         self.log_text.configure(state='normal')
 
@@ -323,13 +298,13 @@ class LogPanel(TabPanel):
         self.log_text.configure(state='disabled')
 
     def clear_log(self) -> None:
-        """Leere das Protokoll."""
+        """Empty the protocol."""
         self.log_text.configure(state='normal')
         self.log_text.delete('1.0', tk.END)
         self.log_text.configure(state='disabled')
 
     def save_log(self) -> None:
-        """Speichere das Protokoll in eine Datei."""
+        """Save the Protocol Into a File."""
         # In an actual implementation, a file dialog would be opened here and
         # the content of the protocol can be saved in the selected file
         # Placeholder for the actual implementation

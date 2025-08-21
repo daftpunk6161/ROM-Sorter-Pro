@@ -1,12 +1,6 @@
 #!/usr/bin/env python3
 # -*-coding: utf-8-*-
-"""
-ROM Sorter Pro - Integrationsmodul für Desktop-Anwendung
-Phase 1 Implementation: Desktop-Optimierung
-
-Dieses Modul verbindet die Desktop-Benutzeroberfläche mit den verbesserten
-Scannerfunktionen und stellt sicher, dass alle Komponenten korrekt zusammenarbeiten.
-"""
+"""ROM SARTER PRO - Integration module for desktop application Phase 1 Implementation: Desktop optimization This module combines the desktop user interface with the improved Scanner functions and ensure that all components work together correctly."""
 
 import os
 import sys
@@ -31,14 +25,10 @@ from ..database.rom_database import ROMDatabase
 logger = logging.getLogger(__name__)
 
 class DesktopIntegration:
-    """
-    Integrationsklasse für die Desktop-Anwendung.
-    Verbindet UI, Scanner und Datenbank und stellt
-    einen einheitlichen Zugriffspunkt für die Anwendung bereit.
-    """
+    """Integration Class for Desktop Application. Connects UI, Scanner and Database and Provides Ready for a Uniform Access Point for the Application."""
 
     def __init__(self):
-        """Initialisiert die Desktop-Integration."""
+        """Initialized the desktop integration."""
         self.config = get_enhanced_config()
         self.scanner = None
         self.thread_pool = None
@@ -55,10 +45,7 @@ class DesktopIntegration:
         self._lock = threading.RLock()
 
     def initialize(self):
-        """
-        Initialisiert alle benötigten Komponenten.
-        Diese Methode sollte nach der Konfiguration aufgerufen werden.
-        """
+        """Initialized all the required components. This method should be called after the configuration."""
         if self._initialized:
             return
 
@@ -109,7 +96,7 @@ class DesktopIntegration:
                 raise
 
     def register_scanner_callbacks(self):
-        """Registriert Callbacks für den Scanner."""
+        """Register callbacks for the scanner."""
         if not self.scanner:
             return
 
@@ -188,16 +175,7 @@ class DesktopIntegration:
         self.scanner.register_callback('error', on_error)
 
     def scan_directory(self, directory: str, recursive: bool = True) -> Optional[str]:
-        """
-        Startet einen Scan des angegebenen Verzeichnisses.
-
-        Args:
-            directory: Das zu scannende Verzeichnis
-            recursive: Ob Unterordner durchsucht werden sollen
-
-        Returns:
-            Scan-ID oder None bei Fehler
-        """
+        """Starts A Scan of the Specified Directory. ARGS: Directory: The Directory to Be Scanned Recursive: Whether subfolder should be searched return: Scan-Id or None in the event of errors"""
         if not self._initialized:
             self.initialize()
 
@@ -221,15 +199,7 @@ class DesktopIntegration:
             return None
 
     def pause_scan(self, scan_id: Optional[str] = None) -> bool:
-        """
-        Pausiert einen laufenden Scan.
-
-        Args:
-            scan_id: ID des zu pausierenden Scans oder None für alle Scans
-
-        Returns:
-            True wenn erfolgreich, False bei Fehler
-        """
+        """Pauses A Running Scan. ARGS: Scan_id: Id of the Scan Or None to Be Paused for All Scans Return: True IF Successful, False In The Event of Errors"""
         if not self._initialized or not self.scanner:
             return False
 
@@ -240,15 +210,7 @@ class DesktopIntegration:
             return False
 
     def resume_scan(self, scan_id: Optional[str] = None) -> bool:
-        """
-        Setzt einen pausierten Scan fort.
-
-        Args:
-            scan_id: ID des fortzusetzenden Scans oder None für alle Scans
-
-        Returns:
-            True wenn erfolgreich, False bei Fehler
-        """
+        """Stop a paused scan. ARGS: Scan_id: ID of Continuing Scans Or None for All Scans Return: True IF Successful, False in the event of errors"""
         if not self._initialized or not self.scanner:
             return False
 
@@ -259,15 +221,7 @@ class DesktopIntegration:
             return False
 
     def stop_scan(self, scan_id: Optional[str] = None) -> bool:
-        """
-        Stoppt einen laufenden Scan.
-
-        Args:
-            scan_id: ID des zu stoppenden Scans oder None für alle Scans
-
-        Returns:
-            True wenn erfolgreich, False bei Fehler
-        """
+        """Stop a running scan. Args: Scan_id: Id of the Scan to Be Stoped Or None for All Scans Return: True IF Successful, False in the event of errors"""
         if not self._initialized or not self.scanner:
             return False
 
@@ -278,23 +232,14 @@ class DesktopIntegration:
             return False
 
     def execute_task(self, func: Callable, *args, **kwargs) -> str:
-        """
-        Führt eine Aufgabe im Thread-Pool aus.
-
-        Args:
-            func: Die auszuführende Funktion
-            *args, **kwargs: Parameter für die Funktion
-
-        Returns:
-            Task-ID
-        """
+        """Performs a task in the thread pool. Args: Func: The Function to Be Carried Out *Args, ** Kwargs: Parameters for the Function Return: Task ID"""
         if not self._initialized:
             self.initialize()
 
         return self.thread_pool.submit(func, *args, **kwargs)
 
     def shutdown(self):
-        """Fährt alle Komponenten herunter."""
+        """Drives down all components."""
         logger.info("Fahre Desktop-Integration herunter...")
 
         try:
@@ -326,14 +271,7 @@ class DesktopIntegration:
             logger.error(f"Fehler beim Herunterfahren der Desktop-Integration: {e}")
 
     def show_error_dialog(self, title: str, message: str):
-        """
-        Zeigt einen Fehlerdialog an, wenn Qt verfügbar ist.
-        Falls nicht, wird der Fehler nur protokolliert.
-
-        Args:
-            title: Titel des Dialogs
-            message: Fehlermeldung
-        """
+        """Displays an error dialog when QT is available. If not, the error is only logged. Args: Title: Title of Dialogue Message: error message"""
         logger.error(f"{title}: {message}")
 
         global QApplication, QMessageBox
@@ -376,13 +314,7 @@ class DesktopIntegration:
 desktop_integration_instance = None
 
 def get_desktop_integration() -> DesktopIntegration:
-    """
-    Gibt die globale Instanz der Desktop-Integration zurück.
-    Erstellt eine neue Instanz, falls noch keine existiert.
-
-    Returns:
-        DesktopIntegration-Instanz
-    """
+    """Designs The Global Instance of the Desktop Integration. Creates a new instance if there is no yet. Return: Desktopintegration instance"""
     global desktop_integration_instance
 
     if desktop_integration_instance is None:

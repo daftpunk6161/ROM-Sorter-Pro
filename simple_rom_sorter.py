@@ -1,11 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-ROM Sorter Pro - Simple Starter (Stand-Alone) v2.1.8
-
-This file serves as a simple entry point for ROM Sorter Pro without
-the complex import dependencies of the full application.
-"""
+"""Rome Sorter Pro - Simple Starter (Stand -Salone) V2.1.8 This file Serves as a Simple Entry Point for Rome Sorter Pro Without the Complex ImpmentCies of the Full Application."""
 
 import os
 import sys
@@ -22,11 +17,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class SimpleROMSorterGUI:
-    """
-    Simplified GUI class for ROM Sorter Pro.
-
-    This class implements a minimal version of the user interface.
-    """
+    """Simplified Gui Class for Rome Sorter Pro. This class implements a minimal version of the user interface."""
 
     def __init__(self):
         """Initializes the GUI."""

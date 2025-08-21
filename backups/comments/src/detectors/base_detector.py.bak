@@ -1,0 +1,37 @@
+#!/usr/bin/env python3
+# -*-coding: utf-8-*-
+"""Rome Sorter Pro - Basic detector This module defines the basic class for all detectors, To a uniform interface and common functionality to ensure for all detectors."""
+
+import logging
+from abc import ABC, abstractmethod
+from pathlib import Path
+from typing import Optional, Dict, Any
+
+logger = logging.getLogger(__name__)
+
+
+class BaseDetector(ABC):
+    """Basic class for all detectors in the Rome sorter per application. Defines a common interface and basic functions."""
+
+    def __init__(self, confidence_threshold: float = 0.5):
+        """Initialized the detector. Args: Confidence_threshold: Minimal confidence threshold for positive detection"""
+        self.confidence_threshold = confidence_threshold
+        self.last_result = None
+        self.last_confidence = 0.0
+
+    @abstractmethod
+    def detect(self, file_path: Path) -> Optional[Dict[str, Any]]:
+        """Recognize the console type for a file. Args: File_Path: path to the file to be examined Return: Dict with console information or none if no detection is possible"""
+        pass
+
+    def is_supported_file(self, file_path: Path) -> bool:
+        """Check whether the file is supported by this detector. Args: File_Path: path to the file to be examined Return: True if the file is supported, otherwise false"""
+        return False
+
+    def get_last_result(self) -> Optional[Dict[str, Any]]:
+        """Gives back the last detection result. Return: Dict with console information or none if there is no detection"""
+        return self.last_result
+
+    def get_confidence(self) -> float:
+        """Gives back the confidence value of the last detection. Return: Confidence between 0.0 and 1.0"""
+        return self.last_confidence

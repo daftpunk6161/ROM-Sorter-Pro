@@ -1,20 +1,6 @@
 #!/usr/bin/env python3
 # -*-coding: utf-8-*-
-"""
-ROM Sorter Pro - High-Performance Scanner v2.1.8
-Phase 1 Implementation: Desktop Optimization
-
-This module implements a high-performance scanner for ROM files with advanced
-thread management, optimized memory usage, and enhanced error handling.
-
-FEATURES:
-- Multi-threading for maximum CPU utilization
-- Advanced parallel processing for optimal performance
-- Intelligent chunking of large files for reduced memory usage
-- Robust error handling with recovery capabilities
-- Adaptive scanning for different systems
-- Support for delayed and incremental processing
-"""
+"""Rom Sarter Pro -High -performance scanner V2.1.8 Phase 1 implementation: Desktop Optimization This module Implements A High -performance scanner for rome files with Advanced Thread Management, Optimized Memory Usage, and Enhanced Error Handling. Features: - Multi -Threading for Maximum CPU Utilization - Advanced Processing for Optimal Performance - Intelligent Chunking of Large Files Files for Reduced Memory Usage - Robust Error Handling With Recovery Capabilities - Adaptive Scanning for Different Systems - Support for Delayed and Incremental Processing"""
 
 import os
 import sys
@@ -54,15 +40,10 @@ FILE_EXTENSIONS = {
 ARCHIVE_EXTENSIONS = ['.zip', '.7z', '.rar']
 
 class HighPerformanceScanner:
-    """Ein hochoptimierter Scanner für ROM-Dateien mit fortschrittlicher Parallelverarbeitung."""
+    """A Highly Optimized Scanner for Rome Files with Advanced Processing."""
 
     def __init__(self, config: Optional[ConfigType] = None):
-        """
-        Initialisiert den Scanner.
-
-        Args:
-            config: Optionale Konfigurationsinstanz. Falls None, wird die Standardkonfiguration verwendet.
-        """
+        """Initialized the scanner. Args: Config: Optional configuration instance. If None, the standard configuration is used."""
         self.config = config or Config()
         self.is_running = False
         self.is_paused = False
@@ -92,7 +73,7 @@ class HighPerformanceScanner:
         self.on_error = None       # Callback: (error: str) -> None
 
     def _reset_counters(self):
-        """Setzt alle Statistikzähler zurück."""
+        """Reset all statistics meters."""
         self.files_processed = 0
         self.files_found = 0
         self.roms_found = 0
@@ -112,7 +93,7 @@ class HighPerformanceScanner:
         }
 
     def _ensure_directories(self):
-        """Stellt sicher, dass alle benötigten Verzeichnisse existieren."""
+        """Make sure that all the required directories exist."""
         cache_dir = self.config.get("cache_directory", "cache")
         os.makedirs(cache_dir, exist_ok=True)
 
@@ -125,21 +106,7 @@ class HighPerformanceScanner:
 
     def scan(self, directory: str, recursive: bool = True, file_types: Optional[List[str]] = None,
              max_depth: int = -1, follow_symlinks: bool = False, use_cache: bool = True):
-        """
-        Startet einen asynchronen Scan des angegebenen Verzeichnisses.
-
-        Args:
-            directory: Das zu durchsuchende Verzeichnis
-            recursive: Ob Unterverzeichnisse durchsucht werden sollen
-            file_types: Liste von Dateierweiterungen, die gesucht werden sollen
-                        (None für alle bekannten ROM-Typen)
-            max_depth: Maximale Rekursionstiefe (-1 für unbegrenzt)
-            follow_symlinks: Ob symbolischen Links gefolgt werden soll
-            use_cache: Ob Cache-Daten verwendet werden sollen
-
-        Returns:
-            True wenn der Scan erfolgreich gestartet wurde, False sonst
-        """
+        """Starts an asynchronous scan of the specified directory. Args: Directory: The directory to be searched Recursive: Whether subdirectaries should be searched File_types: List of file extensions that are to be searched (None for all known Rome types) Max_depth: Maximum depth of recursion (-1 for unlimited) Follow_symlinks: Whether symbolic links should be followed use_cache: Whether cache data should be used Return: True when the scan was successfully started, otherwise false"""
         if self.is_running:
             logger.warning("Ein Scan läuft bereits. Bitte warten Sie, bis dieser abgeschlossen ist.")
             return False
@@ -177,12 +144,7 @@ class HighPerformanceScanner:
         return True
 
     def pause(self):
-        """
-        Pausiert den laufenden Scan.
-
-        Returns:
-            True wenn der Scan erfolgreich pausiert wurde, False sonst
-        """
+        """Pauses the running scan. Return: True when the scan was successfully paused, otherwise false"""
         if self.is_running and not self.is_paused:
             logger.info("Scan pausiert")
             self.is_paused = True
@@ -190,12 +152,7 @@ class HighPerformanceScanner:
         return False
 
     def resume(self):
-        """
-        Setzt einen pausierten Scan fort.
-
-        Returns:
-            True wenn der Scan erfolgreich fortgesetzt wurde, False sonst
-        """
+        """Stop a paused scan. Return: True when the scan was successfully continued, OtherWise False"""
         if self.is_running and self.is_paused:
             logger.info("Scan fortgesetzt")
             self.is_paused = False
@@ -203,12 +160,7 @@ class HighPerformanceScanner:
         return False
 
     def stop(self):
-        """
-        Stoppt den laufenden Scan.
-
-        Returns:
-            True wenn der Scan erfolgreich gestoppt wurde, False sonst
-        """
+        """Stop the running scan. Return: True when the scan was successfully stopped, otherwise false"""
         if self.is_running:
             logger.info("Scan wird gestoppt...")
             self.should_stop = True
@@ -217,15 +169,7 @@ class HighPerformanceScanner:
         return False
 
     def _scan_thread(self, directory: str, options: Dict[str, Any]):
-        """
-        Hauptthread für den Scanvorgang.
-
-        Koordiniert die Worker-Threads und sammelt die Ergebnisse.
-
-        Args:
-            directory: Das zu durchsuchende Verzeichnis
-            options: Dictionary mit Scanoptionen
-        """
+        """Main thread for the scanning process. Coordinates the worker threads and collects the results. Args: Directory: The directory to be searched Options: Dictionary with scan options"""
         try:
             self.start_time = time.time()
 
@@ -325,20 +269,7 @@ class HighPerformanceScanner:
 
     def _collect_files(self, directory: str, recursive: bool, file_types: Optional[List[str]],
                       max_depth: int = -1, follow_symlinks: bool = False, current_depth: int = 0) -> List[str]:
-        """
-        Sammelt alle zu scannenden Dateien im angegebenen Verzeichnis.
-
-        Args:
-            directory: Zu durchsuchendes Verzeichnis
-            recursive: Ob Unterverzeichnisse durchsucht werden sollen
-            file_types: Liste von Dateierweiterungen oder None für alle bekannten Typen
-            max_depth: Maximale Rekursionstiefe (-1 für unbegrenzt)
-            follow_symlinks: Ob symbolischen Links gefolgt werden soll
-            current_depth: Aktuelle Rekursionstiefe (intern verwendet)
-
-        Returns:
-            Liste aller gefundenen Dateipfade
-        """
+        """Collect all files to be scanned in the specified directory. Args: Directory: Directory to be searched Recursive: Whether subdirectaries should be searched File_types: List of file extensions or None for all known types Max_depth: Maximum depth of recursion (-1 for unlimited) Follow_symlinks: Whether symbolic links should be followed Current_deth: Current recursion depths (used internally) Return: List of all found file paths"""
         result = []
 
 # Reached maximum depth?
@@ -405,16 +336,7 @@ class HighPerformanceScanner:
         return result
 
     def _process_file(self, file_path: str, use_cache: bool = True) -> Optional[Dict]:
-        """
-        Verarbeitet eine einzelne Datei und gibt die ROM-Informationen zurück, falls gefunden.
-
-        Args:
-            file_path: Pfad zur zu verarbeitenden Datei
-            use_cache: Ob Cache-Daten verwendet werden sollen
-
-        Returns:
-            Dictionary mit ROM-Informationen oder None, wenn keine ROM gefunden wurde
-        """
+        """Process a single file and return the rom information if found. ARGS: File_Path: Path to the File to Be Processed Use_cache: Whether Cache Data Should be used Return: Dictionary with Rome Information or None If No Rome Has Be."""
         try:
 # Perform cache lookup if activated
             if use_cache:
@@ -466,15 +388,7 @@ class HighPerformanceScanner:
             return None
 
     def _detect_system_by_extension(self, file_path: str) -> Optional[str]:
-        """
-        Erkennt das System anhand der Dateierweiterung.
-
-        Args:
-            file_path: Zu prüfender Dateipfad
-
-        Returns:
-            Systemname oder None, wenn keine Übereinstimmung gefunden wurde
-        """
+        """Recognize the system based on the file extension. Args: File_Path: File path to be examined Return: System name or none if no agreement has been found"""
         lower_path = file_path.lower()
 
         for system, extensions in FILE_EXTENSIONS.items():
@@ -484,17 +398,7 @@ class HighPerformanceScanner:
         return None
 
     def _calculate_checksums(self, file_path: str) -> Tuple[str, str]:
-        """
-        Berechnet CRC32 und MD5 Prüfsummen einer Datei.
-
-        Verwendet Chunking für bessere Speichernutzung bei großen Dateien.
-
-        Args:
-            file_path: Pfad zur Datei
-
-        Returns:
-            Tuple mit (CRC32, MD5) Prüfsummen als Hex-Strings
-        """
+        """Calculate CRC32 and MD5 Test Sums of a File. Use chunking for better storage use for large files. Args: File_Path: Path to the File Return: Tull With (CRC32, MD5) Test Sums as Hex Strings"""
         crc32_value = 0
         md5_hash = hashlib.md5()
 
@@ -515,15 +419,7 @@ class HighPerformanceScanner:
         return f"{crc32_value & 0xFFFFFFFF:08x}", md5_hash.hexdigest()
 
     def _get_from_cache(self, file_path: str) -> Optional[Dict]:
-        """
-        Versucht, ROM-Informationen aus dem Cache zu laden.
-
-        Args:
-            file_path: Pfad zur Datei
-
-        Returns:
-            ROM-Informationen oder None, wenn nicht im Cache oder veraltet
-        """
+        """Try to load ROM information from the cache. Args: File_Path: path to the file Return: ROM information or none, if not in the cache or outdated"""
 # In a complete implementation, Cache Access Wood Take Place here
         return None
 
@@ -539,12 +435,7 @@ class HighPerformanceScanner:
         pass
 
     def _finish_scan(self, message: str):
-        """
-        Schließt den Scan ab und ruft den Completion-Callback auf.
-
-        Args:
-            message: Abschlussmeldung für das Log
-        """
+        """Complete the scan and call up the Completion Callback. Args: Message: final report for the log"""
         self.end_time = time.time()
         duration = self.end_time - self.start_time
 

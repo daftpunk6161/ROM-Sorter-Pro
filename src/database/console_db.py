@@ -311,7 +311,7 @@ def get_all_rom_extensions(include_dot: bool = True) -> Set[str]:
 
 @lru_cache(maxsize=1)
 def get_supported_consoles() -> List[Dict[str, Any]]:
-    """Returns a comprehensive list of all supported consoles."""
+    """Returns a Comprehensive List of All Supported Consoles."""
     consoles = []
     for console_name, meta in ENHANCED_CONSOLE_DATABASE.items():
         console_info = {
@@ -329,15 +329,7 @@ def get_supported_consoles() -> List[Dict[str, Any]]:
 
 
 def get_console_for_extension(extension: str) -> Optional[str]:
-    """
-    Returns the console name for a specific extension.
-
-    Args:
-        extension: The file extension (with or without leading dot)
-
-    Returns:
-        Console name or None if the extension is not supported
-    """
+    """Returns the Console Name for a Specific Extension. Args: Extension: The File Extension (With Or Without Leading Dot) Return: Console Name Or None If the Extension is not supported"""
     if not extension.startswith('.'):
         extension = f'.{extension}'
 
@@ -370,15 +362,7 @@ def get_consoles_by_manufacturer(
 
 
 def get_console_folder_for_extension(extension: str) -> Optional[str]:
-    """
-    Returns the console folder name for a specific extension.
-
-    Args:
-        extension: The file extension (with or without leading dot)
-
-    Returns:
-        Console folder name or None if the extension is not supported
-    """
+    """Returns the Console Folder Name for a Specific Extension. Args: Extension: The File Extension (With Or Without Leading Dot) Return: Console Folder Name Or None If the Extension is not supported"""
     console_name = get_console_for_extension(extension)
     if console_name:
         return ENHANCED_CONSOLE_DATABASE[console_name].folder_name

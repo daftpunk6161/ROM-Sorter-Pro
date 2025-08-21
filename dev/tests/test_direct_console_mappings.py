@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""
-Direkte Tests für die Konsolen-Mappings (ohne Integration)
-
-Dieses Skript testet die Konsolen-Mapping-Funktionalität direkt,
-ohne die gesamte Anwendung zu laden.
-"""
+"""Direct tests for console mapping (without integration) This script tests the console mapping functionality directly, without loading the entire application."""
 
 import sys
 import unittest
@@ -45,17 +40,7 @@ EXTENSION_PRIORITY_MAP = {
 }
 
 def get_console_for_extension(ext, file_content=None, filename=None):
-    """
-    Get console type for a file extension, using content analysis for ambiguous extensions.
-
-    Args:
-        ext: File extension (with leading dot)
-        file_content: Optional file content for further analysis
-        filename: Optional filename for further analysis
-
-    Returns:
-        str: Console type identifier or 'Unknown' if not recognized
-    """
+    """Get console type for a file extension, using content analysis for ambiguous extensions. ARGS: Ext: File Extension (With Leading Dot) File_Content: Optional File Content for Further Analysis Filename: Optional Filename for Further Analysis Return: Str: Console Type Identifier or 'Unknown' if not Recognizedizedized"""
     ext = ext.lower()
 
     # Direct mapping
@@ -83,17 +68,17 @@ def get_console_for_extension(ext, file_content=None, filename=None):
     return 'Unknown'
 
 class TestConsoleMappings(unittest.TestCase):
-    """Testklasse für die Konsolen-Mappings"""
+    """Test class for console mapping"""
 
     def test_basic_extensions(self):
-        """Testet die grundlegende Funktionalität der Mapping-Function"""
+        """Tests the basic functionality of the mapping function"""
         self.assertEqual(get_console_for_extension('.nes'), 'Nintendo_NES')
         self.assertEqual(get_console_for_extension('.gba'), 'Nintendo_Game_Boy_Advance')
         self.assertEqual(get_console_for_extension('.n64'), 'Nintendo_64')
         self.assertEqual(get_console_for_extension('.unknown'), 'Unknown')
 
     def test_ambiguous_extensions(self):
-        """Testet die Auflösung von mehrdeutigen Dateierweiterungen"""
+        """Tests the resolution of ambiguous file extensions"""
         # Test default priorities
         self.assertEqual(get_console_for_extension('.bin'), 'PlayStation')
         self.assertEqual(get_console_for_extension('.cso'), 'PlayStation_Portable')

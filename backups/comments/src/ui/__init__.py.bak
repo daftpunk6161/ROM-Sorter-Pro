@@ -1,0 +1,103 @@
+"""
+ROM-Sorter UI-Package v2.1.8 - BEREINIGT
+
+Dieses Paket enthält die Benutzeroberflächen-Komponenten für die ROM-Sorter-Anwendung.
+Die UI wurde modular aufgebaut, um die Wartbarkeit und Erweiterbarkeit zu verbessern.
+
+Kernmodule:
+- app.py: Hauptanwendungsklasse, die GUI und Logik verbindet
+- base.py: Grundlegende UI-Komponenten und Stile
+- main_window.py: Definition des Hauptfensters
+- widgets.py: Wiederverwendbare UI-Widgets
+- custom_widgets.py: Erweiterte Widgets mit zusätzlichen Funktionen
+- panels.py: Tab-Panels und andere Panel-Komponenten
+- dialogs.py: Spezialisierte Dialogfenster
+- theme_manager.py: Theme-Management mit Unterstützung für helle/dunkle Themes
+- enhanced_theme.py: Vereinfachte Theme-API
+"""
+
+# Grundlegende UI-Komponenten
+from .base import STYLE, BaseApp, center_window, create_tooltip
+from .main_window import ROMSorterWindow
+from .app import ROMSorterApp, main
+
+# Widgets and Ui elements
+from .widgets import FolderSelector, ToggleSwitch, FileListBox, ProgressDialog
+from .panels import TabPanel, OptionsPanel, StatisticsPanel, LogPanel
+from .custom_widgets import DragDropSupport, CustomTreeview
+from .dialogs import (
+    AboutDialog, SettingsDialog, ErrorDialog,
+    show_error_dialog, show_about_dialog, show_settings_dialog
+)
+
+# Theme-System
+try:
+    from .theme_manager import ThemeManager, Theme, ThemeType, ColorScheme
+    from .theme_integration import ThemeIntegrator
+    from .enhanced_theme import (
+        get_current_theme, apply_theme_to_widget, register_for_theme_updates,
+        register_theme_callback, set_theme, initialize_theme_system
+    )
+    THEME_SUPPORT = True
+except ImportError:
+    THEME_SUPPORT = False
+
+# Drag & Drop Support
+# Define defaults first to avoid circular imports
+DND_AVAILABLE = False
+DND_MANAGER_AVAILABLE = False
+IntegratedDnDSupport = None
+create_drop_target = None
+add_drop_support = None
+get_dnd_manager = None
+
+# Now try importing safely
+def _initialize_dnd():
+    """Initialize DND support without circular imports"""
+    global DND_AVAILABLE, DND_MANAGER_AVAILABLE, IntegratedDnDSupport
+    global create_drop_target, add_drop_support, get_dnd_manager
+
+    try:
+        from .integrated_dnd import (
+            DND_AVAILABLE as _DND_AVAILABLE,
+            DND_MANAGER_AVAILABLE as _DND_MANAGER_AVAILABLE,
+            IntegratedDnDSupport as _IntegratedDnDSupport,
+            create_drop_target as _create_drop_target,
+            add_drop_support as _add_drop_support,
+            get_dnd_manager as _get_dnd_manager
+        )
+        DND_AVAILABLE = _DND_AVAILABLE
+        DND_MANAGER_AVAILABLE = _DND_MANAGER_AVAILABLE
+        IntegratedDnDSupport = _IntegratedDnDSupport
+        create_drop_target = _create_drop_target
+        add_drop_support = _add_drop_support
+        get_dnd_manager = _get_dnd_manager
+    except ImportError:
+        # Fallback to GUI-DnD
+        try:
+            from .gui_dnd import DND_AVAILABLE as _DND_AVAILABLE
+            DND_AVAILABLE = _DND_AVAILABLE
+            DND_MANAGER_AVAILABLE = False
+        except ImportError:
+            DND_AVAILABLE = False
+            DND_MANAGER_AVAILABLE = False
+
+# Initialize DND support
+_initialize_dnd()
+
+# Exposing the main function for starting the application
+__all__ = [
+    'STYLE', 'BaseApp', 'center_window', 'create_tooltip',
+    'FolderSelector', 'ToggleSwitch', 'FileListBox', 'ProgressDialog',
+    'ThemeManager', 'Theme', 'ThemeType', 'ColorScheme', 'ThemeIntegrator', 'THEME_SUPPORT',
+    'get_current_theme', 'apply_theme_to_widget', 'register_for_theme_updates',
+    'register_theme_callback', 'set_theme', 'initialize_theme_system',
+    'TabPanel', 'OptionsPanel', 'StatisticsPanel', 'LogPanel',
+    'DragDropSupport', 'CustomTreeview',
+    'ROMSorterWindow', 'ROMSorterApp', 'main',
+    'AboutDialog', 'SettingsDialog', 'ErrorDialog',
+    'show_error_dialog', 'show_about_dialog', 'show_settings_dialog',
+    'is_ui_available', 'get_ui_mode',
+    'DND_AVAILABLE', 'DND_MANAGER_AVAILABLE', 'IntegratedDnDSupport',
+    'create_drop_target', 'add_drop_support', 'get_dnd_manager'
+]

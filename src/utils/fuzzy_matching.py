@@ -1,11 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-ROM Sorter Pro - Fuzzy-Matching-Funktionen
-
-Dieses Modul stellt Funktionen für Fuzzy-String-Matching bereit, die für
-die ROM-Erkennung und Ähnlichkeitsvergleiche verwendet werden.
-"""
+"""ROM SARTER PRO-Fuzzy matching functions This module provides functions for fuzzy-string matching that for the ROM detection and similarity comparisons are used."""
 
 import re
 import logging
@@ -30,16 +25,7 @@ except ImportError:
 
 
 def _process_strings(s1: str, s2: str) -> Tuple[str, str]:
-    """
-    Bereitet Strings für den Ähnlichkeitsvergleich vor.
-
-    Args:
-        s1: Erster String
-        s2: Zweiter String
-
-    Returns:
-        Tuple mit den normalisierten Strings
-    """
+    """Prepares Strings for the similarity comparison. Args: S1: First string S2: second string Return: Tuple with the normalized strings"""
     # Convert to small letters
     s1 = s1.lower()
     s2 = s2.lower()
@@ -56,16 +42,7 @@ def _process_strings(s1: str, s2: str) -> Tuple[str, str]:
 
 
 def fuzz_ratio(s1: str, s2: str) -> int:
-    """
-    Berechnet die Ähnlichkeit zwischen zwei Strings (Levenshtein-Distanz).
-
-    Args:
-        s1: Erster String
-        s2: Zweiter String
-
-    Returns:
-        Ähnlichkeitswert zwischen 0 und 100
-    """
+    """Calculate the similarity between two strings (Levenshtein distance). Args: S1: First string S2: second string Return: Similarity value between 0 and 100"""
     if _USE_EXTERNAL_FUZZ:
         return fuzz.ratio(s1, s2)
 
@@ -85,16 +62,7 @@ def fuzz_ratio(s1: str, s2: str) -> int:
 
 
 def fuzz_partial_ratio(s1: str, s2: str) -> int:
-    """
-    Berechnet die beste partielle Ähnlichkeit zwischen zwei Strings.
-
-    Args:
-        s1: Erster String
-        s2: Zweiter String
-
-    Returns:
-        Ähnlichkeitswert zwischen 0 und 100
-    """
+    """Calculate the best partial similarity between two strings. Args: S1: First string S2: second string Return: Similarity value between 0 and 100"""
     if _USE_EXTERNAL_FUZZ:
         return fuzz.partial_ratio(s1, s2)
 
@@ -119,16 +87,7 @@ def fuzz_partial_ratio(s1: str, s2: str) -> int:
 
 
 def fuzz_token_sort_ratio(s1: str, s2: str) -> int:
-    """
-    Sortiert die Wörter in beiden Strings und vergleicht dann die sortierten Strings.
-
-    Args:
-        s1: Erster String
-        s2: Zweiter String
-
-    Returns:
-        Ähnlichkeitswert zwischen 0 und 100
-    """
+    """Sort the words in both strings and then compare the sorted strings. Args: S1: First string S2: second string Return: Similarity value between 0 and 100"""
     if _USE_EXTERNAL_FUZZ:
         return fuzz.token_sort_ratio(s1, s2)
 
@@ -143,16 +102,7 @@ def fuzz_token_sort_ratio(s1: str, s2: str) -> int:
 
 
 def fuzz_token_set_ratio(s1: str, s2: str) -> int:
-    """
-    Betrachtet die Strings als Mengen von Tokens und vergleicht diese.
-
-    Args:
-        s1: Erster String
-        s2: Zweiter String
-
-    Returns:
-        Ähnlichkeitswert zwischen 0 und 100
-    """
+    """Consider the strings as quantities of tokens and compares them. Args: S1: First string S2: second string Return: Similarity value between 0 and 100"""
     if _USE_EXTERNAL_FUZZ:
         return fuzz.token_set_ratio(s1, s2)
 
@@ -177,27 +127,14 @@ def fuzz_token_set_ratio(s1: str, s2: str) -> int:
 
 
 class ProcessMatch:
-    """Class für erweiterte String-Ähnlichkeitssuche."""
+    """Class for extended string-like search."""
 
     @staticmethod
     def extract(query: str, choices: List[T], limit: int = 5,
                processor: Callable[[T], str] = str,
                scorer: Callable[[str, str], int] = fuzz_ratio,
                score_cutoff: int = 0) -> List[Tuple[T, int]]:
-        """
-        Extrahiert die besten Übereinstimmungen aus einer Liste von Optionen.
-
-        Args:
-            query: Der Suchstring
-            choices: Liste der zu durchsuchenden Elemente
-            limit: Maximale Anzahl an Ergebnissen
-            processor: Funktion zur Umwandlung der Elemente in Strings
-            scorer: Ähnlichkeitsfunktion
-            score_cutoff: Minimaler Ähnlichkeitswert
-
-        Returns:
-            Liste von (Element, Ähnlichkeitswert)-Tupeln
-        """
+        """Extract the best matches from a list of options. ARGS: Query: The Search String Choices: List of Elements to Be Searched Limit: Maximum Number of Results Processor: Function to Convert the Elements Into Strings Scorer: Similarity Function Score_Cutoff: Minimal Similarity Value Return: List of (element, Similarity Value) Tuber"""
         if _USE_EXTERNAL_FUZZ:
             return process.extract(query, choices, limit=limit,
                                   processor=processor, scorer=scorer,
@@ -223,19 +160,7 @@ class ProcessMatch:
                   processor: Callable[[T], str] = str,
                   scorer: Callable[[str, str], int] = fuzz_ratio,
                   score_cutoff: int = 0) -> Optional[Tuple[T, int]]:
-        """
-        Extrahiert die beste Übereinstimmung aus einer Liste von Optionen.
-
-        Args:
-            query: Der Suchstring
-            choices: Liste der zu durchsuchenden Elemente
-            processor: Funktion zur Umwandlung der Elemente in Strings
-            scorer: Ähnlichkeitsfunktion
-            score_cutoff: Minimaler Ähnlichkeitswert
-
-        Returns:
-            (Element, Ähnlichkeitswert)-Tupel oder None
-        """
+        """Extract the best match from a list of options. Args: query: The Search String Choices: List of Elements to Be Searched Processor: Function to Convert the Elements Into Strings Scorer: Similarity Function Score_Cutoff: Minimal Similarity Value Return: (Element, Similarity Value) Tupel or None"""
         if _USE_EXTERNAL_FUZZ:
             return process.extractOne(query, choices,
                                      processor=processor, scorer=scorer,

@@ -1,0 +1,54 @@
+#!/usr/bin/env python3
+# -*-coding: utf-8-*-
+"""ROM SARTER PRO V2.1.8 - Test modules for ml detection This module provides a simple interface for testing ml-based Rome Detection."""
+
+import os
+from pathlib import Path
+from typing import Optional, Tuple, Dict, Any
+
+import sys
+import os
+
+# Add the main directory to the path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from .detectors.detection_handler import DetectionManager, DetectionResult
+from .detectors.ml_detector import detect_console_with_ml
+
+# Aliases for downward compatibility
+DetectionHandler = DetectionManager
+
+def test_detection_pipeline(rom_path: str) -> Tuple[str, float]:
+    """Tests The Detection Pipeline with a Rome Path. Args: ROM_Path: path to Rome file Return: Tuble from (console name, confidence)"""
+    if not os.path.exists(rom_path):
+        print(f"Datei nicht gefunden: {rom_path}")
+        return "Unknown", 0.0
+
+# Create A Manager Instance
+    manager = DetectionManager.get_instance()
+
+# Extract file names
+    file_path = Path(rom_path)
+    filename = file_path.name
+
+# Create detection
+    result = manager.detect_console_with_metadata(filename, str(file_path))
+
+# Alternative: Direct test of ML detection
+    ml_result = detect_console_with_ml(rom_path)
+
+    print(f"Standard-Erkennung: {result}")
+    print(f"ML-Erkennung: {ml_result}")
+
+    return result.console, result.confidence
+
+if __name__ == "__main__":
+# Example of use
+    import sys
+
+    if len(sys.argv) > 1:
+        rom_path = sys.argv[1]
+        console, confidence = test_detection_pipeline(rom_path)
+        print(f"Erkannte Konsole: {console} (Konfidenz: {confidence:.2f})")
+    else:
+        print("Verwendung: python detection_test.py <pfad_zur_rom>")

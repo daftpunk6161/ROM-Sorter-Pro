@@ -1,13 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-ROM Sorter Pro - Fortschrittlicher Thread-Pool
-Phase 1 Implementation: Desktop-Optimierung
-
-Dieses Modul bietet eine verbesserte Thread-Pool-Implementierung für die
-Parallelverarbeitung von Aufgaben mit fortschrittlicher Fehlerbehandlung,
-Ressourcenmanagement und adaptiver Leistungsoptimierung.
-"""
+"""Rome Sorter Pro - advanced thread pool Phase 1 Implementation: Desktop optimization This module offers improved thread pool implementation for the Parallel processing of tasks with progressive error treatment, Resource management and adaptive performance optimization."""
 
 import os
 import threading
@@ -22,20 +15,11 @@ from typing import Dict, List, Set, Tuple, Optional, Callable, Any, Union
 logger = logging.getLogger(__name__)
 
 class Task:
-    """Repräsentiert eine Aufgabe, die vom ThreadPool ausgeführt werden soll."""
+    """Represents a task that is to be carried out by the thread pool."""
 
     def __init__(self, func: Callable, args: tuple = (), kwargs: dict = {},
                 task_id: Optional[str] = None, priority: int = 0):
-        """
-        Initialisiert eine neue Aufgabe.
-
-        Args:
-            func: Die auszuführende Funktion
-            args: Positionsargumente für die Funktion
-            kwargs: Schlüsselwortargumente für die Funktion
-            task_id: Optionale ID für die Aufgabe (wird automatisch generiert, wenn nicht angegeben)
-            priority: Priorität der Aufgabe (höhere Zahlen = höhere Priorität)
-        """
+        """Initialized A New Task. Args: Func: The Function to Be Carried Out Args: Position Argents for the Function Kwargs: Key Virtues for the Function Task_ID: Optional ID for the Task (is generated automatically, if not specific) Priority: Priority of the Task (Higher Numbers = Higher Priority)"""
         self.func = func
         self.args = args
         self.kwargs = kwargs
@@ -49,13 +33,13 @@ class Task:
         self.status = "pending"  # pending, running, completed, failed, cancelled
 
     def __lt__(self, other):
-        """Vergleich für die Prioritätsqueue - höhere Priorität zuerst."""
+        """Comparison for priority taue - higher priority first."""
         if self.priority != other.priority:
             return self.priority > other.priority  # Higher numbers = higher priority
         return self.creation_time < other.creation_time  # With the same priority: fifo
 
     def execute(self):
-        """Führt die Aufgabe aus und erfasst das Result oder Error."""
+        """Performs the task and records the result or error."""
         self.start_time = time.time()
         self.status = "running"
 
@@ -72,22 +56,11 @@ class Task:
         return self
 
 class AdaptiveThreadPool:
-    """
-    Ein Thread-Pool mit adaptiver Leistungsoptimierung, Prioritätsunterstützung
-    und erweiterten Überwachungsfunktionen.
-    """
+    """A thread pool with adaptive performance optimization, priority support and extended monitoring function."""
 
     def __init__(self, min_workers: int = 2, max_workers: int = None,
                 name_prefix: str = "worker", daemon: bool = True):
-        """
-        Initialisiert den Thread-Pool.
-
-        Args:
-            min_workers: Minimale Anzahl von Worker-Threads
-            max_workers: Maximale Anzahl von Worker-Threads (None für CPU-Anzahl * 2)
-            name_prefix: Präfix für Thread-Namen
-            daemon: Ob die Threads als Daemon-Threads laufen sollen
-        """
+        """Initialized the thread pool. Args: Min_Workers: Minimal number of worker threads MAX_WORKERS: Maximum number of worker threads (None for CPU number * 2) Name_Prefix: Prefix for thread names Daemon: Whether the threads should run as Daemon threads"""
         self.min_workers = min_workers
         self.max_workers = max_workers or (os.cpu_count() or 4) * 2
         self.name_prefix = name_prefix
@@ -148,12 +121,7 @@ class AdaptiveThreadPool:
             logger.info(f"AdaptiveThreadPool gestartet mit {self.min_workers} Workern")
 
     def shutdown(self, wait: bool = True):
-        """
-        Fährt den Thread-Pool herunter.
-
-        Args:
-            wait: Ob auf die Beendigung aller Tasks gewartet werden soll
-        """
+        """Drives down the thread pool. Args: Wait: Whether all tasks should be served"""
         with self._lock:
             if not self.running:
                 return
@@ -171,21 +139,7 @@ class AdaptiveThreadPool:
         logger.info("AdaptiveThreadPool heruntergefahren")
 
     def submit(self, func: Callable, *args, **kwargs) -> str:
-        """
-        Sendet eine Aufgabe zur Ausführung.
-
-        Args:
-            func: Die auszuführende Funktion
-            *args: Positionsargumente für die Funktion
-            **kwargs: Schlüsselwortargumente für die Funktion
-
-            Zusätzliche Schlüsselwortargumente:
-            - task_id: Optionale ID für die Aufgabe
-            - priority: Priorität (höhere Zahlen = höhere Priorität)
-
-        Returns:
-            Die ID der Aufgabe
-        """
+        """Sends a Task for Execution. Args: Func: The Function to Be Carried Out *Args: Position Argents for the Function ** Kwargs: Key Virtues for the Functional Key Wort Argents: - Task_ID: Optional ID for the Task - Priority (Higher Numbers = Higher Priority) Return: The ID of the Task"""
         # Spezielle Kwargs extrahieren
         task_id = kwargs.pop('task_id', None)
         priority = kwargs.pop('priority', 0)
@@ -203,7 +157,7 @@ class AdaptiveThreadPool:
         return task.task_id
 
     def _add_worker(self):
-        """Fügt einen neuen Worker-Thread zum Pool hinzu."""
+        """Add a new worker thread to the pool."""
         with self._lock:
             if len(self.workers) >= self.max_workers:
                 return False
@@ -221,7 +175,7 @@ class AdaptiveThreadPool:
             return True
 
     def _worker_loop(self):
-        """Hauptschleife für Worker-Threads."""
+        """Main loop for worker threads."""
         while self.running and not self._shutdown_event.is_set():
             try:
                 # Try to get a task
@@ -327,7 +281,7 @@ class AdaptiveThreadPool:
             self.performance_metrics['last_adjustment_time'] = now
 
     def _monitor_performance(self):
-        """Überwacht die Performance und passt die Anzahl der Worker an."""
+        """Monitors the performance and adapts the number of workers."""
         while self.running and not self._shutdown_event.is_set():
             try:
                 # Sleep for an interval
@@ -378,7 +332,7 @@ class AdaptiveThreadPool:
 
     @property
     def stats(self) -> Dict[str, Any]:
-        """Gibt aktuelle Statistiken des Thread-Pools zurück."""
+        """Gives back current statistics of the thread pool."""
         with self._lock:
             return {
                 'workers': len(self.workers),
@@ -399,13 +353,7 @@ class BatchProcessor:
     """
 
     def __init__(self, min_workers: int = 2, max_workers: int = None):
-        """
-        Initialisiert den Batch-Prozessor.
-
-        Args:
-            min_workers: Minimale Anzahl von Worker-Threads
-            max_workers: Maximale Anzahl von Worker-Threads
-        """
+        """Initialized the batch processor. Args: Min_Workers: Minimal number of worker threads Max_Workers: Maximum number of worker threads"""
         self.thread_pool = AdaptiveThreadPool(
             min_workers=min_workers,
             max_workers=max_workers,
@@ -434,24 +382,11 @@ class BatchProcessor:
         self.thread_pool.on_task_error = self._on_task_error
 
     def shutdown(self, wait: bool = True):
-        """
-        Fährt den Thread-Pool herunter.
-
-        Args:
-            wait: Ob auf die Beendigung aller Tasks gewartet werden soll
-        """
+        """Drives down the thread pool. Args: Wait: Whether all tasks should be served"""
         self.thread_pool.shutdown(wait)
 
     def create_batch(self, name: str = None) -> str:
-        """
-        Creates a new batch and returns its ID.
-
-        Args:
-            name: Optional name for the batch
-
-        Returns:
-            Die Batch-ID
-        """
+        """Creates a new batch and returns its id. ARGS: Name: Optional name for the Batch Return: The Batch ID"""
         with self._lock:
             self.batch_counter += 1
             batch_id = f"batch_{self.batch_counter}"
@@ -471,15 +406,7 @@ class BatchProcessor:
             return batch_id
 
     def start_batch(self, batch_id: str) -> bool:
-        """
-        Startet die Ausführung eines Batches.
-
-        Args:
-            batch_id: Die Batch-ID
-
-        Returns:
-            True wenn der Batch erfolgreich gestartet wurde, False sonst
-        """
+        """Starts the execution of a batch. ARGS: Batch_id: The Batch Id Return: True When the Batch Started Successfully, False OtherWise"""
         with self._lock:
             if batch_id not in self.batches:
                 logger.error(f"Batch {batch_id} existiert nicht")
@@ -503,18 +430,7 @@ class BatchProcessor:
             return True
 
     def add_task(self, batch_id: str, func: Callable, *args, **kwargs) -> Optional[str]:
-        """
-        Fügt eine Aufgabe zu einem Batch hinzu.
-
-        Args:
-            batch_id: Die Batch-ID
-            func: Die auszuführende Funktion
-            *args: Positionsargumente für die Funktion
-            **kwargs: Schlüsselwortargumente für die Funktion
-
-        Returns:
-            Die Task-ID oder None, wenn der Batch nicht existiert
-        """
+        """Add a Task to a Batch. Args: Batch_id: The Batch Id Func: The Function to Be Carried Out *Args: Position Argents for the Function ** Kwargs: Key Virtues for the Function Return: The Task Id Or None IF the Batch Does not Exist"""
         with self._lock:
             if batch_id not in self.batches:
                 logger.error(f"Batch {batch_id} existiert nicht")
@@ -544,16 +460,7 @@ class BatchProcessor:
             return task_id
 
     def add_tasks_bulk(self, batch_id: str, tasks: List[Tuple[Callable, tuple, dict]]) -> List[Optional[str]]:
-        """
-        Fügt mehrere Aufgaben auf einmal zu einem Batch hinzu.
-
-        Args:
-            batch_id: Die Batch-ID
-            tasks: Liste von (func, args, kwargs) Tupeln
-
-        Returns:
-            Liste von Task-IDs oder None-Werten
-        """
+        """Add Several Task to a Batch at Once. Args: Batch_id: The Batch Id Tasks: List of (Func, Args, Kwargs) Tuber Return: List of Task Ids Or None Values"""
         task_ids = []
 
         for func, args, kwargs in tasks:
@@ -563,12 +470,7 @@ class BatchProcessor:
         return task_ids
 
     def _on_task_complete(self, task: Task):
-        """
-        Wird aufgerufen, wenn eine Aufgabe abgeschlossen ist.
-
-        Args:
-            task: Die abgeschlossene Aufgabe
-        """
+        """Is called when a task is complete. Args: Task: The Completed Task"""
         batch_id = task.kwargs.get('batch_id')
         if not batch_id:
             return
@@ -596,13 +498,7 @@ class BatchProcessor:
                             logger.error(f"Fehler im on_batch_progress-Callback: {e}")
 
     def _on_task_error(self, task: Task, error: Exception):
-        """
-        Wird aufgerufen, wenn eine Aufgabe fehlschlägt.
-
-        Args:
-            task: Die fehlgeschlagene Aufgabe
-            error: Der aufgetretene Fehler
-        """
+        """Is called when a task fails. Args: Task: The Failed Task Error: The Error Occurred"""
         batch_id = task.kwargs.get('batch_id')
         if not batch_id:
             return
@@ -631,12 +527,7 @@ class BatchProcessor:
                             logger.error(f"Fehler im on_batch_progress-Callback: {e}")
 
     def _finish_batch(self, batch_id: str):
-        """
-        Schließt einen Batch ab.
-
-        Args:
-            batch_id: Die Batch-ID
-        """
+        """Complete a Batch. Args: Batch_id: The Batch ID"""
         with self._lock:
             if batch_id not in self.batches:
                 return
@@ -653,15 +544,7 @@ class BatchProcessor:
                     logger.error(f"Fehler im on_batch_complete-Callback: {e}")
 
     def get_batch_status(self, batch_id: str) -> Optional[Dict]:
-        """
-        Gibt den Status eines Batches zurück.
-
-        Args:
-            batch_id: Die Batch-ID
-
-        Returns:
-            Ein Dictionary mit Status-Informationen oder None, wenn der Batch nicht existiert
-        """
+        """Gives Back the Status of a Batch. Args: Batch_id: The Batch Id Return: A dictionary with status information or none if the batch does not exist"""
         with self._lock:
             if batch_id not in self.batches:
                 return None
@@ -686,26 +569,12 @@ class BatchProcessor:
             return batch
 
     def get_all_batches(self) -> Dict[str, Dict]:
-        """
-        Gibt den Status aller Batches zurück.
-
-        Returns:
-            Ein Dictionary mit Batch-IDs als Schlüssel und Status-Dictionaries als Werte
-        """
+        """Gives Back the Status of All Batches. Return: a dictionary with batch ids as a key and status dictionaries as value"""
         with self._lock:
             return {batch_id: self.get_batch_status(batch_id) for batch_id in self.batches}
 
     def wait_for_batch(self, batch_id: str, timeout: Optional[float] = None) -> bool:
-        """
-        Wartet, bis ein Batch abgeschlossen ist.
-
-        Args:
-            batch_id: Die Batch-ID
-            timeout: Optionales Timeout in Sekunden
-
-        Returns:
-            True wenn der Batch abgeschlossen wurde, False bei Timeout
-        """
+        """Wait until a batch is complained. Args: Batch_id: The Batch ID Timeout: Optional Timeout in Seconds Return: True When The Batch Has Been Completed, False at Timeout"""
         start_time = time.time()
 
         while True:
@@ -727,7 +596,7 @@ class BatchProcessor:
 
 # Main function for test purposes
 def main():
-    """Testfunktion für den AdaptiveThreadPool und BatchProcessor."""
+    """Test function for the adaptive thread pool and batchprocessor."""
     # Logging konfigurieren
     logging.basicConfig(
         level=logging.INFO,

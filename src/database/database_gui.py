@@ -1,8 +1,4 @@
-"""
-Datenbank-Verwaltungsdialog für die ROM-Datenbank-Integration.
-
-Dieses Modul stellt eine GUI-Oberfläche für die Verwaltung der ROM-Datenbank bereit.
-"""
+"""Database Management Dialog for Rome Database Integration. This module provides a gui interface for the management of the rome database."""
 
 import os
 import sys
@@ -16,15 +12,10 @@ from pathlib import Path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 class DatabaseManagerDialog:
-    """Dialog zur Verwaltung der ROM-Datenbank."""
+    """Dialogue for managing the Rome database."""
 
     def __init__(self, parent):
-        """
-        Initialisiert den Datenbank-Manager-Dialog.
-
-        Args:
-            parent: Das übergeordnete Fenster
-        """
+        """Initialized the database manager dialog. Args: Parent: The overarching window"""
         self.parent = parent
         self.dialog = tk.Toplevel(parent)
         self.dialog.title("ROM-Datenbank verwalten")
@@ -39,7 +30,7 @@ class DatabaseManagerDialog:
         self._create_interface()
 
     def _create_interface(self):
-        """Erstellt die Benutzeroberfläche."""
+        """Creates the user interface."""
 # Main container
         main_frame = ttk.Frame(self.dialog, padding=10)
         main_frame.pack(fill='both', expand=True)
@@ -80,7 +71,7 @@ class DatabaseManagerDialog:
         self.update_database_status()
 
     def update_database_status(self):
-        """Aktualisiert die Datenbank-Statusinformationen."""
+        """Updates the database status information."""
         try:
             if not os.path.exists(self.db_path):
                 self.status_var.set(
@@ -152,14 +143,14 @@ class DatabaseManagerDialog:
             debug_database_initialization(self.db_path)
 
     def _update_stats(self, text):
-        """Aktualisiert das Statistik-Textfeld."""
+        """Updates the statistics text field."""
         self.stats_text.config(state='normal')
         self.stats_text.delete(1.0, tk.END)
         self.stats_text.insert(tk.END, text)
         self.stats_text.config(state='disabled')
 
     def _scan_roms(self):
-        """Öffnet einen Dialog zum Scannen von ROMs für die Database."""
+        """Open's A Dialogue for Scanning Roms for the Database."""
         rom_dir = filedialog.askdirectory(title="ROM-Verzeichnis zum Scannen auswählen")
         if not rom_dir:
             return
@@ -232,7 +223,7 @@ class DatabaseManagerDialog:
         progress_dialog.after(100, check_thread_status)
 
     def _import_dat(self):
-        """Öffnet einen Dialog zum Importieren einer DAT-File."""
+        """Open's A Dialog for Importing A Dat File."""
         dat_file = filedialog.askopenfilename(
             title="DAT-Datei importieren",
             filetypes=[("DAT-Dateien", "*.dat"), ("XML-Dateien", "*.xml"), ("Alle Dateien", "*.*")]

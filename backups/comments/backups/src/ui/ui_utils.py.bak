@@ -1,10 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-ROM Sorter Pro - UI-Komponenten
-
-Dieses Modul stellt verbesserte UI-Komponenten für die Konsole bereit.
-"""
+"""Rome Sorter Pro - Ui components This module provides improved UI components for the console."""
 
 import os
 import sys
@@ -16,16 +12,7 @@ from datetime import datetime, timedelta
 
 
 class ProgressBar:
-    """
-    Verbesserte Fortschrittsanzeige mit mehreren Anzeigeformaten.
-
-    Features:
-    - Dynamische Größenanpassung an Terminalbreite
-    - Mehrere Anzeigestile
-    - ETA-Berechnung
-    - Anpassbare Farben und Formatierung
-    - Thread-sicheres Update
-    """
+    """Improved progress display with several display formats. Features: - Dynamic size adjustment to the terminal width - several display styles - ETA calculation - Adaptable colors and formatting - Threadproof update"""
 
     STYLES = {
         'default': {'char': '█', 'empty': '░', 'left': '[', 'right': ']'},
@@ -46,22 +33,7 @@ class ProgressBar:
                  show_eta: bool = True,
                  update_interval: float = 0.1,
                  file=sys.stdout):
-        """
-        Initialisiert eine neue Fortschrittsanzeige.
-
-        Args:
-            total: Gesamtzahl der zu verarbeitenden Elemente
-            prefix: Präfix vor dem Fortschrittsbalken
-            suffix: Suffix nach dem Fortschrittsbalken
-            style: Vordefinierter Stil ('default', 'simple', 'arrow', 'dots')
-            length: Länge des Fortschrittsbalkens (None für automatisch)
-            fill_char: Anpassbares Füllzeichen (überschreibt Stil)
-            empty_char: Anpassbares Leerzeichen (überschreibt Stil)
-            show_percent: Prozentangabe anzeigen
-            show_eta: Geschätzte verbleibende Zeit anzeigen
-            update_interval: Minimale Zeit zwischen Updates
-            file: Ausgabedatei (Standard: sys.stdout)
-        """
+        """Initialized a new progress display. Args: Total: total number of elements to be processed Prefix: Prefix in front of the progress bar suffix: suffix after the progress bar Style: predefined style ('default', 'Simple', 'Arrow', 'Dots') Langth: length of the progress bar (None for automatic) Fill_Char: Adaptable filler sign (overwrites style) Empty_Char: Adaptable spaces (overwrites style) Show_percent: Show a percentage Show_eta: Show estimated remaining time Update_interval: Minimum time between updates File: output file (Standard: Sys.Stdout)"""
         self.total = max(total, 1)  # Vermeide Division durch Null
         self.prefix = prefix
         self.suffix = suffix
@@ -79,7 +51,7 @@ class ProgressBar:
         self._lock = threading.RLock()
         self._first_update = True
 
-        # Dynamische Größenanpassung
+        # Dynamic size adjustment
         if length is None:
             try:
                 terminal_width = shutil.get_terminal_size().columns
@@ -101,7 +73,7 @@ class ProgressBar:
         """
         current_time = time.time()
 
-        # Update nur bei Erreichen des Intervalls oder bei erster/letzter Aktualisierung
+        # Update only when the interval is reached or at first/last update
         if (current_time - self.last_update_time < self.update_interval and
             not self._first_update and
             progress < self.total):
@@ -143,7 +115,7 @@ class ProgressBar:
             print(f"\r{self.prefix}{bar}{percent_display}{eta_display} {self.suffix}",
                   end='', file=self.file, flush=True)
 
-            # Zeile abschließen, wenn fertig
+            # Line line when you're done
             if self.progress >= self.total:
                 elapsed = current_time - self.start_time
                 total_time = self._format_time(elapsed)
@@ -169,9 +141,7 @@ class ProgressBar:
 
 
 class MultiProgressDisplay:
-    """
-    Verwaltet mehrere Fortschrittsbalken für parallele Aufgaben.
-    """
+    """Manages several progress bars for parallel tasks."""
 
     def __init__(self, clear_on_exit: bool = True):
         """
@@ -189,38 +159,18 @@ class MultiProgressDisplay:
                 total: int,
                 prefix: str = '',
                 **kwargs) -> None:
-        """
-        Fügt einen neuen Fortschrittsbalken hinzu.
-
-        Args:
-            name: Eindeutiger Name für den Balken
-            total: Gesamtzahl der zu verarbeitenden Elemente
-            prefix: Präfix vor dem Balken
-            **kwargs: Weitere Parameter für ProgressBar
-        """
+        """Adds a new progress bar. Args: Name: clear name for the bar Total: total number of elements to be processed Prefix: Prefix in front of the bar ** Kwargs: Further parameters for progressable"""
         with self._lock:
             self.bars[name] = ProgressBar(total=total, prefix=prefix, **kwargs)
 
     def update(self, name: str, progress: int, suffix: Optional[str] = None) -> None:
-        """
-        Aktualisiert einen bestimmten Fortschrittsbalken.
-
-        Args:
-            name: Name des zu aktualisierenden Balkens
-            progress: Aktuelle Fortschrittsposition
-            suffix: Optionaler Suffix-Text
-        """
+        """Updates a certain progress bar. Args: Name: Name of the bar to be updated Progress: Current progress position suffix: optional suffix text"""
         with self._lock:
             if name in self.bars:
                 self.bars[name].update(progress, suffix)
 
     def remove(self, name: str) -> None:
-        """
-        Entfernt einen Fortschrittsbalken.
-
-        Args:
-            name: Name des zu entfernenden Balkens
-        """
+        """Removes a progress bar. Args: Name: Name of the beam to be removed"""
         with self._lock:
             if name in self.bars:
                 del self.bars[name]
@@ -230,33 +180,20 @@ class MultiProgressDisplay:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        """
-        Context Manager Austritt.
-        Bereinigt die Fortschrittsbalken.
-        """
+        """Context Manager leaves. Adjusted the progress bars."""
         if self.clear_on_exit:
             print("\033[2J\033[H", end="")  # Clear screen
 
 
 class StatusDisplay:
-    """
-    Statusanzeige für laufende Prozesse ohne definierte Fortschrittslänge.
-    """
+    """Status display for ongoing processes without defined progress length."""
 
     def __init__(self,
                  prefix: str = '',
                  spinner_type: str = 'dots',
                  update_interval: float = 0.1,
                  file=sys.stdout):
-        """
-        Initialisiert eine neue Statusanzeige.
-
-        Args:
-            prefix: Anzuzeigender Präfixtext
-            spinner_type: Art des Spinners ('dots', 'braille', 'bar', 'arrows')
-            update_interval: Aktualisierungsintervall in Sekunden
-            file: Ausgabedatei
-        """
+        """Initialized a new status display. Args: Prefix: Prefix text to be displayed Spinner_type: Type of the spinner ('Dots', 'Braille', 'Bar', 'Arrows') UPDATE_INERVAL: Update interval in seconds File: output file"""
         self.prefix = prefix
         self.update_interval = update_interval
         self.file = file
@@ -276,12 +213,7 @@ class StatusDisplay:
         self._spinner_frames = self._spinners.get(spinner_type, self._spinners['dots'])
 
     def start(self, status_text: str = "") -> None:
-        """
-        Startet die Statusanzeige in einem separaten Thread.
-
-        Args:
-            status_text: Anfänglicher Statustext
-        """
+        """Starts the status display in a separate thread. Args: Status_text: initial status text"""
         with self._lock:
             if self._running:
                 return
@@ -302,12 +234,7 @@ class StatusDisplay:
             self._current_status = status_text
 
     def stop(self, final_message: Optional[str] = None) -> None:
-        """
-        Stoppt die Statusanzeige.
-
-        Args:
-            final_message: Optionale Abschlussnachricht
-        """
+        """Stop the status display. Args: Final_message: Optional final message"""
         with self._lock:
             if not self._running:
                 return
@@ -321,12 +248,12 @@ class StatusDisplay:
             if final_message:
                 print(f"\r{final_message}", file=self.file)
             else:
-                # Zeile löschen
+                # Delete line
                 terminal_width = shutil.get_terminal_size().columns
                 print(f"\r{' ' * terminal_width}\r", end="", file=self.file)
 
     def _update_status(self) -> None:
-        """Thread-Methode für die Statusaktualisierung."""
+        """Thread method for status update."""
         idx = 0
 
         while self._running:
@@ -353,15 +280,7 @@ class StatusDisplay:
 
 
 def print_box(title: str, content: str, width: int = 80, style: str = 'single') -> None:
-    """
-    Gibt eine Box mit Titel und Inhalt aus.
-
-    Args:
-        title: Titel der Box
-        content: Inhalt der Box
-        width: Breite der Box
-        style: Boxstil ('single', 'double', 'rounded', 'bold')
-    """
+    """Gives out a box with title and content. Args: Title: Title of the Box Content: Content of the box Width: Width of the box Style: box style ('single', 'double', 'rounded', 'bold')"""
     box_styles = {
         'single': {'tl': '┌', 'tr': '┐', 'bl': '└', 'br': '┘', 'h': '─', 'v': '│', 'lt': '├', 'rt': '┤'},
         'double': {'tl': '╔', 'tr': '╗', 'bl': '╚', 'br': '╝', 'h': '═', 'v': '║', 'lt': '╠', 'rt': '╣'},
@@ -378,7 +297,7 @@ def print_box(title: str, content: str, width: int = 80, style: str = 'single') 
         except (AttributeError, OSError):
             width = 80
 
-    # Obere Boxzeile mit Titel
+    # Upper boxing line with title
     title_display = f" {title} " if title else ""
     title_len = len(title_display)
     left_pad = (width - title_len) // 2
@@ -389,7 +308,7 @@ def print_box(title: str, content: str, width: int = 80, style: str = 'single') 
     # Inhalt zeilenweise
     lines = content.split('\n')
     for line in lines:
-        # Zu lange Zeilen umbrechen
+        # Call lines for too long
         while len(line) > width - 2:
             print(f"{box['v']} {line[:width-4]} {box['v']}")
             line = line[width-4:]
@@ -403,14 +322,7 @@ def print_box(title: str, content: str, width: int = 80, style: str = 'single') 
 
 
 def print_table(data: List[List[Any]], headers: List[str], title: Optional[str] = None) -> None:
-    """
-    Gibt eine formatierte Tabelle aus.
-
-    Args:
-        data: Liste von Zeilen mit Daten
-        headers: Spaltentitel
-        title: Optionaler Tabellentitel
-    """
+    """Is a formatted table. Args: Data: List of lines with data Headers: column title Title: Optional table title"""
     if not data and not headers:
         return
 
@@ -418,7 +330,7 @@ def print_table(data: List[List[Any]], headers: List[str], title: Optional[str] 
     num_cols = max(len(headers), max(len(row) for row in data) if data else 0)
     headers = headers + [''] * (num_cols - len(headers))
 
-    # Jede Zeile auf die gleiche Länge bringen
+    # Bring each line to the same length
     normalized_data = []
     for row in data:
         normalized_data.append(row + [''] * (num_cols - len(row)))
@@ -427,7 +339,7 @@ def print_table(data: List[List[Any]], headers: List[str], title: Optional[str] 
     col_widths = [max(len(str(row[i])) for row in normalized_data + [headers]) for i in range(num_cols)]
 
     # Gesamtbreite berechnen
-    separator_width = 1  # Breite der Trennzeichen zwischen Spalten
+    separator_width = 1  # Width of the separator between columns
     total_width = sum(col_widths) + separator_width * (num_cols + 1)
 
     # Tabellenkopf
@@ -457,16 +369,7 @@ def print_table(data: List[List[Any]], headers: List[str], title: Optional[str] 
 
 
 def confirm_action(prompt: str, default: bool = False) -> bool:
-    """
-    Fordert den Benutzer zur Bestätigung einer Aktion auf.
-
-    Args:
-        prompt: Anzuzeigender Text
-        default: Standardaktion (True = Ja, False = Nein)
-
-    Returns:
-        Benutzerentscheidung als Boolean
-    """
+    """Ask the user to confirm an action. Args: Prompt: text to be displayed Default: Standard action (True = yes, false = no) Return: User decision as Boolean"""
     yes_choices = ['j', 'ja', 'y', 'yes', '1']
     no_choices = ['n', 'nein', 'no', '0']
 
@@ -500,7 +403,7 @@ def print_color(text: str, color: str = 'white', bold: bool = False) -> None:
         'blue': 34, 'magenta': 35, 'cyan': 36, 'white': 37
     }
 
-    color_code = colors.get(color.lower(), 37)  # Standard: weiß
+    color_code = colors.get(color.lower(), 37)  # Standard: white
     bold_code = 1 if bold else 0
 
     print(f"\033[{bold_code};{color_code}m{text}\033[0m")

@@ -1,23 +1,4 @@
-"""
-ROM-Sorter UI-Package
-
-This package contains the user interface components for the ROM-Sorter application.
-The UI has been built in a modular way to improve maintainability and extensibility.
-
-Modules:
-- app.py: Main application class that connects GUI and logic
-- base.py: Basic UI components and styles
-- custom_widgets.py: Enhanced widgets with additional functions
-- main_window.py: Main window definition
-- panels.py: Tab panels and other panel components
-- widgets.py: Reusable UI widgets
-- dialogs.py: Specialized dialog windows
-- compat.py: Compatibility layer for migration
-- theme_manager.py: Theme management with support for light/dark themes
-- theme_integration.py: Integration of theme management into the GUI
-- gui_dnd.py: Drag and drop functionality for the GUI
-- integrated_dnd.py: Integration of different DND implementations
-"""
+"""Rome Sorter Ui-package This Package Contains The User Interface Components for the Rome Sorter Application. The Ui Has Been Built in A Modular Way to Improve Maintainability and Extensibility. Module: - App.py: Main Application Class that Connects Gui and Logic - Base.py: Basic Ui Components and Styles - Custom_Widgets.Py: Enhanced Widgets with Additional Functions - Main_window Definition - Main Window Definition - Panels and Other Panel Componen - Widgets.py: Reusable Ui Widgets - Dialogs.py: Specialized Dialog Windows - Compat.py: Compatibility Layer for Migration - Theme_Manager.py: Theme Management With Support for Light/Dark Themes - Theme_integration.PY: Integration of Theme Management Into the GUI - gui_dnd.py: drag and drop functionality for the gui - integrated_dnd.py: Integration of different"""
 
 from .base import STYLE, BaseApp, center_window, create_tooltip
 from .widgets import FolderSelector, ToggleSwitch, FileListBox, ProgressDialog
