@@ -1,0 +1,7 @@
+# GUI-only dependencies (MVP)
+#
+# Preferred Qt binding:
+PySide6>=6.5
+
+# Alternative (if you prefer PyQt):
+# PyQt5>=5.15

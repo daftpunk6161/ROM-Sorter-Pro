@@ -1,0 +1,45 @@
+# ROM-Sorter-Pro: local/runtime artifacts
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtualenvs
+.venv/
+venv/
+ENV/
+
+# Node artifacts
+node_modules/
+
+# IDE/editor state
+.vs/
+.vscode/
+.idea/
+
+# Logs / caches / temp
+logs/
+cache/
+temp/
+*.log
+backups/
+rom_databases/
+
+# Legacy backups / leftovers
+*.bak
+*.py.new
+comment-translation-cache.json
+archive/
+
+# Test caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# OS cruft
+.DS_Store
+Thumbs.db

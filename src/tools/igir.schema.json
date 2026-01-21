@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ROM Sorter Pro IGIR Config",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "enabled", "exe_path", "args_templates"],
+  "properties": {
+    "version": {"type": "string"},
+    "enabled": {"type": "boolean"},
+    "exe_path": {"type": "string"},
+    "args_templates": {
+      "type": "object",
+      "properties": {
+        "probe": {"type": "array", "items": {"type": "string"}},
+        "plan": {"type": "array", "items": {"type": "string"}},
+        "execute": {"type": "array", "items": {"type": "string"}}
+      },
+      "additionalProperties": false
+    },
+    "timeout_seconds": {"type": "integer", "minimum": 1},
+    "allowed_actions": {"type": "array", "items": {"type": "string"}},
+    "enforce_dest_root": {"type": "boolean"},
+    "require_plan_before_execute": {"type": "boolean"},
+    "execute_requires_explicit_user_action": {"type": "boolean"},
+    "dry_run_never_runs_igir": {"type": "boolean"},
+    "report_dir_default": {"type": "string"}
+  }
+}

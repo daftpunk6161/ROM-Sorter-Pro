@@ -1,0 +1,14 @@
+line-length = 100
+target-version = "py311"
+
+select = ["E", "F"]
+ignore = ["E501"]
+
+exclude = [
+  ".venv",
+  "_archive",
+  "cache",
+  "logs",
+  "rom_databases",
+  "temp",
+]

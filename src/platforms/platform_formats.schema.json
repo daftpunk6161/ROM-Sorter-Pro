@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ROM Sorter Pro Platform Formats",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "formats"],
+  "properties": {
+    "version": {"type": "string"},
+    "formats": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "platform_id": {"type": "string"},
+          "format_id": {"type": "string"},
+          "description": {"type": "string"},
+          "input_kinds": {"type": "array", "items": {"type": "string"}},
+          "required_manifests": {"type": "array", "items": {"type": "string"}},
+          "output_extension": {"type": "string"},
+          "tool_key": {"type": "string"},
+          "preferred_outputs": {"type": "array", "items": {"type": "string"}},
+          "normalize_to_single_file": {"type": "boolean"}
+        }
+      }
+    }
+  }
+}

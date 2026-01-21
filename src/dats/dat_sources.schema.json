@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ROM Sorter Pro DAT Sources",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "sources"],
+  "properties": {
+    "version": {"type": "string"},
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "paths"],
+        "properties": {
+          "name": {"type": "string"},
+          "paths": {"type": "array", "items": {"type": "string"}},
+          "enabled": {"type": "boolean"}
+        }
+      }
+    }
+  }
+}

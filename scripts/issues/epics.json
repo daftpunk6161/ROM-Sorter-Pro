@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "repo": "daftpunk6161/Code",
+  "epics": [
+    {
+      "key": "E1",
+      "title": "EPIC: Baseline Tooling + CI Gates (ruff/pytest/coverage)",
+      "labels": ["priority:P0", "area:ci", "area:tests", "type:chore"],
+      "milestone": "CI-Hardening",
+      "body": "## Context\n- Files: docs/BASELINE.md, docs/TEST_STRATEGY.md, ruff.toml, pytest.ini\n\n## Problem\nBaseline quality gates are not enforced consistently; CI coverage and ruff gates are missing.\n\n## Acceptance Criteria\n- [ ] Ruff gate configured and documented\n- [ ] Pytest smoke suite runs in CI\n- [ ] Coverage thresholds defined and enforced\n- [ ] Local run commands documented\n\n## Subtasks\n- [ ] Add CI workflow for ruff + pytest + coverage\n- [ ] Add coverage config and thresholds\n- [ ] Document local quality gates\n- [ ] Add mutation-proof notes to test strategy\n\n## Test Plan\n- [ ] Run ruff check\n- [ ] Run pytest smoke suite\n\n## Risks / Notes\n- CI changes can fail on missing dependencies; guard optional deps"
+    },
+    {
+      "key": "E2",
+      "title": "EPIC: Controller Boundary (UI ↔ Core) + stable APIs",
+      "labels": ["priority:P0", "area:gui", "area:scanner", "area:tests", "type:refactor"],
+      "milestone": "MVP-GUI",
+      "body": "## Context\n- Files: src/app/controller.py, src/ui/mvp/qt_app.py, src/ui/mvp/tk_app.py, src/core/scan_service.py\n\n## Problem\nUI still touches low-level modules and risks optional dependency crashes or inconsistent behavior.\n\n## Acceptance Criteria\n- [ ] UI uses only controller APIs\n- [ ] Controller surface documented and stable\n- [ ] No direct UI imports from detectors/scanners\n\n## Subtasks\n- [ ] Audit UI imports and remove low-level usage\n- [ ] Add controller interface tests\n- [ ] Stabilize DTOs between layers\n\n## Test Plan\n- [ ] UI smoke test (scan → preview → execute)\n- [ ] Controller unit tests\n\n## Risks / Notes\n- Refactor may break legacy workflows"
+    },
+    {
+      "key": "E3",
+      "title": "EPIC: Platform Catalog + Format Matrix (YAML + schema + loader + validation)",
+      "labels": ["priority:P1", "area:detection", "area:config", "area:tests", "type:feature"],
+      "milestone": "Detection-Accuracy",
+      "body": "## Context\n- Files: src/core/platform_heuristics.py, src/platforms/*, src/config/platform_catalog.json\n\n## Problem\nPlatform definitions are split and partially validated, leading to inconsistent detection and false positives.\n\n## Acceptance Criteria\n- [ ] Catalog schema validation enforced\n- [ ] YAML + JSON fallback supported\n- [ ] UNKNOWN > wrong policy enforced\n\n## Subtasks\n- [ ] Consolidate catalog sources\n- [ ] Add schema validation tests\n- [ ] Add negative detection tests (mixed content, weak signals)\n\n## Test Plan\n- [ ] Catalog validation tests\n- [ ] Unknown detection tests\n\n## Risks / Notes\n- Tightening rules may reduce detection coverage initially"
+    },
+    {
+      "key": "E4",
+      "title": "EPIC: Detection Pipeline Hardening (Exact+Heuristic+UNKNOWN rules) + tests",
+      "labels": ["priority:P0", "area:detection", "area:tests", "type:feature"],
+      "milestone": "Detection-Accuracy",
+      "body": "## Context\n- Files: src/detectors/*, src/core/platform_heuristics.py\n\n## Problem\nMultiple detection paths can return low-confidence non-Unknown results, violating UNKNOWN-first policy.\n\n## Acceptance Criteria\n- [ ] Deterministic candidate ranking\n- [ ] Low confidence results stay Unknown\n- [ ] Archive detection uses safe-path checks\n\n## Subtasks\n- [ ] Define unified confidence thresholds\n- [ ] Add archive safety tests\n- [ ] Remove legacy detector entrypoints from critical path\n\n## Test Plan\n- [ ] Known extension detection tests\n- [ ] Mixed content unknown tests\n\n## Risks / Notes\n- Changes may impact legacy expectations"
+    },
+    {
+      "key": "E5",
+      "title": "EPIC: Normalization/Conversion Engine (kinds, manifests, plans, runner) + tests",
+      "labels": ["priority:P1", "area:conversion", "area:tests", "type:feature"],
+      "milestone": "Normalization-v1",
+      "body": "## Context\n- Files: src/core/normalization.py, src/conversion/*, src/utils/external_tools.py\n\n## Problem\nConversion rules are fragmented and not validated; dry-run safety needs enforcement.\n\n## Acceptance Criteria\n- [ ] Single source of truth for converter rules\n- [ ] args_template enforced (no guessed flags)\n- [ ] Dry-run never runs tools or writes files\n\n## Subtasks\n- [ ] Add converter schema validation\n- [ ] Add fake converter tool for tests\n- [ ] Ensure temp dirs are safe and cleaned\n\n## Test Plan\n- [ ] Normalization plan tests\n- [ ] Dry-run no subprocess tests\n\n## Risks / Notes\n- Tool behavior differences across OS"
+    },
+    {
+      "key": "E6",
+      "title": "EPIC: Sorting Safety (plan/preview/execute, collision policy, security gates) + tests",
+      "labels": ["priority:P0", "area:security", "area:scanner", "area:tests", "type:feature"],
+      "milestone": "MVP-GUI",
+      "body": "## Context\n- Files: src/app/controller.py, src/security/security_utils.py\n\n## Problem\nSafety checks exist but are inconsistent across modules and need stronger negative testing.\n\n## Acceptance Criteria\n- [ ] Dest-root containment enforced for all writes\n- [ ] Symlink and traversal blocked\n- [ ] Collision handling deterministic\n\n## Subtasks\n- [ ] Extend security tests for traversal and symlinks\n- [ ] Verify collision handling tests\n- [ ] Validate safe temp file handling\n\n## Test Plan\n- [ ] Security path tests\n- [ ] Execute cancel tests\n\n## Risks / Notes\n- Some existing paths may be rejected unexpectedly"
+    },
+    {
+      "key": "E7",
+      "title": "EPIC: GUI Stability (threading, progress, cancel, error reporting) + smoke tests",
+      "labels": ["priority:P0", "area:gui", "area:tests", "type:feature"],
+      "milestone": "MVP-GUI",
+      "body": "## Context\n- Files: src/ui/mvp/qt_app.py, src/ui/mvp/tk_app.py, src/ui/compat.py\n\n## Problem\nSome UI actions still execute IO on the UI thread; cancel and error reporting are uneven across flows.\n\n## Acceptance Criteria\n- [ ] No UI blocking during scan/plan/execute\n- [ ] Cancel stops within 250ms\n- [ ] Worker exceptions show dialog + log\n\n## Subtasks\n- [ ] Move IO-heavy operations to workers\n- [ ] Add GUI smoke tests for cancel\n- [ ] Add progress throttling tests\n\n## Test Plan\n- [ ] UI worker tests (headless)\n\n## Risks / Notes\n- Threading refactor can introduce race conditions"
+    },
+    {
+      "key": "E8",
+      "title": "EPIC: Duplicate/Redundancy Removal (scanner/ui variants, backups cleanup) + migration plan",
+      "labels": ["priority:P2", "area:cleanup", "type:refactor"],
+      "milestone": "Cleanup-Refactor",
+      "body": "## Context\n- Files: src/scanning/*, _archive/*, src/ui/*\n\n## Problem\nDeprecated modules remain in repo and import graph, increasing risk and maintenance burden.\n\n## Acceptance Criteria\n- [ ] Deprecated scanners isolated or removed from active imports\n- [ ] Legacy UI separated from MVP UI\n- [ ] Migration plan documented\n\n## Subtasks\n- [ ] Inventory deprecated modules\n- [ ] Remove from active import graph\n- [ ] Write migration plan\n\n## Test Plan\n- [ ] Import graph smoke tests\n\n## Risks / Notes\n- Removing legacy code may break hidden dependencies"
+    },
+    {
+      "key": "E9",
+      "title": "EPIC: Documentation polish + troubleshooting + contributor guide",
+      "labels": ["priority:P2", "area:docs", "type:chore"],
+      "milestone": "Cleanup-Refactor",
+      "body": "## Context\n- Files: docs/*, README.md\n\n## Problem\nDocs are fragmented and lack contributor and troubleshooting guidance.\n\n## Acceptance Criteria\n- [ ] Contributor guide added\n- [ ] Troubleshooting guide added\n- [ ] README updated with baseline run commands\n\n## Subtasks\n- [ ] Add CONTRIBUTING.md\n- [ ] Add TROUBLESHOOTING.md\n- [ ] Update README.md\n\n## Test Plan\n- [ ] Docs link check\n\n## Risks / Notes\n- None"
+    }
+  ]
+}

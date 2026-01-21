@@ -1,0 +1,14 @@
+version: "1.0"
+enabled: false
+exe_path: ""
+args_templates:
+  probe: ["--version"]
+  plan: ["--dry-run", "--report", "{report_dir}", "{input}", "--output", "{output_dir}"]
+  execute: ["{input}", "--output", "{output_dir}"]
+timeout_seconds: 600
+allowed_actions: ["copy", "move", "rebuild", "rename"]
+enforce_dest_root: true
+require_plan_before_execute: true
+execute_requires_explicit_user_action: true
+dry_run_never_runs_igir: true
+report_dir_default: "data/reports/igir"

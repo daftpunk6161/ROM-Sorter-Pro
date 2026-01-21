@@ -1,0 +1,82 @@
+{
+  "repo": "daftpunk6161/Code",
+  "project_title": "ROM-Sorter-Pro Roadmap",
+  "milestones": [
+    "MVP-GUI",
+    "Detection-Accuracy",
+    "Normalization-v1",
+    "CI-Hardening",
+    "Cleanup-Refactor"
+  ],
+  "labels": [
+    "type:epic",
+    "priority:P0",
+    "priority:P1",
+    "priority:P2",
+    "area:identification",
+    "area:index",
+    "area:archive",
+    "area:normalization",
+    "area:igir",
+    "area:gui",
+    "area:ci"
+  ],
+  "epics": [
+    {
+      "id": "E1",
+      "title": "DAT Import + Incremental SQLite Index (CRC32+SHA1, WAL, batch inserts, TB-scale)",
+      "labels": ["type:epic", "priority:P0", "area:index"],
+      "milestone": "Detection-Accuracy",
+      "body": "## Ziel\nDeterministischer SQLite-DAT-Index mit inkrementellem Import und WAL.\n\n## Aufgaben\n- [ ] Schema festlegen (rom_hashes, dat_files, indexes)\n- [ ] SQLite PRAGMAs (WAL, synchronous=NORMAL, temp_store=MEMORY)\n- [ ] Inkrementelle Ingest-Logik (mtime/size/hash)\n- [ ] Batch Inserts (10k–100k) + Prepared Statements\n- [ ] Dat-Source Tracking + Deactivate/Remove\n- [ ] Tests: incremental skip/reindex/remove\n- [ ] Doku aktualisieren (DAT_IMPORT_AND_INDEX.md)"
+    },
+    {
+      "id": "E2",
+      "title": "Lockfile (PID+starttime) + robust recovery + tests",
+      "labels": ["type:epic", "priority:P0", "area:index"],
+      "milestone": "Detection-Accuracy",
+      "body": "## Ziel\nExklusiver Index-Run via Lockfile (stale detection).\n\n## Aufgaben\n- [ ] Lockfile JSON (pid, process_start_time_utc, created_at_utc, hostname, user, index_path)\n- [ ] Atomic create + stale takeover\n- [ ] psutil bevorzugt, PowerShell fallback\n- [ ] Always release (finally)\n- [ ] Tests: parallel blocked, stale recovered, PID reuse"
+    },
+    {
+      "id": "E3",
+      "title": "Archive-aware hashing (ZIP entries) + mixed content handling + security",
+      "labels": ["type:epic", "priority:P0", "area:archive"],
+      "milestone": "Detection-Accuracy",
+      "body": "## Ziel\nZIP Entry Hashing + Mixed-Content-Unknown + Security (zip-slip/symlinks).\n\n## Aufgaben\n- [ ] ZIP Entry Streaming Hashing\n- [ ] Mixed content → Unknown-Regel\n- [ ] Path traversal + symlink checks bei Archives\n- [ ] Tests: zip match, zip non-match, mixed archive"
+    },
+    {
+      "id": "E4",
+      "title": "Deterministic identification pipeline (DAT→Signatures→Heuristic) + UNKNOWN rules + tests",
+      "labels": ["type:epic", "priority:P0", "area:identification"],
+      "milestone": "Detection-Accuracy",
+      "body": "## Ziel\nStrikte Identifikation mit DAT/Hash-first + Unknown-Policy.\n\n## Aufgaben\n- [ ] Unified output model (platform_id, confidence, is_exact, signals, candidates, reason, input_kind)\n- [ ] DAT exact match (SHA1, fallback CRC32+size)\n- [ ] Signature detection (cue/gdi/folderset)\n- [ ] Heuristic LAST + Unknown rules\n- [ ] Tests: low confidence unknown, ambiguous unknown"
+    },
+    {
+      "id": "E5",
+      "title": "Normalization engine (kinds, manifests, preferred outputs per platform) + tests",
+      "labels": ["type:epic", "priority:P1", "area:normalization"],
+      "milestone": "Normalization-v1",
+      "body": "## Ziel\nPlattform-spezifische Normalisierung (preferred_outputs, normalize_to_single_file).\n\n## Aufgaben\n- [ ] platform_formats.yaml + schema\n- [ ] converters.yaml + schema (exe_path + args_template)\n- [ ] Runner: timeout/cancel + output checks\n- [ ] Tests: trackset/folderset validation"
+    },
+    {
+      "id": "E6",
+      "title": "IGIR integration (plan + safety diff + export + execute button gates) + tests",
+      "labels": ["type:epic", "priority:P1", "area:igir"],
+      "milestone": "Detection-Accuracy",
+      "body": "## Ziel\nIGIR Execute nur via explizitem Button + Diff-Gate.\n\n## Aufgaben\n- [ ] src/tools/igir.yaml + schema\n- [ ] Plan/Execute args templates\n- [ ] Safety Diff (CSV/JSON export)\n- [ ] UI Gate: Execute only after diff shown/confirmed\n- [ ] Tests: plan required, dest-root enforced, cancel/timeout"
+    },
+    {
+      "id": "E7",
+      "title": "GUI worker model (progress/cancel/timeout, no blocking) + smoke tests",
+      "labels": ["type:epic", "priority:P1", "area:gui"],
+      "milestone": "MVP-GUI",
+      "body": "## Ziel\nAlle schweren Tasks im Worker.\n\n## Aufgaben\n- [ ] Worker für Index/Hashing/IGIR\n- [ ] Cancel/Timeout überall\n- [ ] UI Status + Live-Log\n- [ ] Smoke Tests (headless)"
+    },
+    {
+      "id": "E8",
+      "title": "Tooling/CI + baseline docs + repo cleanup",
+      "labels": ["type:epic", "priority:P2", "area:ci"],
+      "milestone": "CI-Hardening",
+      "body": "## Ziel\nCI + Hygiene + Doku.\n\n## Aufgaben\n- [ ] ruff + pytest + coverage gate\n- [ ] .gitignore data/index/cache/logs/reports\n- [ ] Update docs (CONFIG_REFERENCE, TROUBLESHOOTING)"
+    }
+  ]
+}

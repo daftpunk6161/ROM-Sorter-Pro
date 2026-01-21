@@ -1,0 +1,11 @@
+{
+  "exclude": [
+    "_archive/**",
+    "**/__pycache__/**",
+    ".venv/**",
+    "cache/**",
+    "logs/**",
+    "rom_databases/**",
+    "temp/**"
+  ]
+}

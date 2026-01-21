@@ -1,0 +1,108 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest PyYAML
+      - name: Run smoke tests
+        run: |
+          pytest -q \
+            dev/tests/test_mvp_backend_selection.py \
+            dev/tests/test_mvp_controller_planning.py \
+            dev/tests/test_mvp_security_paths.py \
+            dev/tests/test_mvp_execute_cancel.py \
+            dev/tests/test_mvp_execute_cancel_mid_copy.py \
+            dev/tests/test_mvp_lang_version_parsing.py \
+            dev/tests/test_mvp_run_scan_policy.py \
+            dev/tests/test_mvp_api_imports.py \
+            dev/tests/test_mvp_ui_compat_imports.py \
+            dev/tests/test_mvp_controller_boundary.py \
+            dev/tests/test_mvp_no_core_controller_imports.py \
+            dev/tests/test_mvp_entrypoint_shim.py \
+            dev/tests/test_mvp_format_validation.py \
+            dev/tests/test_mvp_platform_catalog_validation.py \
+            dev/tests/test_mvp_conversion_runner.py \
+            dev/tests/test_mvp_collision_policy.py \
+            dev/tests/test_mvp_progress_batching.py \
+            dev/tests/test_mvp_cancel_smoke.py \
+            dev/tests/test_mvp_scanning_exports.py \
+            dev/tests/test_mvp_db_schema_unified.py \
+            dev/tests/test_mvp_optional_deps_metadata.py \
+            dev/tests/test_mvp_db_migration_backfill.py \
+            dev/tests/test_mvp_db_controller.py
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest pytest-cov PyYAML
+      - name: Run tests with coverage gate
+        run: |
+          pytest -q \
+            --cov=src/app --cov=src/core --cov=src/security --cov=src/ui/mvp \
+            --cov-report=term-missing \
+            --cov-fail-under=80 \
+            dev/tests/test_mvp_backend_selection.py \
+            dev/tests/test_mvp_controller_planning.py \
+            dev/tests/test_mvp_security_paths.py \
+            dev/tests/test_mvp_execute_cancel.py \
+            dev/tests/test_mvp_execute_cancel_mid_copy.py \
+            dev/tests/test_mvp_lang_version_parsing.py \
+            dev/tests/test_mvp_run_scan_policy.py \
+            dev/tests/test_mvp_api_imports.py \
+            dev/tests/test_mvp_ui_compat_imports.py \
+            dev/tests/test_mvp_controller_boundary.py \
+            dev/tests/test_mvp_no_core_controller_imports.py \
+            dev/tests/test_mvp_entrypoint_shim.py \
+            dev/tests/test_mvp_format_validation.py \
+            dev/tests/test_mvp_platform_catalog_validation.py \
+            dev/tests/test_mvp_conversion_runner.py \
+            dev/tests/test_mvp_collision_policy.py \
+            dev/tests/test_mvp_progress_batching.py \
+            dev/tests/test_mvp_cancel_smoke.py \
+            dev/tests/test_mvp_scanning_exports.py \
+            dev/tests/test_mvp_db_schema_unified.py \
+            dev/tests/test_mvp_optional_deps_metadata.py \
+            dev/tests/test_mvp_db_migration_backfill.py \
+            dev/tests/test_mvp_db_controller.py \
+            dev/tests/test_mvp_region_dedupe.py \
+            dev/tests/test_mvp_platform_detection_known_exts.py \
+            dev/tests/test_mvp_execute_semantics.py \
+            dev/tests/test_mvp_scan_and_conflict.py \
+            dev/tests/test_mvp_archive_security.py \
+            dev/tests/test_mvp_dat_index.py
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install ruff
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install ruff
+      - name: Ruff
+        run: |
+          ruff check .

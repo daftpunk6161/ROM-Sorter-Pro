@@ -1,0 +1,58 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ROM Sorter Pro Platform Catalog",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "platforms"],
+  "properties": {
+    "version": {"type": "string"},
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "min_score_delta": {"type": "number"},
+        "min_top_score": {"type": "number"},
+        "contradiction_min_score": {"type": "number"}
+      }
+    },
+    "platforms": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "platform_id",
+          "canonical_name",
+          "aliases",
+          "category",
+          "media_types",
+          "allowed_containers",
+          "typical_extensions",
+          "positive_tokens",
+          "negative_tokens",
+          "conflict_groups",
+          "minimum_signals"
+        ],
+        "properties": {
+          "platform_id": {"type": "string", "pattern": "^[a-z0-9._-]+$"},
+          "canonical_name": {"type": "string"},
+          "aliases": {"type": "array", "items": {"type": "string"}},
+          "category": {
+            "type": "string",
+            "enum": ["No-Intro", "Redump", "Arcade", "Computer", "Misc"]
+          },
+          "media_types": {"type": "array", "items": {"type": "string"}},
+          "allowed_containers": {"type": "array", "items": {"type": "string"}},
+          "typical_extensions": {"type": "array", "items": {"type": "string"}},
+          "positive_tokens": {"type": "array", "items": {"type": "string"}},
+          "negative_tokens": {"type": "array", "items": {"type": "string"}},
+          "conflict_groups": {"type": "array", "items": {"type": "string"}},
+          "minimum_signals": {
+            "type": "array",
+            "items": {"type": "string", "enum": ["extension", "token", "container"]}
+          }
+        }
+      }
+    }
+  }
+}

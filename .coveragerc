@@ -1,0 +1,15 @@
+[run]
+branch = True
+omit =
+    */_archive/*
+    */dev/*
+    */tests/*
+    */.venv/*
+    */site-packages/*
+    */rom_databases/*
+    */cache/*
+    */temp/*
+
+[report]
+skip_empty = True
+show_missing = True

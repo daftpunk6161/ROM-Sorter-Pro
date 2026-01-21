@@ -1,0 +1,433 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/rom-sorter/config-schema",
+  "title": "ROM Sorter Pro Config",
+  "description": "Schema for ROM Sorter Pro v2.1 config.",
+  "type": "object",
+  "required": ["_metadata", "file_detection", "prioritization"],
+  "properties": {
+    "_metadata": {
+      "type": "object",
+      "properties": {
+        "version": {"type": "string", "pattern": "^\\d+\\.\\d+(\\.\\d+)?$"},
+        "description": {"type": "string"},
+        "last_updated": {"type": "string", "format": "date"},
+        "encoding": {"type": "string", "enum": ["utf-8", "utf-16", "ascii"]},
+        "config_version": {"type": "integer", "minimum": 1}
+      },
+      "required": ["version", "description"]
+    },
+    "file_detection": {
+      "type": "object",
+      "properties": {
+        "rom_extensions": {
+          "type": "array",
+          "items": {"type": "string", "pattern": "^\\.[a-z0-9.-]+$"},
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "unwanted_patterns": {
+          "type": "array",
+          "items": {"type": "string"},
+          "minItems": 1
+        },
+        "priority_extensions": {
+          "type": "object",
+          "patternProperties": {
+            "^\\.[a-z0-9.-]+$": {"type": "integer", "minimum": 0, "maximum": 10}
+          },
+          "additionalProperties": false
+        }
+      },
+      "required": ["rom_extensions"]
+    },
+    "dat_matching": {
+      "type": "object",
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "lazy_load": {"type": "boolean"},
+        "auto_load": {"type": "boolean"},
+        "dat_paths": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      }
+    },
+    "dats": {
+      "type": "object",
+      "properties": {
+        "import_paths": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "index_path": {"type": "string"},
+        "lock_path": {"type": "string"}
+      },
+      "additionalProperties": true
+    },
+    "scanner": {
+      "type": "object",
+      "properties": {
+        "ignore_images": {"type": "boolean"},
+        "ignore_extensions": {
+          "type": "array",
+          "items": {"type": "string", "pattern": "^\\.[a-z0-9.-]+$" }
+        }
+      },
+      "additionalProperties": true
+    },
+    "gui_settings": {
+      "type": "object",
+      "properties": {
+        "theme": {"type": "string"},
+        "auto_scan": {"type": "boolean"},
+        "show_preview": {"type": "boolean"},
+        "real_time_stats": {"type": "boolean"},
+        "drag_drop_enabled": {"type": "boolean"},
+        "remember_window_size": {"type": "boolean"},
+        "progress_updates": {"type": "boolean"},
+        "window_width": {"type": "integer", "minimum": 100},
+        "window_height": {"type": "integer", "minimum": 100},
+        "update_interval": {"type": "integer", "minimum": 50},
+        "show_tooltips": {"type": "boolean"}
+      }
+    },
+    "prioritization": {
+      "type": "object",
+      "properties": {
+        "region_priorities": {
+          "type": "object",
+          "patternProperties": {
+            "^[A-Z]{2,3}|[A-Za-z]+$": {"type": "integer", "minimum": 0, "maximum": 10}
+          },
+          "additionalProperties": false
+        },
+        "language_priorities": {
+          "type": "object",
+          "patternProperties": {
+            "^[A-Z]{2,3}|[A-Za-z]+|Multi[0-9]*$": {"type": "integer", "minimum": 0, "maximum": 10}
+          },
+          "additionalProperties": false
+        },
+        "quality_indicators": {
+          "type": "object",
+          "properties": {
+            "good_patterns": {"type": "array", "items": {"type": "string"}},
+            "bad_patterns": {"type": "array", "items": {"type": "string"}},
+            "revision_bonus": {"type": "integer", "minimum": 0},
+            "language_match_bonus": {"type": "integer", "minimum": 0},
+            "region_match_bonus": {"type": "integer", "minimum": 0},
+            "size_bonus_threshold": {"type": "integer", "minimum": 0},
+            "format_bonus": {
+              "type": "object",
+              "patternProperties": {
+                "^[a-z_]+$": {"type": "integer", "minimum": 0}
+              },
+              "additionalProperties": false
+            }
+          }
+        }
+      },
+      "required": ["region_priorities"]
+    },
+    "performance": {
+      "type": "object",
+      "properties": {
+        "caching": {
+          "type": "object",
+          "properties": {
+            "enable_caching": {"type": "boolean"},
+            "cache_size": {"type": "integer", "minimum": 0},
+            "lru_cache_size": {"type": "integer", "minimum": 0},
+            "cache_cleanup_interval": {"type": "integer", "minimum": 0},
+            "hash_cache_ttl": {"type": "integer", "minimum": 0},
+            "pattern_cache_size": {"type": "integer", "minimum": 0},
+            "extension_cache_size": {"type": "integer", "minimum": 0},
+            "metadata_cache_ttl": {"type": "integer", "minimum": 0}
+          }
+        },
+        "processing": {
+          "type": "object",
+          "properties": {
+            "parallel_workers": {"type": ["integer", "null"], "minimum": 1, "maximum": 32},
+            "batch_size": {"type": "integer", "minimum": 1, "maximum": 10000},
+            "chunk_size": {"type": "integer", "minimum": 1},
+            "max_memory_usage": {"type": "string", "pattern": "^\\d+(MB|GB)$"},
+            "enable_memory_mapping": {"type": "boolean"},
+            "memory_mapping_threshold": {"type": "integer", "minimum": 0},
+            "io_buffer_size": {"type": "integer", "minimum": 0},
+            "prefetch_enabled": {"type": "boolean"},
+            "compression_threads": {"type": "integer", "minimum": 1}
+          }
+        },
+        "optimization": {
+          "type": "object",
+          "properties": {
+            "precompile_patterns": {"type": "boolean"},
+            "use_fast_hash": {"type": "boolean"},
+            "enable_progress_batching": {"type": "boolean"},
+            "lazy_loading": {"type": "boolean"},
+            "memory_pool_size": {"type": "string", "pattern": "^\\d+(MB|GB)$"}
+          }
+        }
+      }
+    },
+    "features": {
+      "type": "object",
+      "properties": {
+        "sorting": {
+          "type": "object",
+          "properties": {
+            "console_sorting_enabled": {"type": "boolean"},
+            "create_console_folders": {"type": "boolean"},
+            "group_by_manufacturer": {"type": "boolean"},
+            "sort_within_console": {"type": "boolean"},
+            "region_based_sorting": {"type": "boolean"},
+            "folder_structure": {"type": "string", "enum": ["console_first", "manufacturer_first", "alphabetical"]},
+            "create_unknown_folder": {"type": "boolean"},
+            "unknown_folder_name": {"type": "string"},
+            "preserve_folder_structure": {"type": "boolean"},
+            "auto_create_directories": {"type": "boolean"},
+            "quarantine_unknown": {"type": "boolean"},
+            "quarantine_folder_name": {"type": "string"},
+            "rename_template": {"type": "string"},
+            "confidence_threshold": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+            "conversion": {
+              "type": "object",
+              "properties": {
+                "enabled": {"type": "boolean"},
+                "require_dat_match": {"type": "boolean"},
+                "fallback_on_missing_tool": {"type": "boolean"},
+                "tools": {
+                  "type": "object",
+                  "additionalProperties": {"type": "string"}
+                },
+                "rules": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {"type": "string"},
+                      "enabled": {"type": "boolean"},
+                      "systems": {
+                        "type": "array",
+                        "items": {"type": "string"}
+                      },
+                      "extensions": {
+                        "type": "array",
+                        "items": {"type": "string"}
+                      },
+                      "to_extension": {"type": "string"},
+                      "tool": {"type": "string"},
+                      "args": {
+                        "type": "array",
+                        "items": {"type": "string"}
+                      },
+                      "require_tool": {"type": "boolean"}
+                    },
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "duplicate_detection": {
+          "type": "object",
+          "properties": {
+            "enabled": {"type": "boolean"},
+            "smart_detection": {"type": "boolean"},
+            "create_duplicates_folder": {"type": "boolean"},
+            "hash_comparison": {"type": "boolean"},
+            "size_comparison": {"type": "boolean"},
+            "name_similarity": {"type": "boolean"},
+            "similarity_threshold": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+            "keep_best_version": {"type": "boolean"}
+          }
+        },
+        "advanced_detection": {
+          "type": "object",
+          "properties": {
+            "detect_homebrew": {"type": "boolean"},
+            "detect_translations": {"type": "boolean"},
+            "detect_hacks": {"type": "boolean"},
+            "handle_homebrew": {"type": "boolean"},
+            "detect_prototypes": {"type": "boolean"},
+            "detect_demos": {"type": "boolean"},
+            "region_detection": {"type": "boolean"},
+            "language_detection": {"type": "boolean"}
+          }
+        },
+        "ai_features": {
+          "type": "object",
+          "properties": {
+            "enable_ai_detection": {"type": "boolean"},
+            "confidence_threshold": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+            "online_metadata": {"type": "boolean"},
+            "download_covers": {"type": "boolean"},
+            "cover_quality": {"type": "string", "enum": ["low", "medium", "high", "ultra"]},
+            "metadata_sources": {
+              "type": "array",
+              "items": {"type": "string", "enum": ["thegamesdb", "mobygames", "igdb", "screenscraper"]}
+            },
+            "enable_fuzzy_matching": {"type": "boolean"},
+            "ml_model_path": {"type": "string"}
+          }
+        }
+      }
+    },
+    "operations": {
+      "type": "object",
+      "properties": {
+        "file_operations": {
+          "type": "object",
+          "properties": {
+            "move_files": {"type": "boolean"},
+            "copy_files": {"type": "boolean"},
+            "create_hardlinks": {"type": "boolean"},
+            "preserve_timestamps": {"type": "boolean"},
+            "skip_existing": {"type": "boolean"},
+            "overwrite_policy": {"type": "string", "enum": ["never", "always", "ask", "newer"]},
+            "collision_handling": {"type": "string", "enum": ["rename", "overwrite", "skip", "ask"]},
+            "safe_mode": {"type": "boolean"},
+            "verify_operations": {"type": "boolean"},
+            "atomic_operations": {"type": "boolean"},
+            "backup_before_move": {"type": "boolean"},
+            "preserve_permissions": {"type": "boolean"}
+          }
+        },
+        "verification": {
+          "type": "object",
+          "properties": {
+            "verify_checksums": {"type": "boolean"},
+            "backup_originals": {"type": "boolean"},
+            "log_all_operations": {"type": "boolean"},
+            "verify_after_copy": {"type": "boolean"},
+            "checksum_algorithm": {"type": "string", "enum": ["md5", "sha1", "sha256", "crc32"]},
+            "parallel_verification": {"type": "boolean"}
+          }
+        },
+        "cleanup": {
+          "type": "object",
+          "properties": {
+            "remove_empty_folders": {"type": "boolean"},
+            "cleanup_temp_files": {"type": "boolean"},
+            "remove_duplicates": {"type": "boolean"},
+            "cleanup_on_exit": {"type": "boolean"}
+          }
+        }
+      }
+    },
+    "external_tools": {
+      "type": "object",
+      "properties": {
+        "wud2app": {
+          "type": "object",
+          "properties": {
+            "exe_path": {"type": "string"},
+            "args_template": {
+              "type": "array",
+              "items": {"type": "string"}
+            }
+          },
+          "required": ["exe_path", "args_template"],
+          "additionalProperties": false
+        },
+        "wudcompress": {
+          "type": "object",
+          "properties": {
+            "exe_path": {"type": "string"},
+            "args_template": {
+              "type": "array",
+              "items": {"type": "string"}
+            }
+          },
+          "required": ["exe_path", "args_template"],
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": true
+    },
+    "interface": {
+      "type": "object",
+      "properties": {
+        "logging": {
+          "type": "object",
+          "properties": {
+            "level": {"type": "string", "enum": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]},
+            "log_to_file": {"type": "boolean"},
+            "log_file": {"type": "string"},
+            "max_log_size": {"type": "string", "pattern": "^\\d+(KB|MB|GB)$"},
+            "backup_count": {"type": "integer", "minimum": 0},
+            "console_output": {"type": "boolean"},
+            "performance_logging": {"type": "boolean"},
+            "memory_tracking": {"type": "boolean"},
+            "rotation_on_startup": {"type": "boolean"},
+            "log_format": {"type": "string"},
+            "date_format": {"type": "string"}
+          }
+        },
+        "gui_settings": {
+          "type": "object",
+          "deprecated": true,
+          "description": "Deprecated: use top-level gui_settings instead.",
+          "properties": {
+            "theme": {"type": "string"},
+            "auto_scan": {"type": "boolean"},
+            "show_preview": {"type": "boolean"},
+            "real_time_stats": {"type": "boolean"},
+            "drag_drop_enabled": {"type": "boolean"},
+            "remember_window_size": {"type": "boolean"},
+            "progress_updates": {"type": "boolean"},
+            "window_width": {"type": "integer", "minimum": 100},
+            "window_height": {"type": "integer", "minimum": 100},
+            "update_interval": {"type": "integer", "minimum": 50},
+            "show_tooltips": {"type": "boolean"}
+          }
+        },
+        "notifications": {
+          "type": "object",
+          "properties": {
+            "desktop_notifications": {"type": "boolean"},
+            "sound_notifications": {"type": "boolean"},
+            "completion_notification": {"type": "boolean"},
+            "error_notification": {"type": "boolean"},
+            "progress_notifications": {"type": "boolean"},
+            "notification_timeout": {"type": "integer", "minimum": 0}
+          }
+        },
+        "web_interface": {
+          "type": "object",
+          "properties": {
+            "enabled": {"type": "boolean"},
+            "host": {"type": "string"},
+            "port": {"type": "integer", "minimum": 1, "maximum": 65535},
+            "debug": {"type": "boolean"},
+            "auto_open_browser": {"type": "boolean"},
+            "websocket_enabled": {"type": "boolean"}
+          }
+        }
+      }
+    },
+    "presets": {
+      "type": "object",
+      "patternProperties": {
+        "^[a-z_]+$": {
+          "type": "object",
+          "properties": {
+            "description": {"type": "string"},
+            "performance": {"$ref": "#/properties/performance"},
+            "features": {"$ref": "#/properties/features"},
+            "operations": {"$ref": "#/properties/operations"},
+            "prioritization": {"$ref": "#/properties/prioritization"}
+          },
+          "required": ["description"],
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": true
+}

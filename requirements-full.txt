@@ -1,0 +1,17 @@
+# Full / optional dependencies for ROM-Sorter-Pro
+#
+# Install minimal GUI deps via requirements-gui.txt.
+# This file is for optional features (web, ML, data tooling) and should NEVER be
+# required to start the GUI.
+#
+# Examples (keep optional):
+# pandas>=2.0
+# requests>=2.31
+# beautifulsoup4>=4.12
+# flask>=3.0
+# scikit-learn>=1.4
+# torch
+# tensorflow
+
+# Optional YAML support (catalogs/convert rules)
+PyYAML>=6.0.1
