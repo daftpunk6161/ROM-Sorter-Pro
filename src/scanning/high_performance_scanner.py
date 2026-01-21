@@ -773,51 +773,60 @@ class HighPerformanceScanner:
 
             from ..security.security_utils import is_safe_archive_member
 
+            # Count DAT evidence by entry hashes (strict mixed-content handling).
+            system_scores: Dict[str, float] = {}
+            system_sources: Dict[str, str] = {}
+            total_safe_entries = 0
+            matched_entries = 0
+
             with zipfile.ZipFile(str(path_obj), 'r') as zf:
                 infos = [zi for zi in zf.infolist() if not zi.is_dir()]
 
-            # Fast exit if empty
-            if not infos:
-                return None
+                # Fast exit if empty
+                if not infos:
+                    return None
 
-            # Count DAT evidence by entry CRCs
-            system_scores: Dict[str, float] = {}
-            system_sources: Dict[str, str] = {}
-
-            if dat_index is not None:
-                try:
-                    for zi in infos:
-                        if not is_safe_archive_member(zi.filename):
-                            continue
-                        with zf.open(zi, 'r') as entry_f:
-                            crc32_val = 0
-                            sha1_hash = hashlib.sha1()
-                            while chunk := entry_f.read(self.chunk_size):
-                                if self.should_stop:
-                                    raise InterruptedError("Scan wurde abgebrochen")
-                                crc32_val = zipfile.crc32(chunk, crc32_val)
-                                sha1_hash.update(chunk)
-                            entry_sha1 = sha1_hash.hexdigest()
-                            match = dat_index.lookup_sha1(entry_sha1)
-                            if not match:
-                                entry_crc = f"{crc32_val & 0xFFFFFFFF:08x}"
-                                match = dat_index.lookup_crc_size_when_sha1_missing(entry_crc, zi.file_size)
-                            if match and match.platform_id:
-                                system_scores[match.platform_id] = system_scores.get(match.platform_id, 0.0) + 1.0
-                                system_sources[match.platform_id] = "dat:entry"
-                except Exception:
-                    pass
+                if dat_index is not None:
+                    try:
+                        for zi in infos:
+                            if not is_safe_archive_member(zi):
+                                continue
+                            total_safe_entries += 1
+                            with zf.open(zi, 'r') as entry_f:
+                                crc32_val = 0
+                                sha1_hash = hashlib.sha1()
+                                while chunk := entry_f.read(self.chunk_size):
+                                    if self.should_stop:
+                                        raise InterruptedError("Scan wurde abgebrochen")
+                                    crc32_val = zipfile.crc32(chunk, crc32_val)
+                                    sha1_hash.update(chunk)
+                                entry_sha1 = sha1_hash.hexdigest()
+                                match = dat_index.lookup_sha1(entry_sha1)
+                                if not match:
+                                    entry_crc = f"{crc32_val & 0xFFFFFFFF:08x}"
+                                    match = dat_index.lookup_crc_size_when_sha1_missing(entry_crc, zi.file_size)
+                                if match and match.platform_id:
+                                    matched_entries += 1
+                                    system_scores[match.platform_id] = system_scores.get(match.platform_id, 0.0) + 1.0
+                                    system_sources[match.platform_id] = "dat:entry"
+                    except Exception:
+                        pass
 
             if not system_scores:
                 system = 'Unknown'
                 confidence = 0.0
                 source = 'zip-unknown'
             else:
-                # Strict: accept only if all DAT evidence points to a single system.
+                # Strict: accept only if all matched entries point to one system
+                # and no unmatched entries remain (mixed content => Unknown).
                 if len(system_scores) != 1:
                     system = 'Unknown'
                     confidence = 0.0
                     source = 'zip-conflict'
+                elif total_safe_entries and matched_entries < total_safe_entries:
+                    system = 'Unknown'
+                    confidence = 0.0
+                    source = 'zip-mixed'
                 else:
                     system = next(iter(system_scores.keys()))
                     confidence = 1000.0
@@ -836,7 +845,7 @@ class HighPerformanceScanner:
                 'system': system,
                 'detection_confidence': float(confidence),
                 'detection_source': str(source),
-                'is_exact': bool(system_scores) and len(system_scores) == 1,
+                'is_exact': bool(system_scores) and len(system_scores) == 1 and matched_entries == total_safe_entries,
                 'signals': candidates_info.get('signals') or [],
                 'candidates': candidates_info.get('candidates') or [],
                 'candidate_systems': candidates_info.get('candidate_systems') or [],
@@ -867,8 +876,9 @@ class HighPerformanceScanner:
             dat_index = self._get_dat_index()
             if dat_index is not None:
                 match = dat_index.lookup_game(path_obj.stem)
-                if match and match.system:
-                    if not self._system_tokens_in_path(match.system, str(path_obj)):
+                if match and match[0]:
+                    system_name = match[0]
+                    if not self._system_tokens_in_path(system_name, str(path_obj)):
                         return {
                             'name': path_obj.name,
                             'path': str(path_obj),
@@ -898,9 +908,9 @@ class HighPerformanceScanner:
                     return {
                         'name': path_obj.name,
                         'path': str(path_obj),
-                        'system': match.system,
+                        'system': system_name,
                         'detection_confidence': 1000.0,
-                        'detection_source': f"dat:{match.source}",
+                        'detection_source': "dat:name",
                         'is_exact': True,
                         'signals': candidates_info.get('signals') or [],
                         'candidates': candidates_info.get('candidates') or [],

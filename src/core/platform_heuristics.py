@@ -45,15 +45,38 @@ def _catalog_schema_path() -> Path:
     return Path(__file__).resolve().parents[1] / "platforms" / "platform_catalog.schema.json"
 
 
+def _catalog_cache_key() -> str:
+    yaml_path = _catalog_yaml_path()
+    json_path = _catalog_json_path()
+    yaml_mtime = str(yaml_path.stat().st_mtime) if yaml_path.exists() else "0"
+    json_mtime = str(json_path.stat().st_mtime) if json_path.exists() else "0"
+    env_override = os.environ.get("ROM_SORTER_PLATFORM_CATALOG", "").strip()
+    return "|".join([env_override, str(yaml_path), yaml_mtime, str(json_path), json_mtime])
+
+
+def _load_json_loose(text: str) -> Optional[Dict[str, Any]]:
+    try:
+        cleaned = re.sub(r",\s*(?=[}\]])", "", text)
+        data = json.loads(cleaned)
+    except Exception:
+        return None
+    return data if isinstance(data, dict) else None
+
+
 def _load_yaml_data(path: Path) -> Optional[Dict[str, Any]]:
+    raw = None
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except Exception:
+        return None
     try:
         import yaml  # type: ignore
     except Exception:
-        return None
+        return _load_json_loose(raw)
     try:
-        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+        data = yaml.safe_load(raw)
     except Exception:
-        return None
+        return _load_json_loose(raw)
     return data if isinstance(data, dict) else None
 
 
@@ -112,8 +135,8 @@ def _basic_catalog_validation(data: object) -> Tuple[bool, str]:
     return True, "ok"
 
 
-@lru_cache(maxsize=1)
-def _load_catalog() -> Tuple[List[Dict[str, object]], str, Dict[str, Any]]:
+@lru_cache(maxsize=4)
+def _load_catalog(_cache_key: str) -> Tuple[List[Dict[str, object]], str, Dict[str, Any]]:
     yaml_path = _catalog_yaml_path()
     json_path = _catalog_json_path()
 
@@ -125,10 +148,13 @@ def _load_catalog() -> Tuple[List[Dict[str, object]], str, Dict[str, Any]]:
             logger.warning("Platform catalog YAML could not be loaded: %s", yaml_path)
 
     if data is None and json_path.exists():
+        raw = None
         try:
-            data = json.loads(json_path.read_text(encoding="utf-8"))
+            raw = json_path.read_text(encoding="utf-8")
         except Exception:
-            data = None
+            raw = None
+        if raw is not None:
+            data = _load_json_loose(raw)
 
     if data is None:
         return [], "missing", {}
@@ -187,7 +213,7 @@ def evaluate_platform_candidates(path: str, *, container: Optional[str] = None) 
     This is strictly heuristic and intentionally conservative.
     """
 
-    platforms, status, policy = _load_catalog()
+    platforms, status, policy = _load_catalog(_catalog_cache_key())
     if not platforms:
         return {
             "candidates": [],

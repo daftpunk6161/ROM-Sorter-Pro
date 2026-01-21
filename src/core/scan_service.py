@@ -76,13 +76,19 @@ def run_scan(
 
     scanner = HighPerformanceScanner(cfg)
 
-    # DAT status (best-effort). The DAT index loads in the background by default.
+    # DAT status (best-effort). Prefer new dats config, keep legacy dat_matching gate.
     dat_cfg = {}
+    legacy_dat_cfg = {}
     try:
-        dat_cfg = cfg.get("dat_matching", {}) or {}
+        dat_cfg = cfg.get("dats", {}) or {}
     except Exception:
         dat_cfg = {}
-    dat_enabled = bool(dat_cfg.get("enabled", True))
+    try:
+        legacy_dat_cfg = cfg.get("dat_matching", {}) or {}
+    except Exception:
+        legacy_dat_cfg = {}
+    legacy_enabled = bool(legacy_dat_cfg.get("enabled", True))
+    dat_enabled = bool(dat_cfg or legacy_dat_cfg) and legacy_enabled
 
     dat_index = None
     dat_index_path = None
@@ -92,7 +98,6 @@ def run_scan(
         except Exception:
             dat_index = None
         try:
-            dat_cfg = cfg.get("dats", {}) or {}
             dat_index_path = dat_cfg.get("index_path") or os.path.join("data", "index", "romsorter_dat_index.sqlite")
         except Exception:
             dat_index_path = None

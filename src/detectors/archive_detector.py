@@ -18,7 +18,6 @@ from pathlib import Path
 from typing import Optional, Tuple
 import logging
 from functools import lru_cache
-from collections import Counter
 
 # Importing functions from Utils
 from ..utils import detect_console_fast
@@ -38,11 +37,6 @@ ARCHIVE_EXTENSIONS = {
     '.bz2': 'BZIP2',
 }
 
-# Maximum number of files to be tested in an archive
-MAX_FILES_TO_CHECK = 50
-
-# Minimal confidence for positive console recognition
-MIN_CONFIDENCE = 0.65
 
 
 @lru_cache(maxsize=100)
@@ -72,53 +66,16 @@ def analyze_zip_archive(zip_path: str) -> Tuple[str, float]:
             logger.warning(f"Ungültige ZIP-Datei: {zip_path}")
             return "Archive", 0.0
 
-        console_counts = Counter()
-        total_files = 0
-
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-            file_list = zip_ref.namelist()
+            infos = [zi for zi in zip_ref.infolist() if not zi.is_dir()]
 
-            unsafe_entries = [name for name in file_list if not _is_safe_archive_member(name)]
+            unsafe_entries = [zi.filename for zi in infos if not is_safe_archive_member(zi)]
             if unsafe_entries:
                 for name in unsafe_entries[:5]:
                     logger.warning(f"Unsafe archive member skipped: {name}")
 
-            file_list = [name for name in file_list if _is_safe_archive_member(name)]
-
-# Filtere hidden files and directories
-            file_list = [f for f in file_list if not f.startswith('__MACOSX')
-                         and not f.startswith('.') and not f.endswith('/')]
-
-# Limit the number of files to be checked
-            files_to_check = file_list[:MAX_FILES_TO_CHECK]
-
-            for file_name in files_to_check:
-                extension = os.path.splitext(file_name)[1].lower()
-
-# Skip meta files
-                if file_name.startswith('.') or extension in ['.txt', '.nfo', '.xml', '.html', '.jpg', '.png', '.gif']:
-                    continue
-
-# Detectors Console based on the file name
-                console, confidence = detect_console_fast(file_name)
-
-# If we have found a console with sufficient confidence, count it
-                if confidence >= MIN_CONFIDENCE and console != "Unknown" and console not in ["Archive", "Binary", "ROM_File"]:
-                    console_counts[console] += 1
-                    total_files += 1
-
-# If we have found consoles, use the most common
-        if total_files > 0:
-            most_common_console, count = console_counts.most_common(1)[0]
-            confidence = min(count / total_files * 1.2, 0.95)  # Reinforced confidence, max 95%
-            return most_common_console, confidence
-
-# Fallback: Attempts to recognize the console from the archive name
-        console, confidence = detect_console_fast(os.path.basename(zip_path))
-        if confidence >= 0.5:
-            return console, confidence * 0.8  # Reduziere Konfidenz leicht
-
-        return "Archive", 0.3  # Generic archive type with low confidence
+        # Strict policy: do not guess console from archive contents here.
+        return "Archive", 0.0
 
     except Exception as e:
         logger.error(f"Fehler beim Analysieren des ZIP-Archivs {zip_path}: {e}")
@@ -137,16 +94,8 @@ def detect_console_from_archive(archive_path: str) -> Tuple[str, float]:
     if archive_type == "ZIP":
         return analyze_zip_archive(archive_path)
 
-# For other archive types (RAR, 7Z, etc.)
-# These formats will be handled by specialized detectors when implemented
-# For now we use the fallback method
-
-# Fallback: Attempts to recognize the console from the archive name
-    console, confidence = detect_console_fast(os.path.basename(archive_path))
-    if confidence >= 0.5:
-        return console, confidence * 0.8  # Reduziere Konfidenz leicht
-
-    return "Archive", 0.3  # Generic archive type with low confidence
+    # For other archive types (RAR, 7Z, etc.), do not guess.
+    return "Archive", 0.0
 
 
 # Pattern-based consoling caps for certain archive types

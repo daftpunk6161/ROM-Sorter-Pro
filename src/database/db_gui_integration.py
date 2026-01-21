@@ -8,7 +8,6 @@ import os
 import platform
 import sqlite3
 import logging
-from tkinter import messagebox
 
 from .db_paths import get_rom_db_path
 
@@ -153,7 +152,11 @@ def _show_database_manager(self):
         self._display_database_status()
 
     except Exception as e:
-        messagebox.showerror("Fehler", f"Fehler beim Öffnen des Datenbank-Managers: {e}")
+        try:
+            from tkinter import messagebox
+            messagebox.showerror("Fehler", f"Fehler beim Öffnen des Datenbank-Managers: {e}")
+        except Exception:
+            logger.error("Fehler beim Öffnen des Datenbank-Managers: %s", e)
 
 def _show_database_docs(self):
     """Displays the documentation to databases."""
@@ -170,15 +173,23 @@ def _show_database_docs(self):
             else:  # Linux and others
                 os.system(f'xdg-open "{doc_path}"')
         else:
-            messagebox.showinfo(
-                "Dokumentation",
-                "Die ROM-Datenbank ermöglicht eine präzise Erkennung durch Vergleich von "
-                "Hash-Werten mit bekannten ROMs aus No-Intro und Redump. "
-                "Verwenden Sie den Datenbank-Manager, um eigene ROMs zu scannen oder "
-                "DAT-Dateien zu importieren."
-            )
+            try:
+                from tkinter import messagebox
+                messagebox.showinfo(
+                    "Dokumentation",
+                    "Die ROM-Datenbank ermöglicht eine präzise Erkennung durch Vergleich von "
+                    "Hash-Werten mit bekannten ROMs aus No-Intro und Redump. "
+                    "Verwenden Sie den Datenbank-Manager, um eigene ROMs zu scannen oder "
+                    "DAT-Dateien zu importieren."
+                )
+            except Exception:
+                logger.info("Dokumentation nicht verfügbar: %s", doc_path)
     except Exception as e:
-        messagebox.showerror("Fehler", f"Fehler beim Öffnen der Dokumentation: {e}")
+        try:
+            from tkinter import messagebox
+            messagebox.showerror("Fehler", f"Fehler beim Öffnen der Dokumentation: {e}")
+        except Exception:
+            logger.error("Fehler beim Öffnen der Dokumentation: %s", e)
 
 def _open_log_file(self):
     """Opens the current log file."""
@@ -201,9 +212,17 @@ def _open_log_file(self):
                     os.system(f'xdg-open "{latest_log}"')
                 return
 
-        messagebox.showinfo("Info", "Keine Log-Datei gefunden.")
+        try:
+            from tkinter import messagebox
+            messagebox.showinfo("Info", "Keine Log-Datei gefunden.")
+        except Exception:
+            logger.info("Keine Log-Datei gefunden.")
     except Exception as e:
-        messagebox.showerror("Fehler", f"Fehler beim Öffnen der Log-Datei: {e}")
+        try:
+            from tkinter import messagebox
+            messagebox.showerror("Fehler", f"Fehler beim Öffnen der Log-Datei: {e}")
+        except Exception:
+            logger.error("Fehler beim Öffnen der Log-Datei: %s", e)
 
 # Add the functions to the GUI class
 def add_database_methods_to_gui(cls):

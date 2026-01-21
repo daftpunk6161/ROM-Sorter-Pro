@@ -6,8 +6,10 @@ import os
 import re
 import logging
 import sys
+import stat
 from pathlib import Path
 from typing import Optional, List, Dict, Any, Union
+from pathlib import PurePosixPath
 import zipfile
 
 logger = logging.getLogger(__name__)
@@ -261,14 +263,31 @@ def is_path_traversal_attack(path: str) -> bool:
     return False
 
 
-def is_safe_archive_member(member_name: str) -> bool:
-    """Check for safe archive member names (no traversal, no abs paths)."""
+def is_safe_archive_member(member: Union[str, zipfile.ZipInfo]) -> bool:
+    """Check for safe archive members (no traversal, no abs paths, no symlinks)."""
+    if isinstance(member, zipfile.ZipInfo):
+        member_name = member.filename
+        try:
+            mode = stat.S_IFMT(member.external_attr >> 16)
+            if mode == stat.S_IFLNK:
+                return False
+        except Exception:
+            pass
+    else:
+        member_name = str(member)
+
     if not member_name:
+        return False
+    if "\x00" in member_name:
         return False
     if member_name.startswith(('/', '\\')):
         return False
+    if re.match(r"^[a-zA-Z]:", member_name):
+        return False
+    if member_name.startswith("\\\\"):
+        return False
     try:
-        parts = Path(member_name).parts
+        parts = PurePosixPath(member_name.replace("\\", "/")).parts
     except Exception:
         return False
     return ".." not in parts
@@ -289,17 +308,10 @@ def safe_extract_zip(zip_path: Union[str, Path], dest_dir: Union[str, Path]) -> 
 
     dest_root = dest_dir.resolve()
 
-    def _is_symlink_member(info: zipfile.ZipInfo) -> bool:
-        try:
-            mode = (info.external_attr >> 16) & 0o170000
-            return mode == 0o120000
-        except Exception:
-            return False
-
     with zipfile.ZipFile(zip_path, 'r') as zip_ref:
         for member in zip_ref.infolist():
-            if _is_symlink_member(member):
-                raise InvalidPathError(f"Symlink entry blocked: {member.filename}")
+            if not is_safe_archive_member(member):
+                raise InvalidPathError(f"Unsafe archive member blocked: {member.filename}")
             member_path = dest_root / member.filename
             try:
                 resolved = member_path.resolve()
