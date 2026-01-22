@@ -56,16 +56,17 @@ Die Tabelle enthält:
 ## 6) DAT‑Matching
 
 - Unterstützte DAT‑Formate: `.xml` (Logiqx), `.dat` (ClrMamePro), `.zip` (mit `.dat/.xml` im ZIP)
-- Cache: `cache/dat_index.pkl`
+- Index: `data/index/romsorter_dat_index.sqlite`
 - Auto‑Load per Settings‑Toggle (GUI)
 
 Konfiguration (Auszug) in `src/config.json`:
 
 ```
-"dat_matching": {
+"dats": {
   "enabled": true,
   "auto_load": false,
-  "dat_paths": ["D:/DATs"]
+  "import_paths": ["D:/DATs"],
+  "index_path": "data/index/romsorter_dat_index.sqlite"
 }
 ```
 
@@ -166,6 +167,15 @@ Empfohlene Tests:
 - `dev/tests/test_mvp_execute_cancel_mid_copy.py`
 - `dev/tests/test_mvp_security_paths.py`
 - `dev/tests/test_mvp_lang_version_parsing.py`
+- `dev/tests/test_mvp_igir_gates.py`
+- `dev/tests/test_mvp_identify_rules.py`
+
+## 9.1) GUI‑Threading (Kurzüberblick)
+
+- Qt: `QThread` + Worker‑Objekte (Scan/Plan/Execute/IGIR/Export)
+- Tk: `threading.Thread` + Queue + `after()` Polling
+- Cancel: `CancelToken` in langen Operationen
+- Keine UI‑Blocker: Export‑Tasks laufen im Worker
 
 ## 10) Archiv
 
