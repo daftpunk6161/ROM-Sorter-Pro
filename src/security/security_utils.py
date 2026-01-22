@@ -66,10 +66,7 @@ def sanitize_path(path: str) -> str:
     orig_sep = '/' if '/' in path and '\\' not in path else os.path.sep
 
 # Normalize the path
-    normalized = os.path.normpath(path)
-
-# Remove potentially dangerous sequences
-    sanitized = re.sub(r'\.\.[/\\]', '', normalized)
+    sanitized = os.path.normpath(path)
 
 # Restore the original scout separator
     if orig_sep == '/' and os.path.sep == '\\':
@@ -80,7 +77,10 @@ def sanitize_path(path: str) -> str:
 
 def resolve_path_safe(path: Union[str, Path]) -> Path:
     """Sanitize, validate, and resolve a path to an absolute Path."""
-    sanitized = sanitize_path(str(path))
+    raw = str(path)
+    if is_path_traversal_attack(raw):
+        raise InvalidPathError(f"Path traversal detected: {raw}")
+    sanitized = sanitize_path(raw)
     if is_path_traversal_attack(sanitized):
         raise InvalidPathError(f"Path traversal detected: {sanitized}")
     return Path(sanitized).resolve()
