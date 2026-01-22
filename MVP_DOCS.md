@@ -181,6 +181,7 @@ Empfohlene Tests:
 - Cancel: `CancelToken` in langen Operationen
 - Keine UI‑Blocker: Export‑Tasks laufen im Worker
 - Konfig‑I/O und DB‑Dialoge bleiben kurz; bei langen Aktionen künftig auslagern.
+- DB‑Manager: Backup/Migration/Status laufen asynchron.
 
 ## 10) Archiv
 

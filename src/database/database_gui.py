@@ -89,36 +89,35 @@ class DatabaseManagerDialog:
 
     def update_database_status(self):
         """Updates the database status information."""
+        def worker() -> None:
+            result = self._compute_database_status()
+            self.dialog.after(0, lambda: self._apply_database_status(result))
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _compute_database_status(self) -> Dict[str, Any]:
         try:
             if not os.path.exists(self.db_path):
-                self.status_var.set(
-                    "Keine Datenbank gefunden. Erstellen Sie eine Datenbank, indem Sie ROMs scannen "
-                    "oder eine DAT-Datei importieren."
-                )
-                self._update_stats("Keine Datenbank vorhanden")
-                return
+                return {
+                    "status": (
+                        "Keine Datenbank gefunden. Erstellen Sie eine Datenbank, indem Sie ROMs scannen "
+                        "oder eine DAT-Datei importieren."
+                    ),
+                    "stats": "Keine Datenbank vorhanden",
+                }
 
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
 
-# Number of ROMs
             cursor.execute("SELECT COUNT(*) FROM roms")
             rom_count = cursor.fetchone()[0]
 
-# Number of consoles
             cursor.execute("SELECT COUNT(DISTINCT console) FROM roms")
             console_count = cursor.fetchone()[0]
 
-# List of consoles and their number
             cursor.execute("SELECT console, COUNT(*) FROM roms GROUP BY console ORDER BY COUNT(*) DESC")
             console_stats = cursor.fetchall()
 
-# Update status
-            self.status_var.set(
-                f"ROM-Datenbank gefunden: {rom_count:,} ROMs für {console_count} Konsolen."
-            )
-
-# Update statistics
             stats_text = f"Datenbankpfad: {self.db_path}\n"
             stats_text += f"Gesamtanzahl der ROMs: {rom_count:,}\n"
             stats_text += f"Anzahl der Konsolen: {console_count}\n\n"
@@ -127,36 +126,104 @@ class DatabaseManagerDialog:
             for i, (console, count) in enumerate(console_stats[:10], 1):
                 stats_text += f"{i}. {console}: {count:,} ROMs\n"
 
-            self._update_stats(stats_text)
-
             conn.close()
 
+            return {
+                "status": f"ROM-Datenbank gefunden: {rom_count:,} ROMs für {console_count} Konsolen.",
+                "stats": stats_text,
+            }
+
         except sqlite3.OperationalError as e:
-# If the table does not exist, we initiate the database
             if "no such table: roms" in str(e):
                 try:
+                    self._ensure_repo_root()
                     from app import db_controller
-# Create database directory if necessary
                     os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
-# Initialize database
                     db_controller.init_db(self.db_path)
-# Update status
-                    self.status_var.set("Datenbank wurde initialisiert. Bitte fügen Sie ROMs hinzu.")
-                    self._update_stats("Leere Datenbank wurde erstellt.\nVerwenden Sie 'ROMs scannen' oder 'DAT-Datei importieren', um Daten hinzuzufügen.")
+                    return {
+                        "status": "Datenbank wurde initialisiert. Bitte fügen Sie ROMs hinzu.",
+                        "stats": (
+                            "Leere Datenbank wurde erstellt.\n"
+                            "Verwenden Sie 'ROMs scannen' oder 'DAT-Datei importieren', um Daten hinzuzufügen."
+                        ),
+                    }
                 except Exception as init_err:
-                    self.status_var.set(f"Fehler bei der Datenbankinitialisierung: {init_err}")
-                    self._update_stats(f"Initialisierungsfehler: {init_err}\n\nBitte stellen Sie sicher, dass Sie Schreibberechtigungen haben.")
-            else:
-                self.status_var.set(f"Fehler beim Lesen der Datenbank: {e}")
-                self._update_stats(f"Datenbankfehler: {e}\n\nBitte überprüfen Sie die Berechtigungen und Datenbankstruktur.")
+                    return {
+                        "status": f"Fehler bei der Datenbankinitialisierung: {init_err}",
+                        "stats": (
+                            f"Initialisierungsfehler: {init_err}\n\n"
+                            "Bitte stellen Sie sicher, dass Sie Schreibberechtigungen haben."
+                        ),
+                    }
+            return {
+                "status": f"Fehler beim Lesen der Datenbank: {e}",
+                "stats": (
+                    f"Datenbankfehler: {e}\n\n"
+                    "Bitte überprüfen Sie die Berechtigungen und Datenbankstruktur."
+                ),
+            }
 
         except Exception as e:
-# General mistake
-            self.status_var.set(f"Unerwarteter Fehler beim Lesen der Datenbank: {e}")
-            self._update_stats(f"Fehler: {e}\n\nDiagnoseinformationen:\nDB-Pfad: {self.db_path}\nExistiert: {os.path.exists(self.db_path)}")
-# For additional diagnosis
-            from .db_debug import debug_database_initialization
-            debug_database_initialization(self.db_path)
+            try:
+                from .db_debug import debug_database_initialization
+                debug_database_initialization(self.db_path)
+            except Exception:
+                pass
+            return {
+                "status": f"Unerwarteter Fehler beim Lesen der Datenbank: {e}",
+                "stats": (
+                    f"Fehler: {e}\n\nDiagnoseinformationen:\n"
+                    f"DB-Pfad: {self.db_path}\nExistiert: {os.path.exists(self.db_path)}"
+                ),
+            }
+
+    def _apply_database_status(self, payload: Dict[str, Any]) -> None:
+        try:
+            self.status_var.set(str(payload.get("status") or ""))
+            self._update_stats(str(payload.get("stats") or ""))
+        except Exception:
+            return
+
+    def _run_threaded(self, label: str, message: str, task, on_success) -> None:
+        progress_dialog = tk.Toplevel(self.dialog)
+        progress_dialog.title(label)
+        progress_dialog.geometry("320x110")
+        progress_dialog.transient(self.dialog)
+        progress_dialog.grab_set()
+
+        ttk.Label(progress_dialog, text=message).pack(pady=10)
+
+        progress = ttk.Progressbar(progress_dialog, mode='indeterminate')
+        progress.pack(fill='x', padx=20)
+        progress.start()
+
+        done_flag = threading.Event()
+        result_holder: Dict[str, Any] = {}
+
+        def worker() -> None:
+            try:
+                result_holder["result"] = task()
+            except Exception as exc:
+                result_holder["error"] = exc
+            finally:
+                done_flag.set()
+                self.dialog.after(0, finish)
+
+        def finish() -> None:
+            try:
+                progress.stop()
+                progress_dialog.destroy()
+            except Exception:
+                pass
+
+            err = result_holder.get("error")
+            if err is not None:
+                messagebox.showerror(label, f"{label} fehlgeschlagen:\n{err}")
+                return
+
+            on_success(result_holder.get("result"))
+
+        threading.Thread(target=worker, daemon=True).start()
 
     def _update_stats(self, text):
         """Updates the statistics text field."""
@@ -171,18 +238,20 @@ class DatabaseManagerDialog:
             messagebox.showerror("Fehler", "Keine Datenbank gefunden, die gesichert werden kann.")
             return
 
-        try:
+        def task():
             backup_dir = os.path.join(os.path.dirname(self.db_path), 'backups')
             os.makedirs(backup_dir, exist_ok=True)
 
             stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             backup_path = os.path.join(backup_dir, f"roms_{stamp}.db")
             shutil.copy2(self.db_path, backup_path)
+            return backup_path
 
+        def on_success(backup_path):
             messagebox.showinfo("Backup erstellt", f"Backup gespeichert unter:\n{backup_path}")
             self.update_database_status()
-        except Exception as e:
-            messagebox.showerror("Fehler", f"Backup fehlgeschlagen:\n{e}")
+
+        self._run_threaded("Backup", "Erstelle Backup der Datenbank...", task, on_success)
 
     def _open_db_folder(self):
         """Open the database folder in the system file explorer."""
@@ -210,18 +279,21 @@ class DatabaseManagerDialog:
 
     def _migrate_db(self):
         """Run DB migration to latest schema version."""
-        try:
+        def task():
             self._ensure_repo_root()
             from app import db_controller
 
             ok = db_controller.migrate_db(self.db_path)
+            return bool(ok)
+
+        def on_success(ok: bool):
             if ok:
                 messagebox.showinfo("Migration", "Datenbank erfolgreich migriert.")
             else:
                 messagebox.showerror("Migration", "Migration fehlgeschlagen.")
             self.update_database_status()
-        except Exception as e:
-            messagebox.showerror("Migration", f"Migration fehlgeschlagen:\n{e}")
+
+        self._run_threaded("Migration", "Migriere Datenbank...", task, on_success)
 
     def _scan_roms(self):
         """Open's A Dialogue for Scanning Roms for the Database."""
