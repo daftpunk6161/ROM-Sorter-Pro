@@ -185,12 +185,16 @@ def run() -> int:
             output_dir: str,
             temp_dir: str,
             cancel_token: CancelToken,
+            plan_confirmed: bool,
+            explicit_user_action: bool,
         ):
             super().__init__()
             self._input_path = input_path
             self._output_dir = output_dir
             self._temp_dir = temp_dir
             self._cancel_token = cancel_token
+            self._plan_confirmed = plan_confirmed
+            self._explicit_user_action = explicit_user_action
 
         @Slot()
         def run(self) -> None:
@@ -202,6 +206,8 @@ def run() -> int:
                     temp_dir=self._temp_dir,
                     log_cb=lambda msg: self.log.emit(str(msg)),
                     cancel_token=self._cancel_token,
+                    plan_confirmed=self._plan_confirmed,
+                    explicit_user_action=self._explicit_user_action,
                 )
                 self.finished.emit(result)
             except Exception as exc:
@@ -1391,12 +1397,38 @@ def run() -> int:
                 QtWidgets.QMessageBox.information(self, "IGIR", "Bitte Ziel wählen.")
                 return
 
+            diff_parts = []
+            if self._igir_diff_csv:
+                diff_parts.append(f"CSV: {self._igir_diff_csv}")
+            if self._igir_diff_json:
+                diff_parts.append(f"JSON: {self._igir_diff_json}")
+            diff_hint = "\n".join(diff_parts)
+            confirm_text = "IGIR Execute startet echte Änderungen. Fortfahren?"
+            if diff_hint:
+                confirm_text = f"{confirm_text}\n\nDiff-Berichte:\n{diff_hint}"
+            reply = QtWidgets.QMessageBox.question(
+                self,
+                "IGIR Execute bestätigen",
+                confirm_text,
+                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
+                QtWidgets.QMessageBox.No,
+            )
+            if reply != QtWidgets.QMessageBox.Yes:
+                return
+
             self._save_igir_settings_to_config()
             self._igir_cancel_token = CancelToken()
             temp_dir = str((Path(__file__).resolve().parents[3] / "temp").resolve())
 
             thread = QtCore.QThread()
-            worker = IgirExecuteWorker(source, dest, temp_dir, self._igir_cancel_token)
+            worker = IgirExecuteWorker(
+                source,
+                dest,
+                temp_dir,
+                self._igir_cancel_token,
+                self._igir_plan_ready,
+                True,
+            )
             worker.moveToThread(thread)
 
             worker.log.connect(self._append_log)

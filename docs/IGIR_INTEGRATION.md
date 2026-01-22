@@ -37,6 +37,6 @@
 - Logs: data/logs/igir/
 - Reports: data/reports/igir/ (CSV/JSON)
 
-## Ist-Zustand (Gap)
-- external_tools.py unterstützt igir run/probe
-- UI enthält IGIR Tab, aber ohne verpflichtenden Diff+Execute Gate
+## Ist-Zustand
+- external_tools.py unterstützt igir plan/execute mit Gates
+- UI (Qt/Tk) fordert Bestätigung vor Execute und zeigt Diff‑Hinweise

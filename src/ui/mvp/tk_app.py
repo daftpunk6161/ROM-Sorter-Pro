@@ -944,6 +944,19 @@ class TkMVPApp:
             messagebox.showinfo("IGIR", "Bitte Ziel wählen.")
             return
 
+        diff_parts = []
+        if self._igir_diff_csv:
+            diff_parts.append(f"CSV: {self._igir_diff_csv}")
+        if self._igir_diff_json:
+            diff_parts.append(f"JSON: {self._igir_diff_json}")
+        diff_hint = "\n".join(diff_parts)
+        confirm_text = "IGIR Execute startet echte Änderungen. Fortfahren?"
+        if diff_hint:
+            confirm_text = f"{confirm_text}\n\nDiff-Berichte:\n{diff_hint}"
+        confirm = messagebox.askyesno("IGIR Execute bestätigen", confirm_text)
+        if not confirm:
+            return
+
         self._save_igir_settings_to_config()
         self._igir_cancel_token = CancelToken()
         temp_dir = str((Path(__file__).resolve().parents[3] / "temp").resolve())
@@ -952,12 +965,20 @@ class TkMVPApp:
         self.igir_status_var.set("IGIR Execute läuft...")
         self._igir_thread = threading.Thread(
             target=self._run_igir_worker,
-            args=("execute", source, dest, temp_dir, report_dir),
+            args=("execute", source, dest, temp_dir, report_dir, True),
             daemon=True,
         )
         self._igir_thread.start()
 
-    def _run_igir_worker(self, mode: str, source: str, dest: str, temp_dir: str, report_dir: str) -> None:
+    def _run_igir_worker(
+        self,
+        mode: str,
+        source: str,
+        dest: str,
+        temp_dir: str,
+        report_dir: str,
+        explicit_user_action: bool = False,
+    ) -> None:
         try:
             try:
                 Path(temp_dir).mkdir(parents=True, exist_ok=True)
@@ -988,6 +1009,8 @@ class TkMVPApp:
                     temp_dir=temp_dir,
                     log_cb=lambda msg: self._queue.put(("log", f"[IGIR] {msg}")),
                     cancel_token=self._igir_cancel_token,
+                    plan_confirmed=self._igir_plan_ready,
+                    explicit_user_action=explicit_user_action,
                 )
                 if result.cancelled:
                     self._queue.put(("igir_execute_done", result))

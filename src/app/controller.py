@@ -1044,7 +1044,8 @@ def identify(
             break
 
         input_path = str(item.input_path or "")
-        if dat_index and os.path.exists(input_path):
+        input_exists = bool(input_path and os.path.exists(input_path))
+        if dat_index and input_exists:
             match = identify_by_hash(input_path, dat_index)
             if match:
                 results.append(
@@ -1071,6 +1072,18 @@ def identify(
                         input_kind="RawRom",
                     )
                 )
+        elif dat_index and not input_exists:
+            results.append(
+                IdentificationResult(
+                    platform_id="Unknown",
+                    confidence=0.0,
+                    is_exact=False,
+                    signals=["INPUT_MISSING"],
+                    candidates=[],
+                    reason="input-missing",
+                    input_kind="RawRom",
+                )
+            )
         else:
             results.append(
                 IdentificationResult(

@@ -828,7 +828,7 @@ def igir_plan(
     timeout_sec: Optional[float] = None,
 ) -> IgirPlanResult:
     cfg = _get_igir_yaml_config()
-    if dry_run or cfg.get("dry_run_never_runs_igir", True):
+    if dry_run and cfg.get("dry_run_never_runs_igir", True):
         return IgirPlanResult(True, False, "dry-run (no external tool executed)", "")
 
     exe_path = str(cfg.get("exe_path") or "").strip()
@@ -887,9 +887,15 @@ def igir_execute(
     temp_dir: str,
     log_cb: LogCallback = None,
     cancel_token: Optional[Any] = None,
+    plan_confirmed: bool = False,
+    explicit_user_action: bool = False,
     timeout_sec: Optional[float] = None,
 ) -> IgirRunResult:
     cfg = _get_igir_yaml_config()
+    if cfg.get("require_plan_before_execute", True) and not plan_confirmed:
+        return IgirRunResult(False, False, "plan required before execute", "")
+    if cfg.get("execute_requires_explicit_user_action", True) and not explicit_user_action:
+        return IgirRunResult(False, False, "explicit user action required", "")
     exe_path = str(cfg.get("exe_path") or "").strip()
     args_template = (cfg.get("args_templates") or {}).get("execute") or []
     if not exe_path:

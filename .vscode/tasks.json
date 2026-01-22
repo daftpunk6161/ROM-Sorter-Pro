@@ -1,0 +1,24 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "pytest mvp smoke",
+			"type": "shell",
+			"command": ".\\.venv\\Scripts\\python.exe",
+			"args": [
+				"-m",
+				"pytest",
+				"-q",
+				"dev/tests/test_mvp_backend_selection.py",
+				"dev/tests/test_mvp_controller_planning.py",
+				"dev/tests/test_mvp_igir_gates.py",
+				"dev/tests/test_mvp_identify_rules.py",
+				"dev/tests/test_mvp_security_paths.py",
+				"dev/tests/test_mvp_execute_cancel.py",
+				"dev/tests/test_mvp_execute_cancel_mid_copy.py",
+				"dev/tests/test_mvp_lang_version_parsing.py"
+			],
+			"isBackground": false
+		}
+	]
+}
