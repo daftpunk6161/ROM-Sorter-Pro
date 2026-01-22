@@ -167,6 +167,7 @@
     "index_path": "data/index/romsorter_dat_index.sqlite",
     "lock_path": "data/index/romsorter_dat_index.lock"
   },
+  "platform_catalog_path": "",
   "database": {
     "use_memory_cache": true,
     "cache_size_mb": 100,

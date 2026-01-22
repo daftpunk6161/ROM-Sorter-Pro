@@ -18,6 +18,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
+from ..config import load_config
 from ..config.schema import JSONSCHEMA_AVAILABLE, validate_config_schema
 
 
@@ -34,6 +35,13 @@ def _catalog_yaml_path() -> Path:
     override = os.environ.get("ROM_SORTER_PLATFORM_CATALOG", "").strip()
     if override:
         return Path(override)
+    try:
+        cfg = load_config()
+        cfg_path = str((cfg or {}).get("platform_catalog_path") or "").strip()
+        if cfg_path:
+            return Path(cfg_path)
+    except Exception:
+        pass
     return Path(__file__).resolve().parents[1] / "platforms" / "platform_catalog.yaml"
 
 

@@ -65,6 +65,9 @@
       },
       "additionalProperties": true
     },
+    "platform_catalog_path": {
+      "type": "string"
+    },
     "scanner": {
       "type": "object",
       "properties": {

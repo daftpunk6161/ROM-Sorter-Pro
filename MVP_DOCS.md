@@ -98,6 +98,7 @@ Hinweis: Bei zu aggressiven Regeln steigen Unknown‑Fälle, dafür weniger Fals
 - Primär: `src/platforms/platform_catalog.yaml`
 - Fallback: `src/config/platform_catalog.json`
 - Optionales Override: `ROM_SORTER_PLATFORM_CATALOG` (Dateipfad)
+- Optionales Override via Config: `platform_catalog_path` in `src/config.json`
 
 ## 6.3) Detection‑Signals (Kurzreferenz)
 
