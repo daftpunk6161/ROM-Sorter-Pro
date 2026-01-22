@@ -25,6 +25,9 @@ temp/
 *.log
 backups/
 rom_databases/
+data/index/
+data/reports/
+reports/
 
 # Legacy backups / leftovers
 *.bak

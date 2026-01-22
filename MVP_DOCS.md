@@ -45,13 +45,19 @@ Zusätzliche Sort‑Logik (Config‑gesteuert):
 
 Die Tabelle enthält:
 - InputPath
+- Name
 - DetectedConsole/Type
 - Confidence
 - Signals
 - Candidates
+- Reason
 - PlannedTargetPath
 - Action
 - Status/Error
+
+Zusatzaktionen:
+- **ⓘ Details** öffnet die komplette Detailansicht (Tk).
+- **Warum unbekannt?** ist nur für Unknown/Low‑Confidence aktiv.
 
 ## 6) DAT‑Matching
 

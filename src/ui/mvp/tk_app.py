@@ -77,6 +77,45 @@ from .model_utils import (
 )
 
 
+class _ToolTip:
+    def __init__(self, widget: tk.Widget, text: str) -> None:
+        self._widget = widget
+        self._text = text
+        self._tip_window: Optional[tk.Toplevel] = None
+        widget.bind("<Enter>", self._show, add="+")
+        widget.bind("<Leave>", self._hide, add="+")
+
+    def _show(self, _event: object = None) -> None:
+        if self._tip_window or not self._text:
+            return
+        try:
+            x = self._widget.winfo_rootx() + 16
+            y = self._widget.winfo_rooty() + self._widget.winfo_height() + 4
+            self._tip_window = tk.Toplevel(self._widget)
+            self._tip_window.wm_overrideredirect(True)
+            self._tip_window.wm_geometry(f"+{x}+{y}")
+            label = tk.Label(
+                self._tip_window,
+                text=self._text,
+                background="#ffffe0",
+                foreground="#000000",
+                relief="solid",
+                borderwidth=1,
+                font=("TkDefaultFont", 9),
+            )
+            label.pack(ipadx=4, ipady=2)
+        except Exception:
+            self._tip_window = None
+
+    def _hide(self, _event: object = None) -> None:
+        try:
+            if self._tip_window is not None:
+                self._tip_window.destroy()
+        except Exception:
+            pass
+        self._tip_window = None
+
+
 class TkMVPApp:
     def __init__(self):
         self.root = tk.Tk()
@@ -98,6 +137,7 @@ class TkMVPApp:
         self._plan_row_iids: list[str] = []
         self._row_meta: dict[str, dict[str, object]] = {}
         self._failed_action_indices: set[int] = set()
+        self._last_details_text = ""
         self._resume_path = str((Path(__file__).resolve().parents[3] / "cache" / "last_sort_resume.json").resolve())
 
         self.source_var = tk.StringVar()
@@ -131,6 +171,11 @@ class TkMVPApp:
         self._dat_index_cancel_token: Optional[CancelToken] = None
 
         self._build_ui()
+        try:
+            self.btn_show_details.configure(text="ⓘ", width=3)
+        except Exception:
+            self.btn_show_details.configure(text="i", width=3)
+        self._details_tooltip = _ToolTip(self.btn_show_details, "Details öffnen")
         self._log_buffer: list[str] = []
         self._log_flush_scheduled = False
         self._install_log_handler()
@@ -542,6 +587,7 @@ class TkMVPApp:
             ("confidence", "Sicherheit", 110, 140),
             ("signals", "Signale", 160, 220),
             ("candidates", "Kandidaten", 160, 220),
+            ("reason", "Grund", 160, 220),
             ("target", "Geplantes Ziel", 280, 520),
             ("action", "Aktion", 90, 140),
             ("status", "Status/Fehler", 240, 360),
@@ -556,6 +602,7 @@ class TkMVPApp:
                 "confidence",
                 "signals",
                 "candidates",
+                "reason",
                 "target",
                 "action",
                 "status",
@@ -578,6 +625,14 @@ class TkMVPApp:
 
         details_frame = ttk.LabelFrame(outer, text="Details")
         details_frame.pack(fill=tk.X, pady=(8, 0))
+
+        details_actions = ttk.Frame(details_frame)
+        details_actions.pack(fill=tk.X, pady=(0, 4))
+        self.btn_show_details = ttk.Button(details_actions, text="Details öffnen", command=self._show_details_window)
+        self.btn_show_details.pack(side=tk.LEFT)
+        self.btn_why_unknown = ttk.Button(details_actions, text="Warum unbekannt?", command=self._show_why_unknown)
+        self.btn_why_unknown.pack(side=tk.RIGHT)
+        self._set_why_unknown_enabled(False)
 
         details_inner = ttk.Frame(details_frame)
         details_inner.pack(fill=tk.X, expand=False)
@@ -1317,10 +1372,38 @@ class TkMVPApp:
         threading.Thread(target=task, daemon=True).start()
 
     def _set_details(self, text: str) -> None:
+        self._last_details_text = text
         self.details_text.configure(state="normal")
         self.details_text.delete("1.0", tk.END)
         self.details_text.insert(tk.END, text)
         self.details_text.configure(state="disabled")
+
+    def _show_details_window(self) -> None:
+        try:
+            content = self._last_details_text or ""
+            if not content:
+                messagebox.showinfo("Details", "Keine Details verfügbar.")
+                return
+            win = tk.Toplevel(self.root)
+            win.title("Details")
+            win.geometry("700x400")
+            win.minsize(420, 240)
+            text = tk.Text(win, wrap="word")
+            text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+            text.insert(tk.END, content)
+            text.configure(state="disabled")
+            scroll = ttk.Scrollbar(win, orient=tk.VERTICAL, command=text.yview)
+            scroll.pack(side=tk.RIGHT, fill=tk.Y)
+            text.configure(yscrollcommand=scroll.set)
+        except Exception:
+            return
+
+    def _set_why_unknown_enabled(self, enabled: bool) -> None:
+        try:
+            state = "normal" if enabled else "disabled"
+            self.btn_why_unknown.configure(state=state)
+        except Exception:
+            return
 
     def _on_row_selected(self, _event: object = None) -> None:
         try:
@@ -1331,10 +1414,11 @@ class TkMVPApp:
             values = self.table.item(iid, "values")
             if not values:
                 return
-            status = values[8] if len(values) >= 9 else ""
+            status = values[9] if len(values) >= 10 else ""
             confidence = values[3] if len(values) >= 4 else ""
             signals = values[4] if len(values) >= 5 else ""
             candidates = values[5] if len(values) >= 6 else ""
+            reason = values[6] if len(values) >= 7 else ""
             full = values[0] if len(values) >= 1 else ""
 
             meta = self._row_meta.get(str(iid), {})
@@ -1368,6 +1452,8 @@ class TkMVPApp:
                 extra_lines.append(f"Audit‑Tool: {meta.get('tool_key')}")
             if meta.get("reason"):
                 extra_lines.append(f"Hinweis: {meta.get('reason')}")
+            if reason:
+                extra_lines.append(f"Grund: {reason}")
 
             self._set_details(
                 f"{full}\n\nConfidence: {confidence}\nQuelle: {source}\nExact: {exact_text}"
@@ -1386,6 +1472,16 @@ class TkMVPApp:
 
     def _format_candidates(self, item: object) -> str:
         return format_candidates(item)
+
+    def _format_reason(self, item: ScanItem) -> str:
+        raw = item.raw or {}
+        reason = raw.get("reason") or raw.get("policy") or ""
+        if not reason:
+            reason = str(getattr(item, "detection_source", "") or "")
+        min_conf = self._get_min_confidence()
+        if str(getattr(item, "detection_source", "")) == "policy-low-confidence":
+            reason = f"low-confidence (<{min_conf:.2f})"
+        return str(reason or "")
 
     def _validate_size_entry(self, value: str) -> bool:
         if value == "":
@@ -1600,21 +1696,107 @@ class TkMVPApp:
         try:
             selection = self.table.selection()
             if not selection:
+                self._set_why_unknown_enabled(False)
                 return
             iid = selection[0]
             values = self.table.item(iid, "values")
             if not values:
+                self._set_why_unknown_enabled(False)
                 return
-            # values: (input, name, system, confidence, signals, candidates, target, action, status)
-            status = values[8] if len(values) >= 9 else ""
+            # values: (input, name, system, confidence, signals, candidates, reason, target, action, status)
+            status = values[9] if len(values) >= 10 else ""
             confidence = values[3] if len(values) >= 4 else ""
             signals = values[4] if len(values) >= 5 else ""
             candidates = values[5] if len(values) >= 6 else ""
-            # Show full input path + status in details for convenience.
+            reason = values[6] if len(values) >= 7 else ""
             full = values[0] if len(values) >= 1 else ""
+
+            tags = self.table.item(iid, "tags") or ()
+            self._set_why_unknown_enabled("unknown" in tags)
+
+            meta = self._row_meta.get(str(iid), {})
+            source = meta.get("source") or "-"
+            exact = meta.get("is_exact")
+            if exact is True:
+                exact_text = "ja"
+            elif exact is False:
+                exact_text = "nein"
+            else:
+                exact_text = "-"
+
+            extra_lines = []
+            if meta.get("action"):
+                extra_lines.append(f"Aktion: {meta.get('action')}")
+            if meta.get("target"):
+                extra_lines.append(f"Ziel: {meta.get('target')}")
+            if meta.get("conversion_rule"):
+                extra_lines.append(f"Regel: {meta.get('conversion_rule')}")
+            if meta.get("conversion_tool"):
+                extra_lines.append(f"Tool: {meta.get('conversion_tool')}")
+            if meta.get("conversion_output"):
+                extra_lines.append(f"Output: {meta.get('conversion_output')}")
+            if meta.get("current_extension"):
+                extra_lines.append(f"Aktuell: {meta.get('current_extension')}")
+            if meta.get("recommended_extension"):
+                extra_lines.append(f"Empfohlen: {meta.get('recommended_extension')}")
+            if meta.get("rule_name"):
+                extra_lines.append(f"Audit‑Regel: {meta.get('rule_name')}")
+            if meta.get("tool_key"):
+                extra_lines.append(f"Audit‑Tool: {meta.get('tool_key')}")
+            if reason:
+                extra_lines.append(f"Grund: {reason}")
+
             self._set_details(
-                f"{full}\n\nConfidence: {confidence}\nSignals: {signals}\nCandidates: {candidates}\n\n{status}"
+                f"{full}\n\nConfidence: {confidence}\nQuelle: {source}\nExact: {exact_text}"
+                f"\nSignale: {signals}\nKandidaten: {candidates}"
+                + ("\n" + "\n".join(extra_lines) if extra_lines else "")
+                + f"\n\n{status}"
             )
+        except Exception:
+            self._set_why_unknown_enabled(False)
+            return
+
+    def _show_why_unknown(self) -> None:
+        try:
+            selection = self.table.selection()
+            if not selection:
+                messagebox.showinfo("Warum unbekannt", "Keine Zeile ausgewählt.")
+                return
+            iid = selection[0]
+            values = self.table.item(iid, "values")
+            if not values:
+                messagebox.showinfo("Warum unbekannt", "Keine Zeile ausgewählt.")
+                return
+            tags = self.table.item(iid, "tags") or ()
+            if "unknown" not in tags:
+                messagebox.showinfo("Warum unbekannt", "Nur für Unknown/Low-Confidence Einträge verfügbar.")
+                return
+            system = values[2] if len(values) >= 3 else "-"
+            confidence = values[3] if len(values) >= 4 else "-"
+            signals = values[4] if len(values) >= 5 else "-"
+            candidates = values[5] if len(values) >= 6 else "-"
+            reason = values[6] if len(values) >= 7 else "-"
+
+            meta = self._row_meta.get(str(iid), {})
+            source = meta.get("source") or "-"
+            exact = meta.get("is_exact")
+            if exact is True:
+                exact_text = "ja"
+            elif exact is False:
+                exact_text = "nein"
+            else:
+                exact_text = "-"
+
+            msg = (
+                f"System: {system}\n"
+                f"Grund: {reason or '-'}\n"
+                f"Quelle: {source}\n"
+                f"Sicherheit: {confidence}\n"
+                f"Exact: {exact_text}\n"
+                f"Signale: {signals}\n"
+                f"Kandidaten: {candidates}"
+            )
+            messagebox.showinfo("Warum unbekannt", msg)
         except Exception:
             return
 
@@ -1985,6 +2167,7 @@ class TkMVPApp:
         for item in self.table.get_children():
             self.table.delete(item)
         self._row_meta.clear()
+        self._set_why_unknown_enabled(False)
 
     def _populate_scan_table(self, scan: ScanResult) -> None:
         self._clear_table()
@@ -1993,6 +2176,7 @@ class TkMVPApp:
             is_confident = self._is_confident_for_display(item, min_conf)
             status = "found" if is_confident else "unknown/low-confidence"
             tags = ("unknown",) if not is_confident else ()
+            reason = self._format_reason(item)
             iid = self.table.insert(
                 "",
                 tk.END,
@@ -2003,6 +2187,7 @@ class TkMVPApp:
                     self._format_confidence(item.detection_confidence),
                     self._format_signals(item),
                     self._format_candidates(item),
+                    reason,
                     "",
                     "scan",
                     status,
@@ -2012,6 +2197,7 @@ class TkMVPApp:
             self._row_meta[str(iid)] = {
                 "source": getattr(item, "detection_source", None),
                 "is_exact": bool(getattr(item, "is_exact", False)),
+                "reason": reason,
             }
 
         try:
@@ -2039,6 +2225,7 @@ class TkMVPApp:
                     str(act.input_path or ""),
                     self._rom_display_name(act.input_path),
                     act.detected_system,
+                    "",
                     "",
                     "",
                     "",
@@ -2095,6 +2282,7 @@ class TkMVPApp:
                     "",
                     "",
                     "",
+                    item.reason or "",
                     suggestion,
                     action,
                     status,
@@ -2124,7 +2312,7 @@ class TkMVPApp:
         self.table.insert(
             "",
             tk.END,
-            values=("(Summary)", "", "", "", "", "", report.dest_path, report.mode, text),
+            values=("(Summary)", "", "", "", "", "", "", report.dest_path, report.mode, text),
         )
 
     def _start_op(

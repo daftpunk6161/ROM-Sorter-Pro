@@ -1,39 +1,44 @@
-# Issue Backlog (Epics)
+# Issue Backlog (Roadmap & Epics)
 
-## Epics (Proposed)
-- **E1** DAT Import + Incremental SQLite Index (CRC32+SHA1, WAL, batch inserts, TB-scale)
-  - Milestone: Detection-Accuracy
-  - Priority: P0
-  - Status: erledigt
-- **E2** Lockfile (PID+starttime) + robust recovery + tests
-  - Milestone: Detection-Accuracy
-  - Priority: P0
-  - Status: erledigt
-- **E3** Archive-aware hashing (ZIP entries) + mixed content handling + security
-  - Milestone: Detection-Accuracy
-  - Priority: P0
-  - Status: erledigt
-- **E4** Deterministic identification pipeline (DAT→Signatures→Heuristic) + UNKNOWN rules + tests
-  - Milestone: Detection-Accuracy
-  - Priority: P0
-  - Status: erledigt
-- **E5** Normalization engine (kinds, manifests, preferred outputs per platform) + tests
-  - Milestone: Normalization-v1
-  - Priority: P1
-  - Status: erledigt
-- **E6** IGIR integration (plan + safety diff + export + execute button gates) + tests
-  - Milestone: Detection-Accuracy
-  - Priority: P1
-  - Status: erledigt (Gates, UI-Bestätigung, Tests)
-- **E7** GUI worker model (progress/cancel/timeout, no blocking) + smoke tests
-  - Milestone: MVP-GUI
-  - Priority: P1
-  - Status: erledigt
-- **E8** Tooling/CI + baseline docs + repo cleanup
-  - Milestone: CI-Hardening
-  - Priority: P2
-  - Status: erledigt
+Diese Roadmap wird über Manifest + Scripts gepflegt:
+- Manifest: [issues/epics.json](../issues/epics.json)
+- Scripts: [scripts/issues](../scripts/issues/)
 
-## Umsetzung
-- Scripts: scripts/issues/gh_setup.ps1 + scripts/issues/gh_create_epics.ps1
-- Epics manifest: issues/epics.json
+## Ablauf (GitHub CLI)
+
+### PowerShell (Windows)
+1) Labels erstellen/aktualisieren:
+- `powershell -ExecutionPolicy Bypass -File scripts/issues/create_labels.ps1`
+
+2) Milestones anlegen:
+- `powershell -ExecutionPolicy Bypass -File scripts/issues/create_milestones.ps1`
+
+3) Project v2 anlegen + Felder:
+- `powershell -ExecutionPolicy Bypass -File scripts/issues/create_project.ps1`
+
+4) Epics anlegen:
+- `powershell -ExecutionPolicy Bypass -File scripts/issues/create_epics.ps1`
+
+5) Epics zum Project hinzufügen + Felder setzen:
+- `powershell -ExecutionPolicy Bypass -File scripts/issues/add_epics_to_project.ps1`
+
+### Bash (Linux/macOS)
+1) Labels erstellen/aktualisieren:
+- `pwsh scripts/issues/create_labels.ps1`
+
+2) Milestones anlegen:
+- `pwsh scripts/issues/create_milestones.ps1`
+
+3) Project v2 anlegen + Felder:
+- `pwsh scripts/issues/create_project.ps1`
+
+4) Epics anlegen:
+- `pwsh scripts/issues/create_epics.ps1`
+
+5) Epics zum Project hinzufügen + Felder setzen:
+- `pwsh scripts/issues/add_epics_to_project.ps1`
+
+## Hinweise
+- Falls `gh auth login` fehlt, erst authentifizieren.
+- Repo-Override in [issues/epics.json](../issues/epics.json) setzen (`repo`).
+- Project-Felder/IDs werden im Script erzeugt oder bei Bedarf manuell ergänzt.

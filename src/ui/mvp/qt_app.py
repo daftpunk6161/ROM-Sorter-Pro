@@ -31,7 +31,7 @@ import json
 import csv
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, cast
+from typing import List, Optional, cast
 
 
 def _load_qt():
@@ -624,6 +624,7 @@ def run() -> int:
             self._log_visible = True
 
             self._last_view: str = "scan"  # scan|plan
+            self._table_items: List[ScanItem] = []
             self._dat_index: Optional[DatIndexSqlite] = None
             self._dat_status_timer = QtCore.QTimer(self)
             self._dat_status_timer.setInterval(800)
@@ -1098,13 +1099,17 @@ def run() -> int:
             self.summary_label = QtWidgets.QLabel("-")
             main_layout.addWidget(self.summary_label)
 
+            self.btn_why_unknown = QtWidgets.QPushButton("Why Unknown?")
+            self.btn_why_unknown.clicked.connect(self._show_why_unknown)
+            main_layout.addWidget(self.btn_why_unknown)
+
             results_intro = QtWidgets.QLabel(
                 "Die Ergebnistabelle zeigt geplante Ziele und Status. Nutze die Vorschau vor dem Ausführen."
             )
             results_intro.setWordWrap(True)
             main_layout.addWidget(results_intro)
 
-            self.table = QtWidgets.QTableWidget(0, 9)
+            self.table = QtWidgets.QTableWidget(0, 10)
             self.table.setHorizontalHeaderLabels(
                 [
                     "Eingabepfad",
@@ -1116,6 +1121,7 @@ def run() -> int:
                     "Geplantes Ziel",
                     "Aktion",
                     "Status/Fehler",
+                    "Reason",
                 ]
             )
             self.table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)
@@ -1917,6 +1923,40 @@ def run() -> int:
                 self._populate_scan_table(self._get_filtered_scan_result())
                 self._last_view = "scan"
 
+        def _format_reason(self, item: ScanItem) -> str:
+            raw = item.raw or {}
+            reason = raw.get("reason") or raw.get("policy") or ""
+            if not reason:
+                reason = str(item.detection_source or "")
+            min_conf = self._get_min_confidence()
+            if str(item.detection_source) == "policy-low-confidence":
+                reason = f"low-confidence (<{min_conf:.2f})"
+            return str(reason or "")
+
+        def _show_why_unknown(self) -> None:
+            row = self.table.currentRow()
+            if row < 0 or row >= len(self._table_items):
+                QtWidgets.QMessageBox.information(self, "Why Unknown", "Keine Scan-Zeile ausgewählt.")
+                return
+            item = self._table_items[row]
+            raw = item.raw or {}
+            reason = self._format_reason(item) or "-"
+            signals = ", ".join(raw.get("signals") or []) if isinstance(raw.get("signals"), list) else "-"
+            candidates = ", ".join(raw.get("candidates") or []) if isinstance(raw.get("candidates"), list) else "-"
+            source = str(item.detection_source or "-")
+            confidence = self._format_confidence(item.detection_confidence)
+            exact = "ja" if getattr(item, "is_exact", False) else "nein"
+            msg = (
+                f"System: {item.detected_system}\n"
+                f"Reason: {reason}\n"
+                f"Quelle: {source}\n"
+                f"Sicherheit: {confidence}\n"
+                f"Exact: {exact}\n"
+                f"Signale: {signals}\n"
+                f"Kandidaten: {candidates}"
+            )
+            QtWidgets.QMessageBox.information(self, "Why Unknown", msg)
+
         def _clear_filters(self) -> None:
             def _set_combo(combo, value: str) -> None:
                 idx = combo.findText(value)
@@ -2544,6 +2584,7 @@ def run() -> int:
                 pass
 
             self.table.setRowCount(len(scan.items))
+            self._table_items = list(scan.items)
             for row, item in enumerate(scan.items):
 
                 path_item = QtWidgets.QTableWidgetItem(str(item.input_path or ""))
@@ -2583,6 +2624,7 @@ def run() -> int:
                     except Exception:
                         pass
                 self.table.setItem(row, 8, status_item)
+                self.table.setItem(row, 9, QtWidgets.QTableWidgetItem(self._format_reason(item)))
 
             try:
                 self.table.setUpdatesEnabled(True)
@@ -2616,6 +2658,7 @@ def run() -> int:
                 pass
 
             self.table.setRowCount(len(plan.actions))
+            self._table_items = []
             for row, act in enumerate(plan.actions):
 
                 path_item = QtWidgets.QTableWidgetItem(str(act.input_path or ""))
@@ -2633,6 +2676,7 @@ def run() -> int:
                 self.table.setItem(row, 6, QtWidgets.QTableWidgetItem(act.planned_target_path or ""))
                 self.table.setItem(row, 7, QtWidgets.QTableWidgetItem(act.action))
                 self.table.setItem(row, 8, QtWidgets.QTableWidgetItem(act.error or act.status))
+                self.table.setItem(row, 9, QtWidgets.QTableWidgetItem(""))
 
             try:
                 self.table.setUpdatesEnabled(True)
@@ -2664,6 +2708,7 @@ def run() -> int:
                 pass
 
             self.table.setRowCount(len(report.items))
+            self._table_items = []
             for row, item in enumerate(report.items):
                 path_item = QtWidgets.QTableWidgetItem(str(item.input_path or ""))
                 self.table.setItem(row, 0, path_item)
@@ -2690,6 +2735,7 @@ def run() -> int:
                 if item.reason:
                     status = f"{status}: {item.reason}"
                 self.table.setItem(row, 8, QtWidgets.QTableWidgetItem(status))
+                self.table.setItem(row, 9, QtWidgets.QTableWidgetItem(item.reason or ""))
 
             try:
                 self.table.setUpdatesEnabled(True)
