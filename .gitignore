@@ -46,3 +46,16 @@ htmlcov/
 # OS cruft
 .DS_Store
 Thumbs.db
+# --- large/binary tools ---
+_archive/legacy_tools/tools/conversion/chdman/**
+_archive/legacy_tools/**
+_archive/runtime/**
+node_modules/
+cache/
+logs/
+temp/
+rom_databases/
+**/__pycache__/
+*.pyd
+*.exe
+*.sym
