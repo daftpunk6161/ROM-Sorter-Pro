@@ -88,6 +88,27 @@ def _load_yaml_data(path: Path) -> Optional[Dict[str, Any]]:
     return data if isinstance(data, dict) else None
 
 
+def _ensure_catalog_yaml() -> None:
+    yaml_path = _catalog_yaml_path()
+    if yaml_path.exists():
+        return
+    json_path = _catalog_json_path()
+    if not json_path.exists():
+        return
+    try:
+        raw = json_path.read_text(encoding="utf-8")
+    except Exception:
+        return
+    data = _load_json_loose(raw)
+    if not isinstance(data, dict):
+        return
+    try:
+        yaml_path.parent.mkdir(parents=True, exist_ok=True)
+        yaml_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    except Exception:
+        return
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -145,6 +166,8 @@ def _basic_catalog_validation(data: object) -> Tuple[bool, str]:
 
 @lru_cache(maxsize=4)
 def _load_catalog(_cache_key: str) -> Tuple[List[Dict[str, object]], str, Dict[str, Any]]:
+    _ensure_catalog_yaml()
+
     yaml_path = _catalog_yaml_path()
     json_path = _catalog_json_path()
 

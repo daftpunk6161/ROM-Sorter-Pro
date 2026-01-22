@@ -1767,9 +1767,18 @@ def run() -> int:
                 gui_cfg = cfg.get("gui_settings", {}) or {}
                 gui_cfg["theme"] = theme_value
                 cfg["gui_settings"] = gui_cfg
-                save_config(cfg)
+                self._save_config_async(cfg)
             except Exception:
                 pass
+
+        def _save_config_async(self, cfg: dict) -> None:
+            def task():
+                try:
+                    save_config(cfg)
+                except Exception:
+                    return
+
+            threading.Thread(target=task, daemon=True).start()
 
         def _load_window_size(self) -> None:
             try:
@@ -1808,7 +1817,7 @@ def run() -> int:
                 gui_cfg["window_width"] = int(self.width())
                 gui_cfg["window_height"] = int(self.height())
                 cfg["gui_settings"] = gui_cfg
-                save_config(cfg)
+                self._save_config_async(cfg)
             except Exception:
                 return
 
@@ -1820,7 +1829,7 @@ def run() -> int:
                 gui_cfg = cfg.get("gui_settings", {}) or {}
                 gui_cfg["log_visible"] = bool(self._log_visible)
                 cfg["gui_settings"] = gui_cfg
-                save_config(cfg)
+                self._save_config_async(cfg)
             except Exception:
                 return
 

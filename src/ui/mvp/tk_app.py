@@ -684,7 +684,7 @@ class TkMVPApp:
             dat_cfg = data["dat"]
             dat_cfg["auto_build"] = bool(self.dat_auto_load_var.get())
             cfg["dats"] = dat_cfg
-            save_config(cfg)
+            self._save_config_async(cfg)
         except Exception:
             return
 
@@ -720,7 +720,7 @@ class TkMVPApp:
             paths.append(directory)
         dat_cfg["import_paths"] = paths
         cfg["dats"] = dat_cfg
-        save_config(cfg)
+        self._save_config_async(cfg)
         self.dat_status_var.set("DAT: Pfade aktualisiert")
         if bool(dat_cfg.get("auto_build", False)):
             self._start_dat_auto_load()
@@ -1092,7 +1092,7 @@ class TkMVPApp:
             sorting_cfg["preserve_folder_structure"] = bool(self.preserve_structure_var.get())
             features_cfg["sorting"] = sorting_cfg
             cfg["features"] = features_cfg
-            save_config(cfg)
+            self._save_config_async(cfg)
         except Exception:
             return
 
@@ -1116,7 +1116,7 @@ class TkMVPApp:
             gui_cfg = cfg.get("gui_settings", {}) or {}
             gui_cfg["theme"] = theme_value
             cfg["gui_settings"] = gui_cfg
-            save_config(cfg)
+            self._save_config_async(cfg)
         except Exception:
             pass
 
@@ -1146,7 +1146,7 @@ class TkMVPApp:
             gui_cfg["window_width"] = int(self.root.winfo_width())
             gui_cfg["window_height"] = int(self.root.winfo_height())
             cfg["gui_settings"] = gui_cfg
-            save_config(cfg)
+            self._save_config_async(cfg)
         except Exception:
             return
 
@@ -1303,9 +1303,18 @@ class TkMVPApp:
             gui_cfg = cfg.get("gui_settings", {}) or {}
             gui_cfg["log_visible"] = bool(self._log_visible)
             cfg["gui_settings"] = gui_cfg
-            save_config(cfg)
+            self._save_config_async(cfg)
         except Exception:
             return
+
+    def _save_config_async(self, cfg: dict) -> None:
+        def task() -> None:
+            try:
+                save_config(cfg)
+            except Exception:
+                return
+
+        threading.Thread(target=task, daemon=True).start()
 
     def _set_details(self, text: str) -> None:
         self.details_text.configure(state="normal")

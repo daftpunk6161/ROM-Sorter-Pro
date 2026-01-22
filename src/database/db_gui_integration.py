@@ -99,12 +99,14 @@ def _display_database_status(self):
         if not os.path.exists(db_path):
             logger.info(f"Datenbank nicht gefunden unter: {db_path}")
 # Try to initialize the database
-            if initialize_database(db_path):
+            try:
+                from ..app import db_controller
+                db_controller.init_db(db_path)
                 logger.info(f"Datenbank erfolgreich initialisiert: {db_path}")
                 self.status_bar.config(text="ROM-Datenbank wurde initialisiert. Bereit für Datenimport.")
-            else:
+            except Exception as exc:
                 logger.error(f"Datenbank konnte nicht initialisiert werden: {db_path}")
-                self.status_bar.config(text="ROM-Datenbank konnte nicht initialisiert werden.")
+                self.status_bar.config(text=f"ROM-Datenbank konnte nicht initialisiert werden: {exc}")
             return
 
 # Connect to the database and show statistics
@@ -126,8 +128,12 @@ def _display_database_status(self):
 # The table does not exist, initialize the database
                 logger.warning("Tabelle 'roms' nicht gefunden, initialisiere Datenbank...")
                 conn.close()
-                initialize_database(db_path)
-                self.status_bar.config(text="ROM-Datenbank wurde initialisiert. Bereit für Datenimport.")
+                try:
+                    from ..app import db_controller
+                    db_controller.init_db(db_path)
+                    self.status_bar.config(text="ROM-Datenbank wurde initialisiert. Bereit für Datenimport.")
+                except Exception as exc:
+                    self.status_bar.config(text=f"ROM-Datenbank konnte nicht initialisiert werden: {exc}")
             else:
                 logger.error(f"Datenbankfehler: {e}", exc_info=True)
                 self.status_bar.config(text=f"Datenbankfehler: {e}")

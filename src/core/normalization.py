@@ -229,6 +229,18 @@ def _load_converters_from_config() -> List[Dict[str, Any]]:
     return converters
 
 
+def _write_converters_file(converters: List[Dict[str, Any]]) -> None:
+    if not converters:
+        return
+    path = _converters_path()
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        payload = {"version": "1.0", "converters": converters}
+        path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    except Exception:
+        return
+
+
 def load_platform_formats() -> List[Dict[str, Any]]:
     data = _load_yaml_or_json(_platform_formats_path()) or {}
     if JSONSCHEMA_AVAILABLE:
@@ -253,14 +265,20 @@ def load_converters() -> List[Dict[str, Any]]:
         except Exception:
             is_valid, error = False, "validation-error"
         if not is_valid:
-            return _load_converters_from_config()
+            converters = _load_converters_from_config()
+            _write_converters_file(converters)
+            return converters
     else:
         if not _basic_validate_converters(data):
-            return _load_converters_from_config()
+            converters = _load_converters_from_config()
+            _write_converters_file(converters)
+            return converters
     converters = data.get("converters")
     if isinstance(converters, list) and converters:
         return list(converters)
-    return _load_converters_from_config()
+    converters = _load_converters_from_config()
+    _write_converters_file(converters)
+    return converters
 
 
 def classify_input(path: str) -> InputKind:

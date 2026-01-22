@@ -239,13 +239,10 @@ class DatabaseManagerDialog:
             return
 
         def task():
-            backup_dir = os.path.join(os.path.dirname(self.db_path), 'backups')
-            os.makedirs(backup_dir, exist_ok=True)
+            self._ensure_repo_root()
+            from app import db_controller
 
-            stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            backup_path = os.path.join(backup_dir, f"roms_{stamp}.db")
-            shutil.copy2(self.db_path, backup_path)
-            return backup_path
+            return db_controller.backup_db(self.db_path)
 
         def on_success(backup_path):
             messagebox.showinfo("Backup erstellt", f"Backup gespeichert unter:\n{backup_path}")
