@@ -24,6 +24,7 @@
 - **E7** GUI worker model (progress/cancel/timeout, no blocking) + smoke tests
   - Milestone: MVP-GUI
   - Priority: P1
+  - Status: teilweise erledigt (Scan/Plan/Execute/Export asynchron, Doku ergänzt)
 - **E8** Tooling/CI + baseline docs + repo cleanup
   - Milestone: CI-Hardening
   - Priority: P2
