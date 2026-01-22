@@ -13,12 +13,14 @@
 - **E4** Deterministic identification pipeline (DAT→Signatures→Heuristic) + UNKNOWN rules + tests
   - Milestone: Detection-Accuracy
   - Priority: P0
+  - Status: in Arbeit (DAT/Unknown-Regeln + Tests ergänzt)
 - **E5** Normalization engine (kinds, manifests, preferred outputs per platform) + tests
   - Milestone: Normalization-v1
   - Priority: P1
 - **E6** IGIR integration (plan + safety diff + export + execute button gates) + tests
   - Milestone: Detection-Accuracy
   - Priority: P1
+  - Status: erledigt (Gates, UI-Bestätigung, Tests)
 - **E7** GUI worker model (progress/cancel/timeout, no blocking) + smoke tests
   - Milestone: MVP-GUI
   - Priority: P1
