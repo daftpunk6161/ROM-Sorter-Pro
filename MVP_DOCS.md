@@ -132,6 +132,9 @@ Schemafelder u. a.:
 
 Dry‑Run führt keine Tools aus und benötigt keine Executables.
 
+Fallback:
+- Wenn `src/conversion/converters.yaml` leer ist, werden Conversion‑Regeln aus `src/config.json` (features.sorting.conversion) geladen.
+
 ## 7.2) Format‑Matrix (InputKinds → typische Formate)
 
 | InputKind | Beschreibung | Typische Formate |

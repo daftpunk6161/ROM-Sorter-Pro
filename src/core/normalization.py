@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Literal, Optional, Tuple
 
 from ..security.security_utils import InvalidPathError, validate_file_operation
+from ..config import load_config
 from ..config.schema import JSONSCHEMA_AVAILABLE, validate_config_schema
 
 InputKind = Literal[
@@ -140,6 +141,94 @@ def _basic_validate_formats(data: Dict[str, Any]) -> bool:
     return True
 
 
+def _infer_input_kinds_from_extensions(exts: List[str]) -> List[InputKind]:
+    norm_exts = [str(ext).lower() if str(ext).startswith(".") else f".{str(ext).lower()}" for ext in exts]
+    kinds: List[InputKind] = []
+
+    track_exts = {".cue", ".gdi"}
+    disc_exts = {".iso", ".bin", ".img", ".mdf", ".nrg", ".cdi", ".chd", ".gcz", ".rvz", ".wbfs"}
+    archive_exts = {".zip", ".7z", ".rar", ".tar", ".gz", ".bz2", ".xz", ".tar.gz", ".tar.bz2"}
+
+    if any(ext in track_exts for ext in norm_exts):
+        kinds.append("DiscTrackSet")
+    if any(ext in disc_exts for ext in norm_exts):
+        kinds.append("DiscImage")
+    if any(ext in archive_exts for ext in norm_exts):
+        kinds.append("ArchiveSet")
+    if not kinds:
+        kinds.append("RawRom")
+
+    return kinds
+
+
+def _load_converters_from_config() -> List[Dict[str, Any]]:
+    try:
+        cfg = load_config()
+    except Exception:
+        return []
+
+    try:
+        sorting_cfg = cfg.get("features", {}).get("sorting", {}) or {}
+    except Exception:
+        sorting_cfg = {}
+    conversion_cfg = sorting_cfg.get("conversion", {}) or {}
+    rules = conversion_cfg.get("rules", []) or []
+    tools = conversion_cfg.get("tools", {}) or {}
+
+    converters: List[Dict[str, Any]] = []
+
+    for rule in rules:
+        if not rule or not isinstance(rule, dict):
+            continue
+        if not bool(rule.get("enabled", True)):
+            continue
+        converter_id = str(rule.get("name") or rule.get("converter_id") or "").strip()
+        if not converter_id:
+            continue
+
+        exts = rule.get("extensions") or []
+        if isinstance(exts, str):
+            exts = [exts]
+        exts = [str(ext).lower() if str(ext).startswith(".") else f".{str(ext).lower()}" for ext in exts if ext]
+
+        output_extension = str(rule.get("to_extension") or rule.get("output_extension") or "").strip()
+        if not output_extension:
+            continue
+
+        tool_key = str(rule.get("tool") or "").strip()
+        tool_path = str(tools.get(tool_key) or tool_key).strip()
+        if not tool_path:
+            continue
+
+        systems = rule.get("systems") or []
+        if isinstance(systems, str):
+            systems = [systems]
+
+        args = rule.get("args") or []
+        if isinstance(args, str):
+            args = [args]
+        args_template = [
+            str(arg).replace("{src}", "{input}").replace("{dst}", "{output}") for arg in args if arg
+        ]
+
+        converters.append(
+            {
+                "converter_id": converter_id,
+                "name": rule.get("name") or converter_id,
+                "tool_key": tool_key,
+                "exe_path": tool_path,
+                "enabled": True,
+                "platform_ids": list(systems) if systems else [],
+                "extensions": exts,
+                "input_kinds": _infer_input_kinds_from_extensions(exts),
+                "output_extension": output_extension,
+                "args_template": args_template,
+            }
+        )
+
+    return converters
+
+
 def load_platform_formats() -> List[Dict[str, Any]]:
     data = _load_yaml_or_json(_platform_formats_path()) or {}
     if JSONSCHEMA_AVAILABLE:
@@ -164,12 +253,14 @@ def load_converters() -> List[Dict[str, Any]]:
         except Exception:
             is_valid, error = False, "validation-error"
         if not is_valid:
-            return []
+            return _load_converters_from_config()
     else:
         if not _basic_validate_converters(data):
-            return []
+            return _load_converters_from_config()
     converters = data.get("converters")
-    return list(converters) if isinstance(converters, list) else []
+    if isinstance(converters, list) and converters:
+        return list(converters)
+    return _load_converters_from_config()
 
 
 def classify_input(path: str) -> InputKind:
