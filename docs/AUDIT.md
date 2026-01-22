@@ -79,16 +79,16 @@ Entry: start_rom_sorter.py
 
 ## Empfehlungen (Priorisierung)
 P0:
-- DAT/Hash-first Pipeline + Unknown Policy erzwingen
-- DAT SQLite Index (inkrementell + WAL) + Lockfile
-- Archive Entry Hashing + Mixed-Content-Handling
-- IGIR: Plan -> Diff -> Execute Gate + Export
+- DAT/Hash-first Pipeline + Unknown Policy erzwingen — erledigt
+- DAT SQLite Index (inkrementell + WAL) + Lockfile — erledigt
+- Archive Entry Hashing + Mixed-Content-Handling — erledigt
+- IGIR: Plan -> Diff -> Execute Gate + Export — erledigt
 
 P1:
-- Controller API vereinheitlichen
-- Conversion/Format Regeln in YAML + Schema
-- Security zentralisieren (Archive, symlinks)
+- Controller API vereinheitlichen — erledigt (app/api.py als Public Surface)
+- Conversion/Format Regeln in YAML + Schema — erledigt (Schema + YAML-Persistenz)
+- Security zentralisieren (Archive, symlinks) — erledigt
 
 P2:
-- Legacy/Redundanz abbauen
-- Dokumentation + CI/Tests erweitern
+- Legacy/Redundanz abbauen — erledigt (Legacy-Import-Guard)
+- Dokumentation + CI/Tests erweitern — erledigt (MVP-Suite erweitert)
