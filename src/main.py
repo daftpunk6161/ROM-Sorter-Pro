@@ -20,7 +20,10 @@ def main() -> int:
 
     import start_rom_sorter
 
-    return int(start_rom_sorter.main())
+    result = start_rom_sorter.main()
+    if result is None:
+        return 0
+    return int(result)
 
 
 if __name__ == "__main__":

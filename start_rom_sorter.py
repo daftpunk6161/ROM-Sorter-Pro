@@ -78,7 +78,7 @@ def parse_arguments():
 
     return parser.parse_args()
 
-def main():
+def main() -> int:
     """Main function to start the application."""
     logger.info("Starting ROM Sorter Pro...")
 
@@ -92,7 +92,7 @@ def main():
     if args.version:
         print("ROM Sorter Pro v2.1.8")
         print("Copyright (c) 2025")
-        sys.exit(0)
+        return 0
 
     if args.debug:
         logging.getLogger().setLevel(logging.DEBUG)
@@ -173,12 +173,12 @@ def main():
             summary = ", ".join(f"{key}: {value}" for key, value in sorted(totals.items()))
             print(f"Conversion audit complete. {summary}")
             print(f"Report saved to: {output_path}")
-            sys.exit(0)
+            return 0
 
         except Exception as e:
             logger.error(f"Audit failed: {e}")
             print(f"Audit failed: {e}")
-            sys.exit(1)
+            return 1
 
     # Start the Application in the Desired Mode
     try:
@@ -197,19 +197,20 @@ def main():
         exit_code = launch_gui(backend=backend)
         if exit_code != 0:
             logger.error(f"GUI returned error code: {exit_code}")
-            sys.exit(exit_code)
+            return int(exit_code)
 
     except ImportError as e:
         logger.error(f"Error importing modules: {e}")
         print(f"Error: {e}")
         print("Please run 'python install_dependencies.py' to install all required dependencies.")
-        sys.exit(1)
+        return 1
     except Exception as e:
         logger.error(f"Error starting the application: {e}")
         print(f"Error: {e}")
-        sys.exit(1)
+        return 1
 
     logger.info("ROM Sorter Pro terminated.")
+    return 0
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
