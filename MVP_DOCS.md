@@ -186,6 +186,10 @@ Empfohlene Tests:
 
 Legacy‑Code, alte Tools und Runtime‑Artefakte liegen in `_archive/`.
 
+## 12) Datenbank (Entrypoints)
+
+Siehe [docs/DB_ENTRYPOINTS.md](docs/DB_ENTRYPOINTS.md) für die empfohlenen DB‑Routen.
+
 ## 11) Troubleshooting (Kurz)
 
 - **GUI startet nicht**: Qt fehlt → `pip install -r requirements-gui.txt` oder `--backend tk`.
