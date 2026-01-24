@@ -21,7 +21,7 @@ pip install -r requirements-gui.txt
 
 - **GUI‑Start stabil** (Qt/Tk)
 - **Scan → Preview Sort (Dry‑run) → Execute Sort**
-- **Filter**: Sprache, Version, Region, Extension, Größe (MB), Dedupe, Hide Unknown
+- **Filter** (im Arbeitsbereich): Sprache, Version, Region, Extension, Größe (MB), Dedupe, Hide Unknown
 - **DAT‑Matching** mit Cache und Auto‑Load‑Toggle
 - **External Tools**: wud2app / wudcompress (konfigurierbar)
 

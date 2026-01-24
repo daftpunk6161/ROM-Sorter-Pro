@@ -162,6 +162,7 @@ class TkMVPApp:
         self.igir_exe_var = tk.StringVar()
         self.igir_args_var = tk.StringVar()
         self.igir_status_var = tk.StringVar(value="IGIR nicht geprüft.")
+        self.igir_advanced_var = tk.BooleanVar(value=False)
         self.mode_var = tk.StringVar(value="copy")
         self.conflict_var = tk.StringVar(value="rename")
         self.rebuild_var = tk.BooleanVar(value=False)
@@ -176,6 +177,7 @@ class TkMVPApp:
         self.console_folders_var = tk.BooleanVar(value=True)
         self.region_subfolders_var = tk.BooleanVar(value=False)
         self.preserve_structure_var = tk.BooleanVar(value=False)
+        self.dat_auto_load_var = tk.BooleanVar(value=False)
 
         self._theme_manager = ThemeManager()
         self.theme_var = tk.StringVar(value=self._theme_manager.get_current_theme_name())
@@ -192,8 +194,17 @@ class TkMVPApp:
         self.igir_copy_first_var = tk.BooleanVar(value=False)
         self._dat_index_thread: Optional[threading.Thread] = None
         self._dat_index_cancel_token: Optional[CancelToken] = None
+        self.dashboard_source_var = tk.StringVar(value="-")
+        self.dashboard_dest_var = tk.StringVar(value="-")
+        self.dashboard_status_var = tk.StringVar(value="-")
+        self.dashboard_dat_var = tk.StringVar(value="-")
 
         self._build_ui()
+        try:
+            self.source_var.trace_add("write", lambda *_args: self._update_quick_actions())
+            self.dest_var.trace_add("write", lambda *_args: self._update_quick_actions())
+        except Exception:
+            pass
         try:
             self.log_filter_var.trace_add("write", lambda *_args: self._apply_log_filter())
         except Exception:
@@ -214,14 +225,11 @@ class TkMVPApp:
         self.queue_mode_var = tk.BooleanVar(value=False)
         self.queue_priority_var = tk.StringVar(value="Normal")
         self._current_op: Optional[str] = None
-        self.dashboard_source_var = tk.StringVar(value="-")
-        self.dashboard_dest_var = tk.StringVar(value="-")
-        self.dashboard_status_var = tk.StringVar(value="-")
-        self.dashboard_dat_var = tk.StringVar(value="-")
         self._install_log_handler()
         self._apply_theme(self._theme_manager.get_theme())
         self._load_window_size()
         self._load_log_visibility()
+        self._load_general_settings_from_config()
         self._load_sort_settings_from_config()
         self._load_dat_settings_from_config()
         self._load_igir_settings_from_config()
@@ -234,19 +242,25 @@ class TkMVPApp:
 
     def _build_ui(self) -> None:
         notebook = ttk.Notebook(self.root)
+        self.notebook = notebook
         notebook.pack(fill=tk.BOTH, expand=True)
 
         dashboard_tab = ttk.Frame(notebook, padding=12)
         main_tab = ttk.Frame(notebook, padding=10)
+        sort_tab = ttk.Frame(notebook, padding=10)
         conversions_tab = ttk.Frame(notebook, padding=10)
         igir_tab = ttk.Frame(notebook, padding=10)
+        db_tab = ttk.Frame(notebook, padding=10)
         settings_tab = ttk.Frame(notebook, padding=10)
-        notebook.add(dashboard_tab, text="Dashboard")
-        notebook.add(main_tab, text="Arbeitsbereich")
-        notebook.add(conversions_tab, text="Konvertierungen")
-        notebook.add(igir_tab, text="IGIR")
-        notebook.add(settings_tab, text="Einstellungen")
+        notebook.add(dashboard_tab, text="🏠 Dashboard")
+        notebook.add(main_tab, text="🧭 Arbeitsbereich")
+        notebook.add(sort_tab, text="🗂️ Sortierung")
+        notebook.add(conversions_tab, text="🧰 Konvertierungen")
+        notebook.add(igir_tab, text="🧪 IGIR")
+        notebook.add(db_tab, text="🗃️ Datenbank")
+        notebook.add(settings_tab, text="⚙️ Einstellungen")
         notebook.select(dashboard_tab)
+        self._tab_main = main_tab
 
         dash_title = ttk.Label(dashboard_tab, text="Willkommen", font=("Segoe UI", 14, "bold"))
         dash_title.pack(anchor="w", pady=(0, 6))
@@ -260,29 +274,83 @@ class TkMVPApp:
         quick_frame.pack(fill=tk.X, pady=(0, 10))
         quick_row = ttk.Frame(quick_frame)
         quick_row.pack(fill=tk.X, padx=8, pady=8)
-        self.btn_dash_scan = ttk.Button(quick_row, text="Scannen", command=self._start_scan)
-        self.btn_dash_preview = ttk.Button(quick_row, text="Vorschau (Dry-run)", command=self._start_preview)
-        self.btn_dash_execute = ttk.Button(quick_row, text="Sortieren ausführen", command=self._start_execute)
+        self.btn_dash_scan = ttk.Button(quick_row, text="🔍 Scannen", command=self._start_scan)
+        self.btn_dash_preview = ttk.Button(quick_row, text="🧾 Vorschau (Dry-run)", command=self._start_preview)
+        self.btn_dash_execute = ttk.Button(quick_row, text="🚀 Sortieren ausführen", command=self._start_execute)
         self.btn_dash_scan.pack(side=tk.LEFT)
         self.btn_dash_preview.pack(side=tk.LEFT, padx=(8, 0))
         self.btn_dash_execute.pack(side=tk.LEFT, padx=(8, 0))
+        _ToolTip(self.btn_dash_scan, "Scannt den Quellordner")
+        _ToolTip(self.btn_dash_preview, "Erstellt einen Plan ohne Änderungen")
+        _ToolTip(self.btn_dash_execute, "Führt den Plan aus")
+
+        paths_frame = ttk.LabelFrame(dashboard_tab, text="Pfade")
+        paths_frame.pack(fill=tk.X, pady=(0, 10))
+        paths_frame.columnconfigure(1, weight=1)
+        ttk.Label(paths_frame, text="Quelle:").grid(row=0, column=0, sticky="w")
+        self.dashboard_source_entry = ttk.Entry(paths_frame, textvariable=self.source_var)
+        self.dashboard_source_entry.grid(row=0, column=1, sticky="ew", padx=6)
+        self.btn_dashboard_source = ttk.Button(paths_frame, text="Quelle wählen…", command=self._choose_source)
+        self.btn_dashboard_source.grid(row=0, column=2)
+        ttk.Label(paths_frame, text="Ziel:").grid(row=1, column=0, sticky="w", pady=(6, 0))
+        self.dashboard_dest_entry = ttk.Entry(paths_frame, textvariable=self.dest_var)
+        self.dashboard_dest_entry.grid(row=1, column=1, sticky="ew", padx=6, pady=(6, 0))
+        self.btn_dashboard_dest = ttk.Button(paths_frame, text="Ziel wählen…", command=self._choose_dest)
+        self.btn_dashboard_dest.grid(row=1, column=2, pady=(6, 0))
+        self.btn_dashboard_open_dest = ttk.Button(paths_frame, text="Ziel öffnen", command=self._open_dest)
+        self.btn_dashboard_open_dest.grid(row=1, column=3, padx=(6, 0), pady=(6, 0))
+
+        self.dashboard_path_hint = ttk.Label(
+            dashboard_tab,
+            text="Quelle/Ziel setzen, um Schnellstart zu aktivieren.",
+        )
+        self.dashboard_path_hint.pack(anchor="w", pady=(0, 10))
 
         status_frame = ttk.LabelFrame(dashboard_tab, text="Status")
         status_frame.pack(fill=tk.X, pady=(0, 10))
         status_grid = ttk.Frame(status_frame)
         status_grid.pack(fill=tk.X, padx=8, pady=8)
-        ttk.Label(status_grid, text="Quelle:").grid(row=0, column=0, sticky="w")
+        ttk.Label(status_grid, text="📁 Quelle:").grid(row=0, column=0, sticky="w")
         ttk.Label(status_grid, textvariable=self.dashboard_source_var).grid(row=0, column=1, sticky="w")
-        ttk.Label(status_grid, text="Ziel:").grid(row=1, column=0, sticky="w")
+        ttk.Label(status_grid, text="🎯 Ziel:").grid(row=1, column=0, sticky="w")
         ttk.Label(status_grid, textvariable=self.dashboard_dest_var).grid(row=1, column=1, sticky="w")
-        ttk.Label(status_grid, text="Status:").grid(row=2, column=0, sticky="w")
+        ttk.Label(status_grid, text="📊 Status:").grid(row=2, column=0, sticky="w")
         ttk.Label(status_grid, textvariable=self.dashboard_status_var).grid(row=2, column=1, sticky="w")
-        ttk.Label(status_grid, text="DAT:").grid(row=3, column=0, sticky="w")
-        ttk.Label(status_grid, textvariable=self.dashboard_dat_var).grid(row=3, column=1, sticky="w")
+        self.dashboard_progress = ttk.Progressbar(status_grid, orient=tk.HORIZONTAL, mode="determinate")
+        self.dashboard_progress.grid(row=3, column=0, columnspan=2, sticky="ew", pady=(4, 0))
+        ttk.Label(status_grid, text="🧷 DAT:").grid(row=4, column=0, sticky="w")
+        ttk.Label(status_grid, textvariable=self.dashboard_dat_var).grid(row=4, column=1, sticky="w")
+        status_grid.columnconfigure(1, weight=1)
 
         outer = main_tab
 
-        grid = ttk.Frame(outer)
+        main_split = ttk.Panedwindow(outer, orient=tk.HORIZONTAL)
+        main_split.pack(fill=tk.BOTH, expand=True)
+        control_frame = ttk.Frame(main_split)
+        results_frame = ttk.Frame(main_split)
+        main_split.add(control_frame, weight=1)
+        main_split.add(results_frame, weight=3)
+
+        status_frame = ttk.LabelFrame(control_frame, text="Status")
+        status_frame.pack(fill=tk.X, pady=(0, 8))
+        status_frame.columnconfigure(1, weight=1)
+        ttk.Label(status_frame, text="Quelle:").grid(row=0, column=0, sticky="w")
+        ttk.Label(status_frame, textvariable=self.source_var).grid(row=0, column=1, sticky="w")
+        ttk.Label(status_frame, text="Ziel:").grid(row=1, column=0, sticky="w", pady=(4, 0))
+        ttk.Label(status_frame, textvariable=self.dest_var).grid(row=1, column=1, sticky="w", pady=(4, 0))
+
+        self.progress = ttk.Progressbar(status_frame, orient=tk.HORIZONTAL, mode="determinate")
+        self.progress.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(6, 0))
+
+        self.status_var = tk.StringVar(value="Bereit (Tk)")
+        self.status_label = ttk.Label(status_frame, textvariable=self.status_var)
+        self.status_label.grid(row=3, column=0, columnspan=2, sticky="w", pady=(4, 0))
+
+        self.summary_var = tk.StringVar(value="-")
+        self.summary_label = ttk.Label(status_frame, textvariable=self.summary_var)
+        self.summary_label.grid(row=4, column=0, columnspan=2, sticky="w")
+
+        grid = ttk.Frame(control_frame)
         grid.pack(fill=tk.X)
 
         ttk.Label(grid, text="Quelle:").grid(row=0, column=0, sticky="w")
@@ -331,81 +399,88 @@ class TkMVPApp:
         )
         self.rebuild_check.grid(row=4, column=2, sticky="w", pady=(6, 0), padx=(6, 0))
 
-        ttk.Label(grid, text="Sprachfilter:").grid(row=5, column=0, sticky="w", pady=(6, 0))
+        filters_frame = ttk.LabelFrame(control_frame, text="Filter")
+        filters_frame.pack(fill=tk.X, pady=(8, 0))
+        filters_grid = ttk.Frame(filters_frame)
+        filters_grid.pack(fill=tk.X, padx=6, pady=6)
+
+        ttk.Label(filters_grid, text="Sprachfilter:").grid(row=0, column=0, sticky="w", pady=(6, 0))
         self.lang_filter_list = tk.Listbox(
-            grid,
+            filters_grid,
             height=4,
             exportselection=False,
             selectmode="extended",
         )
         self.lang_filter_list.insert("end", "All")
-        self.lang_filter_list.grid(row=5, column=1, sticky="ew", pady=(6, 0))
-        ttk.Label(grid, text="Mehrfach: Strg/Shift").grid(row=5, column=2, sticky="w", pady=(6, 0))
+        self.lang_filter_list.grid(row=0, column=1, sticky="ew", pady=(6, 0))
+        ttk.Label(filters_grid, text="Mehrfach: Strg/Shift").grid(row=0, column=2, sticky="w", pady=(6, 0))
 
-        ttk.Label(grid, text="Versionsfilter:").grid(row=6, column=0, sticky="w", pady=(6, 0))
+        ttk.Label(filters_grid, text="Versionsfilter:").grid(row=1, column=0, sticky="w", pady=(6, 0))
         self.ver_filter_combo = ttk.Combobox(
-            grid,
+            filters_grid,
             textvariable=self.ver_filter_var,
             values=("All",),
             state="readonly",
         )
-        self.ver_filter_combo.grid(row=6, column=1, sticky="w", pady=(6, 0))
+        self.ver_filter_combo.grid(row=1, column=1, sticky="w", pady=(6, 0))
 
-        ttk.Label(grid, text="Regionsfilter:").grid(row=7, column=0, sticky="w", pady=(6, 0))
+        ttk.Label(filters_grid, text="Regionsfilter:").grid(row=2, column=0, sticky="w", pady=(6, 0))
         self.region_filter_list = tk.Listbox(
-            grid,
+            filters_grid,
             height=4,
             exportselection=False,
             selectmode="extended",
         )
         self.region_filter_list.insert("end", "All")
-        self.region_filter_list.grid(row=7, column=1, sticky="ew", pady=(6, 0))
-        ttk.Label(grid, text="Mehrfach: Strg/Shift").grid(row=7, column=2, sticky="w", pady=(6, 0))
+        self.region_filter_list.grid(row=2, column=1, sticky="ew", pady=(6, 0))
+        ttk.Label(filters_grid, text="Mehrfach: Strg/Shift").grid(row=2, column=2, sticky="w", pady=(6, 0))
 
-        ttk.Label(grid, text="Erweiterungsfilter:").grid(row=8, column=0, sticky="w", pady=(6, 0))
-        self.extension_entry = ttk.Entry(grid, textvariable=self.extension_filter_var)
-        self.extension_entry.grid(row=8, column=1, sticky="ew", pady=(6, 0))
-        ttk.Label(grid, text="z.B. iso, chd").grid(row=8, column=2, sticky="w", pady=(6, 0))
+        ttk.Label(filters_grid, text="Erweiterungsfilter:").grid(row=3, column=0, sticky="w", pady=(6, 0))
+        self.extension_entry = ttk.Entry(filters_grid, textvariable=self.extension_filter_var)
+        self.extension_entry.grid(row=3, column=1, sticky="ew", pady=(6, 0))
+        ttk.Label(filters_grid, text="z.B. iso, chd").grid(row=3, column=2, sticky="w", pady=(6, 0))
 
-        ttk.Label(grid, text="Min (MB):").grid(row=9, column=0, sticky="w", pady=(6, 0))
+        ttk.Label(filters_grid, text="Min (MB):").grid(row=4, column=0, sticky="w", pady=(6, 0))
         size_vcmd = (self.root.register(self._validate_size_entry), "%P")
         self.min_size_entry = ttk.Entry(
-            grid,
+            filters_grid,
             textvariable=self.min_size_var,
             width=12,
             validate="key",
             validatecommand=size_vcmd,
         )
-        self.min_size_entry.grid(row=9, column=1, sticky="w", pady=(6, 0))
+        self.min_size_entry.grid(row=4, column=1, sticky="w", pady=(6, 0))
 
-        ttk.Label(grid, text="Max (MB):").grid(row=10, column=0, sticky="w", pady=(6, 0))
+        ttk.Label(filters_grid, text="Max (MB):").grid(row=5, column=0, sticky="w", pady=(6, 0))
         self.max_size_entry = ttk.Entry(
-            grid,
+            filters_grid,
             textvariable=self.max_size_var,
             width=12,
             validate="key",
             validatecommand=size_vcmd,
         )
-        self.max_size_entry.grid(row=10, column=1, sticky="w", pady=(6, 0))
+        self.max_size_entry.grid(row=5, column=1, sticky="w", pady=(6, 0))
 
         self.dedupe_check = ttk.Checkbutton(
-            grid,
+            filters_grid,
             text="Duplikate vermeiden (Europa → USA)",
             variable=self.dedupe_var,
             command=self._on_filters_changed,
         )
-        self.dedupe_check.grid(row=11, column=1, sticky="w", pady=(6, 0))
+        self.dedupe_check.grid(row=6, column=1, sticky="w", pady=(6, 0))
 
         self.hide_unknown_check = ttk.Checkbutton(
-            grid,
+            filters_grid,
             text="Unbekannt / Niedrige Sicherheit ausblenden",
             variable=self.hide_unknown_var,
             command=self._on_filters_changed,
         )
-        self.hide_unknown_check.grid(row=11, column=2, sticky="w", pady=(6, 0))
+        self.hide_unknown_check.grid(row=7, column=1, sticky="w", pady=(6, 0))
 
-        self.btn_clear_filters = ttk.Button(grid, text="Filter zurücksetzen", command=self._clear_filters)
-        self.btn_clear_filters.grid(row=12, column=1, sticky="w", pady=(6, 0))
+        filters_grid.columnconfigure(1, weight=1)
+
+        self.btn_clear_filters = ttk.Button(filters_grid, text="Filter zurücksetzen", command=self._clear_filters)
+        self.btn_clear_filters.grid(row=8, column=1, sticky="w", pady=(6, 0))
 
         self.lang_filter_list.bind("<<ListboxSelect>>", self._on_filter_listbox_changed)
         self.ver_filter_combo.bind("<<ComboboxSelected>>", self._on_filters_changed)
@@ -416,7 +491,30 @@ class TkMVPApp:
 
         grid.columnconfigure(1, weight=1)
 
-        sort_frame = ttk.LabelFrame(outer, text="Sortieroptionen")
+        defaults_frame = ttk.LabelFrame(sort_tab, text="Standardwerte")
+        defaults_frame.pack(fill=tk.X, pady=(0, 8))
+        defaults_frame.columnconfigure(1, weight=1)
+        ttk.Label(defaults_frame, text="Standardmodus:").grid(row=0, column=0, sticky="w")
+        self.default_mode_combo = ttk.Combobox(
+            defaults_frame,
+            values=("copy", "move"),
+            state="readonly",
+            width=12,
+        )
+        self.default_mode_combo.grid(row=0, column=1, sticky="w", padx=(6, 0))
+        self.default_mode_combo.bind("<<ComboboxSelected>>", lambda _e: self._on_default_mode_changed())
+
+        ttk.Label(defaults_frame, text="Standard-Konflikte:").grid(row=1, column=0, sticky="w", pady=(4, 0))
+        self.default_conflict_combo = ttk.Combobox(
+            defaults_frame,
+            values=("rename", "skip", "overwrite"),
+            state="readonly",
+            width=12,
+        )
+        self.default_conflict_combo.grid(row=1, column=1, sticky="w", padx=(6, 0), pady=(4, 0))
+        self.default_conflict_combo.bind("<<ComboboxSelected>>", lambda _e: self._on_default_conflict_changed())
+
+        sort_frame = ttk.LabelFrame(sort_tab, text="Sortieroptionen")
         sort_frame.pack(fill=tk.X, pady=(8, 0))
 
         self.console_folders_check = ttk.Checkbutton(
@@ -443,7 +541,7 @@ class TkMVPApp:
         )
         self.preserve_structure_check.pack(side=tk.LEFT)
 
-        btn_row = ttk.Frame(outer)
+        btn_row = ttk.Frame(control_frame)
         ttk.Label(btn_row, text="Sortierung").pack(anchor="w", pady=(0, 4))
         btn_row.pack(fill=tk.X, pady=(10, 0))
 
@@ -452,17 +550,26 @@ class TkMVPApp:
         btn_row_bottom = ttk.Frame(btn_row)
         btn_row_bottom.pack(fill=tk.X, pady=(6, 0))
 
-        self.btn_scan = ttk.Button(btn_row_top, text="Scannen", command=self._start_scan)
-        self.btn_preview = ttk.Button(btn_row_top, text="Vorschau Sortierung (Dry-run)", command=self._start_preview)
-        self.btn_execute = ttk.Button(btn_row_top, text="Sortieren ausführen (ohne Konvertierung)", command=self._start_execute)
+        self.btn_scan = ttk.Button(btn_row_top, text="Scannen", command=self._start_scan, width=22)
+        self.btn_preview = ttk.Button(btn_row_top, text="Vorschau Sortierung (Dry-run)", command=self._start_preview, width=28)
+        self.btn_execute = ttk.Button(btn_row_top, text="Sortieren ausführen (ohne Konvertierung)", command=self._start_execute, width=32)
         self.btn_resume = ttk.Button(btn_row_bottom, text="Fortsetzen", command=self._start_resume)
         self.btn_retry_failed = ttk.Button(btn_row_bottom, text="Fehlgeschlagene erneut", command=self._start_retry_failed)
         self.btn_cancel = ttk.Button(btn_row_bottom, text="Abbrechen", command=self._cancel)
-        self.btn_db = ttk.Button(btn_row_bottom, text="DB-Manager", command=self._open_db_manager)
+
+        try:
+            self.btn_scan.configure(default="active")
+        except Exception:
+            pass
+
+        _ToolTip(self.btn_scan, "Scannt den Quellordner")
+        _ToolTip(self.btn_preview, "Erstellt einen Plan ohne Änderungen")
+        _ToolTip(self.btn_execute, "Führt den Sortierplan aus")
 
         self.btn_scan.pack(side=tk.LEFT)
         self.btn_preview.pack(side=tk.LEFT, padx=(8, 0))
         self.btn_execute.pack(side=tk.LEFT, padx=(8, 0))
+        ttk.Label(btn_row, text="Tipp: Vorschau ändert keine Dateien.").pack(anchor="w", pady=(6, 0))
         conversions_intro = ttk.Label(
             conversions_tab,
             text="Konvertierungen nutzen konfigurierte Tools und Regeln. Nutze die Prüfung für eine Vorschau.",
@@ -488,7 +595,7 @@ class TkMVPApp:
         self.conv_open_dest_btn = ttk.Button(conversions_paths, text="Ziel öffnen", command=self._open_dest)
         self.conv_open_dest_btn.grid(row=1, column=3, padx=(6, 0), pady=(6, 0))
 
-        conversions_row_top = ttk.Frame(conversions_tab)
+        conversions_row_top = ttk.LabelFrame(conversions_tab, text="Schnellstart")
         conversions_row_top.pack(fill=tk.X, pady=(0, 6))
         self.btn_execute_convert = ttk.Button(
             conversions_row_top,
@@ -502,6 +609,8 @@ class TkMVPApp:
         )
         self.btn_execute_convert.pack(side=tk.LEFT)
         self.btn_audit.pack(side=tk.LEFT, padx=(8, 0))
+        _ToolTip(self.btn_execute_convert, "Sortieren inkl. Konvertierungen")
+        _ToolTip(self.btn_audit, "Prüft Konvertierungen ohne Änderungen")
 
         conversions_row_bottom = ttk.Frame(conversions_tab)
         conversions_row_bottom.pack(fill=tk.X)
@@ -567,18 +676,28 @@ class TkMVPApp:
         _safe_pack(self.btn_resume, padx=(8, 0))
         _safe_pack(self.btn_retry_failed, padx=(8, 0))
         _safe_pack(self.btn_cancel, padx=(8, 0))
-        _safe_pack(self.btn_db, padx=(8, 0))
+        self.btn_db = ttk.Button(db_tab, text="DB-Manager öffnen", command=self._open_db_manager)
+        self.btn_db.pack(anchor="w", pady=(6, 0))
 
         igir_intro = ttk.Label(
             igir_tab,
-            text="IGIR nutzt eine externe Konsole. Pfad/Argumente konfigurieren und dann ausführen.",
+            text="IGIR ist ein externes Tool. Erst einen Plan erstellen, dann ausführen.",
             wraplength=740,
         )
         igir_intro.pack(anchor="w", pady=(0, 10))
 
-        igir_cfg = ttk.LabelFrame(igir_tab, text="Konfiguration", padding=6)
+        self.igir_advanced_toggle = ttk.Checkbutton(
+            igir_tab,
+            text="Erweitert anzeigen",
+            variable=self.igir_advanced_var,
+            command=self._toggle_igir_advanced,
+        )
+        self.igir_advanced_toggle.pack(anchor="w", pady=(0, 6))
+
+        igir_cfg = ttk.LabelFrame(igir_tab, text="Erweitert: Konfiguration", padding=6)
         igir_cfg.pack(fill=tk.X, pady=(0, 10))
         igir_cfg.columnconfigure(1, weight=1)
+        self.igir_cfg_frame = igir_cfg
 
         ttk.Label(igir_cfg, text="IGIR Exe:").grid(row=0, column=0, sticky="w")
         self.igir_exe_entry = ttk.Entry(igir_cfg, textvariable=self.igir_exe_var)
@@ -621,32 +740,40 @@ class TkMVPApp:
 
         igir_paths = ttk.LabelFrame(igir_tab, text="Ausführen", padding=6)
         igir_paths.pack(fill=tk.X, pady=(0, 10))
+        self.igir_paths_frame = igir_paths
         igir_paths.columnconfigure(1, weight=1)
 
         ttk.Label(igir_paths, text="Quelle:").grid(row=0, column=0, sticky="w")
         self.igir_source_entry = ttk.Entry(igir_paths, textvariable=self.source_var)
         self.igir_source_entry.grid(row=0, column=1, sticky="ew", padx=6)
+        self.igir_source_entry.configure(state="readonly")
         self.btn_igir_source = ttk.Button(igir_paths, text="Quelle wählen…", command=self._choose_source)
         self.btn_igir_source.grid(row=0, column=2)
 
         ttk.Label(igir_paths, text="Ziel:").grid(row=1, column=0, sticky="w", pady=(6, 0))
         self.igir_dest_entry = ttk.Entry(igir_paths, textvariable=self.dest_var)
         self.igir_dest_entry.grid(row=1, column=1, sticky="ew", padx=6, pady=(6, 0))
+        self.igir_dest_entry.configure(state="readonly")
         self.btn_igir_dest = ttk.Button(igir_paths, text="Ziel wählen…", command=self._choose_dest)
         self.btn_igir_dest.grid(row=1, column=2, pady=(6, 0))
         self.btn_igir_open_dest = ttk.Button(igir_paths, text="Ziel öffnen", command=self._open_dest)
         self.btn_igir_open_dest.grid(row=1, column=3, padx=(6, 0), pady=(6, 0))
 
-        igir_row = ttk.Frame(igir_tab)
-        igir_row.pack(fill=tk.X, pady=(0, 10))
-        self.btn_igir_plan = ttk.Button(igir_row, text="IGIR Plan", command=self._start_igir_plan)
-        self.btn_igir_execute = ttk.Button(igir_row, text="IGIR Execute", command=self._start_igir_execute)
+        igir_quick = ttk.LabelFrame(igir_tab, text="Schnellstart")
+        igir_quick.pack(fill=tk.X, pady=(0, 10))
+        self.btn_igir_plan = ttk.Button(igir_quick, text="Plan erstellen", command=self._start_igir_plan)
+        self.btn_igir_execute = ttk.Button(igir_quick, text="Ausführen", command=self._start_igir_execute)
         self.btn_igir_execute.configure(state="disabled")
-        self.btn_igir_cancel = ttk.Button(igir_row, text="IGIR abbrechen", command=self._cancel_igir)
-        self.btn_igir_cancel.configure(state="disabled")
         self.btn_igir_plan.pack(side=tk.LEFT)
         self.btn_igir_execute.pack(side=tk.LEFT, padx=(8, 0))
-        self.btn_igir_cancel.pack(side=tk.LEFT, padx=(8, 0))
+        _ToolTip(self.btn_igir_plan, "Plant IGIR Schritte ohne Ausführung")
+        _ToolTip(self.btn_igir_execute, "Führt IGIR Plan aus")
+
+        igir_row = ttk.Frame(igir_tab)
+        igir_row.pack(fill=tk.X, pady=(0, 10))
+        self.btn_igir_cancel = ttk.Button(igir_row, text="IGIR abbrechen", command=self._cancel_igir)
+        self.btn_igir_cancel.configure(state="disabled")
+        self.btn_igir_cancel.pack(side=tk.LEFT)
         self.igir_copy_first_check = ttk.Checkbutton(
             igir_row,
             text="Copy-first (Staging)",
@@ -662,19 +789,9 @@ class TkMVPApp:
         )
         self.btn_igir_open_diff_json.pack(side=tk.LEFT, padx=(8, 0))
         self._update_igir_diff_buttons()
+        self._set_igir_advanced_visible(False)
 
-        self.progress = ttk.Progressbar(outer, orient=tk.HORIZONTAL, mode="determinate")
-        self.progress.pack(fill=tk.X, pady=(10, 0))
-
-        self.status_var = tk.StringVar(value="Bereit (Tk)")
-        self.status_label = ttk.Label(outer, textvariable=self.status_var)
-        self.status_label.pack(anchor="w", pady=(6, 0))
-
-        self.summary_var = tk.StringVar(value="-")
-        self.summary_label = ttk.Label(outer, textvariable=self.summary_var)
-        self.summary_label.pack(anchor="w", pady=(2, 0))
-
-        queue_frame = ttk.LabelFrame(outer, text="Jobs")
+        queue_frame = ttk.LabelFrame(control_frame, text="Jobs")
         queue_frame.pack(fill=tk.X, pady=(6, 0))
         queue_controls = ttk.Frame(queue_frame)
         queue_controls.pack(fill=tk.X, padx=6, pady=(4, 2))
@@ -717,10 +834,51 @@ class TkMVPApp:
         self.theme_combo.pack(side=tk.LEFT, padx=(6, 0))
         self.theme_combo.bind("<<ComboboxSelected>>", self._on_theme_changed)
 
-        self.dat_status_label = ttk.Label(settings_tab, textvariable=self.dat_status_var)
+        general_frame = ttk.LabelFrame(settings_tab, text="Allgemein")
+        general_frame.pack(fill=tk.X, pady=(6, 0))
+
+        self.log_visible_var = tk.BooleanVar(value=False)
+        self.log_visible_check = ttk.Checkbutton(
+            general_frame,
+            text="Log standardmäßig anzeigen",
+            variable=self.log_visible_var,
+            command=self._on_log_visible_changed,
+        )
+        self.log_visible_check.pack(anchor="w")
+
+        self.remember_window_var = tk.BooleanVar(value=True)
+        self.remember_window_check = ttk.Checkbutton(
+            general_frame,
+            text="Fenstergröße merken",
+            variable=self.remember_window_var,
+            command=self._on_remember_window_changed,
+        )
+        self.remember_window_check.pack(anchor="w")
+
+        self.drag_drop_var = tk.BooleanVar(value=True)
+        self.drag_drop_check = ttk.Checkbutton(
+            general_frame,
+            text="Drag & Drop aktivieren",
+            variable=self.drag_drop_var,
+            command=self._on_drag_drop_changed,
+        )
+        self.drag_drop_check.pack(anchor="w")
+
+        self.dat_auto_load_check = ttk.Checkbutton(
+            general_frame,
+            text="DATs beim Start automatisch laden",
+            variable=self.dat_auto_load_var,
+            command=self._on_dat_auto_load_changed,
+        )
+        self.dat_auto_load_check.pack(anchor="w", pady=(6, 0))
+
+        db_intro = ttk.Label(db_tab, text="Datenbank- und DAT-Index-Verwaltung.")
+        db_intro.pack(anchor="w", pady=(0, 6))
+
+        self.dat_status_label = ttk.Label(db_tab, textvariable=self.dat_status_var)
         self.dat_status_label.pack(anchor="w", pady=(2, 0))
 
-        dat_controls = ttk.Frame(settings_tab)
+        dat_controls = ttk.Frame(db_tab)
         dat_controls.pack(fill=tk.X, pady=(4, 0))
         self.btn_add_dat = ttk.Button(dat_controls, text="DAT-Ordner hinzufügen…", command=self._add_dat_folder)
         self.btn_add_dat.pack(side=tk.LEFT)
@@ -735,32 +893,30 @@ class TkMVPApp:
             dat_controls, text="Mapping Overrides öffnen", command=self._open_identification_overrides
         )
         self.btn_open_overrides.pack(side=tk.LEFT, padx=(8, 0))
-        self.dat_auto_load_var = tk.BooleanVar(value=False)
-        self.dat_auto_load_check = ttk.Checkbutton(
-            dat_controls,
-            text="DATs beim Start automatisch laden",
-            variable=self.dat_auto_load_var,
-            command=self._on_dat_auto_load_changed,
-        )
-        self.dat_auto_load_check.pack(side=tk.LEFT, padx=(8, 0))
         self.btn_clear_dat_cache = ttk.Button(dat_controls, text="DAT-Cache löschen", command=self._clear_dat_cache)
         self.btn_clear_dat_cache.pack(side=tk.LEFT, padx=(8, 0))
 
-        table_frame = ttk.Frame(outer)
-        table_frame.pack(fill=tk.BOTH, expand=True, pady=(10, 0))
+        self.results_empty_label = ttk.Label(
+            results_frame,
+            text="Noch keine Ergebnisse. Starte mit Scan oder Vorschau.",
+        )
+        self.results_empty_label.pack(fill=tk.X, pady=(0, 6))
+
+        table_frame = ttk.Frame(results_frame)
+        table_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 0))
 
         self._table_column_defs = [
+            ("status", "Status/Fehler", 240, 360),
+            ("action", "Aktion", 90, 140),
             ("input", "Eingabepfad", 320, 520),
             ("name", "Name", 220, 320),
             ("system", "Erkannte Konsole/Typ", 200, 260),
             ("confidence", "Sicherheit", 110, 140),
             ("signals", "Signale", 160, 220),
             ("candidates", "Kandidaten", 160, 220),
+            ("target", "Geplantes Ziel", 280, 520),
             ("normalization", "Normalisierung", 200, 320),
             ("reason", "Grund", 160, 220),
-            ("target", "Geplantes Ziel", 280, 520),
-            ("action", "Aktion", 90, 140),
-            ("status", "Status/Fehler", 240, 360),
         ]
 
         self.table = ttk.Treeview(
@@ -794,7 +950,7 @@ class TkMVPApp:
         table_scroll.pack(side=tk.RIGHT, fill=tk.Y)
         self.table.configure(yscrollcommand=table_scroll.set)
 
-        details_frame = ttk.LabelFrame(outer, text="Details")
+        details_frame = ttk.LabelFrame(results_frame, text="Details")
         details_frame.pack(fill=tk.X, pady=(8, 0))
 
         details_actions = ttk.Frame(details_frame)
@@ -1935,6 +2091,7 @@ class TkMVPApp:
             self._current_op = None
         self._refresh_job_queue()
         self._maybe_start_next_job()
+        self._update_quick_actions()
 
     def _refresh_job_queue(self) -> None:
         try:
@@ -1974,6 +2131,24 @@ class TkMVPApp:
     def _toggle_log(self) -> None:
         self._set_log_visible(not self._log_visible)
 
+    def _toggle_igir_advanced(self) -> None:
+        self._set_igir_advanced_visible(bool(self.igir_advanced_var.get()))
+
+    def _set_igir_advanced_visible(self, visible: bool) -> None:
+        frame = getattr(self, "igir_cfg_frame", None)
+        if frame is None:
+            return
+        if visible:
+            try:
+                frame.pack(fill=tk.X, pady=(0, 10), before=self.igir_paths_frame)
+            except Exception:
+                frame.pack(fill=tk.X, pady=(0, 10))
+        else:
+            try:
+                frame.pack_forget()
+            except Exception:
+                return
+
     def _set_log_visible(self, visible: bool, persist: bool = True) -> None:
         self._log_visible = bool(visible)
         if self._log_visible:
@@ -1997,10 +2172,65 @@ class TkMVPApp:
             if not isinstance(cfg, dict):
                 return
             gui_cfg = cfg.get("gui_settings", {}) or {}
-            visible = bool(gui_cfg.get("log_visible", True))
+            visible = bool(gui_cfg.get("log_visible", False))
             self._set_log_visible(visible, persist=False)
         except Exception:
             return
+
+    def _load_general_settings_from_config(self) -> None:
+        try:
+            cfg = load_config()
+            if not isinstance(cfg, dict):
+                return
+            gui_cfg = cfg.get("gui_settings", {}) or {}
+            self.log_visible_var.set(bool(gui_cfg.get("log_visible", False)))
+            self.remember_window_var.set(bool(gui_cfg.get("remember_window_size", True)))
+            self.drag_drop_var.set(bool(gui_cfg.get("drag_drop_enabled", True)))
+
+            default_mode = str(gui_cfg.get("default_sort_mode") or "copy")
+            default_conflict = str(gui_cfg.get("default_conflict_policy") or "rename")
+            if default_mode in ("copy", "move"):
+                self.default_mode_combo.set(default_mode)
+                self.mode_var.set(default_mode)
+            if default_conflict in ("rename", "skip", "overwrite"):
+                self.default_conflict_combo.set(default_conflict)
+                self.conflict_var.set(default_conflict)
+        except Exception:
+            return
+
+    def _update_gui_setting(self, key: str, value: object) -> None:
+        try:
+            cfg = load_config()
+            if not isinstance(cfg, dict):
+                cfg = {}
+            gui_cfg = cfg.get("gui_settings", {}) or {}
+            gui_cfg[key] = value
+            cfg["gui_settings"] = gui_cfg
+            self._save_config_async(cfg)
+        except Exception:
+            return
+
+    def _on_log_visible_changed(self) -> None:
+        self._set_log_visible(bool(self.log_visible_var.get()))
+
+    def _on_remember_window_changed(self) -> None:
+        self._update_gui_setting("remember_window_size", bool(self.remember_window_var.get()))
+
+    def _on_drag_drop_changed(self) -> None:
+        enabled = bool(self.drag_drop_var.get())
+        self._update_gui_setting("drag_drop_enabled", enabled)
+        if enabled != bool(self._dnd_available):
+            messagebox.showinfo("Drag & Drop", "Änderung wird nach Neustart wirksam.")
+
+    def _on_default_mode_changed(self) -> None:
+        mode = str(self.default_mode_combo.get() or "copy")
+        self.mode_var.set(mode)
+        self._update_gui_setting("default_sort_mode", mode)
+
+    def _on_default_conflict_changed(self) -> None:
+        conflict = str(self.default_conflict_combo.get() or "rename")
+        self.conflict_var.set(conflict)
+        self._update_gui_setting("default_conflict_policy", conflict)
 
     def _save_log_visibility(self) -> None:
         try:
@@ -2066,12 +2296,12 @@ class TkMVPApp:
             values = self.table.item(iid, "values")
             if not values:
                 return
-            status = values[9] if len(values) >= 10 else ""
-            confidence = values[3] if len(values) >= 4 else ""
-            signals = values[4] if len(values) >= 5 else ""
-            candidates = values[5] if len(values) >= 6 else ""
-            reason = values[6] if len(values) >= 7 else ""
-            full = values[0] if len(values) >= 1 else ""
+            status = values[0] if len(values) >= 1 else ""
+            confidence = values[5] if len(values) >= 6 else ""
+            signals = values[6] if len(values) >= 7 else ""
+            candidates = values[7] if len(values) >= 8 else ""
+            reason = values[10] if len(values) >= 11 else ""
+            full = values[2] if len(values) >= 3 else ""
 
             meta = self._row_meta.get(str(iid), {})
             source = meta.get("source") or "-"
@@ -2401,13 +2631,13 @@ class TkMVPApp:
             if not values:
                 self._set_why_unknown_enabled(False)
                 return
-            # values: (input, name, system, confidence, signals, candidates, reason, target, action, status)
-            status = values[9] if len(values) >= 10 else ""
-            confidence = values[3] if len(values) >= 4 else ""
-            signals = values[4] if len(values) >= 5 else ""
-            candidates = values[5] if len(values) >= 6 else ""
-            reason = values[6] if len(values) >= 7 else ""
-            full = values[0] if len(values) >= 1 else ""
+            # values: (status, action, input, name, system, confidence, signals, candidates, target, normalization, reason)
+            status = values[0] if len(values) >= 1 else ""
+            confidence = values[5] if len(values) >= 6 else ""
+            signals = values[6] if len(values) >= 7 else ""
+            candidates = values[7] if len(values) >= 8 else ""
+            reason = values[10] if len(values) >= 11 else ""
+            full = values[2] if len(values) >= 3 else ""
 
             tags = self.table.item(iid, "tags") or ()
             self._set_why_unknown_enabled("unknown" in tags)
@@ -2469,12 +2699,12 @@ class TkMVPApp:
             if "unknown" not in tags:
                 messagebox.showinfo("Warum unbekannt", "Nur für Unknown/Low-Confidence Einträge verfügbar.")
                 return
-            input_path = values[0] if len(values) >= 1 else ""
-            system = values[2] if len(values) >= 3 else "-"
-            confidence = values[3] if len(values) >= 4 else "-"
-            signals = values[4] if len(values) >= 5 else "-"
-            candidates = values[5] if len(values) >= 6 else "-"
-            reason = values[6] if len(values) >= 7 else "-"
+            input_path = values[2] if len(values) >= 3 else ""
+            system = values[4] if len(values) >= 5 else "-"
+            confidence = values[5] if len(values) >= 6 else "-"
+            signals = values[6] if len(values) >= 7 else "-"
+            candidates = values[7] if len(values) >= 8 else "-"
+            reason = values[10] if len(values) >= 11 else "-"
 
             meta = self._row_meta.get(str(iid), {})
             source = meta.get("source") or "-"
@@ -2592,9 +2822,7 @@ class TkMVPApp:
         self.btn_execute.configure(state=state_normal)
         self.btn_execute_convert.configure(state=state_normal)
         self.btn_audit.configure(state=state_normal)
-        self.btn_dash_scan.configure(state=state_normal)
-        self.btn_dash_preview.configure(state=state_normal)
-        self.btn_dash_execute.configure(state=state_normal)
+        self._update_quick_actions()
         export_scan_state = "normal" if (not running and self._scan_result is not None) else "disabled"
         export_plan_state = "normal" if (not running and self._sort_plan is not None) else "disabled"
         self.btn_export_scan_csv.configure(state=export_scan_state)
@@ -2633,6 +2861,26 @@ class TkMVPApp:
         self.btn_cancel_dat.configure(state="disabled" if running else "disabled")
         self.btn_manage_dat.configure(state=state_normal)
         self.btn_open_overrides.configure(state=state_normal)
+
+    def _has_required_paths(self) -> bool:
+        source = self.source_var.get().strip()
+        dest = self.dest_var.get().strip()
+        return bool(source and dest)
+
+    def _update_quick_actions(self) -> None:
+        ready = self._has_required_paths()
+        enabled = "normal" if (ready and not self._current_op) else "disabled"
+        try:
+            self.btn_dash_scan.configure(state=enabled)
+            self.btn_dash_preview.configure(state=enabled)
+            self.btn_dash_execute.configure(state=enabled)
+        except Exception:
+            pass
+        try:
+            if hasattr(self, "dashboard_path_hint"):
+                self.dashboard_path_hint.configure(text="Pfad gesetzt" if ready else "Quelle/Ziel setzen, um Schnellstart zu aktivieren.")
+        except Exception:
+            pass
         self.dat_auto_load_check.configure(state=state_normal)
         self.btn_clear_dat_cache.configure(state=state_normal)
         if not running:
@@ -2651,6 +2899,7 @@ class TkMVPApp:
             self.dashboard_dat_var.set(dat_status or "-")
         except Exception:
             pass
+        self._update_quick_actions()
         self.root.after(600, self._refresh_dashboard)
 
     def _sync_rebuild_controls(self, *, running: bool = False) -> None:
@@ -2946,6 +3195,17 @@ class TkMVPApp:
             self.table.delete(item)
         self._row_meta.clear()
         self._set_why_unknown_enabled(False)
+        self._update_results_empty_state()
+
+    def _update_results_empty_state(self) -> None:
+        try:
+            has_rows = bool(self.table.get_children())
+            if has_rows:
+                self.results_empty_label.pack_forget()
+            else:
+                self.results_empty_label.pack(fill=tk.X, pady=(0, 6))
+        except Exception:
+            return
 
     def _populate_scan_table(self, scan: ScanResult) -> None:
         self._clear_table()
@@ -2960,17 +3220,17 @@ class TkMVPApp:
                 "",
                 tk.END,
                 values=(
+                    status,
+                    "scan",
                     str(item.input_path or ""),
                     self._rom_display_name(item.input_path),
                     item.detected_system,
                     self._format_confidence(item.detection_confidence),
                     self._format_signals(item),
                     self._format_candidates(item),
+                    "",
                     normalization_hint,
                     reason,
-                    "",
-                    "scan",
-                    status,
                 ),
                 tags=tags,
             )
@@ -2993,6 +3253,8 @@ class TkMVPApp:
         except Exception:
             self.summary_var.set("-")
 
+        self._update_results_empty_state()
+
     def _populate_plan_table(self, plan: SortPlan) -> None:
         self._clear_table()
         self._plan_row_iids = []
@@ -3003,17 +3265,17 @@ class TkMVPApp:
                 "",
                 tk.END,
                 values=(
+                    act.error or act.status,
+                    act.action,
                     str(act.input_path or ""),
                     self._rom_display_name(act.input_path),
                     act.detected_system,
                     "",
                     "",
                     "",
+                    act.planned_target_path or "",
                     normalization_hint,
                     "",
-                    act.planned_target_path or "",
-                    act.action,
-                    act.error or act.status,
                 ),
             )
             self._plan_row_iids.append(str(iid))
@@ -3039,6 +3301,8 @@ class TkMVPApp:
         except Exception:
             self.summary_var.set("-")
 
+        self._update_results_empty_state()
+
     def _populate_audit_table(self, report: ConversionAuditReport) -> None:
         self._clear_table()
         self._plan_row_iids = []
@@ -3058,17 +3322,17 @@ class TkMVPApp:
                 "",
                 tk.END,
                 values=(
+                    status,
+                    action,
                     str(item.input_path or ""),
                     self._rom_display_name(item.input_path),
                     item.detected_system,
                     "",
                     "",
                     "",
+                    suggestion,
                     "-",
                     item.reason or "",
-                    suggestion,
-                    action,
-                    status,
                 ),
             )
             self._row_meta[str(iid)] = {
@@ -3087,6 +3351,8 @@ class TkMVPApp:
         except Exception:
             self.summary_var.set("-")
 
+        self._update_results_empty_state()
+
     def _append_summary_row(self, report: SortReport) -> None:
         text = (
             f"Processed: {report.processed} | Copied: {report.copied} | Moved: {report.moved} | "
@@ -3095,8 +3361,9 @@ class TkMVPApp:
         self.table.insert(
             "",
             tk.END,
-            values=("(Summary)", "", "", "", "", "", "", "", report.dest_path, report.mode, text),
+            values=(text, report.mode, "(Summary)", "", "", "", "", "", report.dest_path, "", ""),
         )
+        self._update_results_empty_state()
 
     def _start_op(
         self,
@@ -3598,6 +3865,7 @@ class TkMVPApp:
                     except Exception:
                         pass
                     self.dat_status_var.set(f"DAT: Index fehlgeschlagen ({message})")
+                    self._set_log_visible(True, persist=False)
                     messagebox.showerror("DAT", f"DAT-Index fehlgeschlagen: {message}")
                 elif event == "igir_plan_done":
                     result = payload
@@ -3667,6 +3935,7 @@ class TkMVPApp:
                         self._append_log(str(msg))
                         self._append_log(str(tb))
                         self.igir_status_var.set("IGIR Fehler")
+                        self._set_log_visible(True, persist=False)
                         messagebox.showerror("IGIR", f"{msg}\n\n{tb}")
                     else:
                         result = payload
@@ -3676,6 +3945,7 @@ class TkMVPApp:
                                 self._append_log(f"[IGIR] {result.raw_output}")
                         except Exception:
                             pass
+                        self._set_log_visible(True, persist=False)
                         messagebox.showerror("IGIR", f"IGIR Fehler: {getattr(result, 'message', 'Unbekannt')}")
                     self._complete_job("igir_plan")
                     self._complete_job("igir_execute")
@@ -3691,6 +3961,7 @@ class TkMVPApp:
                     self.status_var.set("Error")
                     self.dat_status_var.set("DAT: -")
                     self._set_running(False)
+                    self._set_log_visible(True, persist=False)
                     messagebox.showerror("Arbeitsfehler", f"{msg}\n\n{tb}")
                     if self._current_op:
                         self._complete_job(self._current_op)

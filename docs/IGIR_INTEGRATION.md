@@ -19,13 +19,16 @@
   - report_dir_default: data/reports/igir/
 
 ## UI-Flow
-1) **IGIR Plan**
-   - erzeugt Report + Diff (Tabelle + Export)
+1) **Plan erstellen**
+   - erzeugt Report + Diff (CSV/JSON)
 2) **Safety Diff**
    - op, src, dst, collision, policy_action, notes
    - summary + risk flags
-3) **Run IGIR Execute**
+3) **Ausführen**
    - nur nach bestätigtem Diff
+
+Hinweis: Quelle/Ziel folgen dem Arbeitsbereich (read‑only). Erweiterte Einstellungen
+werden per „Erweitert anzeigen“ eingeblendet.
 
 ## Safety Gates
 - dest_root containment

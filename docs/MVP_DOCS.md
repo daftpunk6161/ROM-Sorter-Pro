@@ -34,6 +34,9 @@ Zusätzliche Sort‑Logik (Config‑gesteuert):
 
 ## 4) Filter (MVP)
 
+Filter sind Teil des **Arbeitsbereichs** (linke Seitenleiste). Sie beeinflussen die
+**Ergebnisanzeige** für Scan/Plan – nicht die tatsächliche Ausführung.
+
 - Sprache
 - Version
 - Region
@@ -60,7 +63,14 @@ Zusatzaktionen:
 - **ⓘ Details** öffnet die komplette Detailansicht (Tk).
 - **Warum unbekannt?** ist nur für Unknown/Low‑Confidence aktiv.
 
-## 6) DAT‑Matching
+## 6) IGIR (Plan/Execute)
+
+- **Plan erstellen** → erzeugt Diff‑Reports (CSV/JSON)
+- **Ausführen** → nur nach vorhandenem Plan/Diff
+- **Erweitert anzeigen** zeigt Konfiguration/Args/Templates
+- Quelle/Ziel sind read‑only und folgen dem Arbeitsbereich
+
+## 7) DAT‑Matching
 
 - Unterstützte DAT‑Formate: `.xml` (Logiqx), `.dat` (ClrMamePro), `.zip` (mit `.dat/.xml` im ZIP)
 - Index: `data/index/romsorter_dat_index.sqlite`
@@ -77,7 +87,7 @@ Konfiguration (Auszug) in `src/config.json`:
 }
 ```
 
-## 6.1) Detection‑Policy (Strict + Ambiguität)
+## 7.1) Detection‑Policy (Strict + Ambiguität)
 
 Die Erkennung ist **strict**: ohne exakte DAT‑Treffer wird nicht geraten.
 
@@ -100,14 +110,14 @@ Policy‑Parameter in `platform_catalog.yaml`/`platform_catalog.json`:
 
 Hinweis: Bei zu aggressiven Regeln steigen Unknown‑Fälle, dafür weniger False Positives.
 
-## 6.2) Platform‑Catalog (YAML)
+## 7.2) Platform‑Catalog (YAML)
 
 - Primär: `src/platforms/platform_catalog.yaml`
 - Fallback: `src/config/platform_catalog.json`
 - Optionales Override: `ROM_SORTER_PLATFORM_CATALOG` (Dateipfad)
 - Optionales Override via Config: `platform_catalog_path` in `src/config.json`
 
-## 6.3) Detection‑Signals (Kurzreferenz)
+## 7.3) Detection‑Signals (Kurzreferenz)
 
 Die Spalte **Signals** in der Ergebnisliste enthält maschinenlesbare Hinweise, die die Erkennung beeinflussen.
 
@@ -120,7 +130,7 @@ Typische Signals:
 
 Die Spalte **Candidates** zeigt die Kandidatenliste mit Scores/Quellen, die zur Entscheidung geführt haben.
 
-## 7) Normalization (InputKinds + Validatoren)
+## 8) Normalization (InputKinds + Validatoren)
 
 Neue Engine: `src/core/normalization.py`
 
@@ -133,7 +143,7 @@ Konfiguration:
 - `src/platforms/platform_formats.yaml`
 - `src/conversion/converters.yaml`
 
-## 7.1) Converters (Schema)
+## 8.1) Converters (Schema)
 
 Schemafelder u. a.:
 - `exe_path`, `enabled`, `platform_ids`, `extensions`, `input_kinds`, `output_extension`, `args_template`
@@ -143,7 +153,7 @@ Dry‑Run führt keine Tools aus und benötigt keine Executables.
 Fallback:
 - Wenn `src/conversion/converters.yaml` leer ist, werden Conversion‑Regeln aus `src/config.json` (features.sorting.conversion) geladen.
 
-## 7.2) Format‑Matrix (InputKinds → typische Formate)
+## 8.2) Format‑Matrix (InputKinds → typische Formate)
 
 | InputKind | Beschreibung | Typische Formate |
 | --- | --- | --- |
@@ -155,13 +165,13 @@ Fallback:
 
 Die endgültige Zuordnung wird in `src/platforms/platform_formats.yaml` definiert.
 
-## 8) External Tools (WUD)
+## 9) External Tools (WUD)
 
 - Unterstützt: `wud2app`, `wudcompress`
 - Konfiguration in `src/config.json` → `external_tools`
 - Probe‑Status wird im UI angezeigt
 
-## 8.1) Safety‑Regeln (Plan/Execute)
+## 9.1) Safety‑Regeln (Plan/Execute)
 
 - **Dry‑Run** schreibt keine Dateien und startet keine externen Tools.
 - **Path‑Security**: Zielpfade werden validiert (Traversal‑Schutz, keine unerlaubten Pfade).
@@ -169,7 +179,7 @@ Die endgültige Zuordnung wird in `src/platforms/platform_formats.yaml` definier
 
 Bei Verstößen wird die Aktion übersprungen und der Fehler im Report protokolliert.
 
-## 9) Tests (MVP)
+## 10) Tests (MVP)
 
 Empfohlene Tests:
 - `dev/tests/test_mvp_backend_selection.py`
@@ -194,7 +204,7 @@ Empfohlene Tests:
 - `dev/tests/test_mvp_gui_smoke.py`
 - `dev/tests/test_mvp_execute_dry_run_no_tools.py`
 
-## 9.1) GUI‑Threading (Kurzüberblick)
+## 10.1) GUI‑Threading (Kurzüberblick)
 
 - Qt: `QThread` + Worker‑Objekte (Scan/Plan/Execute/IGIR/Export)
 - Tk: `threading.Thread` + Queue + `after()` Polling

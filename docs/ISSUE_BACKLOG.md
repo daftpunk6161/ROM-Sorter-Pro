@@ -4,6 +4,10 @@ Diese Roadmap wird über Manifest + Scripts gepflegt:
 - Manifest: [issues/epics.json](../issues/epics.json)
 - Scripts: [scripts/issues](../scripts/issues/)
 
+## Release-Status
+- Für den Release 2.1.8 sind alle Epics im Manifest auf **Done** gesetzt.
+- GitHub-Status bei Bedarf mit den Scripts synchronisieren (siehe Ablauf unten).
+
 ## Ablauf (GitHub CLI)
 
 ### PowerShell (Windows)

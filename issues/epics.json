@@ -47,6 +47,7 @@
   "epics": [
     {
       "id": "E1",
+      "status": "Done",
       "title": "Baseline-Quality: crash-freier GUI-Start, Cancel-Sicherheit, Error UX",
       "labels": ["type:epic", "priority:P0", "area:gui"],
       "milestone": "Baseline-Quality",
@@ -54,6 +55,7 @@
     },
     {
       "id": "E2",
+      "status": "Done",
       "title": "Security Gates: Pfadvalidierung, Dry-run Invariant, Safety Diff",
       "labels": ["type:epic", "priority:P0", "area:security"],
       "milestone": "Baseline-Quality",
@@ -61,6 +63,7 @@
     },
     {
       "id": "E3",
+      "status": "Done",
       "title": "DAT Source Manager + Integrity + Analytics",
       "labels": ["type:epic", "priority:P0", "area:detection"],
       "milestone": "Detection-Accuracy",
@@ -68,6 +71,7 @@
     },
     {
       "id": "E4",
+      "status": "Done",
       "title": "Unknown-Reduktion: Why Unknown + lokale Mapping-Regeln",
       "labels": ["type:epic", "priority:P1", "area:detection"],
       "milestone": "Detection-Accuracy",
@@ -75,6 +79,7 @@
     },
     {
       "id": "E5",
+      "status": "Done",
       "title": "Normalization v1: Plattform-Registry + Track/Folder Validatoren",
       "labels": ["type:epic", "priority:P1", "area:conversion"],
       "milestone": "Normalization-v1",
@@ -82,6 +87,7 @@
     },
     {
       "id": "E6",
+      "status": "Done",
       "title": "Per-Plattform Output Targets & Conversion Runner",
       "labels": ["type:epic", "priority:P1", "area:conversion"],
       "milestone": "Normalization-v1",
@@ -89,6 +95,7 @@
     },
     {
       "id": "E7",
+      "status": "Done",
       "title": "IGIR Power-Flow: Plan/Diff/Execute + Profile + Rollback",
       "labels": ["type:epic", "priority:P1", "area:igir"],
       "milestone": "IGIR-Power-Flow",
@@ -96,6 +103,7 @@
     },
     {
       "id": "E8",
+      "status": "Done",
       "title": "GUI Job-System: Queue, Pause/Resume, Live-Log Filter",
       "labels": ["type:epic", "priority:P1", "area:gui"],
       "milestone": "GUI-JobSystem",
@@ -103,6 +111,7 @@
     },
     {
       "id": "E9",
+      "status": "Done",
       "title": "Performance-Scale: Hash-Cache, IO-Throttling, SQLite-Tuning",
       "labels": ["type:epic", "priority:P2", "area:perf"],
       "milestone": "Performance-Scale",
@@ -110,6 +119,7 @@
     },
     {
       "id": "E10",
+      "status": "Done",
       "title": "Integrations: Rebuilder-Mode + Frontend-Exports",
       "labels": ["type:epic", "priority:P2", "area:integration"],
       "milestone": "Integrations",
@@ -117,6 +127,7 @@
     },
     {
       "id": "E11",
+      "status": "Done",
       "title": "Quality & Regression Suite: Golden Fixtures, CI Gates, Structured Logs",
       "labels": ["type:epic", "priority:P1", "area:tests"],
       "milestone": "Baseline-Quality",

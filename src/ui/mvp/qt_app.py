@@ -28,7 +28,7 @@ import traceback
 import threading
 import json
 from pathlib import Path
-from typing import Iterable, List, Optional, cast
+from typing import Any, Iterable, List, Optional, cast
 
 
 def _load_version() -> str:
@@ -358,7 +358,7 @@ def run() -> int:
                         resume_path=self.resume_path,
                         start_index=self.start_index,
                         only_indices=self.only_indices,
-                        conversion_mode=self.conversion_mode,
+                        conversion_mode=cast(ConversionMode, self.conversion_mode),
                     )
                     self.signals.log.emit(
                         f"Execute finished: processed={report.processed} copied={report.copied} moved={report.moved} errors={len(report.errors)} cancelled={report.cancelled}"
@@ -698,10 +698,10 @@ def run() -> int:
             self._scan_result: Optional[ScanResult] = None
             self._sort_plan: Optional[SortPlan] = None
             self._audit_report: Optional[ConversionAuditReport] = None
-            self._export_thread: Optional[QtCore.QThread] = None
+            self._export_thread: Optional[Any] = None
             self._export_worker: Optional[ExportWorker] = None
-            self._igir_thread: Optional[QtCore.QThread] = None
-            self._igir_worker: Optional[QtCore.QObject] = None
+            self._igir_thread: Optional[Any] = None
+            self._igir_worker: Optional[Any] = None
             self._igir_cancel_token: Optional[CancelToken] = None
             self._igir_plan_ready = False
             self._igir_diff_csv: Optional[str] = None
@@ -713,6 +713,7 @@ def run() -> int:
             self._theme_manager = ThemeManager()
             self._syncing_paths = False
             self._log_visible = True
+            self._is_running = False
 
             self._last_view: str = "scan"  # scan|plan
             self._table_items: List[ScanItem] = []
@@ -720,7 +721,7 @@ def run() -> int:
             self._dat_status_timer = QtCore.QTimer(self)
             self._dat_status_timer.setInterval(800)
             self._dat_status_timer.timeout.connect(self._poll_dat_status)
-            self._dat_index_thread: Optional[QtCore.QThread] = None
+            self._dat_index_thread: Optional[Any] = None
             self._dat_index_worker: Optional[DatIndexWorker] = None
             self._dat_index_cancel_token: Optional[CancelToken] = None
 
@@ -752,19 +753,26 @@ def run() -> int:
             root_layout = QtWidgets.QVBoxLayout(central)
 
             tabs = QtWidgets.QTabWidget()
+            self.tabs = tabs
             root_layout.addWidget(tabs)
 
             dashboard_tab = QtWidgets.QWidget()
             main_tab = QtWidgets.QWidget()
-            settings_tab = QtWidgets.QWidget()
-            tools_tab = QtWidgets.QWidget()
+            sort_tab = QtWidgets.QWidget()
             conversions_tab = QtWidgets.QWidget()
             igir_tab = QtWidgets.QWidget()
-            tabs.addTab(dashboard_tab, "Dashboard")
-            tabs.addTab(main_tab, "Arbeitsbereich")
-            tabs.addTab(conversions_tab, "Konvertierungen")
-            tabs.addTab(igir_tab, "IGIR")
-            tabs.addTab(settings_tab, "Einstellungen")
+            db_tab = QtWidgets.QWidget()
+            settings_tab = QtWidgets.QWidget()
+            tools_tab = QtWidgets.QWidget()
+            tabs.addTab(dashboard_tab, "🏠 Dashboard")
+            tabs.addTab(main_tab, "🧭 Arbeitsbereich")
+            tabs.addTab(sort_tab, "🗂️ Sortierung")
+            tabs.addTab(conversions_tab, "🧰 Konvertierungen")
+            tabs.addTab(igir_tab, "🧪 IGIR")
+            tabs.addTab(db_tab, "🗃️ Datenbank")
+            tabs.addTab(settings_tab, "⚙️ Einstellungen")
+            self._tab_index_main = tabs.indexOf(main_tab)
+            self._tab_index_dashboard = tabs.indexOf(dashboard_tab)
             show_external_tools = False
             if show_external_tools:
                 tabs.addTab(tools_tab, "External Tools")
@@ -772,8 +780,10 @@ def run() -> int:
 
             dashboard_layout = QtWidgets.QVBoxLayout(dashboard_tab)
             main_layout = QtWidgets.QVBoxLayout(main_tab)
+            sort_tab_layout = QtWidgets.QVBoxLayout(sort_tab)
             conversions_layout = QtWidgets.QVBoxLayout(conversions_tab)
             igir_layout = QtWidgets.QVBoxLayout(igir_tab)
+            db_layout = QtWidgets.QVBoxLayout(db_tab)
             settings_layout = QtWidgets.QVBoxLayout(settings_tab)
             tools_layout = QtWidgets.QVBoxLayout(tools_tab)
 
@@ -789,31 +799,72 @@ def run() -> int:
 
             quick_group = QtWidgets.QGroupBox("Schnellstart")
             quick_layout = QtWidgets.QHBoxLayout(quick_group)
-            self.btn_dash_scan = QtWidgets.QPushButton("Scannen")
-            self.btn_dash_preview = QtWidgets.QPushButton("Vorschau (Dry-run)")
-            self.btn_dash_execute = QtWidgets.QPushButton("Sortieren ausführen")
+            self.btn_dash_scan = QtWidgets.QPushButton("🔍 Scannen")
+            self.btn_dash_preview = QtWidgets.QPushButton("🧾 Vorschau (Dry-run)")
+            self.btn_dash_execute = QtWidgets.QPushButton("🚀 Sortieren ausführen")
+            self.btn_dash_scan.setToolTip("Scannt den Quellordner")
+            self.btn_dash_preview.setToolTip("Erstellt einen Sortierplan ohne Änderungen")
+            self.btn_dash_execute.setToolTip("Führt den Plan aus")
+            self.btn_dash_scan.setMinimumHeight(34)
+            self.btn_dash_preview.setMinimumHeight(34)
+            self.btn_dash_execute.setMinimumHeight(34)
             quick_layout.addWidget(self.btn_dash_scan)
             quick_layout.addWidget(self.btn_dash_preview)
             quick_layout.addWidget(self.btn_dash_execute)
             quick_layout.addStretch(1)
             dashboard_layout.addWidget(quick_group)
 
+            dnd_enabled = self._is_drag_drop_enabled()
+            paths_dashboard_group = QtWidgets.QGroupBox("Pfade")
+            paths_dashboard_layout = QtWidgets.QGridLayout(paths_dashboard_group)
+            paths_dashboard_layout.addWidget(QtWidgets.QLabel("Quelle:"), 0, 0)
+            self.dashboard_source_edit = DropLineEdit(self._on_drop_source, enabled=dnd_enabled)
+            self.dashboard_source_edit.setPlaceholderText("ROM-Quelle auswählen")
+            paths_dashboard_layout.addWidget(self.dashboard_source_edit, 0, 1)
+            self.btn_dash_source = QtWidgets.QPushButton("Quelle wählen…")
+            self.btn_dash_source.clicked.connect(self._choose_source)
+            paths_dashboard_layout.addWidget(self.btn_dash_source, 0, 2)
+
+            paths_dashboard_layout.addWidget(QtWidgets.QLabel("Ziel:"), 1, 0)
+            self.dashboard_dest_edit = DropLineEdit(self._on_drop_dest, enabled=dnd_enabled)
+            self.dashboard_dest_edit.setPlaceholderText("Zielordner auswählen")
+            paths_dashboard_layout.addWidget(self.dashboard_dest_edit, 1, 1)
+            self.btn_dash_dest = QtWidgets.QPushButton("Ziel wählen…")
+            self.btn_dash_dest.clicked.connect(self._choose_dest)
+            paths_dashboard_layout.addWidget(self.btn_dash_dest, 1, 2)
+            self.btn_dash_open_dest = QtWidgets.QPushButton("Ziel öffnen")
+            self.btn_dash_open_dest.clicked.connect(self._open_destination)
+            paths_dashboard_layout.addWidget(self.btn_dash_open_dest, 1, 3)
+            paths_dashboard_layout.setColumnStretch(1, 1)
+            dashboard_layout.addWidget(paths_dashboard_group)
+
+            self.dashboard_path_hint = QtWidgets.QLabel(
+                "Quelle und Ziel setzen, damit Schnellstart aktiv wird."
+            )
+            self.dashboard_path_hint.setWordWrap(True)
+            self.dashboard_path_hint.setStyleSheet("color: #777;")
+            dashboard_layout.addWidget(self.dashboard_path_hint)
+
             status_group = QtWidgets.QGroupBox("Status")
             status_layout = QtWidgets.QGridLayout(status_group)
-            status_layout.addWidget(QtWidgets.QLabel("Quelle:"), 0, 0)
+            status_layout.addWidget(QtWidgets.QLabel("📁 Quelle:"), 0, 0)
             self.dashboard_source_label = QtWidgets.QLabel("-")
             self.dashboard_source_label.setWordWrap(True)
             status_layout.addWidget(self.dashboard_source_label, 0, 1)
-            status_layout.addWidget(QtWidgets.QLabel("Ziel:"), 1, 0)
+            status_layout.addWidget(QtWidgets.QLabel("🎯 Ziel:"), 1, 0)
             self.dashboard_dest_label = QtWidgets.QLabel("-")
             self.dashboard_dest_label.setWordWrap(True)
             status_layout.addWidget(self.dashboard_dest_label, 1, 1)
-            status_layout.addWidget(QtWidgets.QLabel("Status:"), 2, 0)
+            status_layout.addWidget(QtWidgets.QLabel("📊 Status:"), 2, 0)
             self.dashboard_status_label = QtWidgets.QLabel("-")
             status_layout.addWidget(self.dashboard_status_label, 2, 1)
-            status_layout.addWidget(QtWidgets.QLabel("DAT:"), 3, 0)
+            self.dashboard_progress = QtWidgets.QProgressBar()
+            self.dashboard_progress.setRange(0, 100)
+            self.dashboard_progress.setValue(0)
+            status_layout.addWidget(self.dashboard_progress, 3, 0, 1, 2)
+            status_layout.addWidget(QtWidgets.QLabel("🧷 DAT:"), 4, 0)
             self.dashboard_dat_label = QtWidgets.QLabel("-")
-            status_layout.addWidget(self.dashboard_dat_label, 3, 1)
+            status_layout.addWidget(self.dashboard_dat_label, 4, 1)
             dashboard_layout.addWidget(status_group)
             dashboard_layout.addStretch(1)
 
@@ -832,8 +883,46 @@ def run() -> int:
             sections_row = QtWidgets.QHBoxLayout()
             sections_row.addWidget(paths_group, 2)
             sections_row.addWidget(actions_group, 1)
-            sections_row.addWidget(filters_group, 2)
-            main_layout.addLayout(sections_row)
+
+            main_splitter = QtWidgets.QSplitter(QtCore.Qt.Orientation.Horizontal)
+            main_layout.addWidget(main_splitter, 1)
+            left_panel = QtWidgets.QWidget()
+            right_panel = QtWidgets.QWidget()
+            main_splitter.addWidget(left_panel)
+            main_splitter.addWidget(right_panel)
+            main_splitter.setStretchFactor(0, 0)
+            main_splitter.setStretchFactor(1, 1)
+
+            left_layout = QtWidgets.QVBoxLayout(left_panel)
+            right_layout = QtWidgets.QVBoxLayout(right_panel)
+            main_status_group = QtWidgets.QGroupBox("Status")
+            main_status_layout = QtWidgets.QGridLayout(main_status_group)
+            main_status_layout.setHorizontalSpacing(6)
+            main_status_layout.setVerticalSpacing(4)
+
+            self.main_source_label = QtWidgets.QLabel("-")
+            self.main_source_label.setWordWrap(True)
+            self.main_dest_label = QtWidgets.QLabel("-")
+            self.main_dest_label.setWordWrap(True)
+
+            self.progress = QtWidgets.QProgressBar()
+            self.progress.setRange(0, 100)
+            self.progress.setValue(0)
+            self.status_label = QtWidgets.QLabel(f"Bereit ({binding})")
+            self.summary_label = QtWidgets.QLabel("-")
+
+            main_status_layout.addWidget(QtWidgets.QLabel("Quelle:"), 0, 0)
+            main_status_layout.addWidget(self.main_source_label, 0, 1)
+            main_status_layout.addWidget(QtWidgets.QLabel("Ziel:"), 1, 0)
+            main_status_layout.addWidget(self.main_dest_label, 1, 1)
+            main_status_layout.addWidget(self.progress, 2, 0, 1, 2)
+            main_status_layout.addWidget(self.status_label, 3, 0, 1, 2)
+            main_status_layout.addWidget(self.summary_label, 4, 0, 1, 2)
+            main_status_layout.setColumnStretch(1, 1)
+            left_layout.addWidget(main_status_group)
+            left_layout.addLayout(sections_row)
+
+            left_layout.addWidget(filters_group)
 
             dnd_enabled = self._is_drag_drop_enabled()
             self.source_edit = DropLineEdit(self._on_drop_source, enabled=dnd_enabled)
@@ -878,8 +967,8 @@ def run() -> int:
             self.btn_igir_browse = QtWidgets.QPushButton("IGIR wählen…")
             self.btn_igir_save = QtWidgets.QPushButton("IGIR speichern")
             self.btn_igir_probe = QtWidgets.QPushButton("IGIR prüfen")
-            self.btn_igir_plan = QtWidgets.QPushButton("IGIR Plan")
-            self.btn_igir_execute = QtWidgets.QPushButton("IGIR Execute")
+            self.btn_igir_plan = QtWidgets.QPushButton("Plan erstellen")
+            self.btn_igir_execute = QtWidgets.QPushButton("Ausführen")
             self.btn_igir_execute.setEnabled(False)
             self.btn_igir_cancel = QtWidgets.QPushButton("IGIR abbrechen")
             self.btn_igir_cancel.setEnabled(False)
@@ -889,6 +978,8 @@ def run() -> int:
             self.igir_dest_edit = QtWidgets.QLineEdit()
             self.igir_source_edit.setPlaceholderText("Quelle (aus Haupt-Tab)")
             self.igir_dest_edit.setPlaceholderText("Ziel (aus Haupt-Tab)")
+            self.igir_source_edit.setReadOnly(True)
+            self.igir_dest_edit.setReadOnly(True)
 
             self.mode_combo = QtWidgets.QComboBox()
             self.mode_combo.addItems(["copy", "move"])
@@ -986,6 +1077,10 @@ def run() -> int:
 
             self.source_edit.textChanged.connect(self._on_source_text_changed)
             self.dest_edit.textChanged.connect(self._on_dest_text_changed)
+            if hasattr(self, "dashboard_source_edit"):
+                self.dashboard_source_edit.textChanged.connect(self._on_source_text_changed)
+            if hasattr(self, "dashboard_dest_edit"):
+                self.dashboard_dest_edit.textChanged.connect(self._on_dest_text_changed)
 
             paths_layout.setColumnStretch(1, 1)
 
@@ -1041,35 +1136,69 @@ def run() -> int:
 
             settings_form.addWidget(QtWidgets.QLabel("Theme:"), 0, 0)
             settings_form.addWidget(self.theme_combo, 0, 1)
+            settings_form.setColumnStretch(1, 1)
+
+            self.log_visible_checkbox = QtWidgets.QCheckBox("Log standardmäßig anzeigen")
+            self.remember_window_checkbox = QtWidgets.QCheckBox("Fenstergröße merken")
+            self.drag_drop_checkbox = QtWidgets.QCheckBox("Drag & Drop aktivieren")
+            settings_form.addWidget(self.log_visible_checkbox, 1, 1)
+            settings_form.addWidget(self.remember_window_checkbox, 2, 1)
+            settings_form.addWidget(self.drag_drop_checkbox, 3, 1)
+            settings_form.addWidget(self.dat_auto_load_checkbox, 4, 1)
+
+            sort_intro = QtWidgets.QLabel("Sortieroptionen für die Zielstruktur.")
+            sort_intro.setWordWrap(True)
+            sort_tab_layout.addWidget(sort_intro)
+            defaults_group = QtWidgets.QGroupBox("Standardwerte")
+            defaults_layout = QtWidgets.QGridLayout(defaults_group)
+            defaults_layout.setHorizontalSpacing(10)
+            defaults_layout.setVerticalSpacing(6)
+            self.default_mode_combo = QtWidgets.QComboBox()
+            self.default_mode_combo.addItems(["copy", "move"])
+            self.default_conflict_combo = QtWidgets.QComboBox()
+            self.default_conflict_combo.addItems(["rename", "skip", "overwrite"])
+            defaults_layout.addWidget(QtWidgets.QLabel("Standardmodus:"), 0, 0)
+            defaults_layout.addWidget(self.default_mode_combo, 0, 1)
+            defaults_layout.addWidget(QtWidgets.QLabel("Standard-Konflikte:"), 1, 0)
+            defaults_layout.addWidget(self.default_conflict_combo, 1, 1)
+            defaults_layout.setColumnStretch(1, 1)
+            sort_tab_layout.addWidget(defaults_group)
+            sort_group = QtWidgets.QGroupBox("Sortieroptionen")
+            sort_layout = QtWidgets.QVBoxLayout(sort_group)
+            sort_layout.addWidget(self.chk_console_folders)
+            sort_layout.addWidget(self.chk_region_subfolders)
+            sort_layout.addWidget(self.chk_preserve_structure)
+            sort_tab_layout.addWidget(sort_group)
+            sort_tab_layout.addStretch(1)
+
+            db_intro = QtWidgets.QLabel("Datenbank- und DAT-Index-Verwaltung.")
+            db_intro.setWordWrap(True)
+            db_layout.addWidget(db_intro)
 
             dat_hint = QtWidgets.QLabel(
                 "DAT-Index wird als SQLite unter data/index/romsorter_dat_index.sqlite gespeichert. "
                 "Lege DAT-Dateien in einem eigenen Ordner ab und baue den Index bei Änderungen neu."
             )
             dat_hint.setWordWrap(True)
-            settings_layout.addWidget(dat_hint)
+            db_layout.addWidget(dat_hint)
 
-            settings_form.addWidget(self.dat_status, 1, 0)
-            settings_form.addWidget(self.btn_add_dat, 1, 1)
-            settings_form.addWidget(self.btn_refresh_dat, 1, 2)
-            settings_form.addWidget(self.btn_cancel_dat, 1, 3)
-            settings_form.addWidget(self.btn_manage_dat, 1, 4)
+            db_form = QtWidgets.QGridLayout()
+            db_form.setHorizontalSpacing(10)
+            db_form.setVerticalSpacing(6)
+            db_layout.addLayout(db_form)
 
-            settings_form.addWidget(self.dat_auto_load_checkbox, 2, 1)
-            settings_form.addWidget(self.btn_clear_dat_cache, 2, 2)
-            settings_form.addWidget(self.btn_open_overrides, 2, 3)
+            db_form.addWidget(self.dat_status, 0, 0)
+            db_form.addWidget(self.btn_add_dat, 0, 1)
+            db_form.addWidget(self.btn_refresh_dat, 0, 2)
+            db_form.addWidget(self.btn_cancel_dat, 0, 3)
+            db_form.addWidget(self.btn_manage_dat, 0, 4)
 
-            sort_group = QtWidgets.QGroupBox("Sortieroptionen")
-            sort_layout = QtWidgets.QVBoxLayout(sort_group)
-            sort_layout.addWidget(self.chk_console_folders)
-            sort_layout.addWidget(self.chk_region_subfolders)
-            sort_layout.addWidget(self.chk_preserve_structure)
-            settings_layout.addWidget(sort_group)
+            db_form.addWidget(self.btn_clear_dat_cache, 1, 2)
+            db_form.addWidget(self.btn_open_overrides, 1, 3)
 
-            settings_form.addWidget(self.db_status, 3, 0)
-            settings_form.addWidget(self.btn_db_manager, 3, 1)
-
-            settings_form.setColumnStretch(1, 1)
+            db_form.addWidget(self.db_status, 2, 0)
+            db_form.addWidget(self.btn_db_manager, 2, 1)
+            db_form.setColumnStretch(1, 1)
 
             external_form = QtWidgets.QGridLayout()
             external_form.setHorizontalSpacing(10)
@@ -1108,8 +1237,8 @@ def run() -> int:
             button_row.setVerticalSpacing(6)
             sort_title = QtWidgets.QLabel("Sortierung")
             sort_title.setStyleSheet("font-weight: 600;")
-            main_layout.addWidget(sort_title)
-            main_layout.addLayout(button_row)
+            left_layout.addWidget(sort_title)
+            left_layout.addLayout(button_row)
 
             self.btn_scan = QtWidgets.QPushButton("Scannen")
             self.btn_preview = QtWidgets.QPushButton("Vorschau Sortierung (Dry-run)")
@@ -1127,6 +1256,13 @@ def run() -> int:
             self.btn_resume = QtWidgets.QPushButton("Fortsetzen")
             self.btn_retry_failed = QtWidgets.QPushButton("Fehlgeschlagene erneut")
             self.btn_cancel = QtWidgets.QPushButton("Abbrechen")
+
+            self.btn_scan.setToolTip("Scannt den Quellordner und erkennt Konsolen")
+            self.btn_preview.setToolTip("Erstellt einen Sortierplan ohne Dateien zu ändern")
+            self.btn_execute.setToolTip("Führt den Plan aus (ohne Konvertierungen)")
+            self.btn_execute_convert.setToolTip("Führt Sortierung inkl. Konvertierung aus")
+            self.btn_audit.setToolTip("Prüft Konvertierungen ohne Änderungen")
+            self.btn_scan.setDefault(True)
 
             for btn in (
                 self.btn_scan,
@@ -1147,6 +1283,8 @@ def run() -> int:
                 self.btn_cancel,
             ):
                 btn.setMinimumHeight(28)
+                if btn in (self.btn_scan, self.btn_preview, self.btn_execute):
+                    btn.setMinimumWidth(200)
 
             self.btn_cancel.setEnabled(False)
             self.btn_resume.setEnabled(False)
@@ -1165,6 +1303,13 @@ def run() -> int:
             )
             conversions_intro.setWordWrap(True)
             conversions_layout.addWidget(conversions_intro)
+
+            conversions_quick = QtWidgets.QGroupBox("Schnellstart")
+            conversions_quick_layout = QtWidgets.QHBoxLayout(conversions_quick)
+            conversions_quick_layout.addWidget(self.btn_execute_convert)
+            conversions_quick_layout.addWidget(self.btn_audit)
+            conversions_quick_layout.addStretch(1)
+            conversions_layout.addWidget(conversions_quick)
 
             conversions_paths = QtWidgets.QGroupBox("Pfade")
             conversions_paths_layout = QtWidgets.QGridLayout(conversions_paths)
@@ -1205,26 +1350,35 @@ def run() -> int:
             conversions_row.setHorizontalSpacing(6)
             conversions_row.setVerticalSpacing(6)
             conversions_layout.addLayout(conversions_row)
-            conversions_row.addWidget(self.btn_execute_convert, 0, 0)
-            conversions_row.addWidget(self.btn_audit, 0, 1)
-            conversions_row.addWidget(self.btn_export_audit_csv, 1, 0)
-            conversions_row.addWidget(self.btn_export_audit_json, 1, 1)
-            conversions_row.addWidget(self.btn_export_scan_csv, 2, 0)
-            conversions_row.addWidget(self.btn_export_scan_json, 2, 1)
-            conversions_row.addWidget(self.btn_export_plan_csv, 3, 0)
-            conversions_row.addWidget(self.btn_export_plan_json, 3, 1)
-            conversions_row.addWidget(self.btn_export_frontend_es, 4, 0)
-            conversions_row.addWidget(self.btn_export_frontend_launchbox, 4, 1)
+            conversions_row.addWidget(self.btn_export_audit_csv, 0, 0)
+            conversions_row.addWidget(self.btn_export_audit_json, 0, 1)
+            conversions_row.addWidget(self.btn_export_scan_csv, 1, 0)
+            conversions_row.addWidget(self.btn_export_scan_json, 1, 1)
+            conversions_row.addWidget(self.btn_export_plan_csv, 2, 0)
+            conversions_row.addWidget(self.btn_export_plan_json, 2, 1)
+            conversions_row.addWidget(self.btn_export_frontend_es, 3, 0)
+            conversions_row.addWidget(self.btn_export_frontend_launchbox, 3, 1)
             conversions_row.setColumnStretch(2, 1)
             conversions_layout.addStretch(1)
 
             igir_intro = QtWidgets.QLabel(
-                "IGIR ist ein externes Tool. Es wird nur bei 'IGIR ausführen' gestartet (niemals im Dry-Run)."
+                "IGIR ist ein externes Tool. Erstellt zuerst einen Plan und führt dann aus (niemals im Dry-Run)."
             )
             igir_intro.setWordWrap(True)
             igir_layout.addWidget(igir_intro)
 
-            igir_cfg_group = QtWidgets.QGroupBox("IGIR Konfiguration")
+            igir_quick = QtWidgets.QGroupBox("Schnellstart")
+            igir_quick_layout = QtWidgets.QHBoxLayout(igir_quick)
+            igir_quick_layout.addWidget(self.btn_igir_plan)
+            igir_quick_layout.addWidget(self.btn_igir_execute)
+            igir_quick_layout.addStretch(1)
+            igir_layout.addWidget(igir_quick)
+
+            self.igir_advanced_toggle = QtWidgets.QCheckBox("Erweitert anzeigen")
+            self.igir_advanced_toggle.setChecked(False)
+            igir_layout.addWidget(self.igir_advanced_toggle)
+
+            igir_cfg_group = QtWidgets.QGroupBox("Erweitert: IGIR Konfiguration")
             igir_cfg_layout = QtWidgets.QGridLayout(igir_cfg_group)
             igir_cfg_layout.setHorizontalSpacing(6)
             igir_cfg_layout.setVerticalSpacing(6)
@@ -1248,8 +1402,10 @@ def run() -> int:
             igir_actions_row.addStretch(1)
             igir_cfg_layout.addLayout(igir_actions_row, 7, 1, 1, 2)
             igir_layout.addWidget(igir_cfg_group)
+            self._igir_cfg_group = igir_cfg_group
+            self._set_igir_advanced_visible(False)
 
-            igir_run_group = QtWidgets.QGroupBox("IGIR Lauf")
+            igir_run_group = QtWidgets.QGroupBox("Ausführen")
             igir_run_layout = QtWidgets.QGridLayout(igir_run_group)
             igir_run_layout.setHorizontalSpacing(6)
             igir_run_layout.setVerticalSpacing(6)
@@ -1257,9 +1413,7 @@ def run() -> int:
             igir_run_layout.addWidget(self.igir_source_edit, 0, 1)
             igir_run_layout.addWidget(QtWidgets.QLabel("Ziel:"), 1, 0)
             igir_run_layout.addWidget(self.igir_dest_edit, 1, 1)
-            igir_run_layout.addWidget(self.btn_igir_plan, 2, 0)
-            igir_run_layout.addWidget(self.btn_igir_execute, 2, 1)
-            igir_run_layout.addWidget(self.btn_igir_cancel, 2, 2)
+            igir_run_layout.addWidget(self.btn_igir_cancel, 2, 0)
             igir_run_layout.addWidget(self.igir_status_label, 3, 0, 1, 3)
             igir_run_layout.addWidget(self.igir_copy_first_checkbox, 4, 0, 1, 2)
             self.btn_igir_open_diff_csv = QtWidgets.QPushButton("Diff CSV öffnen")
@@ -1270,27 +1424,24 @@ def run() -> int:
             igir_run_layout.addWidget(self.btn_igir_open_diff_json, 5, 1)
             igir_run_layout.setColumnStretch(1, 1)
             igir_layout.addWidget(igir_run_group)
-
-            self.progress = QtWidgets.QProgressBar()
-            self.progress.setRange(0, 100)
-            self.progress.setValue(0)
-            main_layout.addWidget(self.progress)
-
-            self.status_label = QtWidgets.QLabel(f"Bereit ({binding})")
-            main_layout.addWidget(self.status_label)
-
-            self.summary_label = QtWidgets.QLabel("-")
-            main_layout.addWidget(self.summary_label)
+            igir_layout.addStretch(1)
 
             self.btn_why_unknown = QtWidgets.QPushButton("Why Unknown?")
             self.btn_why_unknown.clicked.connect(self._show_why_unknown)
-            main_layout.addWidget(self.btn_why_unknown)
+            right_layout.addWidget(self.btn_why_unknown)
 
             results_intro = QtWidgets.QLabel(
                 "Die Ergebnistabelle zeigt geplante Ziele und Status. Nutze die Vorschau vor dem Ausführen."
             )
             results_intro.setWordWrap(True)
-            main_layout.addWidget(results_intro)
+            right_layout.addWidget(results_intro)
+
+            self.results_empty_label = QtWidgets.QLabel(
+                "Noch keine Ergebnisse. Starte mit Scan oder Vorschau, um Einträge zu sehen."
+            )
+            self.results_empty_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+            self.results_empty_label.setStyleSheet("color: #777; padding: 8px;")
+            right_layout.addWidget(self.results_empty_label)
 
             queue_group = QtWidgets.QGroupBox("Jobs")
             queue_layout = QtWidgets.QGridLayout(queue_group)
@@ -1312,11 +1463,13 @@ def run() -> int:
             queue_layout.addWidget(self.queue_resume_btn, 1, 1)
             queue_layout.addWidget(self.queue_clear_btn, 1, 2)
             queue_layout.addWidget(self.queue_list, 2, 0, 1, 3)
-            main_layout.addWidget(queue_group)
+            left_layout.addWidget(queue_group)
 
             self.table = QtWidgets.QTableWidget(0, 11)
             self.table.setHorizontalHeaderLabels(
                 [
+                    "Status/Fehler",
+                    "Aktion",
                     "Eingabepfad",
                     "Name",
                     "Erkannte Konsole/Typ",
@@ -1324,10 +1477,8 @@ def run() -> int:
                     "Signale",
                     "Kandidaten",
                     "Geplantes Ziel",
-                    "Aktion",
-                    "Status/Fehler",
                     "Normalisierung",
-                    "Reason",
+                    "Grund",
                 ]
             )
             self.table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)
@@ -1350,7 +1501,7 @@ def run() -> int:
             except Exception:
                 pass
             self.table.resizeColumnsToContents()
-            main_layout.addWidget(self.table, 2)
+            right_layout.addWidget(self.table, 2)
 
             self.log_view = QtWidgets.QPlainTextEdit()
             self.log_view.setReadOnly(True)
@@ -1404,6 +1555,7 @@ def run() -> int:
             self.queue_pause_btn.clicked.connect(self._pause_jobs)
             self.queue_resume_btn.clicked.connect(self._resume_jobs)
             self.queue_clear_btn.clicked.connect(self._clear_job_queue)
+            self.igir_advanced_toggle.stateChanged.connect(self._on_igir_advanced_toggle)
 
             self.btn_source.clicked.connect(self._choose_source)
             self.btn_dest.clicked.connect(self._choose_dest)
@@ -1464,6 +1616,11 @@ def run() -> int:
             self.btn_open_overrides.clicked.connect(self._open_identification_overrides)
             self.theme_combo.currentTextChanged.connect(self._on_theme_changed)
             self.btn_db_manager.clicked.connect(self._open_db_manager)
+            self.log_visible_checkbox.stateChanged.connect(self._on_log_visible_changed)
+            self.remember_window_checkbox.stateChanged.connect(self._on_remember_window_changed)
+            self.drag_drop_checkbox.stateChanged.connect(self._on_drag_drop_changed)
+            self.default_mode_combo.currentTextChanged.connect(self._on_default_mode_changed)
+            self.default_conflict_combo.currentTextChanged.connect(self._on_default_conflict_changed)
             self.chk_console_folders.stateChanged.connect(self._on_sort_settings_changed)
             self.chk_region_subfolders.stateChanged.connect(self._on_sort_settings_changed)
             self.chk_preserve_structure.stateChanged.connect(self._on_sort_settings_changed)
@@ -1481,10 +1638,13 @@ def run() -> int:
             self._refresh_db_status()
             self._load_window_size()
             self._load_log_visibility()
+            self._load_general_settings_from_config()
             self._dashboard_timer = QtCore.QTimer(self)
             self._dashboard_timer.setInterval(600)
             self._dashboard_timer.timeout.connect(self._refresh_dashboard)
             self._dashboard_timer.start()
+            self._refresh_dashboard()
+            self._update_results_empty_state()
             self._refresh_dashboard()
             if show_external_tools:
                 self._probe_tools_async()
@@ -2263,6 +2423,16 @@ def run() -> int:
                 width = int(gui_cfg.get("window_width", 0) or 0)
                 height = int(gui_cfg.get("window_height", 0) or 0)
                 if width > 0 and height > 0:
+                    screen = self.screen() or QtWidgets.QApplication.primaryScreen()
+                    if screen is not None:
+                        available = screen.availableGeometry()
+                        if available.isValid():
+                            width = min(width, available.width())
+                            height = min(height, available.height())
+                    min_hint = self.minimumSizeHint()
+                    if min_hint.isValid():
+                        width = max(width, min_hint.width())
+                        height = max(height, min_hint.height())
                     self.resize(width, height)
             except Exception:
                 return
@@ -2273,10 +2443,92 @@ def run() -> int:
                 if not isinstance(cfg, dict):
                     return
                 gui_cfg = cfg.get("gui_settings", {}) or {}
-                visible = bool(gui_cfg.get("log_visible", True))
+                visible = bool(gui_cfg.get("log_visible", False))
                 self._set_log_visible(visible, persist=False)
             except Exception:
                 return
+
+        def _load_general_settings_from_config(self) -> None:
+            try:
+                cfg = load_config()
+                if not isinstance(cfg, dict):
+                    return
+                gui_cfg = cfg.get("gui_settings", {}) or {}
+
+                self.log_visible_checkbox.setChecked(bool(gui_cfg.get("log_visible", False)))
+                self.remember_window_checkbox.setChecked(bool(gui_cfg.get("remember_window_size", True)))
+                self.drag_drop_checkbox.setChecked(bool(gui_cfg.get("drag_drop_enabled", True)))
+
+                default_mode = str(gui_cfg.get("default_sort_mode") or "copy")
+                default_conflict = str(gui_cfg.get("default_conflict_policy") or "rename")
+                if self.default_mode_combo.findText(default_mode) >= 0:
+                    self.default_mode_combo.setCurrentText(default_mode)
+                if self.default_conflict_combo.findText(default_conflict) >= 0:
+                    self.default_conflict_combo.setCurrentText(default_conflict)
+                self._apply_default_sort_settings(default_mode, default_conflict)
+            except Exception:
+                return
+
+        def _update_gui_setting(self, key: str, value: object) -> None:
+            try:
+                cfg = load_config()
+                if not isinstance(cfg, dict):
+                    cfg = {}
+                gui_cfg = cfg.get("gui_settings", {}) or {}
+                gui_cfg[key] = value
+                cfg["gui_settings"] = gui_cfg
+                self._save_config_async(cfg)
+            except Exception:
+                return
+
+        def _apply_default_sort_settings(self, mode: str, conflict: str) -> None:
+            try:
+                if self.mode_combo.currentText() != mode:
+                    self.mode_combo.setCurrentText(mode)
+                if self.conflict_combo.currentText() != conflict:
+                    self.conflict_combo.setCurrentText(conflict)
+            except Exception:
+                return
+
+        def _on_log_visible_changed(self, _value: int) -> None:
+            self._set_log_visible(bool(self.log_visible_checkbox.isChecked()))
+
+        def _on_remember_window_changed(self, _value: int) -> None:
+            self._update_gui_setting("remember_window_size", bool(self.remember_window_checkbox.isChecked()))
+
+        def _on_drag_drop_changed(self, _value: int) -> None:
+            enabled = bool(self.drag_drop_checkbox.isChecked())
+            self._update_gui_setting("drag_drop_enabled", enabled)
+            self._set_drag_drop_enabled(enabled)
+
+        def _on_default_mode_changed(self, value: str) -> None:
+            mode = str(value or "").strip() or "copy"
+            self._update_gui_setting("default_sort_mode", mode)
+            self._apply_default_sort_settings(mode, self.default_conflict_combo.currentText())
+
+        def _on_default_conflict_changed(self, value: str) -> None:
+            conflict = str(value or "").strip() or "rename"
+            self._update_gui_setting("default_conflict_policy", conflict)
+            self._apply_default_sort_settings(self.default_mode_combo.currentText(), conflict)
+
+        def _set_drag_drop_enabled(self, enabled: bool) -> None:
+            widgets = [
+                self.source_edit,
+                self.dest_edit,
+                getattr(self, "dashboard_source_edit", None),
+                getattr(self, "dashboard_dest_edit", None),
+                getattr(self, "conversion_source_edit", None),
+                getattr(self, "conversion_dest_edit", None),
+                getattr(self, "igir_source_edit", None),
+                getattr(self, "igir_dest_edit", None),
+            ]
+            for widget in widgets:
+                if widget is None:
+                    continue
+                try:
+                    widget.setAcceptDrops(bool(enabled))
+                except Exception:
+                    pass
 
         def _save_window_size(self) -> None:
             try:
@@ -2456,30 +2708,33 @@ def run() -> int:
             self.hide_unknown_checkbox.setChecked(False)
             self._on_filters_changed()
 
-        def _get_selected_filter_values(self, widget: QtWidgets.QListWidget) -> list[str]:
-            selected = [item.text() for item in widget.selectedItems()]
+        def _get_selected_filter_values(self, widget: object) -> list[str]:
+            widget_list = cast(Any, widget)
+            selected = [item.text() for item in widget_list.selectedItems()]
             return selected if selected else ["All"]
 
-        def _select_filter_values(self, widget: QtWidgets.QListWidget, values: Iterable[str]) -> None:
-            widget.blockSignals(True)
-            widget.clearSelection()
+        def _select_filter_values(self, widget: object, values: Iterable[str]) -> None:
+            widget_list = cast(Any, widget)
+            widget_list.blockSignals(True)
+            widget_list.clearSelection()
             values_set = {str(v) for v in values if str(v)} or {"All"}
-            for idx in range(widget.count()):
-                item = widget.item(idx)
+            for idx in range(widget_list.count()):
+                item = widget_list.item(idx)
                 if item.text() in values_set:
                     item.setSelected(True)
-            if not widget.selectedItems():
-                for idx in range(widget.count()):
-                    item = widget.item(idx)
+            if not widget_list.selectedItems():
+                for idx in range(widget_list.count()):
+                    item = widget_list.item(idx)
                     if item.text() == "All":
                         item.setSelected(True)
                         break
-            widget.blockSignals(False)
+            widget_list.blockSignals(False)
 
-        def _enforce_all_exclusive(self, widget: QtWidgets.QListWidget) -> None:
-            selected = [item.text() for item in widget.selectedItems()]
+        def _enforce_all_exclusive(self, widget: object) -> None:
+            widget_list = cast(Any, widget)
+            selected = [item.text() for item in widget_list.selectedItems()]
             if "All" in selected and len(selected) > 1:
-                self._select_filter_values(widget, ["All"])
+                self._select_filter_values(widget_list, ["All"])
 
         def _get_filtered_scan_result(self) -> ScanResult:
             if self._scan_result is None:
@@ -2671,15 +2926,6 @@ def run() -> int:
         def _append_summary_row(self, report: SortReport) -> None:
             row = self.table.rowCount()
             self.table.insertRow(row)
-            self.table.setItem(row, 0, QtWidgets.QTableWidgetItem("(Summary)"))
-            self.table.setItem(row, 1, QtWidgets.QTableWidgetItem(""))
-            self.table.setItem(row, 2, QtWidgets.QTableWidgetItem(""))
-            self.table.setItem(row, 3, QtWidgets.QTableWidgetItem(""))
-            self.table.setItem(row, 4, QtWidgets.QTableWidgetItem(""))
-            self.table.setItem(row, 5, QtWidgets.QTableWidgetItem(""))
-            self.table.setItem(row, 6, QtWidgets.QTableWidgetItem(report.dest_path))
-            self.table.setItem(row, 7, QtWidgets.QTableWidgetItem(report.mode))
-
             text = (
                 f"Processed: {report.processed} | Copied: {report.copied} | Moved: {report.moved} | "
                 f"Skipped: {report.skipped} | Errors: {len(report.errors)} | Cancelled: {report.cancelled}"
@@ -2687,7 +2933,25 @@ def run() -> int:
             item = QtWidgets.QTableWidgetItem(text)
             if report.errors:
                 item.setToolTip("\n".join(report.errors))
-            self.table.setItem(row, 8, item)
+            self.table.setItem(row, 0, item)
+            self.table.setItem(row, 1, QtWidgets.QTableWidgetItem(report.mode))
+            self.table.setItem(row, 2, QtWidgets.QTableWidgetItem("(Summary)"))
+            self.table.setItem(row, 3, QtWidgets.QTableWidgetItem(""))
+            self.table.setItem(row, 4, QtWidgets.QTableWidgetItem(""))
+            self.table.setItem(row, 5, QtWidgets.QTableWidgetItem(""))
+            self.table.setItem(row, 6, QtWidgets.QTableWidgetItem(""))
+            self.table.setItem(row, 7, QtWidgets.QTableWidgetItem(""))
+            self.table.setItem(row, 8, QtWidgets.QTableWidgetItem(report.dest_path))
+            self.table.setItem(row, 9, QtWidgets.QTableWidgetItem(""))
+            self.table.setItem(row, 10, QtWidgets.QTableWidgetItem(""))
+
+        def _update_results_empty_state(self) -> None:
+            try:
+                has_rows = self.table.rowCount() > 0
+                self.results_empty_label.setVisible(not has_rows)
+                self.table.setVisible(has_rows)
+            except Exception:
+                return
 
         def _append_log(self, text: str) -> None:
             if not text:
@@ -2744,6 +3008,28 @@ def run() -> int:
                 return
             func()
 
+        def _job_int(self, value: object, default: int = 0) -> int:
+            if isinstance(value, bool):
+                return int(value)
+            if isinstance(value, (int, float)):
+                return int(value)
+            if isinstance(value, str):
+                text = value.strip()
+                if not text:
+                    return int(default)
+                try:
+                    return int(float(text))
+                except Exception:
+                    return int(default)
+            return int(default)
+
+        def _activate_main_tab(self) -> None:
+            try:
+                if hasattr(self, "tabs") and hasattr(self, "_tab_index_main"):
+                    self.tabs.setCurrentIndex(int(self._tab_index_main))
+            except Exception:
+                return
+
         def _enqueue_job(self, op: str, label: str, func, priority: int) -> None:
             self._job_counter += 1
             job = {
@@ -2755,7 +3041,12 @@ def run() -> int:
                 "func": func,
             }
             self._job_queue.append(job)
-            self._job_queue.sort(key=lambda item: (int(item.get("priority", 1)), int(item.get("id", 0))))
+            self._job_queue.sort(
+                key=lambda item: (
+                    self._job_int(item.get("priority", 1), 1),
+                    self._job_int(item.get("id", 0), 0),
+                )
+            )
             self._refresh_job_queue()
             self._maybe_start_next_job()
 
@@ -2798,10 +3089,10 @@ def run() -> int:
             try:
                 self.queue_list.clear()
                 for job in self._job_queue:
-                    priority = int(job.get("priority", 1))
+                    priority = self._job_int(job.get("priority", 1), 1)
                     label = str(job.get("label", "job"))
                     status = str(job.get("status", "queued"))
-                    pid = int(job.get("id", 0))
+                    pid = self._job_int(job.get("id", 0), 0)
                     prio_text = {0: "High", 1: "Normal", 2: "Low"}.get(priority, "Normal")
                     self.queue_list.addItem(f"#{pid} [{prio_text}] {label} - {status}")
             except Exception:
@@ -2825,6 +3116,13 @@ def run() -> int:
 
         def _toggle_log_visibility(self) -> None:
             self._set_log_visible(not self._log_visible)
+
+        def _on_igir_advanced_toggle(self, state: int) -> None:
+            self._set_igir_advanced_visible(state == QtCore.Qt.CheckState.Checked)
+
+        def _set_igir_advanced_visible(self, visible: bool) -> None:
+            if hasattr(self, "_igir_cfg_group"):
+                self._igir_cfg_group.setVisible(bool(visible))
 
         def _set_log_visible(self, visible: bool, persist: bool = True) -> None:
             self._log_visible = bool(visible)
@@ -2889,6 +3187,8 @@ def run() -> int:
             self._syncing_paths = True
             try:
                 self.source_edit.setText(text)
+                if hasattr(self, "dashboard_source_edit"):
+                    self.dashboard_source_edit.setText(text)
                 if hasattr(self, "conversion_source_edit"):
                     self.conversion_source_edit.setText(text)
                 if hasattr(self, "igir_source_edit"):
@@ -2902,6 +3202,8 @@ def run() -> int:
             self._syncing_paths = True
             try:
                 self.dest_edit.setText(text)
+                if hasattr(self, "dashboard_dest_edit"):
+                    self.dashboard_dest_edit.setText(text)
                 if hasattr(self, "conversion_dest_edit"):
                     self.conversion_dest_edit.setText(text)
                 if hasattr(self, "igir_dest_edit"):
@@ -2913,11 +3215,13 @@ def run() -> int:
             if self._syncing_paths:
                 return
             self._set_source_text(text)
+            self._refresh_dashboard()
 
         def _on_dest_text_changed(self, text: str) -> None:
             if self._syncing_paths:
                 return
             self._set_dest_text(text)
+            self._refresh_dashboard()
 
         def _open_destination(self) -> None:
             directory = self.dest_edit.text().strip()
@@ -2949,9 +3253,6 @@ def run() -> int:
             self.btn_execute.setEnabled(not running)
             self.btn_execute_convert.setEnabled(not running)
             self.btn_audit.setEnabled(not running)
-            self.btn_dash_scan.setEnabled(not running)
-            self.btn_dash_preview.setEnabled(not running)
-            self.btn_dash_execute.setEnabled(not running)
             self.btn_export_audit_csv.setEnabled(not running and self._audit_report is not None)
             self.btn_export_audit_json.setEnabled(not running and self._audit_report is not None)
             self.btn_export_scan_csv.setEnabled(not running and self._scan_result is not None)
@@ -2995,7 +3296,29 @@ def run() -> int:
             self.btn_clear_dat_cache.setEnabled(not running)
             if not running:
                 self._update_resume_buttons()
+            self._is_running = bool(running)
             self._refresh_dashboard()
+            self._update_quick_actions()
+
+        def _has_required_paths(self) -> bool:
+            source = self.source_edit.text().strip() if self.source_edit is not None else ""
+            dest = self.dest_edit.text().strip() if self.dest_edit is not None else ""
+            return bool(source and dest)
+
+        def _update_quick_actions(self) -> None:
+            ready = self._has_required_paths()
+            enabled = ready and not self._is_running
+            try:
+                self.btn_dash_scan.setEnabled(enabled)
+                self.btn_dash_preview.setEnabled(enabled)
+                self.btn_dash_execute.setEnabled(enabled)
+            except Exception:
+                pass
+            try:
+                if hasattr(self, "dashboard_path_hint"):
+                    self.dashboard_path_hint.setVisible(not ready)
+            except Exception:
+                pass
 
         def _refresh_dashboard(self) -> None:
             if not hasattr(self, "dashboard_status_label"):
@@ -3008,6 +3331,11 @@ def run() -> int:
             self.dashboard_dest_label.setText(dest or "-")
             self.dashboard_status_label.setText(status or "-")
             self.dashboard_dat_label.setText(dat_status or "-")
+            if hasattr(self, "main_source_label"):
+                self.main_source_label.setText(source or "-")
+            if hasattr(self, "main_dest_label"):
+                self.main_dest_label.setText(dest or "-")
+            self._update_quick_actions()
 
         def _sync_rebuild_controls(self, *, running: bool = False) -> None:
             try:
@@ -3102,6 +3430,8 @@ def run() -> int:
                 QtWidgets.QMessageBox.information(self, "Kein Sortierplan", "Bitte zuerst Vorschau ausführen.")
                 return
 
+            self._activate_main_tab()
+
             self._cancel_token = CancelToken()
             self.progress.setValue(0)
             self.status_label.setText("Starte…")
@@ -3110,6 +3440,7 @@ def run() -> int:
                 self._scan_result = None
                 self._sort_plan = None
                 self.table.setRowCount(0)
+                self._update_results_empty_state()
                 self.log_view.clear()
 
             signals = WorkerSignals()
@@ -3239,25 +3570,42 @@ def run() -> int:
                 self.status_label.setText("Scan läuft…")
                 self.progress.setRange(0, 100)
                 self.progress.setValue(0)
+                if hasattr(self, "dashboard_progress"):
+                    self.dashboard_progress.setRange(0, 100)
+                    self.dashboard_progress.setValue(0)
             elif phase == "plan":
                 self.status_label.setText("Plane…")
                 self.progress.setRange(0, max(1, int(total)))
                 self.progress.setValue(0)
+                if hasattr(self, "dashboard_progress"):
+                    self.dashboard_progress.setRange(0, max(1, int(total)))
+                    self.dashboard_progress.setValue(0)
             elif phase == "execute":
                 self.status_label.setText("Ausführen…")
                 self.progress.setRange(0, max(1, int(total)))
                 self.progress.setValue(0)
+                if hasattr(self, "dashboard_progress"):
+                    self.dashboard_progress.setRange(0, max(1, int(total)))
+                    self.dashboard_progress.setValue(0)
             elif phase == "audit":
                 self.status_label.setText("Prüfe Konvertierungen…")
                 self.progress.setRange(0, max(1, int(total)))
                 self.progress.setValue(0)
+                if hasattr(self, "dashboard_progress"):
+                    self.dashboard_progress.setRange(0, max(1, int(total)))
+                    self.dashboard_progress.setValue(0)
 
         def _on_progress(self, current: int, total: int) -> None:
             if total and total > 0:
                 self.progress.setRange(0, int(total))
                 self.progress.setValue(int(current))
+                if hasattr(self, "dashboard_progress"):
+                    self.dashboard_progress.setRange(0, int(total))
+                    self.dashboard_progress.setValue(int(current))
             else:
                 self.progress.setRange(0, 0)
+                if hasattr(self, "dashboard_progress"):
+                    self.dashboard_progress.setRange(0, 0)
 
         def _cleanup_thread(self) -> None:
             if self._thread is not None:
@@ -3281,28 +3629,6 @@ def run() -> int:
             self._table_items = list(scan.items)
             for row, item in enumerate(scan.items):
 
-                path_item = QtWidgets.QTableWidgetItem(str(item.input_path or ""))
-                self.table.setItem(row, 0, path_item)
-
-                name_item = QtWidgets.QTableWidgetItem(self._rom_display_name(item.input_path))
-                if item.input_path:
-                    name_item.setToolTip(str(item.input_path))
-                self.table.setItem(row, 1, name_item)
-
-                sys_item = QtWidgets.QTableWidgetItem(item.detected_system)
-                self.table.setItem(row, 2, sys_item)
-                conf_item = QtWidgets.QTableWidgetItem(self._format_confidence(item.detection_confidence))
-                try:
-                    source = str(item.detection_source or "-")
-                    exact = "ja" if getattr(item, "is_exact", False) else "nein"
-                    conf_item.setToolTip(f"Quelle: {source}\nExact: {exact}")
-                except Exception:
-                    pass
-                self.table.setItem(row, 3, conf_item)
-                self.table.setItem(row, 4, QtWidgets.QTableWidgetItem(self._format_signals(item)))
-                self.table.setItem(row, 5, QtWidgets.QTableWidgetItem(self._format_candidates(item)))
-                self.table.setItem(row, 6, QtWidgets.QTableWidgetItem(""))
-                self.table.setItem(row, 7, QtWidgets.QTableWidgetItem("scan"))
                 status_item = QtWidgets.QTableWidgetItem("found")
                 try:
                     source = str(item.detection_source or "-")
@@ -3317,7 +3643,31 @@ def run() -> int:
                         status_item.setForeground(QtGui.QBrush(QtGui.QColor("#b00020")))
                     except Exception:
                         pass
-                self.table.setItem(row, 8, status_item)
+                self.table.setItem(row, 0, status_item)
+
+                self.table.setItem(row, 1, QtWidgets.QTableWidgetItem("scan"))
+
+                path_item = QtWidgets.QTableWidgetItem(str(item.input_path or ""))
+                self.table.setItem(row, 2, path_item)
+
+                name_item = QtWidgets.QTableWidgetItem(self._rom_display_name(item.input_path))
+                if item.input_path:
+                    name_item.setToolTip(str(item.input_path))
+                self.table.setItem(row, 3, name_item)
+
+                sys_item = QtWidgets.QTableWidgetItem(item.detected_system)
+                self.table.setItem(row, 4, sys_item)
+                conf_item = QtWidgets.QTableWidgetItem(self._format_confidence(item.detection_confidence))
+                try:
+                    source = str(item.detection_source or "-")
+                    exact = "ja" if getattr(item, "is_exact", False) else "nein"
+                    conf_item.setToolTip(f"Quelle: {source}\nExact: {exact}")
+                except Exception:
+                    pass
+                self.table.setItem(row, 5, conf_item)
+                self.table.setItem(row, 6, QtWidgets.QTableWidgetItem(self._format_signals(item)))
+                self.table.setItem(row, 7, QtWidgets.QTableWidgetItem(self._format_candidates(item)))
+                self.table.setItem(row, 8, QtWidgets.QTableWidgetItem(""))
                 self.table.setItem(
                     row,
                     9,
@@ -3347,6 +3697,8 @@ def run() -> int:
             except Exception:
                 self.summary_label.setText("-")
 
+            self._update_results_empty_state()
+
         def _populate_plan_table(self, plan: SortPlan) -> None:
             try:
                 sorting_enabled = self.table.isSortingEnabled()
@@ -3361,22 +3713,22 @@ def run() -> int:
             self.table.setRowCount(len(plan.actions))
             self._table_items = []
             for row, act in enumerate(plan.actions):
+                self.table.setItem(row, 0, QtWidgets.QTableWidgetItem(act.error or act.status))
+                self.table.setItem(row, 1, QtWidgets.QTableWidgetItem(act.action))
 
                 path_item = QtWidgets.QTableWidgetItem(str(act.input_path or ""))
-                self.table.setItem(row, 0, path_item)
+                self.table.setItem(row, 2, path_item)
 
                 name_item = QtWidgets.QTableWidgetItem(self._rom_display_name(act.input_path))
                 if act.input_path:
                     name_item.setToolTip(str(act.input_path))
-                self.table.setItem(row, 1, name_item)
+                self.table.setItem(row, 3, name_item)
 
-                self.table.setItem(row, 2, QtWidgets.QTableWidgetItem(act.detected_system))
-                self.table.setItem(row, 3, QtWidgets.QTableWidgetItem(""))
-                self.table.setItem(row, 4, QtWidgets.QTableWidgetItem(""))
+                self.table.setItem(row, 4, QtWidgets.QTableWidgetItem(act.detected_system))
                 self.table.setItem(row, 5, QtWidgets.QTableWidgetItem(""))
-                self.table.setItem(row, 6, QtWidgets.QTableWidgetItem(act.planned_target_path or ""))
-                self.table.setItem(row, 7, QtWidgets.QTableWidgetItem(act.action))
-                self.table.setItem(row, 8, QtWidgets.QTableWidgetItem(act.error or act.status))
+                self.table.setItem(row, 6, QtWidgets.QTableWidgetItem(""))
+                self.table.setItem(row, 7, QtWidgets.QTableWidgetItem(""))
+                self.table.setItem(row, 8, QtWidgets.QTableWidgetItem(act.planned_target_path or ""))
                 self.table.setItem(
                     row,
                     9,
@@ -3404,6 +3756,8 @@ def run() -> int:
             except Exception:
                 self.summary_label.setText("-")
 
+            self._update_results_empty_state()
+
         def _populate_audit_table(self, report: ConversionAuditReport) -> None:
             try:
                 sorting_enabled = self.table.isSortingEnabled()
@@ -3418,31 +3772,31 @@ def run() -> int:
             self.table.setRowCount(len(report.items))
             self._table_items = []
             for row, item in enumerate(report.items):
+                suggestion = item.current_extension
+                if item.recommended_extension and item.recommended_extension != item.current_extension:
+                    suggestion = f"{item.current_extension} -> {item.recommended_extension}".strip()
+
+                action = "convert" if item.status == "should_convert" else "keep"
+                status = item.status
+                if item.reason:
+                    status = f"{status}: {item.reason}"
+
+                self.table.setItem(row, 0, QtWidgets.QTableWidgetItem(status))
+                self.table.setItem(row, 1, QtWidgets.QTableWidgetItem(action))
+
                 path_item = QtWidgets.QTableWidgetItem(str(item.input_path or ""))
-                self.table.setItem(row, 0, path_item)
+                self.table.setItem(row, 2, path_item)
 
                 name_item = QtWidgets.QTableWidgetItem(self._rom_display_name(item.input_path))
                 if item.input_path:
                     name_item.setToolTip(str(item.input_path))
-                self.table.setItem(row, 1, name_item)
+                self.table.setItem(row, 3, name_item)
 
-                self.table.setItem(row, 2, QtWidgets.QTableWidgetItem(item.detected_system))
-                self.table.setItem(row, 3, QtWidgets.QTableWidgetItem(""))
-                self.table.setItem(row, 4, QtWidgets.QTableWidgetItem(""))
+                self.table.setItem(row, 4, QtWidgets.QTableWidgetItem(item.detected_system))
                 self.table.setItem(row, 5, QtWidgets.QTableWidgetItem(""))
-
-                suggestion = item.current_extension
-                if item.recommended_extension and item.recommended_extension != item.current_extension:
-                    suggestion = f"{item.current_extension} -> {item.recommended_extension}".strip()
-                self.table.setItem(row, 6, QtWidgets.QTableWidgetItem(suggestion))
-
-                action = "convert" if item.status == "should_convert" else "keep"
-                self.table.setItem(row, 7, QtWidgets.QTableWidgetItem(action))
-
-                status = item.status
-                if item.reason:
-                    status = f"{status}: {item.reason}"
-                self.table.setItem(row, 8, QtWidgets.QTableWidgetItem(status))
+                self.table.setItem(row, 6, QtWidgets.QTableWidgetItem(""))
+                self.table.setItem(row, 7, QtWidgets.QTableWidgetItem(""))
+                self.table.setItem(row, 8, QtWidgets.QTableWidgetItem(suggestion))
                 self.table.setItem(row, 9, QtWidgets.QTableWidgetItem("-"))
                 self.table.setItem(row, 10, QtWidgets.QTableWidgetItem(item.reason or ""))
 
@@ -3460,15 +3814,17 @@ def run() -> int:
             except Exception:
                 self.summary_label.setText("-")
 
+            self._update_results_empty_state()
+
         def _on_action_status(self, row_index: int, status: str) -> None:
             try:
                 row = int(row_index)
                 if row < 0 or row >= self.table.rowCount():
                     return
-                existing = self.table.item(row, 8)
+                existing = self.table.item(row, 0)
                 if existing is None:
                     existing = QtWidgets.QTableWidgetItem(str(status))
-                    self.table.setItem(row, 8, existing)
+                    self.table.setItem(row, 0, existing)
                 else:
                     existing.setText(str(status))
 
@@ -3696,6 +4052,7 @@ def run() -> int:
                     raise RuntimeError("Execute worker returned unexpected payload")
                 self.status_label.setText("Abgebrochen" if payload.cancelled else "Fertig")
                 self._append_summary_row(payload)
+                self._update_results_empty_state()
                 QtWidgets.QMessageBox.information(
                     self,
                     "Fertig",
@@ -3725,6 +4082,7 @@ def run() -> int:
             self._cleanup_thread()
             self._set_running(False)
             self.status_label.setText("Error")
+            self._set_log_visible(True, persist=False)
             QtWidgets.QMessageBox.critical(self, "Arbeitsfehler", f"{message}\n\n{tb}")
             if self._current_op:
                 self._complete_job(self._current_op)

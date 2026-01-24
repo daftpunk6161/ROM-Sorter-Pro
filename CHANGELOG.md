@@ -8,6 +8,16 @@ und dieses Projekt verwendet [Semantic Versioning](https://semver.org/lang/de/).
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Fixed
+
+### Security
+
+## [2.1.8] - 2026-01-24
+
+### Added
 - Golden-Fixture-Test für Sortierplan (Basis für Regression-Suite).
 
 ### Changed
@@ -27,8 +37,9 @@ und dieses Projekt verwendet [Semantic Versioning](https://semver.org/lang/de/).
 - GUI Job-System: Queue (mit Priorität), Pause/Resume und Live-Log-Filter (Qt/Tk).
 - Hash-Cache berücksichtigt jetzt Pfad+mtime+Größe; IO-Throttling für große Dateien; SQLite-Pragmas weiter getunt.
 - Rebuilder-Modus (Copy-only) im UI und Frontend-Exporte (EmulationStation/LaunchBox) aus Sort-Plan.
+- Filter sind im Arbeitsbereich integriert; IGIR-Tab vereinfacht mit „Erweitert anzeigen“.
 
 ### Fixed
-
+- Qt-UI Typing-Anmerkungen bereinigt, um Pylance Fehler zu vermeiden.
 
 ### Security
