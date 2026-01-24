@@ -626,7 +626,7 @@ class TkMVPApp:
         self.progress = ttk.Progressbar(outer, orient=tk.HORIZONTAL, mode="determinate")
         self.progress.pack(fill=tk.X, pady=(10, 0))
 
-        self.status_var = tk.StringVar(value="Bereit")
+        self.status_var = tk.StringVar(value="Bereit (Tk)")
         self.status_label = ttk.Label(outer, textvariable=self.status_var)
         self.status_label.pack(anchor="w", pady=(6, 0))
 

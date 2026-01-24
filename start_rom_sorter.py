@@ -38,6 +38,26 @@ def _load_version() -> str:
     except Exception:
         return "2.1.8"
 
+
+def gui_smoke(backend: str | None = None) -> str:
+    """Validate GUI backend selection without launching the GUI."""
+    from src.ui.compat import select_backend
+
+    selected = select_backend(backend)
+    if selected == "qt":
+        from src.ui.mvp import qt_app  # noqa: F401
+
+        if not hasattr(qt_app, "run"):
+            raise RuntimeError("Qt app entry not found")
+    elif selected == "tk":
+        from src.ui.mvp import tk_app  # noqa: F401
+
+        if not hasattr(tk_app, "run"):
+            raise RuntimeError("Tk app entry not found")
+    else:
+        raise RuntimeError(f"Unsupported GUI backend: {selected}")
+    return selected
+
 def check_environment():
     """Checks the runtime environment."""
     # Check Python version
@@ -83,6 +103,7 @@ def parse_arguments():
     parser.add_argument("--qt", action="store_true", help="Force Qt GUI backend")
     parser.add_argument("--tk", action="store_true", help="Force Tk GUI backend")
     parser.add_argument("--version", action="store_true", help="Show version information")
+    parser.add_argument("--gui-smoke", action="store_true", help="Validate GUI backend without launching UI")
     parser.add_argument("--debug", action="store_true", help="Enable debug mode")
 
     return parser.parse_args()
@@ -102,6 +123,21 @@ def main() -> int:
         print(f"ROM Sorter Pro v{_load_version()}")
         print("Copyright (c) 2025")
         return 0
+
+    if args.gui_smoke:
+        try:
+            backend = args.backend
+            if args.qt:
+                backend = "qt"
+            elif args.tk:
+                backend = "tk"
+            selected = gui_smoke(backend)
+            print(f"GUI smoke ok ({selected})")
+            return 0
+        except Exception as e:
+            logger.error("GUI smoke failed: %s", e)
+            print(f"GUI smoke failed: {e}")
+            return 1
 
     if args.debug:
         logging.getLogger().setLevel(logging.DEBUG)

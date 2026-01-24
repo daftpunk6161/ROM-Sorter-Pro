@@ -5,6 +5,7 @@ Diese Dokumentation beschreibt den aktuellen MVP‑Stand des GUI‑Flows.
 ## 1) Start & Backend
 
 - Start: `python start_rom_sorter.py --gui`
+- GUI‑Smoke (ohne UI‑Start): `python start_rom_sorter.py --gui-smoke`
 - Backendwahl:
   - `--backend qt` oder `--backend tk`
   - Kurzformen: `--qt` / `--tk`
@@ -190,6 +191,7 @@ Empfohlene Tests:
 - `dev/tests/test_mvp_rebuilder_mode.py`
 - `dev/tests/test_mvp_golden_fixtures.py`
 - `dev/tests/test_mvp_start_version.py`
+- `dev/tests/test_mvp_gui_smoke.py`
 
 ## 9.1) GUI‑Threading (Kurzüberblick)
 

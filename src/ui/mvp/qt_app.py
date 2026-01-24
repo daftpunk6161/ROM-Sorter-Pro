@@ -1232,7 +1232,7 @@ def run() -> int:
             self.progress.setValue(0)
             main_layout.addWidget(self.progress)
 
-            self.status_label = QtWidgets.QLabel("Bereit")
+            self.status_label = QtWidgets.QLabel(f"Bereit ({binding})")
             main_layout.addWidget(self.status_label)
 
             self.summary_label = QtWidgets.QLabel("-")

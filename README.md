@@ -8,6 +8,7 @@ MVP‑fokussiertes ROM‑Sortier‑Tool mit stabiler GUI (Qt bevorzugt, Tk als F
   - Backend wählen: `--backend qt` oder `--backend tk`
   - Kurzformen: `--qt` / `--tk`
   - Env‑Override: `ROM_SORTER_GUI_BACKEND=qt|tk`
+  - Smoke‑Check ohne UI‑Start: `python start_rom_sorter.py --gui-smoke`
 - **Installation**: `python install_dependencies.py`
 
 GUI‑Abhängigkeiten (Qt bevorzugt):
