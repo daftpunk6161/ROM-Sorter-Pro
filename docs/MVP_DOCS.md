@@ -195,7 +195,7 @@ Legacy‑Code, alte Tools und Runtime‑Artefakte liegen in `_archive/`.
 
 ## 12) Datenbank (Entrypoints)
 
-Siehe [docs/DB_ENTRYPOINTS.md](docs/DB_ENTRYPOINTS.md) für die empfohlenen DB‑Routen.
+Siehe [DB_ENTRYPOINTS.md](DB_ENTRYPOINTS.md) für die empfohlenen DB‑Routen.
 
 ## 11) Troubleshooting (Kurz)
 
