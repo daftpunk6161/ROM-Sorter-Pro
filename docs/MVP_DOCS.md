@@ -192,6 +192,7 @@ Empfohlene Tests:
 - `dev/tests/test_mvp_golden_fixtures.py`
 - `dev/tests/test_mvp_start_version.py`
 - `dev/tests/test_mvp_gui_smoke.py`
+- `dev/tests/test_mvp_execute_dry_run_no_tools.py`
 
 ## 9.1) GUI‑Threading (Kurzüberblick)
 

@@ -46,6 +46,7 @@
 - `pytest -q dev/tests/test_mvp_lang_version_parsing.py`
 - `pytest -q dev/tests/test_mvp_start_version.py`
 - `pytest -q dev/tests/test_mvp_gui_smoke.py`
+- `pytest -q dev/tests/test_mvp_execute_dry_run_no_tools.py`
 
 ## Security Invariants
 - Writes nur unter dest-root (temp/output eingeschlossen)
