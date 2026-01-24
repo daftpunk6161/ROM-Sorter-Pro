@@ -83,6 +83,17 @@ from .model_utils import (
 )
 
 
+def _load_version() -> str:
+    config_path = Path(__file__).resolve().parents[3] / "src" / "config.json"
+    try:
+        data = json.loads(config_path.read_text(encoding="utf-8"))
+        meta = data.get("_metadata", {}) if isinstance(data, dict) else {}
+        version = str(meta.get("version") or "").strip()
+        return version or "2.1.8"
+    except Exception:
+        return "2.1.8"
+
+
 class _ToolTip:
     def __init__(self, widget: tk.Widget, text: str) -> None:
         self._widget = widget
@@ -125,7 +136,7 @@ class _ToolTip:
 class TkMVPApp:
     def __init__(self):
         self.root = tk.Tk()
-        self.root.title("ROM Sorter Pro - MVP GUI")
+        self.root.title(f"ROM Sorter Pro v{_load_version()} - MVP GUI")
         self.root.geometry("900x600")
         self.root.minsize(800, 500)
 

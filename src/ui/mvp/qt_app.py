@@ -31,6 +31,17 @@ from pathlib import Path
 from typing import Iterable, List, Optional, cast
 
 
+def _load_version() -> str:
+    config_path = Path(__file__).resolve().parents[3] / "src" / "config.json"
+    try:
+        data = json.loads(config_path.read_text(encoding="utf-8"))
+        meta = data.get("_metadata", {}) if isinstance(data, dict) else {}
+        version = str(meta.get("version") or "").strip()
+        return version or "2.1.8"
+    except Exception:
+        return "2.1.8"
+
+
 def _load_qt():
     """Load a Qt binding and return (QtWidgets, QtCore, QtGui, binding_name)."""
 
@@ -677,7 +688,7 @@ def run() -> int:
         def __init__(self):
             super().__init__()
 
-            self.setWindowTitle("ROM Sorter Pro - MVP GUI")
+            self.setWindowTitle(f"ROM Sorter Pro v{_load_version()} - MVP GUI")
             self.resize(1100, 700)
 
             self._cancel_token = CancelToken()
