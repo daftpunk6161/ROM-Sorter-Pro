@@ -53,6 +53,9 @@ Empfohlene MVP‑Tests:
 - `dev/tests/test_mvp_execute_cancel_mid_copy.py`
 - `dev/tests/test_mvp_security_paths.py`
 - `dev/tests/test_mvp_lang_version_parsing.py`
+- `dev/tests/test_mvp_igir_gates.py`
+- `dev/tests/test_mvp_identify_rules.py`
+- `dev/tests/test_mvp_dat_index.py`
 
 ## 📄 Lizenz
 
