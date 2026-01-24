@@ -268,8 +268,11 @@ def load_platform_formats() -> List[Dict[str, Any]]:
 
 
 def load_converters() -> List[Dict[str, Any]]:
-    raw_data = _load_yaml_or_json(_converters_path())
+    converters_path = _converters_path()
+    raw_data = _load_yaml_or_json(converters_path)
     if raw_data is None:
+        if converters_path.exists():
+            return []
         converters = _load_converters_from_config()
         _write_converters_file(converters)
         return converters
