@@ -24,7 +24,7 @@ pip install -r requirements-gui.txt
 - **DAT‑Matching** mit Cache und Auto‑Load‑Toggle
 - **External Tools**: wud2app / wudcompress (konfigurierbar)
 
-Details: [MVP_DOCS.md](MVP_DOCS.md)
+Details: [docs/MVP_DOCS.md](docs/MVP_DOCS.md)
 
 ## 🤝 Contributing / Help
 - [CONTRIBUTING.md](CONTRIBUTING.md)
