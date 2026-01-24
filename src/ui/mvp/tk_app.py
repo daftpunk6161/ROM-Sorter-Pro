@@ -22,10 +22,9 @@ import re
 import subprocess
 import sys
 import json
-import csv
 from pathlib import Path
 from queue import Queue, Empty
-from typing import Any, Callable, Dict, Optional, Tuple
+from typing import Any, Callable, Optional, Tuple
 
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
@@ -34,19 +33,24 @@ from tkinter import font as tkfont
 from ...app.api import (
     CancelToken,
     ConversionAuditReport,
+    DatSourceReport,
     ScanItem,
     ScanResult,
     SortPlan,
     SortReport,
     audit_conversion_candidates,
+    analyze_dat_sources,
     build_dat_index,
     execute_sort,
     filter_scan_items,
+    get_dat_sources,
     infer_languages_and_version_from_name,
     infer_region_from_name,
     load_sort_resume_state,
+    normalize_input,
     plan_sort,
     run_scan,
+    save_dat_sources,
 )
 from ...config.io import load_config, save_config
 from ...core.dat_index_sqlite import DatIndexSqlite
@@ -65,7 +69,9 @@ from .export_utils import (
     plan_report_to_dict,
     scan_report_to_dict,
     write_audit_csv,
+    write_emulationstation_gamelist,
     write_json,
+    write_launchbox_csv,
     write_plan_csv,
     write_scan_csv,
 )
@@ -147,6 +153,7 @@ class TkMVPApp:
         self.igir_status_var = tk.StringVar(value="IGIR nicht geprüft.")
         self.mode_var = tk.StringVar(value="copy")
         self.conflict_var = tk.StringVar(value="rename")
+        self.rebuild_var = tk.BooleanVar(value=False)
         self.lang_filter_var = tk.StringVar(value="All")
         self.ver_filter_var = tk.StringVar(value="All")
         self.region_filter_var = tk.StringVar(value="All")
@@ -167,10 +174,19 @@ class TkMVPApp:
         self._igir_cancel_token = CancelToken()
         self._igir_thread: Optional[threading.Thread] = None
         self._igir_plan_ready = False
+        self._igir_diff_csv: Optional[str] = None
+        self._igir_diff_json: Optional[str] = None
+        self._igir_selected_template: Optional[str] = None
+        self._igir_selected_profile: Optional[str] = None
+        self.igir_copy_first_var = tk.BooleanVar(value=False)
         self._dat_index_thread: Optional[threading.Thread] = None
         self._dat_index_cancel_token: Optional[CancelToken] = None
 
         self._build_ui()
+        try:
+            self.log_filter_var.trace_add("write", lambda *_args: self._apply_log_filter())
+        except Exception:
+            pass
         try:
             self.btn_show_details.configure(text="ⓘ", width=3)
         except Exception:
@@ -178,6 +194,15 @@ class TkMVPApp:
         self._details_tooltip = _ToolTip(self.btn_show_details, "Details öffnen")
         self._log_buffer: list[str] = []
         self._log_flush_scheduled = False
+        self._log_history: list[str] = []
+        self._log_filter_text = ""
+        self._job_queue: list[dict] = []
+        self._job_active: Optional[dict] = None
+        self._job_paused = False
+        self._job_counter = 0
+        self.queue_mode_var = tk.BooleanVar(value=False)
+        self.queue_priority_var = tk.StringVar(value="Normal")
+        self._current_op: Optional[str] = None
         self._install_log_handler()
         self._apply_theme(self._theme_manager.get_theme())
         self._load_window_size()
@@ -247,15 +272,24 @@ class TkMVPApp:
             state="readonly",
         )
         self.conflict_combo.grid(row=4, column=1, sticky="w", pady=(6, 0))
+        self.rebuild_check = ttk.Checkbutton(
+            grid,
+            text="Rebuilder-Modus (Copy-only, Konflikte überspringen)",
+            variable=self.rebuild_var,
+            command=self._on_rebuild_toggle,
+        )
+        self.rebuild_check.grid(row=4, column=2, sticky="w", pady=(6, 0), padx=(6, 0))
 
         ttk.Label(grid, text="Sprachfilter:").grid(row=5, column=0, sticky="w", pady=(6, 0))
-        self.lang_filter_combo = ttk.Combobox(
+        self.lang_filter_list = tk.Listbox(
             grid,
-            textvariable=self.lang_filter_var,
-            values=("All",),
-            state="readonly",
+            height=4,
+            exportselection=False,
+            selectmode="extended",
         )
-        self.lang_filter_combo.grid(row=5, column=1, sticky="w", pady=(6, 0))
+        self.lang_filter_list.insert("end", "All")
+        self.lang_filter_list.grid(row=5, column=1, sticky="ew", pady=(6, 0))
+        ttk.Label(grid, text="Mehrfach: Strg/Shift").grid(row=5, column=2, sticky="w", pady=(6, 0))
 
         ttk.Label(grid, text="Versionsfilter:").grid(row=6, column=0, sticky="w", pady=(6, 0))
         self.ver_filter_combo = ttk.Combobox(
@@ -267,13 +301,15 @@ class TkMVPApp:
         self.ver_filter_combo.grid(row=6, column=1, sticky="w", pady=(6, 0))
 
         ttk.Label(grid, text="Regionsfilter:").grid(row=7, column=0, sticky="w", pady=(6, 0))
-        self.region_filter_combo = ttk.Combobox(
+        self.region_filter_list = tk.Listbox(
             grid,
-            textvariable=self.region_filter_var,
-            values=("All",),
-            state="readonly",
+            height=4,
+            exportselection=False,
+            selectmode="extended",
         )
-        self.region_filter_combo.grid(row=7, column=1, sticky="w", pady=(6, 0))
+        self.region_filter_list.insert("end", "All")
+        self.region_filter_list.grid(row=7, column=1, sticky="ew", pady=(6, 0))
+        ttk.Label(grid, text="Mehrfach: Strg/Shift").grid(row=7, column=2, sticky="w", pady=(6, 0))
 
         ttk.Label(grid, text="Erweiterungsfilter:").grid(row=8, column=0, sticky="w", pady=(6, 0))
         self.extension_entry = ttk.Entry(grid, textvariable=self.extension_filter_var)
@@ -320,9 +356,9 @@ class TkMVPApp:
         self.btn_clear_filters = ttk.Button(grid, text="Filter zurücksetzen", command=self._clear_filters)
         self.btn_clear_filters.grid(row=12, column=1, sticky="w", pady=(6, 0))
 
-        self.lang_filter_combo.bind("<<ComboboxSelected>>", self._on_filters_changed)
+        self.lang_filter_list.bind("<<ListboxSelect>>", self._on_filter_listbox_changed)
         self.ver_filter_combo.bind("<<ComboboxSelected>>", self._on_filters_changed)
-        self.region_filter_combo.bind("<<ComboboxSelected>>", self._on_filters_changed)
+        self.region_filter_list.bind("<<ListboxSelect>>", self._on_filter_listbox_changed)
         self.extension_entry.bind("<KeyRelease>", self._on_filters_changed)
         self.min_size_entry.bind("<KeyRelease>", self._on_filters_changed)
         self.max_size_entry.bind("<KeyRelease>", self._on_filters_changed)
@@ -448,6 +484,16 @@ class TkMVPApp:
             text="Plan JSON exportieren",
             command=self._export_plan_json,
         )
+        self.btn_export_frontend_es = ttk.Button(
+            conversions_row_bottom,
+            text="Frontend ES exportieren",
+            command=self._export_frontend_es,
+        )
+        self.btn_export_frontend_launchbox = ttk.Button(
+            conversions_row_bottom,
+            text="Frontend LaunchBox exportieren",
+            command=self._export_frontend_launchbox,
+        )
         def _safe_pack(widget: ttk.Widget, *, side=tk.LEFT, padx=(0, 0)) -> None:
             try:
                 if widget.master is not conversions_row_bottom:
@@ -465,6 +511,8 @@ class TkMVPApp:
         _safe_pack(self.btn_export_scan_json, padx=(8, 0))
         _safe_pack(self.btn_export_plan_csv, padx=(16, 0))
         _safe_pack(self.btn_export_plan_json, padx=(8, 0))
+        _safe_pack(self.btn_export_frontend_es, padx=(16, 0))
+        _safe_pack(self.btn_export_frontend_launchbox, padx=(8, 0))
         _safe_pack(self.btn_resume, padx=(8, 0))
         _safe_pack(self.btn_retry_failed, padx=(8, 0))
         _safe_pack(self.btn_cancel, padx=(8, 0))
@@ -497,8 +545,28 @@ class TkMVPApp:
         igir_args_hint = ttk.Label(igir_cfg, text="Eine Zeile pro Argument. Nutze {input} und {output_dir}.")
         igir_args_hint.grid(row=2, column=1, sticky="w", padx=6)
 
+        ttk.Label(igir_cfg, text="Template übernehmen:").grid(row=3, column=0, sticky="w", pady=(6, 0))
+        self.igir_template_combo = ttk.Combobox(igir_cfg, state="readonly", values=("-",))
+        self.igir_template_combo.grid(row=3, column=1, sticky="w", padx=6, pady=(6, 0))
+        self.btn_igir_apply_template = ttk.Button(
+            igir_cfg, text="Template übernehmen", command=self._apply_igir_template
+        )
+        self.btn_igir_apply_template.grid(row=3, column=2, padx=(0, 6), pady=(6, 0), sticky="w")
+
+        ttk.Label(igir_cfg, text="Profil:").grid(row=4, column=0, sticky="w", pady=(6, 0))
+        self.igir_profile_combo = ttk.Combobox(igir_cfg, state="readonly", values=("-",))
+        self.igir_profile_combo.grid(row=4, column=1, sticky="w", padx=6, pady=(6, 0))
+        self.btn_igir_apply_profile = ttk.Button(
+            igir_cfg, text="Profil aktivieren", command=self._apply_igir_profile
+        )
+        self.btn_igir_apply_profile.grid(row=4, column=2, padx=(0, 6), pady=(6, 0), sticky="w")
+
+        ttk.Label(igir_cfg, text="Templates:").grid(row=5, column=0, sticky="nw", pady=(6, 0))
+        self.igir_templates_text = tk.Text(igir_cfg, height=6, width=50, state="disabled")
+        self.igir_templates_text.grid(row=5, column=1, sticky="ew", padx=6, pady=(6, 0))
+
         self.igir_status_label = ttk.Label(igir_cfg, textvariable=self.igir_status_var)
-        self.igir_status_label.grid(row=3, column=0, columnspan=4, sticky="w", pady=(6, 0))
+        self.igir_status_label.grid(row=6, column=0, columnspan=4, sticky="w", pady=(6, 0))
 
         igir_paths = ttk.LabelFrame(igir_tab, text="Ausführen", padding=6)
         igir_paths.pack(fill=tk.X, pady=(0, 10))
@@ -528,6 +596,21 @@ class TkMVPApp:
         self.btn_igir_plan.pack(side=tk.LEFT)
         self.btn_igir_execute.pack(side=tk.LEFT, padx=(8, 0))
         self.btn_igir_cancel.pack(side=tk.LEFT, padx=(8, 0))
+        self.igir_copy_first_check = ttk.Checkbutton(
+            igir_row,
+            text="Copy-first (Staging)",
+            variable=self.igir_copy_first_var,
+        )
+        self.igir_copy_first_check.pack(side=tk.LEFT, padx=(8, 0))
+        self.btn_igir_open_diff_csv = ttk.Button(
+            igir_row, text="Diff CSV öffnen", command=lambda: self._open_igir_diff(self._igir_diff_csv)
+        )
+        self.btn_igir_open_diff_csv.pack(side=tk.LEFT, padx=(8, 0))
+        self.btn_igir_open_diff_json = ttk.Button(
+            igir_row, text="Diff JSON öffnen", command=lambda: self._open_igir_diff(self._igir_diff_json)
+        )
+        self.btn_igir_open_diff_json.pack(side=tk.LEFT, padx=(8, 0))
+        self._update_igir_diff_buttons()
 
         self.progress = ttk.Progressbar(outer, orient=tk.HORIZONTAL, mode="determinate")
         self.progress.pack(fill=tk.X, pady=(10, 0))
@@ -539,6 +622,35 @@ class TkMVPApp:
         self.summary_var = tk.StringVar(value="-")
         self.summary_label = ttk.Label(outer, textvariable=self.summary_var)
         self.summary_label.pack(anchor="w", pady=(2, 0))
+
+        queue_frame = ttk.LabelFrame(outer, text="Jobs")
+        queue_frame.pack(fill=tk.X, pady=(6, 0))
+        queue_controls = ttk.Frame(queue_frame)
+        queue_controls.pack(fill=tk.X, padx=6, pady=(4, 2))
+        ttk.Label(queue_controls, text="Priorität:").pack(side=tk.LEFT)
+        self.queue_priority_combo = ttk.Combobox(
+            queue_controls,
+            textvariable=self.queue_priority_var,
+            values=("Normal", "High", "Low"),
+            state="readonly",
+            width=10,
+        )
+        self.queue_priority_combo.pack(side=tk.LEFT, padx=(4, 8))
+        self.queue_mode_check = ttk.Checkbutton(queue_controls, text="Queue mode", variable=self.queue_mode_var)
+        self.queue_mode_check.pack(side=tk.LEFT)
+        self.queue_pause_btn = ttk.Button(queue_controls, text="Pause", command=self._pause_jobs)
+        self.queue_pause_btn.pack(side=tk.LEFT, padx=(8, 0))
+        self.queue_resume_btn = ttk.Button(queue_controls, text="Resume", command=self._resume_jobs)
+        self.queue_resume_btn.pack(side=tk.LEFT, padx=(4, 0))
+        self.queue_clear_btn = ttk.Button(queue_controls, text="Clear", command=self._clear_job_queue)
+        self.queue_clear_btn.pack(side=tk.LEFT, padx=(4, 0))
+
+        self.queue_list = tk.Listbox(queue_frame, height=3)
+        self.queue_list.pack(fill=tk.X, padx=6, pady=(0, 6))
+        try:
+            self.queue_resume_btn.configure(state="disabled")
+        except Exception:
+            pass
 
         self.dat_status_var = tk.StringVar(value="DAT: -")
 
@@ -566,6 +678,12 @@ class TkMVPApp:
         self.btn_cancel_dat = ttk.Button(dat_controls, text="DAT Abbrechen", command=self._cancel_dat_index)
         self.btn_cancel_dat.configure(state="disabled")
         self.btn_cancel_dat.pack(side=tk.LEFT, padx=(8, 0))
+        self.btn_manage_dat = ttk.Button(dat_controls, text="DAT Quellen…", command=self._open_dat_sources_dialog)
+        self.btn_manage_dat.pack(side=tk.LEFT, padx=(8, 0))
+        self.btn_open_overrides = ttk.Button(
+            dat_controls, text="Mapping Overrides öffnen", command=self._open_identification_overrides
+        )
+        self.btn_open_overrides.pack(side=tk.LEFT, padx=(8, 0))
         self.dat_auto_load_var = tk.BooleanVar(value=False)
         self.dat_auto_load_check = ttk.Checkbutton(
             dat_controls,
@@ -587,6 +705,7 @@ class TkMVPApp:
             ("confidence", "Sicherheit", 110, 140),
             ("signals", "Signale", 160, 220),
             ("candidates", "Kandidaten", 160, 220),
+            ("normalization", "Normalisierung", 200, 320),
             ("reason", "Grund", 160, 220),
             ("target", "Geplantes Ziel", 280, 520),
             ("action", "Aktion", 90, 140),
@@ -602,6 +721,7 @@ class TkMVPApp:
                 "confidence",
                 "signals",
                 "candidates",
+                "normalization",
                 "reason",
                 "target",
                 "action",
@@ -655,6 +775,11 @@ class TkMVPApp:
         log_header = ttk.Frame(self.log_frame)
         log_header.pack(fill=tk.X)
         ttk.Label(log_header, text="Log").pack(side=tk.LEFT, pady=(0, 4))
+        self.log_filter_var = tk.StringVar(value="")
+        self.log_filter_entry = ttk.Entry(log_header, textvariable=self.log_filter_var, width=20)
+        self.log_filter_entry.pack(side=tk.LEFT, padx=(8, 0))
+        self.log_filter_clear_btn = ttk.Button(log_header, text="Filter löschen", command=lambda: self.log_filter_var.set(""))
+        self.log_filter_clear_btn.pack(side=tk.LEFT, padx=(4, 0))
         self.log_toggle_btn = ttk.Button(log_header, text="Log ausblenden", command=self._toggle_log)
         self.log_toggle_btn.pack(side=tk.RIGHT)
         self.log_frame.pack(fill=tk.BOTH, expand=False, padx=10, pady=(6, 8))
@@ -866,6 +991,7 @@ class TkMVPApp:
         data.setdefault("args_templates", {})
         if isinstance(data.get("args_templates"), dict):
             data["args_templates"]["execute"] = self._get_igir_args_list()
+        data["copy_first"] = bool(self.igir_copy_first_var.get())
         return data
 
     def _load_igir_settings_from_config(self) -> None:
@@ -895,13 +1021,143 @@ class TkMVPApp:
                     self.igir_args_text.insert("1.0", "\n".join(args))
             except Exception:
                 pass
+            templates = data.get("templates") or {}
+            self._igir_templates = templates if isinstance(templates, dict) else {}
+            template_names = ["-"]
+            if isinstance(self._igir_templates, dict):
+                template_names.extend(sorted(self._igir_templates.keys()))
+            try:
+                self.igir_template_combo.configure(values=tuple(template_names))
+                self.igir_template_combo.set("-")
+            except Exception:
+                pass
+            profiles = data.get("profiles") or {}
+            self._igir_profiles = profiles if isinstance(profiles, dict) else {}
+            profile_names = ["-"]
+            if isinstance(self._igir_profiles, dict):
+                profile_names.extend(sorted(self._igir_profiles.keys()))
+            try:
+                self.igir_profile_combo.configure(values=tuple(profile_names))
+                active_profile = str(data.get("active_profile") or "").strip()
+                if active_profile:
+                    self.igir_profile_combo.set(active_profile)
+                    self._igir_selected_profile = active_profile
+                else:
+                    self.igir_profile_combo.set("-")
+            except Exception:
+                pass
+            templates_text = ""
+            if isinstance(templates, dict):
+                blocks = []
+                for name, spec in templates.items():
+                    if not isinstance(spec, dict):
+                        continue
+                    plan = spec.get("plan") or []
+                    execute = spec.get("execute") or []
+                    if isinstance(plan, str):
+                        plan = [plan]
+                    if isinstance(execute, str):
+                        execute = [execute]
+                    blocks.append(
+                        "\n".join(
+                            [
+                                f"[{name}]",
+                                "plan:",
+                                *[f"  {arg}" for arg in plan],
+                                "execute:",
+                                *[f"  {arg}" for arg in execute],
+                            ]
+                        )
+                    )
+                templates_text = "\n\n".join(blocks)
+            try:
+                self.igir_templates_text.configure(state="normal")
+                self.igir_templates_text.delete("1.0", "end")
+                if templates_text:
+                    self.igir_templates_text.insert("1.0", templates_text)
+                self.igir_templates_text.configure(state="disabled")
+            except Exception:
+                pass
+            try:
+                self.igir_copy_first_var.set(bool(data.get("copy_first", False)))
+            except Exception:
+                pass
         except Exception:
             return
+
+    def _apply_igir_template(self) -> None:
+        try:
+            name = str(self.igir_template_combo.get() or "").strip()
+            if not name or name == "-":
+                self.igir_status_var.set("Status: Template wählen")
+                return
+            templates = getattr(self, "_igir_templates", {}) or {}
+            spec = templates.get(name) if isinstance(templates, dict) else None
+            if not isinstance(spec, dict):
+                self.igir_status_var.set("Status: Template ungültig")
+                return
+            args = spec.get("execute") or []
+            if isinstance(args, str):
+                args = [args]
+            args_text = "\n".join(str(arg) for arg in args if str(arg).strip())
+            try:
+                self.igir_args_text.delete("1.0", "end")
+                if args_text:
+                    self.igir_args_text.insert("1.0", args_text)
+            except Exception:
+                pass
+            self._igir_selected_template = name
+            self.igir_status_var.set(f"Status: Template '{name}' übernommen")
+        except Exception as exc:
+            self.igir_status_var.set(f"Status: Template Fehler ({exc})")
+
+    def _apply_igir_profile(self) -> None:
+        try:
+            name = str(self.igir_profile_combo.get() or "").strip()
+            if not name or name == "-":
+                self.igir_status_var.set("Status: Profil wählen")
+                return
+            profiles = getattr(self, "_igir_profiles", {}) or {}
+            spec = profiles.get(name) if isinstance(profiles, dict) else None
+            if not isinstance(spec, dict):
+                self.igir_status_var.set("Status: Profil ungültig")
+                return
+            args = spec.get("execute") or []
+            if isinstance(args, str):
+                args = [args]
+            args_text = "\n".join(str(arg) for arg in args if str(arg).strip())
+            try:
+                self.igir_args_text.delete("1.0", "end")
+                if args_text:
+                    self.igir_args_text.insert("1.0", args_text)
+            except Exception:
+                pass
+            self._igir_selected_profile = name
+            self.igir_status_var.set(f"Status: Profil '{name}' aktiviert")
+        except Exception as exc:
+            self.igir_status_var.set(f"Status: Profil Fehler ({exc})")
 
     def _save_igir_settings_to_config(self) -> None:
         try:
             path = Path(__file__).resolve().parents[2] / "tools" / "igir.yaml"
             data = self._build_igir_config_snapshot()
+            templates = data.get("templates") or {}
+            template_name = getattr(self, "_igir_selected_template", None)
+            if template_name and isinstance(templates, dict):
+                spec = templates.get(template_name)
+                if isinstance(spec, dict):
+                    plan_args = spec.get("plan") or []
+                    if isinstance(plan_args, str):
+                        plan_args = [plan_args]
+                    plan_args = [str(arg) for arg in plan_args if str(arg).strip()]
+                    data.setdefault("args_templates", {})
+                    if isinstance(data.get("args_templates"), dict) and plan_args:
+                        data["args_templates"]["plan"] = plan_args
+            profile_name = getattr(self, "_igir_selected_profile", None)
+            if profile_name:
+                data["active_profile"] = profile_name
+            else:
+                data["active_profile"] = ""
             payload = None
             try:
                 import yaml  # type: ignore
@@ -957,7 +1213,17 @@ class TkMVPApp:
         except Exception:
             return
 
+    def _update_igir_diff_buttons(self) -> None:
+        try:
+            self.btn_igir_open_diff_csv.configure(state="normal" if self._igir_diff_csv else "disabled")
+            self.btn_igir_open_diff_json.configure(state="normal" if self._igir_diff_json else "disabled")
+        except Exception:
+            return
+
     def _start_igir_plan(self) -> None:
+        self._queue_or_run("igir_plan", "IGIR Plan", self._start_igir_plan_now)
+
+    def _start_igir_plan_now(self) -> None:
         if self._igir_thread is not None and self._igir_thread.is_alive():
             messagebox.showinfo("IGIR", "IGIR läuft bereits.")
             return
@@ -984,8 +1250,20 @@ class TkMVPApp:
         self._igir_thread.start()
 
     def _start_igir_execute(self) -> None:
+        self._queue_or_run("igir_execute", "IGIR Execute", self._start_igir_execute_now)
+
+    def _start_igir_execute_now(self) -> None:
         if not self._igir_plan_ready:
             messagebox.showinfo("IGIR", "Bitte zuerst IGIR Plan ausführen.")
+            return
+        if not self._igir_diff_csv and not self._igir_diff_json:
+            messagebox.showinfo("IGIR", "Bitte zuerst einen Plan mit Diff-Report erstellen.")
+            return
+        if self._igir_diff_csv and not Path(self._igir_diff_csv).exists():
+            messagebox.showwarning("IGIR", "Diff-CSV fehlt. Bitte Plan erneut ausführen.")
+            return
+        if self._igir_diff_json and not Path(self._igir_diff_json).exists():
+            messagebox.showwarning("IGIR", "Diff-JSON fehlt. Bitte Plan erneut ausführen.")
             return
         if self._igir_thread is not None and self._igir_thread.is_alive():
             messagebox.showinfo("IGIR", "IGIR läuft bereits.")
@@ -1066,6 +1344,7 @@ class TkMVPApp:
                     cancel_token=self._igir_cancel_token,
                     plan_confirmed=self._igir_plan_ready,
                     explicit_user_action=explicit_user_action,
+                    copy_first=bool(self.igir_copy_first_var.get()),
                 )
                 if result.cancelled:
                     self._queue.put(("igir_execute_done", result))
@@ -1082,8 +1361,29 @@ class TkMVPApp:
         try:
             self._igir_cancel_token.cancel()
             self.igir_status_var.set("IGIR Abbruch angefordert...")
+            try:
+                self.btn_igir_cancel.configure(state="disabled")
+            except Exception:
+                pass
         except Exception:
             return
+
+    def _open_igir_diff(self, path: Optional[str]) -> None:
+        if not path:
+            messagebox.showinfo("IGIR", "Kein Diff vorhanden.")
+            return
+        try:
+            if not Path(path).exists():
+                messagebox.showwarning("IGIR", f"Diff nicht gefunden: {path}")
+                return
+            if os.name == "nt":
+                os.startfile(str(path))  # type: ignore[attr-defined]
+            elif sys.platform == "darwin":
+                subprocess.Popen(["open", str(path)])
+            else:
+                subprocess.Popen(["xdg-open", str(path)])
+        except Exception as exc:
+            messagebox.showwarning("IGIR", f"Diff konnte nicht geöffnet werden: {exc}")
 
     def _resolve_theme_name(self, value: str) -> Optional[str]:
         val = (value or "").strip()
@@ -1245,6 +1545,177 @@ class TkMVPApp:
     def _open_db_manager(self) -> None:
         DatabaseManagerDialog(self.root)
 
+    def _open_dat_sources_dialog(self) -> None:
+        try:
+            dialog = tk.Toplevel(self.root)
+            dialog.title("DAT Quellen")
+            dialog.geometry("520x360")
+            dialog.transient(self.root)
+
+            listbox = tk.Listbox(dialog, selectmode="extended")
+            listbox.pack(fill=tk.BOTH, expand=True, padx=10, pady=(10, 6))
+
+            status_var = tk.StringVar(value="-")
+            status_label = ttk.Label(dialog, textvariable=status_var, wraplength=480)
+            status_label.pack(anchor="w", padx=10, pady=(0, 6))
+
+            controls = ttk.Frame(dialog)
+            controls.pack(fill=tk.X, padx=10, pady=(0, 10))
+
+            analysis_thread: Optional[threading.Thread] = None
+
+            def _get_paths() -> list[str]:
+                return [str(listbox.get(i)) for i in range(listbox.size())]
+
+            def _format_report(report: DatSourceReport) -> str:
+                total = len(report.paths)
+                existing = len(report.existing_paths)
+                missing = len(report.missing_paths)
+                files_total = report.dat_files + report.dat_xml_files + report.dat_zip_files
+                return (
+                    f"Pfade: {total} | vorhanden: {existing} | fehlend: {missing} | "
+                    f"DAT/XML/ZIP: {files_total} (dat {report.dat_files}, xml {report.dat_xml_files}, zip {report.dat_zip_files})"
+                )
+
+            def _format_coverage(report: dict) -> str:
+                active = int(report.get("active_dat_files", 0) or 0)
+                inactive = int(report.get("inactive_dat_files", 0) or 0)
+                roms = int(report.get("rom_hashes", 0) or 0)
+                games = int(report.get("game_names", 0) or 0)
+                platforms = report.get("platforms", {}) or {}
+                summary = f"Coverage: aktiv {active} | inaktiv {inactive} | ROMs {roms} | Games {games}"
+                if isinstance(platforms, dict) and platforms:
+                    top = ", ".join(
+                        f"{name}:{(data or {}).get('roms', 0)}" for name, data in list(platforms.items())[:6]
+                    )
+                    if top:
+                        summary = f"{summary} | {top}"
+                return summary
+
+            def _run_analysis(paths: list[str]) -> None:
+                nonlocal analysis_thread
+                if analysis_thread is not None and analysis_thread.is_alive():
+                    return
+                if not paths:
+                    status_var.set("Keine DAT-Pfade konfiguriert.")
+                    return
+                status_var.set("Integrität prüfen…")
+
+                def _worker() -> None:
+                    try:
+                        report = analyze_dat_sources(paths)
+                        dialog.after(0, lambda: status_var.set(_format_report(report)))
+                    except Exception as exc:
+                        dialog.after(0, lambda exc=exc: status_var.set(f"Fehler: {exc}"))
+
+                analysis_thread = threading.Thread(target=_worker, daemon=True)
+                analysis_thread.start()
+
+            def _refresh() -> None:
+                listbox.delete(0, "end")
+                for path in get_dat_sources():
+                    listbox.insert("end", path)
+                _run_analysis(_get_paths())
+
+            def _add() -> None:
+                directory = filedialog.askdirectory(title="DAT-Ordner auswählen")
+                if not directory:
+                    return
+                paths = _get_paths()
+                if directory not in paths:
+                    paths.append(directory)
+                    save_dat_sources(paths)
+                    _refresh()
+
+            def _remove() -> None:
+                selection = listbox.curselection()
+                if not selection:
+                    return
+                remove_paths = {str(listbox.get(i)) for i in selection}
+                paths = [p for p in _get_paths() if p not in remove_paths]
+                save_dat_sources(paths)
+                _refresh()
+
+            def _open() -> None:
+                selection = listbox.curselection()
+                if not selection:
+                    return
+                path = str(listbox.get(selection[0]))
+                if not path:
+                    return
+                try:
+                    if os.name == "nt":
+                        os.startfile(path)  # type: ignore[attr-defined]
+                    elif sys.platform == "darwin":
+                        subprocess.Popen(["open", path])
+                    else:
+                        subprocess.Popen(["xdg-open", path])
+                except Exception:
+                    messagebox.showwarning("Öffnen fehlgeschlagen", "Pfad konnte nicht geöffnet werden.")
+
+            def _coverage() -> None:
+                index = None
+                try:
+                    index = DatIndexSqlite.from_config()
+                    report = index.coverage_report()
+                    message = _format_coverage(report)
+                    status_var.set(message)
+                    messagebox.showinfo("DAT Coverage", message)
+                except Exception as exc:
+                    status_var.set(f"Fehler: {exc}")
+                    messagebox.showwarning("DAT Coverage", f"Coverage konnte nicht geladen werden:\n{exc}")
+                finally:
+                    if index is not None:
+                        try:
+                            index.close()
+                        except Exception:
+                            pass
+
+            ttk.Button(controls, text="Hinzufügen…", command=_add).pack(side=tk.LEFT)
+            ttk.Button(controls, text="Entfernen", command=_remove).pack(side=tk.LEFT, padx=(6, 0))
+            ttk.Button(controls, text="Ordner öffnen", command=_open).pack(side=tk.LEFT, padx=(6, 0))
+            ttk.Button(controls, text="Integrität prüfen", command=lambda: _run_analysis(_get_paths())).pack(
+                side=tk.LEFT, padx=(6, 0)
+            )
+            ttk.Button(controls, text="Coverage anzeigen", command=_coverage).pack(side=tk.LEFT, padx=(6, 0))
+            ttk.Button(controls, text="Schließen", command=dialog.destroy).pack(side=tk.RIGHT)
+
+            _refresh()
+        except Exception as exc:
+            logging.getLogger(__name__).exception("Failed to open DAT sources dialog")
+            messagebox.showerror("DAT Quellen", f"Dialog konnte nicht geöffnet werden:\n{exc}")
+
+    def _resolve_override_path(self) -> Path:
+        try:
+            cfg = load_config()
+        except Exception:
+            cfg = {}
+        override_cfg = cfg.get("identification_overrides", {}) if isinstance(cfg, dict) else {}
+        if isinstance(override_cfg, str):
+            override_cfg = {"path": override_cfg}
+        raw_path = str(override_cfg.get("path") or "config/identify_overrides.yaml").strip()
+        if not raw_path:
+            raw_path = "config/identify_overrides.yaml"
+        path = Path(raw_path)
+        if not path.is_absolute():
+            path = (Path(__file__).resolve().parents[3] / path).resolve()
+        return path
+
+    def _open_identification_overrides(self) -> None:
+        try:
+            path = self._resolve_override_path()
+            if not path.exists():
+                messagebox.showinfo("Mapping Overrides", f"Override-Datei nicht gefunden:\n{path}")
+                return
+            if os.name == "nt":
+                os.startfile(str(path))  # type: ignore[attr-defined]
+            elif sys.platform == "darwin":
+                subprocess.Popen(["open", str(path)])
+            else:
+                subprocess.Popen(["xdg-open", str(path)])
+        except Exception as exc:
+            messagebox.showwarning("Mapping Overrides", f"Öffnen fehlgeschlagen:\n{exc}")
+
     def _normalize_drop_path(self, files: list[str]) -> Optional[str]:
         if not files:
             return None
@@ -1307,17 +1778,147 @@ class TkMVPApp:
         self._log_flush_scheduled = False
         if not self._log_buffer:
             return
-        payload = "\n".join(self._log_buffer) + "\n"
+        lines: list[str] = []
+        for entry in self._log_buffer:
+            lines.extend(str(entry).splitlines())
         self._log_buffer.clear()
-        # Ringbuffer: keep last ~2000 lines.
-        self.log_text.insert(tk.END, payload)
+        if lines:
+            self._log_history.extend(lines)
+            if len(self._log_history) > 2000:
+                self._log_history = self._log_history[-2000:]
+        if not self._log_filter_text:
+            payload = "\n".join(lines) + ("\n" if lines else "")
+            if payload:
+                self.log_text.insert(tk.END, payload)
+            try:
+                lines_count = int(self.log_text.index("end-1c").split(".")[0])
+                if lines_count > 2000:
+                    self.log_text.delete("1.0", f"{lines_count - 2000}.0")
+            except Exception:
+                pass
+            self.log_text.see(tk.END)
+            return
+        self._apply_log_filter()
+
+    def _apply_log_filter(self) -> None:
+        text = str(self.log_filter_var.get() or "").strip().lower()
+        self._log_filter_text = text
         try:
-            lines = int(self.log_text.index("end-1c").split(".")[0])
-            if lines > 2000:
-                self.log_text.delete("1.0", f"{lines - 2000}.0")
+            self.log_text.delete("1.0", tk.END)
+        except Exception:
+            return
+        if not self._log_history:
+            return
+        if not text:
+            payload = "\n".join(self._log_history) + "\n"
+            self.log_text.insert(tk.END, payload)
+            self.log_text.see(tk.END)
+            return
+        filtered = [line for line in self._log_history if text in line.lower()]
+        if filtered:
+            payload = "\n".join(filtered) + "\n"
+            self.log_text.insert(tk.END, payload)
+            self.log_text.see(tk.END)
+
+    def _priority_value(self, label: str) -> int:
+        value = str(label or "").strip().lower()
+        if value == "high":
+            return 0
+        if value == "low":
+            return 2
+        return 1
+
+    def _queue_or_run(self, op: str, label: str, func) -> None:
+        priority = self._priority_value(self.queue_priority_var.get())
+        if self.queue_mode_var.get() or self._job_active is not None:
+            self._enqueue_job(op, label, func, priority)
+            return
+        func()
+
+    def _enqueue_job(self, op: str, label: str, func, priority: int) -> None:
+        self._job_counter += 1
+        job = {
+            "id": self._job_counter,
+            "op": op,
+            "label": label,
+            "priority": priority,
+            "status": "queued",
+            "func": func,
+        }
+        self._job_queue.append(job)
+        self._job_queue.sort(key=lambda item: (int(item.get("priority", 1)), int(item.get("id", 0))))
+        self._refresh_job_queue()
+        self._maybe_start_next_job()
+
+    def _maybe_start_next_job(self) -> None:
+        if self._job_active is not None:
+            return
+        if self._job_paused:
+            return
+        if not self._job_queue:
+            return
+        job = self._job_queue[0]
+        job["status"] = "running"
+        self._job_active = job
+        self._refresh_job_queue()
+        try:
+            job_func = job.get("func")
+            if callable(job_func):
+                job_func()
+        except Exception:
+            job["status"] = "error"
+            self._job_active = None
+            self._refresh_job_queue()
+
+    def _complete_job(self, op: str) -> None:
+        if not self._job_active:
+            return
+        if str(self._job_active.get("op")) != str(op):
+            return
+        try:
+            self._job_queue.remove(self._job_active)
         except Exception:
             pass
-        self.log_text.see(tk.END)
+        self._job_active = None
+        if self._current_op == op:
+            self._current_op = None
+        self._refresh_job_queue()
+        self._maybe_start_next_job()
+
+    def _refresh_job_queue(self) -> None:
+        try:
+            self.queue_list.delete(0, "end")
+            for job in self._job_queue:
+                priority = int(job.get("priority", 1))
+                label = str(job.get("label", "job"))
+                status = str(job.get("status", "queued"))
+                pid = int(job.get("id", 0))
+                prio_text = {0: "High", 1: "Normal", 2: "Low"}.get(priority, "Normal")
+                self.queue_list.insert("end", f"#{pid} [{prio_text}] {label} - {status}")
+        except Exception:
+            return
+
+    def _pause_jobs(self) -> None:
+        self._job_paused = True
+        try:
+            self.queue_pause_btn.configure(state="disabled")
+            self.queue_resume_btn.configure(state="normal")
+        except Exception:
+            pass
+        self.status_var.set("Jobs pausiert")
+
+    def _resume_jobs(self) -> None:
+        self._job_paused = False
+        try:
+            self.queue_pause_btn.configure(state="normal")
+            self.queue_resume_btn.configure(state="disabled")
+        except Exception:
+            pass
+        self._maybe_start_next_job()
+
+    def _clear_job_queue(self) -> None:
+        self._job_queue = [job for job in self._job_queue if job is self._job_active]
+        self._refresh_job_queue()
 
     def _toggle_log(self) -> None:
         self._set_log_visible(not self._log_visible)
@@ -1483,6 +2084,17 @@ class TkMVPApp:
             reason = f"low-confidence (<{min_conf:.2f})"
         return str(reason or "")
 
+    def _format_normalization_hint(self, input_path: str, platform_id: str) -> str:
+        if not input_path:
+            return "-"
+        try:
+            norm = normalize_input(input_path, platform_hint=str(platform_id or ""))
+            if norm.issues:
+                return "; ".join(issue.message for issue in norm.issues)
+            return "ok"
+        except Exception as exc:
+            return f"Fehler: {exc}"
+
     def _validate_size_entry(self, value: str) -> bool:
         if value == "":
             return True
@@ -1503,10 +2115,15 @@ class TkMVPApp:
         if self._scan_result is not None:
             self._populate_scan_table(self._get_filtered_scan_result())
 
+    def _on_filter_listbox_changed(self, _event: object = None) -> None:
+        self._enforce_all_listbox(self.lang_filter_list)
+        self._enforce_all_listbox(self.region_filter_list)
+        self._on_filters_changed()
+
     def _clear_filters(self) -> None:
-        self.lang_filter_var.set("All")
+        self._select_listbox_values(self.lang_filter_list, ["All"])
         self.ver_filter_var.set("All")
-        self.region_filter_var.set("All")
+        self._select_listbox_values(self.region_filter_list, ["All"])
         self.extension_filter_var.set("")
         self.min_size_var.set("")
         self.max_size_var.set("")
@@ -1514,13 +2131,35 @@ class TkMVPApp:
         self.hide_unknown_var.set(False)
         self._on_filters_changed()
 
+    def _get_listbox_values(self, listbox: tk.Listbox) -> list[str]:
+        selection = listbox.curselection()
+        values = [str(listbox.get(idx)) for idx in selection]
+        return values if values else ["All"]
+
+    def _select_listbox_values(self, listbox: tk.Listbox, values: list[str]) -> None:
+        listbox.selection_clear(0, "end")
+        values_set = {str(v) for v in values if str(v)} or {"All"}
+        for idx in range(listbox.size()):
+            if str(listbox.get(idx)) in values_set:
+                listbox.selection_set(idx)
+        if not listbox.curselection():
+            for idx in range(listbox.size()):
+                if str(listbox.get(idx)) == "All":
+                    listbox.selection_set(idx)
+                    break
+
+    def _enforce_all_listbox(self, listbox: tk.Listbox) -> None:
+        values = self._get_listbox_values(listbox)
+        if "All" in values and len(values) > 1:
+            self._select_listbox_values(listbox, ["All"])
+
     def _get_filtered_scan_result(self) -> ScanResult:
         if self._scan_result is None:
             raise RuntimeError("No scan result available")
 
-        lang = (self.lang_filter_var.get() or "All").strip() or "All"
+        lang = self._get_listbox_values(self.lang_filter_list)
         ver = (self.ver_filter_var.get() or "All").strip() or "All"
-        region = (self.region_filter_var.get() or "All").strip() or "All"
+        region = self._get_listbox_values(self.region_filter_list)
         extension_filter = (self.extension_filter_var.get() or "").strip()
         min_size = self._parse_size_mb(self.min_size_var.get())
         max_size = self._parse_size_mb(self.max_size_var.get())
@@ -1588,12 +2227,16 @@ class TkMVPApp:
     def _refresh_filter_options(self) -> None:
         if self._scan_result is None:
             lang_values, ver_values, region_values = self._load_filter_defaults()
-            self.lang_filter_combo.configure(values=tuple(lang_values))
-            self.lang_filter_var.set(lang_values[0])
+            self.lang_filter_list.delete(0, "end")
+            for value in lang_values:
+                self.lang_filter_list.insert("end", value)
+            self._select_listbox_values(self.lang_filter_list, ["All"])
             self.ver_filter_combo.configure(values=tuple(ver_values))
             self.ver_filter_var.set(ver_values[0])
-            self.region_filter_combo.configure(values=tuple(region_values))
-            self.region_filter_var.set(region_values[0])
+            self.region_filter_list.delete(0, "end")
+            for value in region_values:
+                self.region_filter_list.insert("end", value)
+            self._select_listbox_values(self.region_filter_list, ["All"])
             return
 
         langs = set()
@@ -1651,17 +2294,21 @@ class TkMVPApp:
             region_values.append("Unknown")
         region_values.extend(sorted(regions))
 
-        self.lang_filter_combo.configure(values=tuple(lang_values))
-        if self.lang_filter_var.get() not in lang_values:
-            self.lang_filter_var.set("All")
+        current_langs = self._get_listbox_values(self.lang_filter_list)
+        self.lang_filter_list.delete(0, "end")
+        for value in lang_values:
+            self.lang_filter_list.insert("end", value)
+        self._select_listbox_values(self.lang_filter_list, current_langs)
 
         self.ver_filter_combo.configure(values=tuple(ver_values))
         if self.ver_filter_var.get() not in ver_values:
             self.ver_filter_var.set("All")
 
-        self.region_filter_combo.configure(values=tuple(region_values))
-        if self.region_filter_var.get() not in region_values:
-            self.region_filter_var.set("All")
+        current_regions = self._get_listbox_values(self.region_filter_list)
+        self.region_filter_list.delete(0, "end")
+        for value in region_values:
+            self.region_filter_list.insert("end", value)
+        self._select_listbox_values(self.region_filter_list, current_regions)
 
     def _load_filter_defaults(self) -> Tuple[list[str], list[str], list[str]]:
         lang_values = ["All", "Unknown"]
@@ -1771,6 +2418,7 @@ class TkMVPApp:
             if "unknown" not in tags:
                 messagebox.showinfo("Warum unbekannt", "Nur für Unknown/Low-Confidence Einträge verfügbar.")
                 return
+            input_path = values[0] if len(values) >= 1 else ""
             system = values[2] if len(values) >= 3 else "-"
             confidence = values[3] if len(values) >= 4 else "-"
             signals = values[4] if len(values) >= 5 else "-"
@@ -1787,6 +2435,8 @@ class TkMVPApp:
             else:
                 exact_text = "-"
 
+            normalization_hint = self._format_normalization_hint(str(input_path), str(system or ""))
+
             msg = (
                 f"System: {system}\n"
                 f"Grund: {reason or '-'}\n"
@@ -1794,7 +2444,8 @@ class TkMVPApp:
                 f"Sicherheit: {confidence}\n"
                 f"Exact: {exact_text}\n"
                 f"Signale: {signals}\n"
-                f"Kandidaten: {candidates}"
+                f"Kandidaten: {candidates}\n"
+                f"Normalisierung: {normalization_hint}"
             )
             messagebox.showinfo("Warum unbekannt", msg)
         except Exception:
@@ -1896,6 +2547,8 @@ class TkMVPApp:
         self.btn_export_scan_json.configure(state=export_scan_state)
         self.btn_export_plan_csv.configure(state=export_plan_state)
         self.btn_export_plan_json.configure(state=export_plan_state)
+        self.btn_export_frontend_es.configure(state=export_plan_state)
+        self.btn_export_frontend_launchbox.configure(state=export_plan_state)
         export_state = "normal" if (not running and self._audit_report is not None) else "disabled"
         self.btn_export_audit_csv.configure(state=export_state)
         self.btn_export_audit_json.configure(state=export_state)
@@ -1907,11 +2560,11 @@ class TkMVPApp:
         self.btn_open_dest.configure(state=state_normal)
         self.source_entry.configure(state=state_normal)
         self.dest_entry.configure(state=state_normal)
-        self.mode_combo.configure(state="disabled" if running else "readonly")
-        self.conflict_combo.configure(state="disabled" if running else "readonly")
-        self.lang_filter_combo.configure(state="disabled" if running else "readonly")
+        self.rebuild_check.configure(state=state_normal)
+        self._sync_rebuild_controls(running=running)
+        self.lang_filter_list.configure(state="disabled" if running else "normal")
         self.ver_filter_combo.configure(state="disabled" if running else "readonly")
-        self.region_filter_combo.configure(state="disabled" if running else "readonly")
+        self.region_filter_list.configure(state="disabled" if running else "normal")
         self.extension_entry.configure(state=state_normal)
         self.min_size_entry.configure(state=state_normal)
         self.max_size_entry.configure(state=state_normal)
@@ -1921,8 +2574,30 @@ class TkMVPApp:
         self.preserve_structure_check.configure(state=state_normal)
         self.dedupe_check.configure(state="disabled" if running else "normal")
         self.hide_unknown_check.configure(state="disabled" if running else "normal")
+        self.btn_add_dat.configure(state=state_normal)
+        self.btn_refresh_dat.configure(state=state_normal)
+        self.btn_cancel_dat.configure(state="disabled" if running else "disabled")
+        self.btn_manage_dat.configure(state=state_normal)
+        self.btn_open_overrides.configure(state=state_normal)
+        self.dat_auto_load_check.configure(state=state_normal)
+        self.btn_clear_dat_cache.configure(state=state_normal)
         if not running:
             self._update_resume_buttons()
+
+    def _sync_rebuild_controls(self, *, running: bool = False) -> None:
+        rebuild_active = bool(self.rebuild_var.get())
+        if rebuild_active:
+            if self.mode_var.get() != "copy":
+                self.mode_var.set("copy")
+            if self.conflict_var.get() != "skip":
+                self.conflict_var.set("skip")
+        mode_state = "readonly" if (not running and not rebuild_active) else "disabled"
+        conflict_state = "readonly" if (not running and not rebuild_active) else "disabled"
+        self.mode_combo.configure(state=mode_state)
+        self.conflict_combo.configure(state=conflict_state)
+
+    def _on_rebuild_toggle(self) -> None:
+        self._sync_rebuild_controls(running=False)
 
     def _can_resume(self) -> bool:
         try:
@@ -1948,16 +2623,43 @@ class TkMVPApp:
         if self._scan_result is not None:
             self._populate_scan_table(self._get_filtered_scan_result())
 
+    def _on_filter_listbox_changed(self, _event: object = None) -> None:
+        self._enforce_all_listbox(self.lang_filter_list)
+        self._enforce_all_listbox(self.region_filter_list)
+        self._on_filters_changed()
+
     def _clear_filters(self) -> None:
-        self.lang_filter_var.set("All")
+        self._select_listbox_values(self.lang_filter_list, ["All"])
         self.ver_filter_var.set("All")
-        self.region_filter_var.set("All")
+        self._select_listbox_values(self.region_filter_list, ["All"])
         self.extension_filter_var.set("")
         self.min_size_var.set("")
         self.max_size_var.set("")
         self.dedupe_var.set(True)
         self.hide_unknown_var.set(False)
         self._on_filters_changed()
+
+    def _get_listbox_values(self, listbox: tk.Listbox) -> list[str]:
+        selection = listbox.curselection()
+        values = [str(listbox.get(idx)) for idx in selection]
+        return values if values else ["All"]
+
+    def _select_listbox_values(self, listbox: tk.Listbox, values: list[str]) -> None:
+        listbox.selection_clear(0, "end")
+        values_set = {str(v) for v in values if str(v)} or {"All"}
+        for idx in range(listbox.size()):
+            if str(listbox.get(idx)) in values_set:
+                listbox.selection_set(idx)
+        if not listbox.curselection():
+            for idx in range(listbox.size()):
+                if str(listbox.get(idx)) == "All":
+                    listbox.selection_set(idx)
+                    break
+
+    def _enforce_all_listbox(self, listbox: tk.Listbox) -> None:
+        values = self._get_listbox_values(listbox)
+        if "All" in values and len(values) > 1:
+            self._select_listbox_values(listbox, ["All"])
 
     def _validate_size_entry(self, value: str) -> bool:
         if value == "":
@@ -1975,10 +2677,9 @@ class TkMVPApp:
         if self._scan_result is None:
             raise RuntimeError("No scan result available")
 
-        lang = (self.lang_filter_var.get() or "All").strip() or "All"
+        lang = self._get_listbox_values(self.lang_filter_list)
         ver = (self.ver_filter_var.get() or "All").strip() or "All"
-
-        region = (self.region_filter_var.get() or "All").strip() or "All"
+        region = self._get_listbox_values(self.region_filter_list)
         extension_filter = (self.extension_filter_var.get() or "").strip()
         min_size = self._parse_size_mb(self.min_size_var.get())
         max_size = self._parse_size_mb(self.max_size_var.get())
@@ -2047,12 +2748,16 @@ class TkMVPApp:
     def _refresh_filter_options(self) -> None:
         if self._scan_result is None:
             lang_values, ver_values, region_values = self._load_filter_defaults()
-            self.lang_filter_combo.configure(values=tuple(lang_values))
-            self.lang_filter_var.set(lang_values[0])
+            self.lang_filter_list.delete(0, "end")
+            for value in lang_values:
+                self.lang_filter_list.insert("end", value)
+            self._select_listbox_values(self.lang_filter_list, ["All"])
             self.ver_filter_combo.configure(values=tuple(ver_values))
             self.ver_filter_var.set(ver_values[0])
-            self.region_filter_combo.configure(values=tuple(region_values))
-            self.region_filter_var.set(region_values[0])
+            self.region_filter_list.delete(0, "end")
+            for value in region_values:
+                self.region_filter_list.insert("end", value)
+            self._select_listbox_values(self.region_filter_list, ["All"])
             return
 
         langs = set()
@@ -2111,17 +2816,21 @@ class TkMVPApp:
             region_values.append("Unknown")
         region_values.extend(sorted(regions))
 
-        self.lang_filter_combo.configure(values=tuple(lang_values))
-        if self.lang_filter_var.get() not in lang_values:
-            self.lang_filter_var.set("All")
+        current_langs = self._get_listbox_values(self.lang_filter_list)
+        self.lang_filter_list.delete(0, "end")
+        for value in lang_values:
+            self.lang_filter_list.insert("end", value)
+        self._select_listbox_values(self.lang_filter_list, current_langs)
 
         self.ver_filter_combo.configure(values=tuple(ver_values))
         if self.ver_filter_var.get() not in ver_values:
             self.ver_filter_var.set("All")
 
-        self.region_filter_combo.configure(values=tuple(region_values))
-        if self.region_filter_var.get() not in region_values:
-            self.region_filter_var.set("All")
+        current_regions = self._get_listbox_values(self.region_filter_list)
+        self.region_filter_list.delete(0, "end")
+        for value in region_values:
+            self.region_filter_list.insert("end", value)
+        self._select_listbox_values(self.region_filter_list, current_regions)
 
     def _load_filter_defaults(self) -> Tuple[list[str], list[str], list[str]]:
         lang_values = ["All", "Unknown"]
@@ -2177,6 +2886,7 @@ class TkMVPApp:
             status = "found" if is_confident else "unknown/low-confidence"
             tags = ("unknown",) if not is_confident else ()
             reason = self._format_reason(item)
+            normalization_hint = self._format_normalization_hint(item.input_path, item.detected_system)
             iid = self.table.insert(
                 "",
                 tk.END,
@@ -2187,6 +2897,7 @@ class TkMVPApp:
                     self._format_confidence(item.detection_confidence),
                     self._format_signals(item),
                     self._format_candidates(item),
+                    normalization_hint,
                     reason,
                     "",
                     "scan",
@@ -2218,6 +2929,7 @@ class TkMVPApp:
         self._plan_row_iids = []
         self._set_details("")
         for act in plan.actions:
+            normalization_hint = self._format_normalization_hint(act.input_path, act.detected_system)
             iid = self.table.insert(
                 "",
                 tk.END,
@@ -2228,6 +2940,7 @@ class TkMVPApp:
                     "",
                     "",
                     "",
+                    normalization_hint,
                     "",
                     act.planned_target_path or "",
                     act.action,
@@ -2282,6 +2995,7 @@ class TkMVPApp:
                     "",
                     "",
                     "",
+                    "-",
                     item.reason or "",
                     suggestion,
                     action,
@@ -2312,7 +3026,7 @@ class TkMVPApp:
         self.table.insert(
             "",
             tk.END,
-            values=("(Summary)", "", "", "", "", "", "", report.dest_path, report.mode, text),
+            values=("(Summary)", "", "", "", "", "", "", "", report.dest_path, report.mode, text),
         )
 
     def _start_op(
@@ -2327,6 +3041,7 @@ class TkMVPApp:
         validated = self._validate_paths(require_dest=op in ("plan", "execute"))
         if validated is None:
             return
+        self._current_op = op
         source, dest = validated
 
         try:
@@ -2454,6 +3169,9 @@ class TkMVPApp:
         self._worker_thread.start()
 
     def _start_scan(self) -> None:
+        self._queue_or_run("scan", "Scan", self._start_scan_now)
+
+    def _start_scan_now(self) -> None:
         self.log_text.delete("1.0", tk.END)
         self.progress.configure(mode="determinate", maximum=100, value=0)
         self.status_var.set("Scan startet…")
@@ -2468,6 +3186,9 @@ class TkMVPApp:
         self._start_op("scan")
 
     def _start_preview(self) -> None:
+        self._queue_or_run("plan", "Preview", self._start_preview_now)
+
+    def _start_preview_now(self) -> None:
         self.progress.configure(mode="determinate", maximum=1, value=0)
         self.status_var.set("Plane…")
         self._failed_action_indices.clear()
@@ -2476,6 +3197,9 @@ class TkMVPApp:
         self._start_op("plan")
 
     def _start_execute(self) -> None:
+        self._queue_or_run("execute", "Execute", self._start_execute_now)
+
+    def _start_execute_now(self) -> None:
         self.progress.configure(mode="determinate", maximum=1, value=0)
         self.status_var.set("Ausführen…")
         self._failed_action_indices.clear()
@@ -2484,6 +3208,9 @@ class TkMVPApp:
         self._start_op("execute", conversion_mode="skip")
 
     def _start_convert_only(self) -> None:
+        self._queue_or_run("execute", "Convert only", self._start_convert_only_now)
+
+    def _start_convert_only_now(self) -> None:
         self.progress.configure(mode="determinate", maximum=1, value=0)
         self.status_var.set("Konvertiere…")
         self._failed_action_indices.clear()
@@ -2492,6 +3219,9 @@ class TkMVPApp:
         self._start_op("execute", conversion_mode="only")
 
     def _start_audit(self) -> None:
+        self._queue_or_run("audit", "Audit", self._start_audit_now)
+
+    def _start_audit_now(self) -> None:
         self.progress.configure(mode="determinate", maximum=1, value=0)
         self.status_var.set("Checking conversions…")
         self._failed_action_indices.clear()
@@ -2570,6 +3300,34 @@ class TkMVPApp:
             return
         self._run_export_task("Plan CSV", lambda: write_plan_csv(plan, filename))
 
+    def _export_frontend_es(self) -> None:
+        plan = self._sort_plan
+        if plan is None:
+            messagebox.showinfo("Kein Plan", "Bitte zuerst Vorschau ausführen.")
+            return
+        filename = filedialog.asksaveasfilename(
+            title="Save EmulationStation gamelist",
+            defaultextension=".xml",
+            filetypes=(("XML files", "*.xml"), ("All files", "*.*")),
+        )
+        if not filename:
+            return
+        self._run_export_task("Frontend EmulationStation", lambda: write_emulationstation_gamelist(plan, filename))
+
+    def _export_frontend_launchbox(self) -> None:
+        plan = self._sort_plan
+        if plan is None:
+            messagebox.showinfo("Kein Plan", "Bitte zuerst Vorschau ausführen.")
+            return
+        filename = filedialog.asksaveasfilename(
+            title="Save LaunchBox CSV",
+            defaultextension=".csv",
+            filetypes=(("CSV files", "*.csv"), ("All files", "*.*")),
+        )
+        if not filename:
+            return
+        self._run_export_task("Frontend LaunchBox", lambda: write_launchbox_csv(plan, filename))
+
     def _export_audit_json(self) -> None:
         report = self._audit_report
         if report is None:
@@ -2642,6 +3400,10 @@ class TkMVPApp:
 
     def _cancel(self) -> None:
         self._append_log("Cancel requested by user")
+        try:
+            self.status_var.set("Abbrechen…")
+        except Exception:
+            pass
         self._cancel_token.cancel()
         self.btn_cancel.configure(state="disabled")
 
@@ -2699,6 +3461,7 @@ class TkMVPApp:
                     else:
                         self.status_var.set("Scan done")
                         messagebox.showinfo("Scan abgeschlossen", f"ROMs gefunden: {len(scan.items)}")
+                    self._complete_job("scan")
                 elif event == "plan_done":
                     plan = payload
                     self._sort_plan = plan
@@ -2706,6 +3469,7 @@ class TkMVPApp:
                     self._set_running(False)
                     self.status_var.set("Plan ready")
                     messagebox.showinfo("Vorschau bereit", f"Geplante Aktionen: {len(plan.actions)}")
+                    self._complete_job("plan")
                 elif event == "exec_done":
                     report: SortReport = payload
                     self._set_running(False)
@@ -2721,6 +3485,7 @@ class TkMVPApp:
                             "Fertig",
                             f"Fertig. Kopiert: {report.copied}, Verschoben: {report.moved}\nFehler: {len(report.errors)}\n\nSiehe Log für Details.",
                         )
+                    self._complete_job("execute")
                 elif event == "audit_done":
                     report: ConversionAuditReport = payload
                     self._set_running(False)
@@ -2733,6 +3498,7 @@ class TkMVPApp:
                     else:
                         self.status_var.set("Audit ready")
                         messagebox.showinfo("Audit abgeschlossen", f"Geprüft: {len(report.items)}")
+                    self._complete_job("audit")
                 elif event == "dat_index_done":
                     result = payload
                     self._dat_index_thread = None
@@ -2743,7 +3509,15 @@ class TkMVPApp:
                             self.btn_cancel_dat.configure(state="disabled")
                     except Exception:
                         pass
-                    self.dat_status_var.set(f"DAT: Index fertig ({result})")
+                    if isinstance(result, dict):
+                        processed = result.get("processed", 0)
+                        skipped = result.get("skipped", 0)
+                        inserted = result.get("inserted", 0)
+                        self.dat_status_var.set(
+                            f"DAT: Index fertig (processed {processed}, skipped {skipped}, inserted {inserted})"
+                        )
+                    else:
+                        self.dat_status_var.set(f"DAT: Index fertig ({result})")
                 elif event == "dat_index_error":
                     message = str(payload)
                     self._dat_index_thread = None
@@ -2769,19 +3543,31 @@ class TkMVPApp:
                         pass
                     if getattr(result, "cancelled", False):
                         self._igir_plan_ready = False
+                        self._igir_diff_csv = None
+                        self._igir_diff_json = None
+                        self._update_igir_diff_buttons()
                         self._update_igir_buttons()
                         self.igir_status_var.set("IGIR Plan abgebrochen")
                         messagebox.showinfo("IGIR", "IGIR Plan abgebrochen.")
+                        self._complete_job("igir_plan")
                     elif getattr(result, "ok", False):
                         self._igir_plan_ready = True
+                        self._igir_diff_csv = getattr(result, "diff_csv", None)
+                        self._igir_diff_json = getattr(result, "diff_json", None)
+                        self._update_igir_diff_buttons()
                         self._update_igir_buttons()
                         self.igir_status_var.set("IGIR Plan fertig")
                         messagebox.showinfo("IGIR", "IGIR Plan abgeschlossen. Diff exportiert.")
+                        self._complete_job("igir_plan")
                     else:
                         self._igir_plan_ready = False
+                        self._igir_diff_csv = getattr(result, "diff_csv", None)
+                        self._igir_diff_json = getattr(result, "diff_json", None)
+                        self._update_igir_diff_buttons()
                         self._update_igir_buttons()
                         self.igir_status_var.set("IGIR Plan fehlgeschlagen")
                         messagebox.showwarning("IGIR", f"IGIR Plan fehlgeschlagen: {getattr(result, 'message', 'Fehler')}")
+                        self._complete_job("igir_plan")
                 elif event == "igir_execute_done":
                     result = payload
                     self._set_igir_running(False)
@@ -2794,15 +3580,19 @@ class TkMVPApp:
                     if getattr(result, "cancelled", False):
                         self.igir_status_var.set("IGIR Execute abgebrochen")
                         messagebox.showinfo("IGIR", "IGIR Execute abgebrochen.")
+                        self._complete_job("igir_execute")
                     elif getattr(result, "success", False):
                         self.igir_status_var.set("IGIR Execute fertig")
                         messagebox.showinfo("IGIR", "IGIR Execute abgeschlossen.")
+                        self._complete_job("igir_execute")
                     else:
                         self.igir_status_var.set("IGIR Execute fehlgeschlagen")
                         messagebox.showwarning("IGIR", f"IGIR Execute fehlgeschlagen: {getattr(result, 'message', 'Fehler')}")
+                        self._complete_job("igir_execute")
                 elif event == "igir_error":
                     self._set_igir_running(False)
                     self._igir_thread = None
+                    self._update_igir_diff_buttons()
                     if isinstance(payload, tuple):
                         msg, tb = payload
                         self._append_log(str(msg))
@@ -2817,7 +3607,9 @@ class TkMVPApp:
                                 self._append_log(f"[IGIR] {result.raw_output}")
                         except Exception:
                             pass
-                        messagebox.showerror("IGIR", f"IGIR Fehler: {getattr(result, 'message', 'Unbekannt')}" )
+                        messagebox.showerror("IGIR", f"IGIR Fehler: {getattr(result, 'message', 'Unbekannt')}")
+                    self._complete_job("igir_plan")
+                    self._complete_job("igir_execute")
                 elif event == "export_done":
                     label = str(payload)
                     messagebox.showinfo("Export abgeschlossen", f"{label} gespeichert.")
@@ -2831,6 +3623,9 @@ class TkMVPApp:
                     self.dat_status_var.set("DAT: -")
                     self._set_running(False)
                     messagebox.showerror("Arbeitsfehler", f"{msg}\n\n{tb}")
+                    if self._current_op:
+                        self._complete_job(self._current_op)
+                        self._current_op = None
         except Empty:
             pass
         finally:

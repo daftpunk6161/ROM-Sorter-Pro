@@ -21,11 +21,12 @@ import re
 import shutil
 import threading
 import subprocess
+import fnmatch
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterable, List, Literal, Optional, Tuple
+from typing import Any, Callable, Dict, Iterable, List, Literal, Optional, Sequence, Set, Tuple, Union
 
-from ..config import Config, load_config
+from ..config import Config, load_config, save_config
 from ..utils.external_tools import build_external_command, run_wud2app, run_wudcompress
 from ..security.security_utils import (
     InvalidPathError,
@@ -42,7 +43,7 @@ from ..core.normalization import (
     execute_normalization as _execute_normalization,
 )
 from ..core.dat_index_sqlite import DatIndexSqlite, build_index_from_config
-from ..detectors.dat_identifier import IdentificationResult as DatIdentificationResult, identify_by_hash
+from ..detectors.dat_identifier import identify_by_hash
 
 # Reuse existing stable core implementation for scanning.
 from ..core.scan_service import run_scan as _core_run_scan
@@ -314,9 +315,9 @@ def select_preferred_variants(
 def filter_scan_items(
     items: List[ScanItem],
     *,
-    language_filter: str = "All",
+    language_filter: Union[str, Sequence[str]] = "All",
     version_filter: str = "All",
-    region_filter: str = "All",
+    region_filter: Union[str, Sequence[str]] = "All",
     extension_filter: str = "",
     min_size_mb: Optional[float] = None,
     max_size_mb: Optional[float] = None,
@@ -327,9 +328,23 @@ def filter_scan_items(
 ) -> List[ScanItem]:
     """Filter scan items by language/version/region and optionally dedupe by preferred region."""
 
-    lang = (language_filter or "All").strip() or "All"
+    def _normalize_filter_values(value: Union[str, Sequence[str]]) -> Set[str]:
+        if value is None:
+            return {"All"}
+        if isinstance(value, str):
+            raw = value.strip()
+            if not raw:
+                return {"All"}
+            parts = [part.strip() for part in re.split(r"[;,]", raw) if part.strip()]
+            if len(parts) > 1:
+                return set(parts)
+            return {raw}
+        values = {str(v).strip() for v in value if str(v).strip()}
+        return values or {"All"}
+
+    lang_values = _normalize_filter_values(language_filter)
     ver = (version_filter or "All").strip() or "All"
-    region = (region_filter or "All").strip() or "All"
+    region_values = _normalize_filter_values(region_filter)
     ext_raw = (extension_filter or "").strip()
     ext_filters = set()
     if ext_raw:
@@ -394,12 +409,17 @@ def filter_scan_items(
             if max_bytes is not None and size > max_bytes:
                 continue
 
-        if lang != "All":
-            if lang == "Unknown":
-                if item_langs:
+        if "All" not in lang_values:
+            wants_unknown_lang = "Unknown" in lang_values
+            lang_targets = {val for val in lang_values if val != "Unknown"}
+            if item_langs:
+                if lang_targets:
+                    if not any(lang in item_langs for lang in lang_targets):
+                        continue
+                elif wants_unknown_lang:
                     continue
             else:
-                if lang not in item_langs:
+                if not wants_unknown_lang:
                     continue
 
         if ver != "All":
@@ -410,12 +430,16 @@ def filter_scan_items(
                 if item_ver != ver:
                     continue
 
-        if region != "All":
-            if region == "Unknown":
-                if item_region != "Unknown":
+        if "All" not in region_values:
+            wants_unknown_region = "Unknown" in region_values
+            region_targets = {val for val in region_values if val != "Unknown"}
+            if item_region == "Unknown":
+                if not wants_unknown_region:
                     continue
             else:
-                if item_region != region:
+                if region_targets and item_region not in region_targets:
+                    continue
+                if not region_targets and wants_unknown_region:
                     continue
 
         filtered.append(item)
@@ -509,6 +533,16 @@ class ExternalToolsReport:
     failed: int
     errors: List[str]
     cancelled: bool
+
+
+@dataclass(frozen=True)
+class DatSourceReport:
+    paths: List[str]
+    existing_paths: List[str]
+    missing_paths: List[str]
+    dat_files: int
+    dat_xml_files: int
+    dat_zip_files: int
 
 
 @dataclass(frozen=True)
@@ -673,7 +707,6 @@ def _match_conversion_rule(
             tool_key = str(rule.get("tool") or "").strip()
             tool_value = conversion_settings.get("tools", {}).get(tool_key) or tool_key
             tool_path = _resolve_tool_path(tool_value)
-            require_tool = bool(rule.get("require_tool", True))
             if not tool_path:
                 return {"missing_tool": True, "rule": rule}
 
@@ -777,6 +810,143 @@ def _build_conversion_args(rule: Dict[str, Any], src: Path, dst: Path) -> List[s
     return built
 
 
+def _resolve_repo_root() -> Path:
+    return Path(__file__).resolve().parents[3]
+
+
+def _load_identification_overrides(cfg: Config) -> List[Dict[str, Any]]:
+    override_cfg = cfg.get("identification_overrides", {}) if isinstance(cfg, dict) else {}
+    if isinstance(override_cfg, str):
+        override_cfg = {"path": override_cfg}
+    if not isinstance(override_cfg, dict):
+        return []
+    if override_cfg.get("enabled") is False:
+        return []
+
+    raw_path = str(override_cfg.get("path") or "config/identify_overrides.yaml").strip()
+    if not raw_path:
+        return []
+    path = Path(raw_path)
+    if not path.is_absolute():
+        path = (_resolve_repo_root() / path).resolve()
+    if not path.exists():
+        return []
+
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except Exception:
+        return []
+
+    data: Optional[Dict[str, Any]] = None
+    if path.suffix.lower() == ".json":
+        try:
+            data = json.loads(raw)
+        except Exception:
+            data = None
+    else:
+        try:
+            import yaml  # type: ignore
+
+            data = yaml.safe_load(raw)
+        except Exception:
+            try:
+                data = json.loads(raw)
+            except Exception:
+                data = None
+
+    if isinstance(data, list):
+        return [rule for rule in data if isinstance(rule, dict)]
+    if isinstance(data, dict):
+        rules = data.get("rules") or []
+        if isinstance(rules, list):
+            return [rule for rule in rules if isinstance(rule, dict)]
+    return []
+
+
+def _match_identification_override(rule: Dict[str, Any], input_path: str) -> bool:
+    path_str = str(input_path or "")
+    if not path_str:
+        return False
+    filename = Path(path_str).name
+    suffix = Path(path_str).suffix.lower()
+
+    matchers = []
+
+    paths = rule.get("paths") or rule.get("path_equals")
+    if isinstance(paths, str):
+        paths = [paths]
+    if isinstance(paths, list):
+        matchers.append(any(str(p) == path_str for p in paths))
+
+    path_regex = rule.get("path_regex")
+    if path_regex:
+        try:
+            matchers.append(re.search(str(path_regex), path_str) is not None)
+        except Exception:
+            return False
+
+    name_regex = rule.get("name_regex") or rule.get("filename_regex")
+    if name_regex:
+        try:
+            matchers.append(re.search(str(name_regex), filename) is not None)
+        except Exception:
+            return False
+
+    path_glob = rule.get("path_glob")
+    if path_glob:
+        matchers.append(fnmatch.fnmatch(path_str, str(path_glob)))
+
+    contains = rule.get("contains")
+    if contains:
+        if isinstance(contains, str):
+            contains = [contains]
+        if isinstance(contains, list):
+            matchers.append(any(str(token).lower() in path_str.lower() for token in contains))
+
+    ext = rule.get("extension") or rule.get("ext")
+    if ext:
+        ext_val = str(ext).lower()
+        if not ext_val.startswith("."):
+            ext_val = f".{ext_val}"
+        matchers.append(suffix == ext_val)
+
+    starts_with = rule.get("starts_with")
+    if starts_with:
+        matchers.append(filename.lower().startswith(str(starts_with).lower()))
+
+    ends_with = rule.get("ends_with")
+    if ends_with:
+        matchers.append(filename.lower().endswith(str(ends_with).lower()))
+
+    if not matchers:
+        return False
+    return all(matchers)
+
+
+def _apply_identification_override(
+    input_path: str,
+    overrides: List[Dict[str, Any]],
+) -> Optional[Dict[str, Any]]:
+    for rule in overrides:
+        if not _match_identification_override(rule, input_path):
+            continue
+        platform = rule.get("platform_id") or rule.get("platform") or rule.get("system")
+        if not platform:
+            continue
+        name = rule.get("name") or rule.get("id") or "override"
+        confidence = rule.get("confidence")
+        try:
+            confidence_val = float(confidence) if confidence is not None else 1.0
+        except Exception:
+            confidence_val = 1.0
+        return {
+            "platform_id": str(platform),
+            "name": str(name),
+            "confidence": confidence_val,
+        }
+    return None
+
+
 def _safe_system_name(system: str) -> str:
     value = (system or "Unknown").strip() or "Unknown"
     safe = "".join(ch for ch in value if ch.isalnum() or ch in (" ", "-", "_", ".")).strip()
@@ -877,6 +1047,7 @@ def save_sort_resume(sort_plan: SortPlan, start_index: int, path: str) -> None:
     payload = _serialize_sort_plan(sort_plan)
     payload["resume_from_index"] = int(start_index)
     target = Path(path)
+    validate_file_operation(target, base_dir=None, allow_read=True, allow_write=True)
     target.parent.mkdir(parents=True, exist_ok=True)
     with open(target, "w", encoding="utf-8") as f:
         json.dump(payload, f, indent=2)
@@ -911,6 +1082,8 @@ def save_scan_resume(scan_result: ScanResult, path: str) -> None:
         "cancelled": scan_result.cancelled,
         "items": [item.__dict__ for item in scan_result.items],
     }
+    target = Path(path)
+    validate_file_operation(target, base_dir=None, allow_read=True, allow_write=True)
     with open(path, "w", encoding="utf-8") as f:
         json.dump(payload, f, indent=2)
 
@@ -961,6 +1134,8 @@ def run_scan(
         min_confidence = float(sorting_cfg.get("confidence_threshold", min_confidence))
     except Exception:
         min_confidence = 0.95
+    overrides = _load_identification_overrides(cfg)
+
     for rom in list(result.get("roms") or []):
         input_path_val = str(rom.get("path") or rom.get("file") or "")
         system = str(rom.get("system") or "Unknown")
@@ -971,10 +1146,18 @@ def run_scan(
             detection_conf_value = None
 
         detection_source = rom.get("detection_source")
+        override = _apply_identification_override(input_path_val, overrides) if input_path_val else None
+        override_name = None
+        if override is not None:
+            system = str(override["platform_id"])
+            detection_conf_value = float(override["confidence"])
+            detection_source = "override"
+            override_name = str(override.get("name") or "override")
         if system != "Unknown":
             if detection_conf_value is None or detection_conf_value < min_confidence:
-                system = "Unknown"
-                detection_source = "policy-low-confidence"
+                if detection_source != "override":
+                    system = "Unknown"
+                    detection_source = "policy-low-confidence"
 
         languages: Tuple[str, ...] = ()
         version: Optional[str] = None
@@ -989,20 +1172,31 @@ def run_scan(
             except Exception:
                 region = None
 
+        raw_payload = dict(rom)
+        signals = list(raw_payload.get("signals") or [])
+        candidates = list(raw_payload.get("candidates") or [])
+        if override_name:
+            signals.append("OVERRIDE_RULE")
+            if system and system not in candidates:
+                candidates.append(system)
+            raw_payload["override_rule"] = override_name
+            raw_payload["override_platform"] = system
+            raw_payload["reason"] = f"override:{override_name}"
+
         items.append(
             ScanItem(
                 input_path=input_path_val,
                 detected_system=system,
                 detection_source=detection_source,
                 detection_confidence=detection_conf_value,
-                is_exact=bool(rom.get("is_exact", False)),
+                is_exact=bool(rom.get("is_exact", False)) or bool(override_name),
                 languages=languages,
                 version=version,
                 region=region,
                 raw={
-                    **dict(rom),
-                    "signals": rom.get("signals") or [],
-                    "candidates": rom.get("candidates") or [],
+                    **raw_payload,
+                    "signals": signals,
+                    "candidates": candidates,
                     "candidate_systems": rom.get("candidate_systems") or [],
                     "policy": "low-confidence" if detection_source == "policy-low-confidence" else None,
                     "policy_threshold": min_confidence,
@@ -1028,6 +1222,7 @@ def identify(
 
     cfg = _load_cfg(config)
     results: List[IdentificationResult] = []
+    overrides = _load_identification_overrides(cfg)
 
     dat_index: Optional[DatIndexSqlite] = None
     try:
@@ -1045,6 +1240,26 @@ def identify(
 
         input_path = str(item.input_path or "")
         input_exists = bool(input_path and os.path.exists(input_path))
+        override = _apply_identification_override(input_path, overrides) if input_path else None
+        if override is not None:
+            platform_id = str(override["platform_id"])
+            name = str(override.get("name") or "override")
+            confidence = float(override.get("confidence") or 1.0)
+            results.append(
+                IdentificationResult(
+                    platform_id=platform_id,
+                    confidence=confidence,
+                    is_exact=True,
+                    signals=["OVERRIDE_RULE"],
+                    candidates=[platform_id],
+                    reason=f"override:{name}",
+                    input_kind="RawRom",
+                    normalized_artifact=None,
+                )
+            )
+            if progress_cb:
+                progress_cb(idx, total)
+            continue
         if dat_index and input_exists:
             match = identify_by_hash(input_path, dat_index)
             if match:
@@ -1106,24 +1321,82 @@ def identify(
     return results
 
 
-def plan_normalization(items: List[ScanItem], config: Optional[Config] = None) -> NormalizationPlan:
-    return _plan_normalization(items, config=config)
-
-
-def execute_normalization(
-    plan: NormalizationPlan,
-    progress_cb: Optional[ProgressCallback] = None,
-    cancel_token: Optional[CancelToken] = None,
-) -> NormalizationReport:
-    return _execute_normalization(plan, progress_cb=progress_cb, cancel_token=cancel_token)
-
-
 def build_dat_index(
     config: Optional[Config] = None,
     cancel_token: Optional[CancelToken] = None,
 ) -> Dict[str, int]:
     cancel_event = cancel_token.event if cancel_token is not None else None
     return build_index_from_config(config=config, cancel_event=cancel_event)
+
+
+def _normalize_dat_sources(paths: Iterable[str]) -> List[str]:
+    seen = set()
+    ordered: List[str] = []
+    for raw in paths:
+        value = str(raw or "").strip()
+        if not value:
+            continue
+        if value in seen:
+            continue
+        seen.add(value)
+        ordered.append(value)
+    return ordered
+
+
+def get_dat_sources(config: Optional[Config] = None) -> List[str]:
+    cfg = _load_cfg(config)
+    dat_cfg = cfg.get("dats", {}) or {}
+    paths = dat_cfg.get("import_paths") or []
+    if isinstance(paths, str):
+        paths = [p.strip() for p in paths.split(";") if p.strip()]
+    return _normalize_dat_sources(paths)
+
+
+def save_dat_sources(paths: Iterable[str], config: Optional[Config] = None) -> List[str]:
+    cfg = _load_cfg(config)
+    dat_cfg = cfg.get("dats", {}) or {}
+    normalized = _normalize_dat_sources(paths)
+    dat_cfg["import_paths"] = normalized
+    cfg["dats"] = dat_cfg
+    save_config(cfg)
+    return normalized
+
+
+def analyze_dat_sources(paths: Iterable[str]) -> DatSourceReport:
+    normalized = _normalize_dat_sources(paths)
+    existing: List[str] = []
+    missing: List[str] = []
+    dat_files = 0
+    dat_xml_files = 0
+    dat_zip_files = 0
+
+    for raw in normalized:
+        path = Path(raw)
+        if not path.exists():
+            missing.append(raw)
+            continue
+        existing.append(raw)
+        if path.is_dir():
+            dat_files += sum(1 for _ in path.rglob("*.dat"))
+            dat_xml_files += sum(1 for _ in path.rglob("*.xml"))
+            dat_zip_files += sum(1 for _ in path.rglob("*.zip"))
+        else:
+            suffix = path.suffix.lower()
+            if suffix == ".dat":
+                dat_files += 1
+            elif suffix == ".xml":
+                dat_xml_files += 1
+            elif suffix == ".zip":
+                dat_zip_files += 1
+
+    return DatSourceReport(
+        paths=normalized,
+        existing_paths=existing,
+        missing_paths=missing,
+        dat_files=dat_files,
+        dat_xml_files=dat_xml_files,
+        dat_zip_files=dat_zip_files,
+    )
 
 
 def audit_conversion_candidates(
@@ -1459,6 +1732,24 @@ def plan_sort(
         mode=mode,
         on_conflict=on_conflict,
         actions=actions,
+    )
+
+
+def plan_rebuild(
+    scan_result: ScanResult,
+    dest_path: str,
+    config: Optional[Config] = None,
+    cancel_token: Optional[CancelToken] = None,
+) -> SortPlan:
+    """Create a copy-only rebuild plan (skip conflicts, no destructive moves)."""
+
+    return plan_sort(
+        scan_result=scan_result,
+        dest_path=dest_path,
+        config=config,
+        mode="copy",
+        on_conflict="skip",
+        cancel_token=cancel_token,
     )
 
 
@@ -1967,6 +2258,33 @@ def build_external_tools_commands(
             continue
 
         output_file = out_dir / Path(action.planned_target_path).name
+
+        def _has_symlink_parent(path: Path) -> bool:
+            for parent in path.parents:
+                try:
+                    if parent.exists() and parent.is_symlink():
+                        return True
+                except Exception:
+                    continue
+            return False
+
+        try:
+            src_raw = Path(action.input_path)
+            if src_raw.is_symlink():
+                raise InvalidPathError(f"Symlink source not allowed: {src_raw}")
+            if output_file.exists() and output_file.is_symlink():
+                raise InvalidPathError(f"Symlink destination not allowed: {output_file}")
+            if _has_symlink_parent(output_file):
+                raise InvalidPathError(f"Symlink parent not allowed: {output_file}")
+
+            src = src_raw.resolve()
+            dst = output_file.resolve()
+
+            validate_file_operation(src, base_dir=None, allow_read=True, allow_write=True)
+            validate_file_operation(dst, base_dir=out_dir, allow_read=True, allow_write=True)
+        except InvalidPathError as exc:
+            commands.append(f"[{tool_key}] ERROR: {exc}")
+            continue
         cmd, err = build_external_command(
             tool_key=tool_key,
             input_path=str(action.input_path),
@@ -2018,6 +2336,15 @@ def execute_external_tools(
     if not dry_run:
         out_dir.mkdir(parents=True, exist_ok=True)
         tmp_dir.mkdir(parents=True, exist_ok=True)
+
+    def _has_symlink_parent(path: Path) -> bool:
+        for parent in path.parents:
+            try:
+                if parent.exists() and parent.is_symlink():
+                    return True
+            except Exception:
+                continue
+        return False
 
     for step, (row_index, action) in enumerate(actions, start=1):
         if cancel_token is not None and cancel_token.is_cancelled():

@@ -10,8 +10,8 @@ import os
 import re
 import subprocess
 import time
-from dataclasses import dataclass
-from pathlib import Path
+from dataclasses import dataclass, field
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any, Dict, Iterable, List, Literal, Optional, Tuple
 
 from ..security.security_utils import InvalidPathError, validate_file_operation
@@ -60,6 +60,16 @@ class NormalizationReport:
     failed: int
     errors: List[str]
     cancelled: bool
+    items: List["NormalizationResultItem"] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class NormalizationResultItem:
+    input_path: str
+    status: str
+    output_path: Optional[str]
+    error: Optional[str] = None
+    converter_id: Optional[str] = None
 
 
 def _platform_formats_path() -> Path:
@@ -245,9 +255,9 @@ def load_platform_formats() -> List[Dict[str, Any]]:
     data = _load_yaml_or_json(_platform_formats_path()) or {}
     if JSONSCHEMA_AVAILABLE:
         try:
-            is_valid, error = validate_config_schema(data, schema_path=str(_platform_formats_schema_path()))
+            is_valid, _ = validate_config_schema(data, schema_path=str(_platform_formats_schema_path()))
         except Exception:
-            is_valid, error = False, "validation-error"
+            is_valid = False
         if not is_valid:
             return []
     else:
@@ -261,18 +271,14 @@ def load_converters() -> List[Dict[str, Any]]:
     data = _load_yaml_or_json(_converters_path()) or {}
     if JSONSCHEMA_AVAILABLE:
         try:
-            is_valid, error = validate_config_schema(data, schema_path=str(_converters_schema_path()))
+            is_valid, _ = validate_config_schema(data, schema_path=str(_converters_schema_path()))
         except Exception:
-            is_valid, error = False, "validation-error"
+            is_valid = False
         if not is_valid:
-            converters = _load_converters_from_config()
-            _write_converters_file(converters)
-            return converters
+            return []
     else:
         if not _basic_validate_converters(data):
-            converters = _load_converters_from_config()
-            _write_converters_file(converters)
-            return converters
+            return []
     converters = data.get("converters")
     if isinstance(converters, list) and converters:
         return list(converters)
@@ -327,6 +333,21 @@ def _parse_gdi_files(gdi_path: Path) -> List[str]:
     return files
 
 
+def _is_invalid_track_ref(name: str) -> bool:
+    if not name:
+        return True
+    if re.match(r"^[A-Za-z]:", name):
+        return True
+    candidate = Path(name)
+    if candidate.is_absolute():
+        return True
+    posix_parts = PurePosixPath(name).parts
+    win_parts = PureWindowsPath(name).parts
+    if ".." in posix_parts or ".." in win_parts:
+        return True
+    return False
+
+
 def validate_trackset(path: str) -> List[str]:
     p = Path(path)
     if not p.exists():
@@ -338,8 +359,14 @@ def validate_trackset(path: str) -> List[str]:
     else:
         return []
 
+    if not files:
+        return [f"{p.name} (no-track-entries)"]
+
     missing: List[str] = []
     for name in files:
+        if _is_invalid_track_ref(name):
+            missing.append(f"{name} (invalid-path)")
+            continue
         candidate = (p.parent / name).resolve()
         if not candidate.exists():
             missing.append(name)
@@ -369,7 +396,7 @@ def validate_folderset(path: str, platform_id: Optional[str], formats: List[Dict
                     continue
                 candidate = (p / rel_path).resolve()
                 if not candidate.exists():
-                    missing.append(str(rel_path))
+                    missing.append(rel_path.as_posix())
         except Exception:
             continue
 
@@ -430,14 +457,45 @@ def normalize_input(
     )
 
 
+def _normalize_extension(value: str) -> str:
+    ext = str(value or "").strip().lower()
+    if not ext:
+        return ""
+    return ext if ext.startswith(".") else f".{ext}"
+
+
+def _preferred_outputs_for_platform(platform_id: Optional[str], formats: List[Dict[str, Any]]) -> List[str]:
+    if not platform_id:
+        return []
+    preferred: List[str] = []
+    for entry in formats:
+        try:
+            if str(entry.get("platform_id") or "").strip() != platform_id:
+                continue
+            outputs = entry.get("preferred_outputs") or []
+            if isinstance(outputs, str):
+                outputs = [outputs]
+            for out in outputs:
+                norm = _normalize_extension(str(out))
+                if norm and norm not in preferred:
+                    preferred.append(norm)
+        except Exception:
+            continue
+    return preferred
+
+
 def _match_converter(
     *,
     input_kind: InputKind,
     platform_id: Optional[str],
     input_path: str,
     converters: List[Dict[str, Any]],
+    preferred_outputs: Optional[List[str]] = None,
 ) -> Optional[Dict[str, Any]]:
     ext = Path(input_path).suffix.lower()
+    preferred = [str(p).lower() for p in (preferred_outputs or []) if str(p).strip()]
+
+    matches: List[Dict[str, Any]] = []
     for entry in converters:
         try:
             if not entry or not isinstance(entry, dict):
@@ -459,10 +517,21 @@ def _match_converter(
                 continue
             if not entry.get("exe_path"):
                 continue
-            return entry
+            matches.append(entry)
         except Exception:
             continue
-    return None
+
+    if not matches:
+        return None
+
+    if preferred:
+        for pref in preferred:
+            for entry in matches:
+                out_ext = _normalize_extension(str(entry.get("output_extension")))
+                if out_ext == pref:
+                    return entry
+
+    return matches[0]
 
 
 def _build_converter_args(entry: Dict[str, Any], *, input_path: str, output_path: str, temp_dir: str) -> List[str]:
@@ -488,6 +557,7 @@ def plan_normalization(
     temp_root: Optional[str] = None,
 ) -> NormalizationPlan:
     converters = load_converters()
+    formats = load_platform_formats()
     out_root = Path(output_root) if output_root else None
     tmp_root = Path(temp_root) if temp_root else None
 
@@ -503,6 +573,7 @@ def plan_normalization(
             platform_id=item.platform_id,
             input_path=item.input_path,
             converters=converters,
+            preferred_outputs=_preferred_outputs_for_platform(item.platform_id, formats),
         )
 
         if not converter:
@@ -553,6 +624,7 @@ def execute_normalization(
     failed = 0
     errors: List[str] = []
     cancelled = False
+    result_items: List[NormalizationResultItem] = []
 
     for item in plan.items:
         if cancel_token is not None and getattr(cancel_token, "is_cancelled", None):
@@ -566,17 +638,43 @@ def execute_normalization(
         if item.status != "planned" or item.action != "convert":
             processed += 1
             succeeded += 1
+            result_items.append(
+                NormalizationResultItem(
+                    input_path=item.input_path,
+                    status="skipped",
+                    output_path=item.output_path,
+                    converter_id=item.converter_id,
+                )
+            )
             continue
 
         if dry_run:
             processed += 1
             succeeded += 1
+            result_items.append(
+                NormalizationResultItem(
+                    input_path=item.input_path,
+                    status="dry-run",
+                    output_path=item.output_path,
+                    converter_id=item.converter_id,
+                )
+            )
             continue
 
         if not item.output_path or not item.args or not item.tool_path:
             processed += 1
             failed += 1
-            errors.append(f"Invalid normalization action for {item.input_path}")
+            message = f"Invalid normalization action for {item.input_path}"
+            errors.append(message)
+            result_items.append(
+                NormalizationResultItem(
+                    input_path=item.input_path,
+                    status="failed",
+                    output_path=item.output_path,
+                    error=message,
+                    converter_id=item.converter_id,
+                )
+            )
             continue
 
         try:
@@ -587,7 +685,17 @@ def execute_normalization(
         except InvalidPathError as exc:
             processed += 1
             failed += 1
-            errors.append(str(exc))
+            message = str(exc)
+            errors.append(message)
+            result_items.append(
+                NormalizationResultItem(
+                    input_path=item.input_path,
+                    status="failed",
+                    output_path=item.output_path,
+                    error=message,
+                    converter_id=item.converter_id,
+                )
+            )
             continue
 
         exe_path = None
@@ -599,7 +707,17 @@ def execute_normalization(
         if not exe_path:
             processed += 1
             failed += 1
-            errors.append(f"Missing tool for {item.input_path}")
+            message = f"Missing tool for {item.input_path}"
+            errors.append(message)
+            result_items.append(
+                NormalizationResultItem(
+                    input_path=item.input_path,
+                    status="failed",
+                    output_path=item.output_path,
+                    error=message,
+                    converter_id=item.converter_id,
+                )
+            )
             continue
 
         cmd = [exe_path] + list(item.args or [])
@@ -608,7 +726,17 @@ def execute_normalization(
         except Exception as exc:
             processed += 1
             failed += 1
-            errors.append(f"Failed to start converter: {exc}")
+            message = f"Failed to start converter: {exc}"
+            errors.append(message)
+            result_items.append(
+                NormalizationResultItem(
+                    input_path=item.input_path,
+                    status="failed",
+                    output_path=item.output_path,
+                    error=message,
+                    converter_id=item.converter_id,
+                )
+            )
             continue
 
         while proc.poll() is None:
@@ -623,22 +751,58 @@ def execute_normalization(
             time.sleep(0.05)
 
         if cancelled:
+            result_items.append(
+                NormalizationResultItem(
+                    input_path=item.input_path,
+                    status="cancelled",
+                    output_path=item.output_path,
+                    converter_id=item.converter_id,
+                )
+            )
             break
 
         if proc.returncode != 0:
             processed += 1
             failed += 1
-            errors.append(f"Converter failed for {item.input_path}")
+            message = f"Converter failed for {item.input_path}"
+            errors.append(message)
+            result_items.append(
+                NormalizationResultItem(
+                    input_path=item.input_path,
+                    status="failed",
+                    output_path=item.output_path,
+                    error=message,
+                    converter_id=item.converter_id,
+                )
+            )
             continue
 
         if not Path(item.output_path).exists():
             processed += 1
             failed += 1
-            errors.append(f"Output missing after conversion: {item.output_path}")
+            message = f"Output missing after conversion: {item.output_path}"
+            errors.append(message)
+            result_items.append(
+                NormalizationResultItem(
+                    input_path=item.input_path,
+                    status="failed",
+                    output_path=item.output_path,
+                    error=message,
+                    converter_id=item.converter_id,
+                )
+            )
             continue
 
         processed += 1
         succeeded += 1
+        result_items.append(
+            NormalizationResultItem(
+                input_path=item.input_path,
+                status="succeeded",
+                output_path=item.output_path,
+                converter_id=item.converter_id,
+            )
+        )
 
     return NormalizationReport(
         processed=processed,
@@ -646,4 +810,5 @@ def execute_normalization(
         failed=failed,
         errors=errors,
         cancelled=cancelled,
+        items=result_items,
     )

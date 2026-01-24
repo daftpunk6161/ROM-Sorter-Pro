@@ -9,7 +9,6 @@ Notes:
 """
 
 import os
-import sys
 import time
 import hashlib
 import logging
@@ -19,14 +18,12 @@ import zipfile
 import concurrent.futures
 import re
 from pathlib import Path
-from typing import Dict, List, Set, Tuple, Optional, Callable, Union, Any, Generator, TypeVar
+from typing import Dict, List, Set, Tuple, Optional, Any, TypeVar
+
+from ..config import Config
 
 # Define the type alias for the config class
 ConfigType = TypeVar('ConfigType')
-
-# Local imports
-from ..exceptions import ScannerError
-from ..config import Config
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -345,7 +342,7 @@ class HighPerformanceScanner:
 
 # Processes the result
                     try:
-                        file_path = futures[future]
+                        _ = futures[future]
                         rom_info = future.result() or {}  # Ensure we have a valid dict, not None
 
 # If a valid rome was found

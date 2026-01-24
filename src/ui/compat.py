@@ -141,6 +141,7 @@ def launch_gui(backend: Optional[str] = None) -> int:
         logger.debug("Tk backend traceback:\n%s", traceback.format_exc())
         qt_detail = f"{type(qt_error).__name__}: {qt_error}" if qt_error else "not attempted"
         tk_detail = f"{type(tk_error).__name__}: {tk_error}" if tk_error else "unknown"
+        logger.error("GUI backend start failed. Qt=%s | Tk=%s", qt_detail, tk_detail)
         raise GUIBackendError(
             "No usable GUI backend found. Install PySide6/PyQt5 or ensure Tk is available. "
             f"Qt error: {qt_detail}. Tk error: {tk_detail}."

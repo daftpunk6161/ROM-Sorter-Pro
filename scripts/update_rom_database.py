@@ -8,7 +8,6 @@ from __future__ import annotations
 import logging
 import os
 import sqlite3
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -205,7 +204,6 @@ def scan_directory(conn: sqlite3.Connection, directory: str, recursive: bool = T
 
 def import_dat_file(conn: sqlite3.Connection, dat_file: str) -> int:
     """Import ROM metadata from a DAT file into the database."""
-    import re
     import xml.etree.ElementTree as ET
 
     logger.info("Importing DAT file: %s", dat_file)
@@ -217,19 +215,11 @@ def import_dat_file(conn: sqlite3.Connection, dat_file: str) -> int:
         tree = ET.parse(dat_file)
         root = tree.getroot()
 
-        header = root.find("header")
-        if header is not None:
-            name_elem = header.find("name")
-            console_name = name_elem.text if name_elem is not None else "Unknown"
-        else:
-            console_name = os.path.splitext(os.path.basename(dat_file))[0]
-
         for game in root.findall(".//game"):
             name = game.get("name", "")
 
             for rom in game.findall("rom"):
                 rom_name = rom.get("name", "")
-                rom_size = rom.get("size", "0")
                 rom_crc = rom.get("crc", "")
 
                 cursor.execute(

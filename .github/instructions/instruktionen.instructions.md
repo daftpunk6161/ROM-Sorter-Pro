@@ -82,17 +82,6 @@ Die GUI ruft **nur** diese Controller-Funktionen auf, nicht low-level Scanner in
   - Prozent, wenn möglich
   - sonst indeterminate + Statusmessages
 
-## Arbeitsweise (wie du Änderungen lieferst)
-- Arbeite in **kleinen, reviewbaren** Schritten.
-- Keine großen Refactors, bevor `--gui` stabil läuft.
-- Jede Iteration muss ein **konkretes Testkommando** liefern.
-
-### Output-Format je Antwort (kurz & praktisch)
-1) **Plan** (max 10 bullets)
-2) **Änderungen**: exakte Dateipfade + vollständige Funktions-/Klassen-Bodies
-3) **Wie testen**: 3 Terminal-Kommandos (Windows + Linux/macOS)
-4) **Risiken / Next** (max 5 bullets)
-
 ## Minimal-Tests (Smoke)
 - `pytest` Smoke-Tests:
   - Backend-Selection crasht nicht (Qt fehlt → fallback).
@@ -102,3 +91,30 @@ Die GUI ruft **nur** diese Controller-Funktionen auf, nicht low-level Scanner in
 ## Cleanup-Policy (wenn passend)
 - Keine Artefakte committen: `.vs/`, `__pycache__/`, `logs/`, `backups/*.bak`.
 - Ergänze `.gitignore`, aber erst nach MVP-Run.
+
+---
+
+## Arbeitsmodus: No-Questions-Default
+- Standard: Ich arbeite ohne Rückfragen und treffe sinnvolle Default-Annahmen.
+- Jede Annahme wird im Output unter **Assumptions** dokumentiert.
+- Ich frage nur nach, wenn ein echter Blocker vorliegt (z.B. Credentials, fehlende Dateien, unauflösbare Zielentscheidung mit hohem Risiko).
+
+## Batch-Modus: "Alle Issues nacheinander"
+Wenn du den Auftrag gibst ("arbeite alle Issues ab"):
+- Reihenfolge: Priority P0 → P1 → P2, dann nach Milestone, dann nach Erstellungsdatum.
+- Pro Issue liefere ich:
+  1) Plan (≤10 bullets)
+  2) Änderungen (Dateipfade + vollständige Bodies)
+  3) Wie testen (3 Kommandos: Windows + Linux/macOS)
+  4) Assumptions / Risiken / Next (≤5 bullets)
+- Stop-Kriterien (sofort anhalten):
+  - GUI-Start (`python start_rom_sorter.py --gui`) bricht
+  - Tests rot oder MVP-Smoke bricht
+  - Datenverlust-/Security-Risiko ohne eindeutige sichere Alternative
+- Sonst: ohne Pause zum nächsten Issue weiter.
+
+## Definition of Done pro Issue
+- Feature/Fix implementiert
+- MVP-Smoke weiterhin grün (GUI startet & bleibt responsiv)
+- mind. ein minimaler Test ergänzt/aktualisiert (wo sinnvoll)
+- Logging/Fehlerdialog/Cancellation nicht verschlechtert

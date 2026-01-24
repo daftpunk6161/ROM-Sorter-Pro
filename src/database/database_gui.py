@@ -2,17 +2,19 @@
 
 import os
 import sys
+import logging
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import threading
 import sqlite3
-import shutil
 import subprocess
 import platform
-from datetime import datetime
+from typing import Any, Dict
 from pathlib import Path
 
 from .db_paths import get_rom_db_path
+
+logger = logging.getLogger(__name__)
 
 # Add the project root to the path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -218,6 +220,10 @@ class DatabaseManagerDialog:
 
             err = result_holder.get("error")
             if err is not None:
+                try:
+                    logger.error("DB task failed (%s): %s", label, err)
+                except Exception:
+                    pass
                 messagebox.showerror(label, f"{label} fehlgeschlagen:\n{err}")
                 return
 
@@ -323,10 +329,10 @@ class DatabaseManagerDialog:
 # Update status
                 self.dialog.after(0, self.update_database_status)
 
-            except Exception as e:
-                self.dialog.after(0, lambda: messagebox.showerror(
+            except Exception as exc:
+                self.dialog.after(0, lambda exc=exc: messagebox.showerror(
                     "Fehler",
-                    f"Fehler beim Scannen des Verzeichnisses:\n{e}"
+                    f"Fehler beim Scannen des Verzeichnisses:\n{exc}"
                 ))
 
 # Start thread
@@ -386,10 +392,10 @@ class DatabaseManagerDialog:
 # Update status
                 self.dialog.after(0, self.update_database_status)
 
-            except Exception as e:
-                self.dialog.after(0, lambda: messagebox.showerror(
+            except Exception as exc:
+                self.dialog.after(0, lambda exc=exc: messagebox.showerror(
                     "Fehler",
-                    f"Fehler beim Importieren der DAT-Datei:\n{e}"
+                    f"Fehler beim Importieren der DAT-Datei:\n{exc}"
                 ))
 
 # Start thread

@@ -100,7 +100,6 @@ def test_identify_crc_size_fallback(tmp_path):
     rom = tmp_path / "game.rom"
     rom.write_text("data", encoding="utf-8")
 
-    sha1 = calculate_file_hash(str(rom), algorithm="sha1")
     crc32 = calculate_crc32(str(rom))
     size_bytes = os.stat(rom).st_size
 
@@ -116,3 +115,39 @@ def test_identify_crc_size_fallback(tmp_path):
     assert results[0].platform_id == "SNES"
     assert results[0].is_exact is True
     assert "DAT_MATCH_CRC_SIZE" in results[0].signals
+
+
+def test_identify_override_rule(tmp_path):
+        rom = tmp_path / "override-game.rom"
+        rom.write_text("data", encoding="utf-8")
+
+        override_path = tmp_path / "identify_overrides.json"
+        override_path.write_text(
+                """
+                {
+                    "rules": [
+                        {
+                            "name": "local_override",
+                            "platform_id": "Genesis",
+                            "name_regex": "override-game",
+                            "extension": ".rom"
+                        }
+                    ]
+                }
+                """,
+                encoding="utf-8",
+        )
+
+        items = [ScanItem(input_path=str(rom), detected_system="Unknown")]
+        config = {
+                "dats": {"index_path": str(tmp_path / "missing.sqlite")},
+                "identification_overrides": {"path": str(override_path), "enabled": True},
+        }
+
+        results = identify(items, config=config)
+
+        assert results
+        assert results[0].platform_id == "Genesis"
+        assert results[0].is_exact is True
+        assert "OVERRIDE_RULE" in results[0].signals
+        assert results[0].reason == "override:local_override"

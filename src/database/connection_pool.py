@@ -2,14 +2,11 @@
 # -*-coding: utf-8-*-
 """Rome Sarter Pro - Database Connection Pool This modules Offers A Secure Connection Pool for Database Operations. It ensures that All Connections are Properly Closed."""
 
-import os
 import sqlite3
 import threading
 import time
 import logging
 from collections import deque
-from pathlib import Path
-from typing import Optional
 from contextlib import contextmanager
 
 from ..security.security_utils import sanitize_path
@@ -84,7 +81,7 @@ class DatabaseConnectionPool:
 # In the event of errors: close the connection and reduce counter
                 try:
                     conn.close()
-                except:
+                except Exception:
                     pass  # Ignore mistakes when closing
                 self._active_connections -= 1
 
@@ -128,7 +125,7 @@ class DatabaseConnectionPool:
                 conn = self._pool.popleft()
                 try:
                     conn.close()
-                except:
+                except Exception:
                     pass  # Ignore mistakes when closing
             self._active_connections = 0
 

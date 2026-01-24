@@ -16,7 +16,6 @@ Features:
 """
 
 import os
-import re
 import sys
 import json
 import time
@@ -26,11 +25,9 @@ import requests
 import tempfile
 import shutil
 import threading
-import platform
 import subprocess
-from typing import Dict, List, Any, Tuple, Optional, Union, Set, Callable
+from typing import Dict, Any, Callable, Optional
 from datetime import datetime, timedelta
-from pathlib import Path
 
 # Configure logger
 logger = logging.getLogger(__name__)

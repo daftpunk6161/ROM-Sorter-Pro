@@ -20,9 +20,9 @@ DAT/Hash-first, keine False Positives, und ein GUI-first Workflow (Qt primär, T
 | Detection-Accuracy | 2026 Q1–Q2 | DAT/Hash-Ökosystem | DAT-Manager, Integritätschecks, Unknown-Reduktion, Analytics |
 | IGIR-Power-Flow | 2026 Q2 | Power-User Flows | Plan/Diff/Execute, Profile, Export, Rollback-Strategie |
 | Normalization-v1 | 2026 Q2 | Formate & Konvertierung | Plattform-Registry, Track-/Folder-Validatoren, Zielprofile |
-| GUI-JobSystem | 2026 Q2–Q3 | Job-Queue & UX | Queue, Pause/Resume/Cancel, Log-Filter |
-| Performance-Scale | 2026 Q3 | Skalierung | Hash-Caching, IO-Throttling, SQLite-Tuning |
-| Integrations | 2026 Q3–Q4 | Exporte & Tools | Frontend-Exporte, Rebuilder-Mode, optionale Plugins |
+| GUI-JobSystem | 2026 Q2–Q3 | Job-Queue & UX | Queue, Pause/Resume/Cancel, Log-Filter (MVP umgesetzt) |
+| Performance-Scale | 2026 Q3 | Skalierung | Hash-Caching, IO-Throttling, SQLite-Tuning (MVP umgesetzt) |
+| Integrations | 2026 Q3–Q4 | Exporte & Tools | Frontend-Exporte, Rebuilder-Mode, optionale Plugins (MVP umgesetzt) |
 
 ## Abhängigkeiten
 - **Qt/PySide6** für primäre UX; Tk nur als Fallback.

@@ -1,22 +1,21 @@
 """Native Drag & Drop Support for Rome Sorter ----------------------------------- This modules Implements A Cross-Platform Drag & Drop Support for Tkinter Without external dependencies. On windows, it uses the Win32-API via CTYPES, While on other operating systems, alternative mechanisms are employed."""
+# ruff: noqa: E402
 
 import os
-import sys
 import tkinter as tk
 import platform
 import logging
 import ctypes
 import weakref
 import time
-from typing import Dict, List, Set, Tuple, Callable, Any, Optional, Union, NewType
-from pathlib import Path
+from typing import List, Callable, NewType
 
 # Type definitions for drag and drop
 FilePath = NewType('FilePath', str)
 FileList = List[FilePath]
 DropCallback = Callable[[FileList], None]
-from ctypes import POINTER, byref, c_char_p, c_uint, c_void_p, c_wchar_p, create_unicode_buffer
-from ctypes.wintypes import BOOL, DWORD, HWND, LPARAM, LPCWSTR, POINT, RECT
+from ctypes import POINTER
+from ctypes.wintypes import BOOL, DWORD, HWND, LPCWSTR, POINT
 
 # Logger Setup
 logger = logging.getLogger(__name__)
@@ -234,7 +233,7 @@ class DragDropMixin:
 # A Top Level Window Can Interact With World Cup
                 self.tk.call('wm', 'title', self._w)
                 is_toplevel = True
-            except:
+            except Exception:
 # Non-top level widgets throw a Mistake
                 pass
 
@@ -335,7 +334,7 @@ class DragDropMixin:
                         toplevel._original_window_proc = toplevel.tk.call('winfo', 'toplevel', toplevel._w)
                         toplevel.tk.call('wm', 'protocol', toplevel._w, 'WM_DROPFILES', _toplevel_drop_handler)
 
-                    logger.info(f"Windows Drop-Target erfolgreich registriert für Widget über Top-Level-Fenster")
+                    logger.info("Windows Drop-Target erfolgreich registriert für Widget über Top-Level-Fenster")
                     self._drop_target_registered = True
                     return True
 
@@ -468,7 +467,7 @@ def _extract_drop_file_paths(hdrop) -> List[str]:
                                 path = path[1:]
                             if os.path.exists(path):
                                 paths.append(path)
-                        except:
+                        except Exception:
                             pass
             else:  # Einzelne URL
                 try:
@@ -477,7 +476,7 @@ def _extract_drop_file_paths(hdrop) -> List[str]:
                         path = path[1:]
                     if os.path.exists(path):
                         paths.append(path)
-                except:
+                except Exception:
                     pass
 
 # Standard space separation

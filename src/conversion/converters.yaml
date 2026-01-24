@@ -1,4 +1,29 @@
 {
   "version": "1.0",
-  "converters": []
+  "converters": [
+    {
+      "converter_id": "cd_to_chd",
+      "name": "cd_to_chd",
+      "tool_key": "chdman",
+      "exe_path": "C:/tools/chdman.exe",
+      "enabled": true,
+      "platform_ids": [
+        "PS1"
+      ],
+      "extensions": [
+        ".cue"
+      ],
+      "input_kinds": [
+        "DiscTrackSet"
+      ],
+      "output_extension": ".chd",
+      "args_template": [
+        "createcd",
+        "-i",
+        "{input}",
+        "-o",
+        "{output}"
+      ]
+    }
+  ]
 }

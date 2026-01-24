@@ -4,13 +4,10 @@
 
 import os
 import logging
-import sys
-import json
-from typing import Dict, Any, Optional, List, Union
-from pathlib import Path
+from typing import Dict, Any, Optional, List
 
 # Import the base class from config
-from ..config import Config as BaseConfig, ConfigError
+from ..config import Config as BaseConfig
 
 # Configure logging
 logger = logging.getLogger(__name__)

@@ -165,7 +165,12 @@
       "F:/AAAATransfer/DATs/Redump"
     ],
     "index_path": "data/index/romsorter_dat_index.sqlite",
-    "lock_path": "data/index/romsorter_dat_index.lock"
+    "lock_path": "data/index/romsorter_dat_index.lock",
+    "auto_build": true
+  },
+  "identification_overrides": {
+    "enabled": true,
+    "path": "config/identify_overrides.yaml"
   },
   "platform_catalog_path": "",
   "database": {

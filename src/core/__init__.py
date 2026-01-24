@@ -5,6 +5,7 @@ ROM Sorter Pro - Core Package
 
 This package contains core functionality and utilities for the application.
 """
+# ruff: noqa: E402
 
 from .file_utils import (
     create_directory_if_not_exists,

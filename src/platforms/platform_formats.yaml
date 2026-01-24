@@ -1,4 +1,74 @@
-{
-  "version": "1.0",
-  "formats": []
-}
+version: "1.0"
+formats:
+  - platform_id: "ps3"
+    format_id: "ps3-folder"
+    description: "PlayStation 3 game folder (folder set)"
+    input_kinds:
+      - "GameFolderSet"
+    required_manifests:
+      - "PS3_DISC.SFB"
+      - "PS3_GAME/PARAM.SFO"
+    normalize_to_single_file: false
+  - platform_id: "ps2"
+    format_id: "ps2-disc"
+    description: "PlayStation 2 disc images"
+    input_kinds:
+      - "DiscImage"
+      - "DiscTrackSet"
+    preferred_outputs:
+      - ".chd"
+  - platform_id: "ps1"
+    format_id: "ps1-disc"
+    description: "PlayStation 1 disc images"
+    input_kinds:
+      - "DiscImage"
+      - "DiscTrackSet"
+    preferred_outputs:
+      - ".chd"
+  - platform_id: "dreamcast"
+    format_id: "dc-gdi"
+    description: "Dreamcast GDI track set"
+    input_kinds:
+      - "DiscTrackSet"
+    preferred_outputs:
+      - ".chd"
+  - platform_id: "segacd"
+    format_id: "segacd-cue"
+    description: "Sega CD cue track set"
+    input_kinds:
+      - "DiscTrackSet"
+  - platform_id: "saturn"
+    format_id: "saturn-cue"
+    description: "Sega Saturn cue track set"
+    input_kinds:
+      - "DiscTrackSet"
+    preferred_outputs:
+      - ".chd"
+  - platform_id: "pcenginecd"
+    format_id: "pcecd-cue"
+    description: "PC Engine CD cue track set"
+    input_kinds:
+      - "DiscTrackSet"
+    preferred_outputs:
+      - ".chd"
+  - platform_id: "neogeocd"
+    format_id: "neogeocd-cue"
+    description: "Neo Geo CD cue track set"
+    input_kinds:
+      - "DiscTrackSet"
+    preferred_outputs:
+      - ".chd"
+  - platform_id: "wii"
+    format_id: "wii-disc"
+    description: "Nintendo Wii disc image"
+    input_kinds:
+      - "DiscImage"
+    preferred_outputs:
+      - ".rvz"
+  - platform_id: "gamecube"
+    format_id: "gc-disc"
+    description: "Nintendo GameCube disc image"
+    input_kinds:
+      - "DiscImage"
+    preferred_outputs:
+      - ".rvz"

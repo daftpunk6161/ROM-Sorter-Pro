@@ -1,0 +1,20 @@
+{
+  "dest_path": "<TMP>/dest",
+  "mode": "copy",
+  "on_conflict": "rename",
+  "actions": [
+    {
+      "input_path": "<TMP>/src/game.nes",
+      "detected_system": "NES",
+      "planned_target_path": "<TMP>/dest/NES/game.nes",
+      "action": "copy",
+      "status": "planned",
+      "error": null,
+      "conversion_tool": null,
+      "conversion_tool_key": null,
+      "conversion_args": null,
+      "conversion_rule": null,
+      "conversion_output_extension": null
+    }
+  ]
+}

@@ -26,15 +26,12 @@ import sys
 import time
 import threading
 import json
-import gzip
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional, Dict, Any, List, Union, Tuple
+from typing import Optional, Dict, Any
 from functools import lru_cache
-from collections import deque, defaultdict
-from concurrent.futures import ThreadPoolExecutor
+from collections import defaultdict
 import queue
-import weakref
 import atexit
 
 # =====================================================================================================
@@ -106,6 +103,25 @@ class FastFormatter(logging.Formatter):
             'misses': self._cache_misses,
             'hit_rate': f"{hit_rate:.1f}%"
         }
+
+
+class JsonFormatter(logging.Formatter):
+    """Structured JSON formatter (optional)."""
+
+    def format(self, record: logging.LogRecord) -> str:
+        payload = {
+            "timestamp": datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat(),
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+            "pathname": record.pathname,
+            "lineno": record.lineno,
+            "thread": record.threadName,
+            "process": record.process,
+        }
+        if record.exc_info:
+            payload["exc_info"] = self.formatException(record.exc_info)
+        return json.dumps(payload, ensure_ascii=False)
 
 # =====================================================================================================
 # Simplified Performance Logger
@@ -368,7 +384,8 @@ def setup_optimized_logging(
     enable_websocket_logging: bool = False,
     socketio_instance=None,
     max_log_size: str = "10MB",
-    backup_count: int = 3
+    backup_count: int = 3,
+    structured_json: Optional[bool] = None
 ) -> Dict[str, Any]:
     """
     Setup optimized logging system for ROM Sorter Pro v2.1.8.
@@ -404,7 +421,15 @@ def setup_optimized_logging(
 
     handlers = {}
 
-# Console Handler
+    def _env_bool(name: str, default: bool = False) -> bool:
+        value = os.environ.get(name)
+        if value is None:
+            return default
+        return value.strip().lower() in ("1", "true", "yes", "on")
+
+    use_json = structured_json if structured_json is not None else _env_bool("ROM_SORTER_LOG_JSON")
+
+    # Console Handler
     if enable_console_logging:
         console_handler = logging.StreamHandler(sys.stdout)
         console_handler.setLevel(numeric_level)
@@ -414,7 +439,7 @@ def setup_optimized_logging(
                         sys.stdout.isatty() and
                         os.environ.get('TERM') != 'dumb')
 
-        console_handler.setFormatter(FastFormatter(enable_colors=enable_colors))
+        console_handler.setFormatter(JsonFormatter() if use_json else FastFormatter(enable_colors=enable_colors))
         root_logger.addHandler(console_handler)
         handlers['console'] = console_handler
 
@@ -429,7 +454,7 @@ def setup_optimized_logging(
             encoding='utf-8'
         )
         main_handler.setLevel(numeric_level)
-        main_handler.setFormatter(FastFormatter())
+        main_handler.setFormatter(JsonFormatter() if use_json else FastFormatter())
         root_logger.addHandler(main_handler)
         handlers['main_file'] = main_handler
 
@@ -442,7 +467,7 @@ def setup_optimized_logging(
             encoding='utf-8'
         )
         error_handler.setLevel(logging.WARNING)
-        error_handler.setFormatter(FastFormatter())
+        error_handler.setFormatter(JsonFormatter() if use_json else FastFormatter())
         root_logger.addHandler(error_handler)
         handlers['error_file'] = error_handler
 
@@ -453,7 +478,7 @@ def setup_optimized_logging(
             namespace='/logs'
         )
         websocket_handler.setLevel(logging.INFO)
-        websocket_handler.setFormatter(FastFormatter())
+        websocket_handler.setFormatter(JsonFormatter() if use_json else FastFormatter())
         root_logger.addHandler(websocket_handler)
         handlers['websocket'] = websocket_handler
 

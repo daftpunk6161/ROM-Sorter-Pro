@@ -9,10 +9,9 @@ for managing system performance parameters like threads, memory limits, etc.
 """
 
 from dataclasses import dataclass
-from typing import Dict, Any, Optional, Union
+from typing import Dict, Any, Optional
 import multiprocessing
 import logging
-import re
 
 from . import BaseConfigModule
 from ...exceptions import ValidationError
@@ -62,7 +61,7 @@ class PerformanceConfig(BaseConfigModule):
 
         # Validate boolean fields
         if not isinstance(self.enable_lazy_loading, bool):
-            raise ValidationError(f"enable_lazy_loading must be a boolean")
+            raise ValidationError("enable_lazy_loading must be a boolean")
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert configuration to dictionary."""

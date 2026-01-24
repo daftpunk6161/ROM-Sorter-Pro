@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
 from ..core.dat_index_sqlite import DatIndexSqlite
 from ..core.file_utils import calculate_file_hash

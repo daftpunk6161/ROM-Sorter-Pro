@@ -1,17 +1,15 @@
 """Rome Sarter Pro - Central Detector Interface This File Provides A Central Interface for All Rome Detectors, to Offer a Consistent API for Console Detection. Features: - uniform api for all identification methods - automatic fallback mechanism - Performance optimization through caching - context -conscious detection - Specialized detectors for certain formats (CHD, archive) - database integration for maximum accuracy (no -intro & redump) use: from detectors import detect_console console, confidence = detect_console (file name, file_path)"""
+# ruff: noqa: E402
 
 import os
 import sqlite3
-from typing import Dict, Tuple, Optional, Any, List
+from typing import Dict, Tuple, Optional, Any
 from functools import lru_cache
 import logging
-import hashlib
-from pathlib import Path
 
 # Import Detection Methods from Specialized Module
 from .console_detector import detect_console_fast
 from ..core.file_utils import calculate_file_hash
-from ..utils.performance_enhanced import measure_time
 
 # Alias for downward compatibility
 calculate_md5_fast = calculate_file_hash
@@ -26,7 +24,7 @@ ML_ENABLED = os.environ.get("ROM_SORTER_ENABLE_ML", "").strip() == "1"
 try:
     from .ml_detector import detect_console_with_ml, MLEnhancedConsoleDetector, get_ml_detector
     ML_AVAILABLE = ML_ENABLED
-except Exception as e:
+except Exception:
     ML_AVAILABLE = False
 
     def detect_console_with_ml(file_path: str) -> "DetectionResult":
@@ -45,7 +43,7 @@ except Exception as e:
         return None
 
 # Database connections
-from ..database.connection_pool import ROM_DATABASE_PATH, database_connection
+from ..database.connection_pool import ROM_DATABASE_PATH
 
 # Configure logger
 logger = logging.getLogger(__name__)

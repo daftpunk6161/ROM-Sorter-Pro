@@ -15,12 +15,21 @@ if (-not $Owner) {
     $Owner = $Repo.Split("/")[0]
 }
 
-$project = (gh project list --owner $Owner --format json | ConvertFrom-Json) | Where-Object { $_.title -eq $manifest.project_title }
+$existing = gh project list --owner $Owner --format json | ConvertFrom-Json
+$projectList = @()
+if ($null -ne $existing.projects) {
+    $projectList = $existing.projects
+} elseif ($existing -is [System.Array]) {
+    $projectList = $existing
+} else {
+    $projectList = @($existing)
+}
+$project = $projectList | Where-Object { $_.title -eq $manifest.project_title } | Sort-Object number -Descending | Select-Object -First 1
 if (-not $project) {
     throw "Project nicht gefunden: $($manifest.project_title)"
 }
 
-$projectNumber = $project.number
+$projectNumber = [string]$project.number
 Write-Host "Project: $($manifest.project_title) (#$projectNumber)"
 
 foreach ($epic in $manifest.epics) {
@@ -31,7 +40,7 @@ foreach ($epic in $manifest.epics) {
     }
 
     try {
-        gh project item-add --project $projectNumber --owner $Owner --url $issue.url | Out-Null
+        gh project item-add $projectNumber --owner $Owner --url $issue.url | Out-Null
         Write-Host "Zum Project hinzugefügt: $($epic.title)"
     } catch {
         Write-Host "Projekt-Add übersprungen: $($epic.title)"

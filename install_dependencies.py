@@ -14,7 +14,7 @@ import time
 import logging
 import platform
 import venv
-import importlib
+import importlib.util
 from logging import StreamHandler
 
 # Set up logging
@@ -76,24 +76,21 @@ def verify_core_packages():
         logger.error("PyQt5 konnte nicht importiert werden.")
         failed.append("PyQt5")
 
-    try:
-        import py7zr
+    if importlib.util.find_spec("py7zr") is not None:
         logger.info("py7zr wurde erfolgreich installiert.")
-    except ImportError:
+    else:
         logger.error("py7zr konnte nicht importiert werden.")
         failed.append("py7zr")
 
-    try:
-        import yaml
+    if importlib.util.find_spec("yaml") is not None:
         logger.info("PyYAML wurde erfolgreich installiert.")
-    except ImportError:
+    else:
         logger.error("PyYAML konnte nicht importiert werden.")
         failed.append("pyyaml")
 
-    try:
-        import requests
+    if importlib.util.find_spec("requests") is not None:
         logger.info("Requests wurde erfolgreich installiert.")
-    except ImportError:
+    else:
         logger.error("Requests konnte nicht importiert werden.")
         failed.append("requests")
 

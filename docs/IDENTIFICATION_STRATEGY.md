@@ -33,6 +33,27 @@
 - input_kind
 - normalized_artifact (optional)
 
+## Lokale Overrides (Mapping)
+Für manuelle Korrekturen gibt es eine lokale Override-Datei.
+
+- Standardpfad: [config/identify_overrides.yaml](../config/identify_overrides.yaml)
+- Aktivierung: `identification_overrides.enabled=true`
+- Pfad-Override: `identification_overrides.path` (YAML oder JSON)
+
+Minimal-Schema pro Regel:
+- `name`: eindeutiger Name
+- `platform_id`: Zielplattform (z.B. "PS2")
+- Match-Keys (kombinierbar, **alle** müssen matchen):
+   - `path_regex`
+   - `name_regex`
+   - `path_glob`
+   - `contains` (String oder Liste)
+   - `extension`
+   - `starts_with`
+   - `ends_with`
+
+Regeln werden top‑down ausgewertet (first match wins). Overrides erzeugen das Signal `OVERRIDE_RULE`.
+
 ## Archive Awareness
 - ZIP: Entries einzeln hashen (Stream, kein Extract by default)
 - 7z/rar: optional (wenn Tool vorhanden), sonst Unknown

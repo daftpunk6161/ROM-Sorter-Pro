@@ -4,10 +4,8 @@ from __future__ import annotations
 
 import os
 import sqlite3
-import hashlib
 import zipfile
 from dataclasses import dataclass
-from datetime import datetime
 from pathlib import Path
 from typing import Dict, Iterable, Iterator, List, Optional, Tuple
 import xml.etree.ElementTree as ET
@@ -55,7 +53,12 @@ class DatIndexSqlite:
         cur.execute("PRAGMA journal_mode=WAL")
         cur.execute("PRAGMA synchronous=NORMAL")
         cur.execute("PRAGMA temp_store=MEMORY")
-        cur.execute("PRAGMA cache_size=10000")
+        cur.execute("PRAGMA foreign_keys=ON")
+        cur.execute("PRAGMA cache_size=-20000")
+        cur.execute("PRAGMA mmap_size=268435456")
+        cur.execute("PRAGMA wal_autocheckpoint=1000")
+        cur.execute("PRAGMA journal_size_limit=67108864")
+        cur.execute("PRAGMA busy_timeout=3000")
         self.conn.commit()
 
     def _init_schema(self) -> None:
@@ -154,12 +157,15 @@ class DatIndexSqlite:
         processed = 0
         skipped = 0
         inserted = 0
+        removed = 0
 
-        for file_path in self._iter_dat_files(paths):
+        file_paths = self._collect_dat_files(paths)
+        current_paths = {str(path) for path in file_paths}
+        removed = self._deactivate_missing_paths(current_paths)
+
+        for file_path in file_paths:
             if cancel_event is not None and getattr(cancel_event, "is_set", lambda: False)():
                 break
-            if not file_path.exists() or not file_path.is_file():
-                continue
             dat_id, changed = self._ensure_dat_file(file_path)
             if not dat_id:
                 continue
@@ -176,7 +182,68 @@ class DatIndexSqlite:
                 inserted += len(rows[i : i + 10000])
             self.conn.commit()
 
-        return {"processed": processed, "skipped": skipped, "inserted": inserted}
+        return {"processed": processed, "skipped": skipped, "inserted": inserted, "removed": removed}
+
+    def coverage_report(self) -> Dict[str, object]:
+        cur = self.conn.cursor()
+        cur.execute("SELECT COUNT(*) AS count FROM dat_files WHERE active=1")
+        active_files = int(cur.fetchone()[0])
+        cur.execute("SELECT COUNT(*) AS count FROM dat_files WHERE active=0")
+        inactive_files = int(cur.fetchone()[0])
+        cur.execute("SELECT COUNT(*) AS count FROM rom_hashes")
+        rom_hashes = int(cur.fetchone()[0])
+        cur.execute("SELECT COUNT(*) AS count FROM game_names")
+        game_names = int(cur.fetchone()[0])
+
+        cur.execute("SELECT platform_id, COUNT(*) AS count FROM rom_hashes GROUP BY platform_id")
+        rom_counts = {str(row["platform_id"] or "Unknown"): int(row["count"]) for row in cur.fetchall()}
+        cur.execute("SELECT platform_id, COUNT(*) AS count FROM game_names GROUP BY platform_id")
+        game_counts = {str(row["platform_id"] or "Unknown"): int(row["count"]) for row in cur.fetchall()}
+
+        platforms = {}
+        for platform in sorted(set(rom_counts.keys()) | set(game_counts.keys())):
+            platforms[platform] = {
+                "roms": rom_counts.get(platform, 0),
+                "games": game_counts.get(platform, 0),
+            }
+
+        return {
+            "active_dat_files": active_files,
+            "inactive_dat_files": inactive_files,
+            "rom_hashes": rom_hashes,
+            "game_names": game_names,
+            "platforms": platforms,
+        }
+
+    def _collect_dat_files(self, paths: Iterable[str]) -> List[Path]:
+        seen: set[str] = set()
+        ordered: List[Path] = []
+        for file_path in self._iter_dat_files(paths):
+            if not file_path.exists() or not file_path.is_file():
+                continue
+            key = str(file_path)
+            if key in seen:
+                continue
+            seen.add(key)
+            ordered.append(file_path)
+        return ordered
+
+    def _deactivate_missing_paths(self, current_paths: set[str]) -> int:
+        cur = self.conn.cursor()
+        cur.execute("SELECT dat_id, source_path FROM dat_files WHERE active=1")
+        rows = cur.fetchall()
+        removed = 0
+        for row in rows:
+            source_path = str(row["source_path"])
+            if source_path in current_paths:
+                continue
+            dat_id = int(row["dat_id"])
+            cur.execute("UPDATE dat_files SET active=0 WHERE dat_id=?", (dat_id,))
+            self._clear_dat_rows(dat_id)
+            removed += 1
+        if removed:
+            self.conn.commit()
+        return removed
 
     def _parse_dat_file(self, path: Path, dat_id: int) -> Iterator[DatHashRow]:
         suffix = path.suffix.lower()
@@ -344,7 +411,7 @@ def build_index_from_config(config: Optional[Config] = None, *, cancel_event: Op
 
     index = DatIndexSqlite.from_config(cfg)
     lock_path = Path(dat_cfg.get("lock_path") or os.path.join("data", "index", "romsorter_dat_index.lock"))
-    lock_info = acquire_index_lock(lock_path, index.db_path)
+    acquire_index_lock(lock_path, index.db_path)
     try:
         result = index.ingest(paths, cancel_event=cancel_event)
         return result

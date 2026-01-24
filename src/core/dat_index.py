@@ -30,7 +30,7 @@ import threading
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, BinaryIO, Dict, Iterable, Iterator, List, Optional, Sequence, Tuple
+from typing import Any, BinaryIO, Dict, Iterator, List, Optional, Sequence, Tuple
 import xml.etree.ElementTree as ET
 
 logger = logging.getLogger(__name__)

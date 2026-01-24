@@ -16,7 +16,7 @@ import re
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from ..config import load_config
 from ..config.schema import JSONSCHEMA_AVAILABLE, validate_config_schema

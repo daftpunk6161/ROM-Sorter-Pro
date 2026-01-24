@@ -10,16 +10,13 @@ It supports local caching, highly optimized queries, and improved metadata manag
 
 # Standard libraries
 import os
-import json
 import logging
 import sqlite3
 import time
-import hashlib
 import threading
 import shutil
 from datetime import datetime
-from pathlib import Path
-from typing import Dict, List, Tuple, Optional, Union, Any
+from typing import Dict, List, Optional, Any
 
 from .db_paths import get_rom_db_path
 

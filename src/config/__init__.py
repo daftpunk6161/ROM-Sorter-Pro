@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*-coding: utf-8-*-
 """Rome Sarter Pro - Configuration Package V2.1.8 This module Initialities the Configuration Package and Provides Helper Functions. The package is organized in a modular way to improve."""
+# ruff: noqa: E402
 
 import logging
 from typing import Any, Dict, Optional
@@ -52,22 +53,27 @@ def load_config(config_path: Optional[str] = None) -> Dict[str, Any]:
 # Erzeuge eine Standard-Instanz
 config_instance = Config()
 
-# Importing the extended configuration without causing circular imports
+# Import the extended configuration lazily to avoid circular imports
+from .enhanced_config import EnhancedConfig
+
+
 def get_enhanced_config():
-    """Delivers the extended configuration instance. Note: This function is later carried out by the correct implementation replaced in enhanced_config.py."""
-    return config_instance
+    """Delivers the extended configuration instance."""
+    from .enhanced_config import get_enhanced_config as get_enhanced_config_impl
 
-# Import the extended configuration only after defining the auxiliary functions
-from .enhanced_config import EnhancedConfig, get_enhanced_config as get_enhanced_config_impl
-
-# Overwritten the preliminary function with the correct implementation
-get_enhanced_config = get_enhanced_config_impl
+    return get_enhanced_config_impl()
 
 # List of the publicly available names for import
 __all__ = [
     'Config',
     'EnhancedConfig',
     'ConfigError',
+    'BaseConfigModule',
+    'PerformanceConfig',
+    'SortingConfig',
+    'AIConfig',
+    'ConfigManager',
+    'default_config',
     'load_config',
     'get_enhanced_config',
     'get_config_path',

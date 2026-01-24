@@ -1,21 +1,11 @@
 """Improved CHD recognition module for Rome Sorter ------------------------------------------ This module adds specialized detection for CHD files several types of console can be used, including: - Mame Arcade - Playstation (1, 2) - Dreamcast - Sega CD - and other disc-based systems The detection is based on: 1. File name pattern 2. Header analysis 3. Metadata from the CHD file 4. External databases (if available) 5. Context -based information (folder structure)"""
 
 import os
-import sqlite3
 import logging
-from pathlib import Path
-from typing import Optional
-
-logger = logging.getLogger(__name__)
-
-import os
 import re
-import sys
-import logging
 import hashlib
-import sqlite3
 from pathlib import Path
-from typing import Tuple, Dict, List, Optional, Set, Any
+from typing import Optional, Tuple
 
 logger = logging.getLogger(__name__)
 

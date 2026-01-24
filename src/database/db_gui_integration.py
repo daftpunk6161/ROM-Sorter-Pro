@@ -94,7 +94,7 @@ def _display_database_status(self):
         logger.info(f"Prüfe Datenbank unter Pfad: {db_path}")
 
 # Carry out detailed examination
-        debug_result = debug_database_initialization(db_path)
+        debug_database_initialization(db_path)
 
         if not os.path.exists(db_path):
             logger.info(f"Datenbank nicht gefunden unter: {db_path}")

@@ -8,8 +8,7 @@ import queue
 import time
 import logging
 import traceback
-import concurrent.futures
-from typing import Dict, List, Set, Tuple, Optional, Callable, Any, Union
+from typing import Dict, List, Tuple, Optional, Callable, Any
 
 # Logging einrichten
 logger = logging.getLogger(__name__)

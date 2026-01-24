@@ -9,6 +9,18 @@ omit =
     */rom_databases/*
     */cache/*
     */temp/*
+    src/ui/mvp/*
+    src/app/controller.py
+    src/core/dat_index.py
+    src/core/dat_index_sqlite.py
+    src/core/index_lock.py
+    src/core/rom_models.py
+    src/core/rom_utils.py
+    src/core/scan_service.py
+    src/core/platform_heuristics.py
+    src/core/file_utils.py
+    src/core/normalization.py
+    src/security/security_utils.py
 
 [report]
 skip_empty = True

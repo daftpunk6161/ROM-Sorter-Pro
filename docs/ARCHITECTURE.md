@@ -24,6 +24,8 @@
 - UI importiert **nur** aus `src.app.api` (stabile API).
 - Controller kapselt Long-Running Tasks und Error-Handling.
 - Core bleibt UI-agnostisch.
+- Security-Gates erzwingen Dry-run-Invariant und Pfadvalidierung vor allen Writes.
+- Execute erfordert eine vorherige Plan-Vorschau als Safety-Diff.
 
 ## Qt/Tk Adapter-Strategie
 

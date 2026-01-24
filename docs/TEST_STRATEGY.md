@@ -5,6 +5,7 @@
 - Negative Fälle verpflichtend
 - Dry-run darf nie schreiben oder Tools starten
 - UNKNOWN ist besser als falsch
+- Golden Fixtures für deterministische Plan-Ausgaben
 
 ## Pflichtfälle (Core)
 - DAT exact match → confidence=1000, is_exact=true

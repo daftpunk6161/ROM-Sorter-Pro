@@ -8,7 +8,7 @@ This module contains AI-related configuration classes.
 """
 
 from dataclasses import dataclass
-from typing import Dict, Any, Optional
+from typing import Any, Optional
 import logging
 
 from . import BaseConfigModule

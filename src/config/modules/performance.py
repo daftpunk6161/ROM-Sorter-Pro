@@ -9,10 +9,9 @@ for managing system performance parameters like threads, memory limits, etc.
 """
 
 from dataclasses import dataclass
-from typing import Dict, Any, Optional, Union
+from typing import Any, Optional
 import multiprocessing
 import logging
-import re
 
 from . import BaseConfigModule
 from ...exceptions import ValidationError

@@ -4,8 +4,7 @@
 
 import re
 import logging
-from typing import List, Tuple, TypeVar, Callable, Generic, Optional, Set, Dict, Any, Union
-from functools import lru_cache
+from typing import List, Tuple, TypeVar, Callable, Optional
 
 # Type variable for generic functions
 T = TypeVar('T')

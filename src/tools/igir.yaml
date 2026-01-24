@@ -1,14 +1,42 @@
 version: "1.0"
 enabled: false
+# Pfad zur igir-Executable (nur den Pfad anpassen)
 exe_path: ""
+
+# Aktive Templates (UI nutzt diese Keys: plan/execute)
 args_templates:
   probe: ["--version"]
   plan: ["--dry-run", "--report", "{report_dir}", "{input}", "--output", "{output_dir}"]
   execute: ["{input}", "--output", "{output_dir}"]
+
+# Standard-Templates (zum Kopieren in args_templates.plan/execute)
+templates:
+  copy:
+    plan: ["--dry-run", "--report", "{report_dir}", "{input}", "--output", "{output_dir}"]
+    execute: ["{input}", "--output", "{output_dir}"]
+  move:
+    plan: ["--dry-run", "--report", "{report_dir}", "{input}", "--output", "{output_dir}", "--move"]
+    execute: ["{input}", "--output", "{output_dir}", "--move"]
+  rebuild:
+    plan: ["--dry-run", "--report", "{report_dir}", "{input}", "--output", "{output_dir}", "--rebuild"]
+    execute: ["{input}", "--output", "{output_dir}", "--rebuild"]
+
+# Optional: Profile per Plattform/Kategorie (aktiv über active_profile)
+profiles:
+  ps2-chd:
+    plan: ["--dry-run", "--report", "{report_dir}", "{input}", "--output", "{output_dir}", "--dat", "PS2"]
+    execute: ["{input}", "--output", "{output_dir}", "--dat", "PS2"]
+  switch-nsp:
+    plan: ["--dry-run", "--report", "{report_dir}", "{input}", "--output", "{output_dir}", "--dat", "Switch"]
+    execute: ["{input}", "--output", "{output_dir}", "--dat", "Switch"]
+
+# Aktives Profil (Name aus profiles). Leer => args_templates nutzen.
+active_profile: ""
 timeout_seconds: 600
 allowed_actions: ["copy", "move", "rebuild", "rename"]
 enforce_dest_root: true
 require_plan_before_execute: true
 execute_requires_explicit_user_action: true
 dry_run_never_runs_igir: true
+copy_first: false
 report_dir_default: "data/reports/igir"

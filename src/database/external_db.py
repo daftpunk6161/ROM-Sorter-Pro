@@ -8,10 +8,8 @@ import xml.etree.ElementTree as ET
 import threading
 import sqlite3
 import logging
-import urllib.request
 from pathlib import Path
-from typing import Dict, List, Any, Optional, Set, Tuple, Union
-from datetime import datetime
+from typing import Dict, Any, Optional, Union
 
 # Logger
 logger = logging.getLogger(__name__)

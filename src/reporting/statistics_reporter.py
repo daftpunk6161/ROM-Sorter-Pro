@@ -7,10 +7,8 @@ import os
 import csv
 import json
 import logging
-import hashlib
 import datetime
-from typing import Dict, List, Any, Tuple, Optional, Union, Set
-from pathlib import Path
+from typing import Dict, List, Any, Optional
 from collections import Counter, defaultdict
 
 # Configure logger
@@ -32,7 +30,7 @@ except ImportError:
     HAS_MATPLOTLIB = False
 
 try:
-    from jinja2 import Template, Environment, FileSystemLoader
+    from jinja2 import Environment, FileSystemLoader
     HAS_JINJA = True
 except ImportError:
     HAS_JINJA = False

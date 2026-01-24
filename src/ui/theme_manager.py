@@ -9,7 +9,7 @@ import logging
 import platform
 import colorsys
 from enum import Enum
-from typing import Dict, Any, Optional, List, Tuple
+from typing import Dict, Any, Optional, List
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -954,7 +954,7 @@ class ThemeManager:
                     # 0 = Dunkel, 1 = Hell
                     value, _ = winreg.QueryValueEx(key, "AppsUseLightTheme")
                     return ThemeType.LIGHT if value == 1 else ThemeType.DARK
-            except:
+            except Exception:
                 pass
 
         elif system == "Darwin":  # macOS
@@ -965,7 +965,7 @@ class ThemeManager:
                     capture_output=True, text=True
                 )
                 return ThemeType.DARK if "Dark" in result.stdout else ThemeType.LIGHT
-            except:
+            except Exception:
                 pass
 
         elif system == "Linux":
@@ -977,7 +977,7 @@ class ThemeManager:
                     capture_output=True, text=True
                 )
                 return ThemeType.DARK if "dark" in result.stdout.lower() else ThemeType.LIGHT
-            except:
+            except Exception:
                 pass
 
         # Fallback: Helles Theme

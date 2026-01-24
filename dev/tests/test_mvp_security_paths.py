@@ -1,7 +1,6 @@
 import os
 import sys
 import zipfile
-import pytest
 from pathlib import Path
 
 import pytest
@@ -113,3 +112,63 @@ def test_safe_extract_zip_blocks_symlink(tmp_path):
     extract_dir = tmp_path / "out"
     with pytest.raises(Exception):
         safe_extract_zip(archive_path, extract_dir)
+
+
+def test_plan_sort_rejects_destination_file(tmp_path):
+    from src.app.controller import ScanItem, ScanResult, plan_sort
+
+    source = tmp_path / "source"
+    source.mkdir()
+    rom = source / "game.rom"
+    rom.write_text("x")
+
+    dest_file = tmp_path / "dest.txt"
+    dest_file.write_text("not a dir")
+
+    scan = ScanResult(
+        source_path=str(source),
+        items=[ScanItem(input_path=str(rom), detected_system="NES")],
+        stats={},
+        cancelled=False,
+    )
+
+    with pytest.raises(ValueError):
+        plan_sort(scan, str(dest_file), mode="copy", on_conflict="rename")
+
+
+def test_execute_external_tools_rejects_symlink_input(tmp_path):
+    from src.app.controller import SortAction, SortPlan, execute_external_tools
+
+    source = tmp_path / "source.txt"
+    source.write_text("data")
+
+    symlink = tmp_path / "link.txt"
+    try:
+        os.symlink(source, symlink)
+    except (OSError, NotImplementedError):
+        pytest.skip("Symlinks not supported in this environment")
+
+    dest_root = tmp_path / "dest"
+    dest_root.mkdir()
+
+    plan = SortPlan(
+        dest_path=str(dest_root),
+        mode="copy",
+        on_conflict="overwrite",
+        actions=[
+            SortAction(
+                input_path=str(symlink),
+                detected_system="Unknown",
+                planned_target_path=str(dest_root / "out.wud"),
+                action="convert",
+                status="planned",
+                conversion_tool="wudcompress",
+                conversion_tool_key="wudcompress",
+                conversion_args=["-h"],
+                error=None,
+            )
+        ],
+    )
+
+    with pytest.raises(Exception):
+        execute_external_tools(plan, output_dir=str(dest_root), temp_dir=str(dest_root / "_temp"), dry_run=True)

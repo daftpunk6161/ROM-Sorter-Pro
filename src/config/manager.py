@@ -12,15 +12,13 @@ import os
 import json
 import logging
 import threading
-from typing import Dict, List, Any, Optional, Union, Tuple
-from pathlib import Path
+from typing import Dict, List, Any
 from datetime import datetime
 
-from . import modules
 from .modules.perf_settings import PerformanceConfig
 from .modules.sorting import SortingConfig
 from .modules.ai import AIConfig
-from ..exceptions import ConfigurationError, ValidationError
+from ..exceptions import ConfigurationError
 
 logger = logging.getLogger(__name__)
 

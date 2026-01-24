@@ -8,18 +8,46 @@ for the ROM sorting application.
 """
 
 import os
+import time
 import logging
 import shutil
 import hashlib
 import mmap
-from typing import Union, Optional, List, Tuple
+from typing import Union, Optional
 from pathlib import Path
 from functools import lru_cache
-import io
 
 from ..security.security_utils import sanitize_filename
 
 logger = logging.getLogger(__name__)
+
+
+def _read_int_env(name: str, default: int) -> int:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    try:
+        return int(raw)
+    except ValueError:
+        return default
+
+
+def _read_float_env(name: str, default: float) -> float:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    try:
+        return float(raw)
+    except ValueError:
+        return default
+
+
+_IO_THROTTLE_MIN_SIZE_BYTES = max(0, _read_int_env("ROM_SORTER_IO_THROTTLE_MIN_MB", 512)) * 1024 * 1024
+_IO_THROTTLE_SLEEP_SECONDS = max(0.0, _read_float_env("ROM_SORTER_IO_THROTTLE_SLEEP_MS", 1.0) / 1000.0)
+
+
+def _should_throttle(size_bytes: int) -> bool:
+    return _IO_THROTTLE_SLEEP_SECONDS > 0 and size_bytes >= _IO_THROTTLE_MIN_SIZE_BYTES
 
 def _calculate_small_file_hash(file_path: Path, algorithm: str) -> str:
     """
@@ -95,13 +123,14 @@ def enhanced_copy_file(source: Union[str, Path], destination: Union[str, Path]) 
 
 
 @lru_cache(maxsize=256)
-def calculate_file_hash(file_path: Union[str, Path], algorithm='md5', block_size=65536) -> Optional[str]:
+def _calculate_file_hash_cached(file_path: str, mtime_ns: int, size_bytes: int, algorithm: str, block_size: int) -> Optional[str]:
     """Calculate the hash value of a file with the specified algorithm. Optimized with Larger Cache and Blocksize for Better Performance. ARGS: File_Path: Path to the File Algorithm: Hashalgorithm ('Md5', 'Sha1', 'Sha256') Block_Size: Size of the Blocks to Be Read in Bytes (Standard: 64kb) Return: Hash Value as A Hex String Or None in the event of errors"""
     try:
         file_path_obj = Path(file_path)
-        file_size = file_path_obj.stat().st_size
+        file_size = size_bytes
+        throttle = _should_throttle(file_size)
 
-# Processing optimized for small files
+        # Processing optimized for small files
         if file_size < 1024 * 1024 and os.name != 'nt':  # 1MB, not for Windows (because of MMAP restrictions)
             return _calculate_small_file_hash(file_path_obj, algorithm)
 
@@ -117,7 +146,7 @@ def calculate_file_hash(file_path: Union[str, Path], algorithm='md5', block_size
             return None
 
 # For very small files
-        if file_path_obj.stat().st_size < block_size * 2:
+        if file_size < block_size * 2:
             with open(file_path_obj, 'rb') as f:
                 hash_obj.update(f.read())
         else:
@@ -127,6 +156,8 @@ def calculate_file_hash(file_path: Union[str, Path], algorithm='md5', block_size
                     with mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ) as mm:
                         for i in range(0, len(mm), block_size):
                             hash_obj.update(mm[i:i+block_size])
+                            if throttle:
+                                time.sleep(_IO_THROTTLE_SLEEP_SECONDS)
                 except (ValueError, OSError):
 # Fallback for files that do not support memory mapping
                     while True:
@@ -134,12 +165,27 @@ def calculate_file_hash(file_path: Union[str, Path], algorithm='md5', block_size
                         if not buffer:
                             break
                         hash_obj.update(buffer)
+                        if throttle:
+                            time.sleep(_IO_THROTTLE_SLEEP_SECONDS)
 
         return hash_obj.hexdigest()
 
     except Exception as e:
         logger.error(f"Fehler bei der Berechnung des {algorithm}-Hash für {file_path}: {e}")
         return None
+
+
+def calculate_file_hash(file_path: Union[str, Path], algorithm='md5', block_size=65536) -> Optional[str]:
+    """Calculate the hash value of a file with the specified algorithm. Optimized with Larger Cache and Blocksize for Better Performance. ARGS: File_Path: Path to the File Algorithm: Hashalgorithm ('Md5', 'Sha1', 'Sha256') Block_Size: Size of the Blocks to Be Read in Bytes (Standard: 64kb) Return: Hash Value as A Hex String Or None in the event of errors"""
+    try:
+        file_path_obj = Path(file_path)
+        stat = file_path_obj.stat()
+    except Exception as e:
+        logger.error(f"Fehler bei der Berechnung des {algorithm}-Hash für {file_path}: {e}")
+        return None
+
+    mtime_ns = getattr(stat, "st_mtime_ns", int(stat.st_mtime * 1_000_000_000))
+    return _calculate_file_hash_cached(str(file_path_obj), mtime_ns, int(stat.st_size), algorithm, block_size)
 
 
 def get_file_extension(file_path: Union[str, Path]) -> str:

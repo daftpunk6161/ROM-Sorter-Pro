@@ -16,12 +16,28 @@ if (-not $Owner) {
 }
 
 $existing = gh project list --owner $Owner --format json | ConvertFrom-Json
-$project = $existing | Where-Object { $_.title -eq $manifest.project_title }
+$projectList = @()
+if ($null -ne $existing.projects) {
+    $projectList = $existing.projects
+} elseif ($existing -is [System.Array]) {
+    $projectList = $existing
+} else {
+    $projectList = @($existing)
+}
+$project = $projectList | Where-Object { $_.title -eq $manifest.project_title } | Sort-Object number -Descending | Select-Object -First 1
 
 if (-not $project) {
     gh project create --title $manifest.project_title --owner $Owner | Out-Null
     $existing = gh project list --owner $Owner --format json | ConvertFrom-Json
-    $project = $existing | Where-Object { $_.title -eq $manifest.project_title }
+    $projectList = @()
+    if ($null -ne $existing.projects) {
+        $projectList = $existing.projects
+    } elseif ($existing -is [System.Array]) {
+        $projectList = $existing
+    } else {
+        $projectList = @($existing)
+    }
+    $project = $projectList | Where-Object { $_.title -eq $manifest.project_title } | Sort-Object number -Descending | Select-Object -First 1
 }
 
 if (-not $project) {

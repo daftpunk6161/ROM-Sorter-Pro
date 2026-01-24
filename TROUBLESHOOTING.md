@@ -20,3 +20,7 @@
 ## Cancel does not stop
 - Ensure you are on latest commit
 - Check logs for long-running IO without cancel points
+
+## Worker errors do not show details
+- GUI should display an error dialog and log details in the live log panel
+- If only a dialog appears, export the log buffer and attach it to bug reports

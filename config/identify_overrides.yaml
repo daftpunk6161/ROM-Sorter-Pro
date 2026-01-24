@@ -1,0 +1,15 @@
+# Identification overrides
+# Each rule can match by filename/path and force a platform_id.
+# Rules are evaluated top-to-bottom; first match wins.
+
+rules:
+  # Example:
+  # - name: "my_ps2_disc"
+  #   platform_id: "PS2"
+  #   name_regex: "(?i)\\bps2\\b"
+  #   extension: ".iso"
+  #   confidence: 1.0
+
+  - name: "placeholder"
+    platform_id: "Unknown"
+    name_regex: "^$"

@@ -14,10 +14,8 @@ import argparse
 import platform
 import json
 import csv
-from pathlib import Path
 
 # Ensure logs directory exists
-import os
 os.makedirs('logs', exist_ok=True)
 
 # Configure logging only for the startup file

@@ -1,5 +1,5 @@
 {
-  "repo": "OWNER/REPO",
+  "repo": "daftpunk6161/ROM-Sorter-Pro",
   "project_title": "ROM-Sorter-Pro Roadmap",
   "milestones": [
     "Baseline-Quality",
@@ -71,7 +71,7 @@
       "title": "Unknown-Reduktion: Why Unknown + lokale Mapping-Regeln",
       "labels": ["type:epic", "priority:P1", "area:detection"],
       "milestone": "Detection-Accuracy",
-      "body": "## Context\nUNKNOWN ist korrekt, aber Nutzer braucht Erklärung + Korrekturoptionen.\n\n## Problem\nFehlende Transparenz erschwert manuelle Korrektur.\n\n## Acceptance Criteria\n- [ ] UI zeigt ""Why Unknown"" Gründe\n- [ ] Vorschläge + Mapping Overrides\n- [ ] Overrides lokal, versionierbar\n\n## Subtasks\n- [ ] Signal/Reason Modell erweitern\n- [ ] Mapping-Overrides (YAML/JSON)\n- [ ] UI Panel für Details\n\n## Test Plan\n- [ ] `dev/tests/test_mvp_identify_rules.py`\n\n## Docs updates\n- [ ] [docs/IDENTIFICATION_STRATEGY.md](../docs/IDENTIFICATION_STRATEGY.md)\n\n## Changelog note\n- [ ] 1 Bullet unter Unreleased"
+      "body": "## Context\nUNKNOWN ist korrekt, aber Nutzer braucht Erklärung + Korrekturoptionen.\n\n## Problem\nFehlende Transparenz erschwert manuelle Korrektur.\n\n## Acceptance Criteria\n- [ ] UI zeigt \"Why Unknown\" Gründe\n- [ ] Vorschläge + Mapping Overrides\n- [ ] Overrides lokal, versionierbar\n\n## Subtasks\n- [ ] Signal/Reason Modell erweitern\n- [ ] Mapping-Overrides (YAML/JSON)\n- [ ] UI Panel für Details\n\n## Test Plan\n- [ ] `dev/tests/test_mvp_identify_rules.py`\n\n## Docs updates\n- [ ] [docs/IDENTIFICATION_STRATEGY.md](../docs/IDENTIFICATION_STRATEGY.md)\n\n## Changelog note\n- [ ] 1 Bullet unter Unreleased"
     },
     {
       "id": "E5",

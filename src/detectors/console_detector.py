@@ -24,7 +24,7 @@ import re
 import logging
 from functools import lru_cache
 from pathlib import Path
-from typing import Dict, Any, Optional, List, Tuple
+from typing import Optional, List, Tuple
 
 # Absolute imports for cross -module functionality
 from ..database.console_db import (

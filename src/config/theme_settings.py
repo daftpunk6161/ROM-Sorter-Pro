@@ -56,7 +56,7 @@ def get_default_theme_settings(theme_name="system"):
                                    r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize") as key:
                     value, _ = winreg.QueryValueEx(key, "AppsUseLightTheme")
                     return THEME_SETTINGS["light"] if value == 1 else THEME_SETTINGS["dark"]
-            except:
+            except Exception:
                 pass
 
         # Fallback if the system setting cannot be determined

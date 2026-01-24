@@ -1,6 +1,8 @@
 import sys
 from pathlib import Path
 
+import pytest
+
 # Ensure repo root on path
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
@@ -45,3 +47,43 @@ def test_db_controller_scan_and_import(tmp_path):
 
     # Import should not error; count can be 0 if no matching rows
     assert db_controller.import_dat(str(dat_file), db_path=str(db_path)) >= 0
+
+
+def test_db_controller_errors_and_migrate(tmp_path, monkeypatch):
+    from src.app import db_controller
+
+    db_path = tmp_path / "roms.db"
+
+    class DummyModule:
+        def setup_database(self, _path: str):
+            class DummyConn:
+                def close(self):
+                    return None
+
+            return DummyConn()
+
+        def update_rom_database(self, _path: str):
+            return True
+
+        def scan_directory(self, _conn, _directory: str, recursive: bool = True):
+            return 0
+
+        def import_dat_file(self, _conn, _dat_file: str):
+            return 0
+
+    monkeypatch.setattr(db_controller, "_load_update_module", lambda: DummyModule())
+
+    assert db_controller.migrate_db(str(db_path)) is True
+    assert db_controller.scan_roms(str(tmp_path), db_path=str(db_path), recursive=False) == 0
+    assert db_controller.import_dat(str(tmp_path / "missing.dat"), db_path=str(db_path)) == 0
+
+    with pytest.raises(db_controller.ProcessingError):
+      db_controller.backup_db(str(tmp_path / "missing.db"))
+
+
+def test_core_init_helpers():
+    from src import core
+
+    summary = core.get_performance_summary()
+    core.print_performance_summary(summary)
+    core.print_performance_summary()

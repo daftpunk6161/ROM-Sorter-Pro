@@ -17,6 +17,8 @@
 - Konfiguriert in src/config.json
   - config.dats.import_paths[] (z. B. D:\DATs\**\*.dat)
 - DATs liegen **nicht** im Repo
+- GUI: "DAT Quellen…" verwaltet Import-Pfade (Add/Remove) und zeigt Integritäts-Check.
+- Integritäts-Check zeigt: vorhandene/fehlende Pfade + DAT/XML/ZIP Counts.
 
 ## Index Schema (Minimum)
 **rom_hashes**
@@ -44,7 +46,15 @@
 ## Inkrementelle Ingest-Regeln
 - DAT File unverändert → Skip
 - DAT File geändert → delete/replace rows für dat_id
-- DAT File entfernt → deactivate dat_id + remove hashes (oder soft delete; zu dokumentieren)
+- DAT File entfernt → deactivate dat_id + remove hashes (hard cleanup)
+
+## Coverage Report (Analytics)
+- Active/Inactive DAT Files
+- ROM Hashes (gesamt)
+- Game Names (gesamt)
+- Plattform-Counts (ROMs/Games)
+
+Coverage wird aus dem SQLite Index berechnet und kann im GUI als Statistik angezeigt werden.
 
 ## SQLite Performance
 - PRAGMA journal_mode=WAL

@@ -22,8 +22,8 @@ Ideensammlung mit Priorisierungs-Hinweisen. Bewertungsskala: Risiko/Komplexität
 | Feature | Ziel | Nutzerwert | Risiko | Komplexität |
 | --- | --- | --- | --- | --- |
 | Plan/Diff/Execute Flow | Safety diff vor Ausführung | Höhere Sicherheit | Mittel | Mittel |
-| Profile pro Plattform | Args-Templates je Kategorie | Power-User Effizienz | Niedrig | Mittel |
-| Rollback-Strategie | Copy-first oder Copy-only | Fehlerprävention | Niedrig | Mittel |
+| Profile pro Plattform | Args-Templates je Kategorie | Power-User Effizienz | Niedrig | Mittel | Implementiert (IGIR Profile + active_profile) |
+| Rollback-Strategie | Copy-first oder Copy-only | Fehlerprävention | Niedrig | Mittel | Implementiert (Copy-first Staging) |
 | Report-Viewer | Filter/Export der Ergebnisse | Transparenz | Niedrig | Mittel |
 
 ## GUI / UX

@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import csv
 import json
-from typing import Any
+import xml.etree.ElementTree as ET
+from pathlib import Path
+from typing import Any, Iterable
 
 from ...app.api import ConversionAuditReport, ScanResult, SortPlan
 
@@ -168,3 +170,62 @@ def write_audit_csv(report: ConversionAuditReport, filename: str) -> None:
                     item.reason,
                 ]
             )
+
+
+def _iter_planned_actions(plan: SortPlan) -> Iterable[Any]:
+    for action in plan.actions:
+        if not action.planned_target_path:
+            continue
+        status = str(action.status or "").lower()
+        if status in {"skipped", "error"}:
+            continue
+        yield action
+
+
+def _format_plan_path(plan: SortPlan, target_path: str, *, prefer_relative: bool) -> str:
+    if not target_path:
+        return ""
+    raw = Path(target_path)
+    try:
+        resolved = raw.resolve()
+    except Exception:
+        resolved = raw
+    if prefer_relative:
+        try:
+            dest_root = Path(plan.dest_path).resolve()
+            rel = resolved.relative_to(dest_root)
+            return f"./{rel.as_posix()}"
+        except Exception:
+            return resolved.as_posix()
+    return resolved.as_posix()
+
+
+def write_emulationstation_gamelist(plan: SortPlan, filename: str) -> None:
+    """Write a minimal EmulationStation gamelist.xml mapping from a SortPlan."""
+    root = ET.Element("gameList")
+    for action in _iter_planned_actions(plan):
+        target_path = _format_plan_path(plan, str(action.planned_target_path), prefer_relative=True)
+        if not target_path:
+            continue
+        entry = ET.SubElement(root, "game")
+        ET.SubElement(entry, "path").text = target_path
+        name = Path(str(action.planned_target_path)).stem or Path(str(action.input_path)).stem
+        ET.SubElement(entry, "name").text = name
+        ET.SubElement(entry, "platform").text = str(action.detected_system or "Unknown")
+
+    tree = ET.ElementTree(root)
+    Path(filename).parent.mkdir(parents=True, exist_ok=True)
+    tree.write(filename, encoding="utf-8", xml_declaration=True)
+
+
+def write_launchbox_csv(plan: SortPlan, filename: str) -> None:
+    """Write a minimal LaunchBox CSV mapping from a SortPlan."""
+    with open(filename, "w", encoding="utf-8", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["Title", "ApplicationPath", "Platform"])
+        for action in _iter_planned_actions(plan):
+            target_path = _format_plan_path(plan, str(action.planned_target_path), prefer_relative=False)
+            if not target_path:
+                continue
+            title = Path(str(action.planned_target_path)).stem or Path(str(action.input_path)).stem
+            writer.writerow([title, target_path, str(action.detected_system or "Unknown")])

@@ -4,17 +4,12 @@
 """ROM SARTER PRO - extended archive detection and processing This module offers extended functions for the detection and processing of various archive formats (zip, rar, 7z, etc.), with support for Nested archives and internal structures. Features: - detection of different archive formats - Processing nested archives - Optimized extraction of Rome from archives - Compression optimization for Rome - Analysis of archive structures"""
 
 import os
-import re
-import io
 import zipfile
-import tarfile
 import logging
-import hashlib
 import tempfile
 import subprocess
 import shutil
-from pathlib import Path
-from typing import Dict, List, Any, Tuple, Optional, Union, Set, Generator, BinaryIO
+from typing import List, Optional
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -309,7 +304,7 @@ class AdvancedArchiveDetector:
                 with zipfile.ZipFile(archive_path, 'r') as zip_file:
 # Check whether the file exists in the archive
                     try:
-                        info = zip_file.getinfo(file_path)
+                        zip_file.getinfo(file_path)
                     except KeyError:
                         logger.error(f"Datei {file_path} nicht im Archiv {archive_path} gefunden")
                         return False

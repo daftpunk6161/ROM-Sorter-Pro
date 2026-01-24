@@ -1,9 +1,6 @@
 line-length = 100
 target-version = "py311"
 
-select = ["E", "F"]
-ignore = ["E501"]
-
 exclude = [
   ".venv",
   "_archive",
@@ -12,3 +9,8 @@ exclude = [
   "rom_databases",
   "temp",
 ]
+
+[lint]
+select = ["E", "F"]
+ignore = ["E501"]
+per-file-ignores = { "dev/tests/*.py" = ["E402"], "src/utils/__init__.py" = ["F401"] }

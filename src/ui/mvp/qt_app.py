@@ -22,16 +22,13 @@ import importlib
 import os
 import logging
 import time
-import shutil
 import sqlite3
 import sys
 import traceback
 import threading
 import json
-import csv
-from datetime import datetime
 from pathlib import Path
-from typing import List, Optional, cast
+from typing import Iterable, List, Optional, cast
 
 
 def _load_qt():
@@ -60,22 +57,26 @@ def run() -> int:
         ConflictPolicy,
         ConversionAuditReport,
         ConversionMode,
+        DatSourceReport,
         ScanItem,
         ScanResult,
         SortPlan,
         SortReport,
         SortMode,
         audit_conversion_candidates,
+        analyze_dat_sources,
         build_dat_index,
         execute_sort,
         filter_scan_items,
+        get_dat_sources,
         infer_languages_and_version_from_name,
         infer_region_from_name,
         load_sort_resume_state,
+        normalize_input,
         plan_sort,
         run_scan,
+        save_dat_sources,
     )
-    from ...app import db_controller
     from ...config.io import load_config, save_config
     from ...core.dat_index_sqlite import DatIndexSqlite
     from ...database.db_paths import get_rom_db_path
@@ -86,7 +87,9 @@ def run() -> int:
         plan_report_to_dict,
         scan_report_to_dict,
         write_audit_csv,
+        write_emulationstation_gamelist,
         write_json,
+        write_launchbox_csv,
         write_plan_csv,
         write_scan_csv,
     )
@@ -187,6 +190,7 @@ def run() -> int:
             cancel_token: CancelToken,
             plan_confirmed: bool,
             explicit_user_action: bool,
+            copy_first: bool,
         ):
             super().__init__()
             self._input_path = input_path
@@ -195,6 +199,7 @@ def run() -> int:
             self._cancel_token = cancel_token
             self._plan_confirmed = plan_confirmed
             self._explicit_user_action = explicit_user_action
+            self._copy_first = copy_first
 
         @Slot()
         def run(self) -> None:
@@ -208,6 +213,7 @@ def run() -> int:
                     cancel_token=self._cancel_token,
                     plan_confirmed=self._plan_confirmed,
                     explicit_user_action=self._explicit_user_action,
+                    copy_first=self._copy_first,
                 )
                 self.finished.emit(result)
             except Exception as exc:
@@ -477,119 +483,192 @@ def run() -> int:
                 self.status_label.setText(f"DB: error ({exc})")
 
         def _init_db(self) -> None:
-            db_path = self._db_path
-            db_file = Path(db_path)
-            try:
-                db_file.parent.mkdir(parents=True, exist_ok=True)
-                db_controller.init_db(db_path)
-                self.status_label.setText("DB: initialized")
-            except Exception as exc:
-                self.status_label.setText(f"DB init failed ({exc})")
+            self._queue_or_run("igir_plan", "IGIR Plan", self._start_igir_plan_now)
 
-        def _backup_db(self) -> None:
-            db_path = Path(self._db_path)
-            if not db_path.exists():
-                self.status_label.setText("DB backup failed (missing db)")
+        def _start_igir_plan_now(self) -> None:
+            if self._igir_thread is not None and self._igir_thread.isRunning():
+                QtWidgets.QMessageBox.information(self, "IGIR läuft", "IGIR läuft bereits.")
                 return
-            try:
-                backup_path = db_controller.backup_db(str(db_path))
-                self.status_label.setText(f"DB backup: {backup_path}")
-            except Exception as exc:
-                self.status_label.setText(f"DB backup failed ({exc})")
-
-        def _run_task(self, label: str, func) -> None:
-            class _TaskWorker(QtCore.QObject):
-                finished = Signal(object)
-                failed = Signal(str)
-
-                def __init__(self, task):
-                    super().__init__()
-                    self._task = task
-
-                @Slot()
-                def run(self):
-                    try:
-                        result = self._task()
-                        self.finished.emit(result)
-                    except Exception as exc:
-                        self.failed.emit(str(exc))
-
-            if self._task_thread is not None:
+            source = self.igir_source_edit.text().strip()
+            dest = self.igir_dest_edit.text().strip()
+            if not source:
+                QtWidgets.QMessageBox.information(self, "IGIR", "Bitte Quelle wählen.")
+                return
+            if not dest:
+                QtWidgets.QMessageBox.information(self, "IGIR", "Bitte Ziel wählen.")
                 return
 
-            self.status_label.setText(f"DB: {label}...")
+            self._save_igir_settings_to_config()
+            self._igir_cancel_token = CancelToken()
+            temp_dir = str((Path(__file__).resolve().parents[3] / "temp").resolve())
+            report_dir = str((Path(__file__).resolve().parents[3] / "data" / "reports" / "igir").resolve())
+            self._set_igir_running(True)
+            self.igir_status_label.setText("Status: Plan läuft...")
 
-            worker = _TaskWorker(func)
             thread = QtCore.QThread()
-            self._task_thread = thread
-
+            worker = IgirPlanWorker(source, dest, report_dir, temp_dir, self._igir_cancel_token)
             worker.moveToThread(thread)
+
+            worker.log.connect(self._append_log)
+            worker.finished.connect(self._on_igir_plan_finished)
+            worker.failed.connect(self._on_igir_failed)
+            worker.finished.connect(thread.quit)
+            worker.failed.connect(thread.quit)
+            thread.finished.connect(lambda: self._cleanup_igir_thread())
+
+            self._igir_thread = thread
+            self._igir_worker = worker
+            self.btn_igir_plan.setEnabled(False)
+            self.btn_igir_execute.setEnabled(False)
+            self.btn_igir_cancel.setEnabled(True)
             thread.started.connect(worker.run)
-
-            def _cleanup():
-                thread.quit()
-                thread.wait()
-                self._task_thread = None
-
-            worker.finished.connect(lambda result: self._on_task_done(label, result))
-            worker.finished.connect(_cleanup)
-            worker.failed.connect(lambda msg: self._on_task_failed(label, msg))
-            worker.failed.connect(_cleanup)
             thread.start()
 
-        def _ensure_repo_root(self) -> None:
-            root = Path(__file__).resolve().parents[3]
-            root_str = str(root)
-            if root_str not in sys.path:
-                sys.path.insert(0, root_str)
+    class DatSourcesDialog(QtWidgets.QDialog):
+        def __init__(self, parent=None):
+            super().__init__(parent)
+            self.setWindowTitle("DAT Quellen")
+            self.resize(560, 360)
 
-        def _on_task_done(self, label: str, result: object) -> None:
-            self.status_label.setText(f"DB: {label} fertig ({result})")
-            self._refresh()
+            self._analysis_thread: Optional[threading.Thread] = None
 
-        def _on_task_failed(self, label: str, msg: str) -> None:
-            self.status_label.setText(f"DB: {label} failed ({msg})")
+            layout = QtWidgets.QVBoxLayout(self)
 
-        def _scan_roms(self) -> None:
-            directory = QtWidgets.QFileDialog.getExistingDirectory(self, "Select ROM Folder")
+            self.list_widget = QtWidgets.QListWidget()
+            layout.addWidget(self.list_widget)
+
+            controls = QtWidgets.QHBoxLayout()
+            layout.addLayout(controls)
+
+            self.btn_add = QtWidgets.QPushButton("Hinzufügen…")
+            self.btn_remove = QtWidgets.QPushButton("Entfernen")
+            self.btn_open = QtWidgets.QPushButton("Ordner öffnen")
+            self.btn_refresh = QtWidgets.QPushButton("Integrität prüfen")
+            self.btn_coverage = QtWidgets.QPushButton("Coverage anzeigen")
+            self.btn_close = QtWidgets.QPushButton("Schließen")
+
+            controls.addWidget(self.btn_add)
+            controls.addWidget(self.btn_remove)
+            controls.addWidget(self.btn_open)
+            controls.addWidget(self.btn_refresh)
+            controls.addWidget(self.btn_coverage)
+            controls.addStretch(1)
+            controls.addWidget(self.btn_close)
+
+            self.status_label = QtWidgets.QLabel("-")
+            self.status_label.setWordWrap(True)
+            layout.addWidget(self.status_label)
+
+            self.btn_add.clicked.connect(self._add_source)
+            self.btn_remove.clicked.connect(self._remove_selected)
+            self.btn_open.clicked.connect(self._open_selected)
+            self.btn_refresh.clicked.connect(self._refresh_stats)
+            self.btn_coverage.clicked.connect(self._show_coverage)
+            self.btn_close.clicked.connect(self.accept)
+
+            self._load_sources()
+
+        def _load_sources(self) -> None:
+            self.list_widget.clear()
+            for path in get_dat_sources():
+                self.list_widget.addItem(path)
+            if self.list_widget.count() == 0:
+                self.status_label.setText("Keine DAT-Pfade konfiguriert.")
+            else:
+                self._refresh_stats()
+
+        def _get_paths(self) -> list[str]:
+            return [self.list_widget.item(i).text() for i in range(self.list_widget.count())]
+
+        def _add_source(self) -> None:
+            directory = QtWidgets.QFileDialog.getExistingDirectory(self, "DAT-Ordner auswählen")
             if not directory:
                 return
+            paths = self._get_paths()
+            if directory not in paths:
+                paths.append(directory)
+                save_dat_sources(paths)
+                self._load_sources()
 
-            def task():
-                count = db_controller.scan_roms(directory, db_path=self._db_path, recursive=True)
-                return f"{count} ROMs"
+        def _remove_selected(self) -> None:
+            selected = self.list_widget.selectedItems()
+            if not selected:
+                return
+            paths = [p for p in self._get_paths() if p not in {i.text() for i in selected}]
+            save_dat_sources(paths)
+            self._load_sources()
 
-            self._run_task("scan", task)
+        def _open_selected(self) -> None:
+            selected = self.list_widget.selectedItems()
+            if not selected:
+                return
+            path = Path(selected[0].text())
+            if path.exists():
+                QtGui.QDesktopServices.openUrl(QtCore.QUrl.fromLocalFile(str(path)))
 
-        def _import_dat(self) -> None:
-            dat_file, _ = QtWidgets.QFileDialog.getOpenFileName(
-                self,
-                "Import DAT",
-                "",
-                "DAT/XML Files (*.dat *.xml);;All Files (*)",
+        def _format_report(self, report: DatSourceReport) -> str:
+            total = len(report.paths)
+            existing = len(report.existing_paths)
+            missing = len(report.missing_paths)
+            files_total = report.dat_files + report.dat_xml_files + report.dat_zip_files
+            return (
+                f"Pfade: {total} | vorhanden: {existing} | fehlend: {missing} | "
+                f"DAT/XML/ZIP: {files_total} (dat {report.dat_files}, xml {report.dat_xml_files}, zip {report.dat_zip_files})"
             )
-            if not dat_file:
-                return
 
-            def task():
-                count = db_controller.import_dat(dat_file, db_path=self._db_path)
-                return f"{count} updated"
+        def _format_coverage(self, report: dict) -> str:
+            active = int(report.get("active_dat_files", 0) or 0)
+            inactive = int(report.get("inactive_dat_files", 0) or 0)
+            roms = int(report.get("rom_hashes", 0) or 0)
+            games = int(report.get("game_names", 0) or 0)
+            platforms = report.get("platforms", {}) or {}
+            summary = f"Coverage: aktiv {active} | inaktiv {inactive} | ROMs {roms} | Games {games}"
+            if isinstance(platforms, dict) and platforms:
+                top = ", ".join(
+                    f"{name}:{(data or {}).get('roms', 0)}"
+                    for name, data in list(platforms.items())[:6]
+                )
+                if top:
+                    summary = f"{summary} | {top}"
+            return summary
 
-            self._run_task("import", task)
-
-        def _migrate_db(self) -> None:
-            def task():
-                ok = db_controller.migrate_db(self._db_path)
-                return "ok" if ok else "failed"
-
-            self._run_task("migrate", task)
-
-        def _open_folder(self) -> None:
+        def _show_coverage(self) -> None:
+            index = None
             try:
-                folder = str(Path(self._db_path).parent)
-                QtGui.QDesktopServices.openUrl(QtCore.QUrl.fromLocalFile(folder))
-            except Exception:
+                index = DatIndexSqlite.from_config()
+                report = index.coverage_report()
+                message = self._format_coverage(report)
+                self.status_label.setText(message)
+                QtWidgets.QMessageBox.information(self, "DAT Coverage", message)
+            except Exception as exc:
+                self.status_label.setText(f"Fehler: {exc}")
+                QtWidgets.QMessageBox.warning(self, "DAT Coverage", f"Coverage konnte nicht geladen werden:\n{exc}")
+            finally:
+                if index is not None:
+                    try:
+                        index.close()
+                    except Exception:
+                        pass
+
+        def _refresh_stats(self) -> None:
+            if self._analysis_thread is not None and self._analysis_thread.is_alive():
                 return
+            paths = self._get_paths()
+            if not paths:
+                self.status_label.setText("Keine DAT-Pfade konfiguriert.")
+                return
+            self.status_label.setText("Integrität prüfen…")
+
+            def _task() -> None:
+                try:
+                    report = analyze_dat_sources(paths)
+                    QtCore.QTimer.singleShot(0, lambda: self.status_label.setText(self._format_report(report)))
+                except Exception as exc:
+                    msg = f"Fehler: {exc}"
+                    QtCore.QTimer.singleShot(0, lambda msg=msg: self.status_label.setText(msg))
+
+            self._analysis_thread = threading.Thread(target=_task, daemon=True)
+            self._analysis_thread.start()
 
     class MainWindow(QtWidgets.QMainWindow):
         log_signal = Signal(str)
@@ -616,6 +695,7 @@ def run() -> int:
             self._igir_plan_ready = False
             self._igir_diff_csv: Optional[str] = None
             self._igir_diff_json: Optional[str] = None
+            self._igir_selected_template: Optional[str] = None
             self._failed_action_indices: set[int] = set()
             self._resume_path = str((Path(__file__).resolve().parents[3] / "cache" / "last_sort_resume.json").resolve())
 
@@ -642,6 +722,8 @@ def run() -> int:
             self.menu_export_scan_json = QtGui.QAction("Scan JSON", self)
             self.menu_export_plan_csv = QtGui.QAction("Plan CSV", self)
             self.menu_export_plan_json = QtGui.QAction("Plan JSON", self)
+            self.menu_export_frontend_es = QtGui.QAction("Frontend EmulationStation", self)
+            self.menu_export_frontend_launchbox = QtGui.QAction("Frontend LaunchBox", self)
             self.menu_export_audit_csv = QtGui.QAction("Audit CSV", self)
             self.menu_export_audit_json = QtGui.QAction("Audit JSON", self)
             export_menu.addAction(self.menu_export_scan_csv)
@@ -649,6 +731,9 @@ def run() -> int:
             export_menu.addSeparator()
             export_menu.addAction(self.menu_export_plan_csv)
             export_menu.addAction(self.menu_export_plan_json)
+            export_menu.addSeparator()
+            export_menu.addAction(self.menu_export_frontend_es)
+            export_menu.addAction(self.menu_export_frontend_launchbox)
             export_menu.addSeparator()
             export_menu.addAction(self.menu_export_audit_csv)
             export_menu.addAction(self.menu_export_audit_json)
@@ -726,6 +811,15 @@ def run() -> int:
             self.igir_exe_edit = QtWidgets.QLineEdit()
             self.igir_args_edit = QtWidgets.QPlainTextEdit()
             self.igir_args_edit.setPlaceholderText("One argument per line. Use {input} and {output_dir}.")
+            self.igir_templates_view = QtWidgets.QPlainTextEdit()
+            self.igir_templates_view.setReadOnly(True)
+            self.igir_templates_view.setPlaceholderText("Templates from igir.yaml (read-only)")
+            self.igir_template_combo = QtWidgets.QComboBox()
+            self.igir_template_combo.addItem("-")
+            self.btn_igir_apply_template = QtWidgets.QPushButton("Template übernehmen")
+            self.igir_profile_combo = QtWidgets.QComboBox()
+            self.igir_profile_combo.addItem("-")
+            self.btn_igir_apply_profile = QtWidgets.QPushButton("Profil aktivieren")
             self.btn_igir_browse = QtWidgets.QPushButton("IGIR wählen…")
             self.btn_igir_save = QtWidgets.QPushButton("IGIR speichern")
             self.btn_igir_probe = QtWidgets.QPushButton("IGIR prüfen")
@@ -735,6 +829,7 @@ def run() -> int:
             self.btn_igir_cancel = QtWidgets.QPushButton("IGIR abbrechen")
             self.btn_igir_cancel.setEnabled(False)
             self.igir_status_label = QtWidgets.QLabel("Status: -")
+            self.igir_copy_first_checkbox = QtWidgets.QCheckBox("Copy-first (Staging)")
             self.igir_source_edit = QtWidgets.QLineEdit()
             self.igir_dest_edit = QtWidgets.QLineEdit()
             self.igir_source_edit.setPlaceholderText("Quelle (aus Haupt-Tab)")
@@ -746,17 +841,23 @@ def run() -> int:
             self.conflict_combo = QtWidgets.QComboBox()
             self.conflict_combo.addItems(["rename", "skip", "overwrite"])
 
-            self.lang_filter = QtWidgets.QComboBox()
+            self.rebuild_checkbox = QtWidgets.QCheckBox("Rebuilder-Modus (Copy-only, Konflikte überspringen)")
+
+            self.lang_filter = QtWidgets.QListWidget()
+            self.lang_filter.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.MultiSelection)
             self.lang_filter.addItems(["All"])
             self.lang_filter.setMinimumWidth(160)
+            self.lang_filter.setMaximumHeight(90)
 
             self.ver_filter = QtWidgets.QComboBox()
             self.ver_filter.addItems(["All"])
             self.ver_filter.setMinimumWidth(160)
 
-            self.region_filter = QtWidgets.QComboBox()
+            self.region_filter = QtWidgets.QListWidget()
+            self.region_filter.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.MultiSelection)
             self.region_filter.addItems(["All"])
             self.region_filter.setMinimumWidth(160)
+            self.region_filter.setMaximumHeight(90)
 
             self.ext_filter_edit = QtWidgets.QLineEdit()
             self.ext_filter_edit.setPlaceholderText(".iso,.chd,.zip")
@@ -789,6 +890,8 @@ def run() -> int:
             self.dat_auto_load_checkbox = QtWidgets.QCheckBox("DATs beim Start automatisch laden")
             self.dat_auto_load_checkbox.setChecked(False)
             self.btn_clear_dat_cache = QtWidgets.QPushButton("DAT-Cache löschen")
+            self.btn_manage_dat = QtWidgets.QPushButton("DAT Quellen…")
+            self.btn_open_overrides = QtWidgets.QPushButton("Mapping Overrides öffnen")
 
             self.theme_combo = QtWidgets.QComboBox()
             theme_names = self._theme_manager.get_theme_names()
@@ -836,6 +939,8 @@ def run() -> int:
 
             actions_layout.addWidget(QtWidgets.QLabel("Bei Konflikt:"), 1, 0)
             actions_layout.addWidget(self.conflict_combo, 1, 1)
+
+            actions_layout.addWidget(self.rebuild_checkbox, 2, 1)
 
             actions_layout.setColumnStretch(1, 1)
 
@@ -893,9 +998,11 @@ def run() -> int:
             settings_form.addWidget(self.btn_add_dat, 1, 1)
             settings_form.addWidget(self.btn_refresh_dat, 1, 2)
             settings_form.addWidget(self.btn_cancel_dat, 1, 3)
+            settings_form.addWidget(self.btn_manage_dat, 1, 4)
 
             settings_form.addWidget(self.dat_auto_load_checkbox, 2, 1)
             settings_form.addWidget(self.btn_clear_dat_cache, 2, 2)
+            settings_form.addWidget(self.btn_open_overrides, 2, 3)
 
             sort_group = QtWidgets.QGroupBox("Sortieroptionen")
             sort_layout = QtWidgets.QVBoxLayout(sort_group)
@@ -960,6 +1067,8 @@ def run() -> int:
             self.btn_export_scan_json = QtWidgets.QPushButton("Scan JSON exportieren")
             self.btn_export_plan_csv = QtWidgets.QPushButton("Plan CSV exportieren")
             self.btn_export_plan_json = QtWidgets.QPushButton("Plan JSON exportieren")
+            self.btn_export_frontend_es = QtWidgets.QPushButton("Frontend ES exportieren")
+            self.btn_export_frontend_launchbox = QtWidgets.QPushButton("Frontend LaunchBox exportieren")
             self.btn_resume = QtWidgets.QPushButton("Fortsetzen")
             self.btn_retry_failed = QtWidgets.QPushButton("Fehlgeschlagene erneut")
             self.btn_cancel = QtWidgets.QPushButton("Abbrechen")
@@ -976,6 +1085,8 @@ def run() -> int:
                 self.btn_export_scan_json,
                 self.btn_export_plan_csv,
                 self.btn_export_plan_json,
+                self.btn_export_frontend_es,
+                self.btn_export_frontend_launchbox,
                 self.btn_resume,
                 self.btn_retry_failed,
                 self.btn_cancel,
@@ -1047,6 +1158,8 @@ def run() -> int:
             conversions_row.addWidget(self.btn_export_scan_json, 2, 1)
             conversions_row.addWidget(self.btn_export_plan_csv, 3, 0)
             conversions_row.addWidget(self.btn_export_plan_json, 3, 1)
+            conversions_row.addWidget(self.btn_export_frontend_es, 4, 0)
+            conversions_row.addWidget(self.btn_export_frontend_launchbox, 4, 1)
             conversions_row.setColumnStretch(2, 1)
             conversions_layout.addStretch(1)
 
@@ -1064,13 +1177,21 @@ def run() -> int:
             igir_cfg_layout.addWidget(self.igir_exe_edit, 0, 1)
             igir_cfg_layout.addWidget(self.btn_igir_browse, 0, 2)
             igir_cfg_layout.addWidget(QtWidgets.QLabel("Args Template:"), 1, 0)
-            igir_cfg_layout.addWidget(self.igir_args_edit, 1, 1, 3, 2)
+            igir_cfg_layout.addWidget(self.igir_args_edit, 1, 1, 2, 2)
+            igir_cfg_layout.addWidget(QtWidgets.QLabel("Standard Templates:"), 3, 0)
+            igir_cfg_layout.addWidget(self.igir_templates_view, 3, 1, 2, 2)
+            igir_cfg_layout.addWidget(QtWidgets.QLabel("Template übernehmen:"), 5, 0)
+            igir_cfg_layout.addWidget(self.igir_template_combo, 5, 1)
+            igir_cfg_layout.addWidget(self.btn_igir_apply_template, 5, 2)
+            igir_cfg_layout.addWidget(QtWidgets.QLabel("Profil:"), 6, 0)
+            igir_cfg_layout.addWidget(self.igir_profile_combo, 6, 1)
+            igir_cfg_layout.addWidget(self.btn_igir_apply_profile, 6, 2)
             igir_cfg_layout.setColumnStretch(1, 1)
             igir_actions_row = QtWidgets.QHBoxLayout()
             igir_actions_row.addWidget(self.btn_igir_save)
             igir_actions_row.addWidget(self.btn_igir_probe)
             igir_actions_row.addStretch(1)
-            igir_cfg_layout.addLayout(igir_actions_row, 4, 1, 1, 2)
+            igir_cfg_layout.addLayout(igir_actions_row, 7, 1, 1, 2)
             igir_layout.addWidget(igir_cfg_group)
 
             igir_run_group = QtWidgets.QGroupBox("IGIR Lauf")
@@ -1085,6 +1206,13 @@ def run() -> int:
             igir_run_layout.addWidget(self.btn_igir_execute, 2, 1)
             igir_run_layout.addWidget(self.btn_igir_cancel, 2, 2)
             igir_run_layout.addWidget(self.igir_status_label, 3, 0, 1, 3)
+            igir_run_layout.addWidget(self.igir_copy_first_checkbox, 4, 0, 1, 2)
+            self.btn_igir_open_diff_csv = QtWidgets.QPushButton("Diff CSV öffnen")
+            self.btn_igir_open_diff_json = QtWidgets.QPushButton("Diff JSON öffnen")
+            self.btn_igir_open_diff_csv.setEnabled(False)
+            self.btn_igir_open_diff_json.setEnabled(False)
+            igir_run_layout.addWidget(self.btn_igir_open_diff_csv, 5, 0)
+            igir_run_layout.addWidget(self.btn_igir_open_diff_json, 5, 1)
             igir_run_layout.setColumnStretch(1, 1)
             igir_layout.addWidget(igir_run_group)
 
@@ -1109,7 +1237,29 @@ def run() -> int:
             results_intro.setWordWrap(True)
             main_layout.addWidget(results_intro)
 
-            self.table = QtWidgets.QTableWidget(0, 10)
+            queue_group = QtWidgets.QGroupBox("Jobs")
+            queue_layout = QtWidgets.QGridLayout(queue_group)
+            queue_layout.setHorizontalSpacing(6)
+            queue_layout.setVerticalSpacing(6)
+            self.queue_mode_checkbox = QtWidgets.QCheckBox("Queue mode")
+            self.queue_priority_combo = QtWidgets.QComboBox()
+            self.queue_priority_combo.addItems(["Normal", "High", "Low"])
+            self.queue_pause_btn = QtWidgets.QPushButton("Pause")
+            self.queue_resume_btn = QtWidgets.QPushButton("Resume")
+            self.queue_clear_btn = QtWidgets.QPushButton("Clear")
+            self.queue_resume_btn.setEnabled(False)
+            self.queue_list = QtWidgets.QListWidget()
+            self.queue_list.setMaximumHeight(90)
+            queue_layout.addWidget(QtWidgets.QLabel("Priorität:"), 0, 0)
+            queue_layout.addWidget(self.queue_priority_combo, 0, 1)
+            queue_layout.addWidget(self.queue_mode_checkbox, 0, 2)
+            queue_layout.addWidget(self.queue_pause_btn, 1, 0)
+            queue_layout.addWidget(self.queue_resume_btn, 1, 1)
+            queue_layout.addWidget(self.queue_clear_btn, 1, 2)
+            queue_layout.addWidget(self.queue_list, 2, 0, 1, 3)
+            main_layout.addWidget(queue_group)
+
+            self.table = QtWidgets.QTableWidget(0, 11)
             self.table.setHorizontalHeaderLabels(
                 [
                     "Eingabepfad",
@@ -1121,6 +1271,7 @@ def run() -> int:
                     "Geplantes Ziel",
                     "Aktion",
                     "Status/Fehler",
+                    "Normalisierung",
                     "Reason",
                 ]
             )
@@ -1159,9 +1310,14 @@ def run() -> int:
             self.log_toggle_btn.clicked.connect(self._toggle_log_visibility)
             log_hint = QtWidgets.QLabel("Logs zeigen Fortschritt, Tool-Ausgaben und Fehler zur Fehlersuche.")
             log_hint.setWordWrap(True)
+            self.log_filter_edit = QtWidgets.QLineEdit()
+            self.log_filter_edit.setPlaceholderText("Log filtern…")
+            self.log_filter_clear_btn = QtWidgets.QPushButton("Filter löschen")
 
             log_header = QtWidgets.QHBoxLayout()
             log_header.addWidget(log_title)
+            log_header.addWidget(self.log_filter_edit)
+            log_header.addWidget(self.log_filter_clear_btn)
             log_header.addStretch(1)
             log_header.addWidget(self.log_toggle_btn)
             root_layout.addLayout(log_header)
@@ -1171,14 +1327,28 @@ def run() -> int:
 
 
             self._log_buffer = []
+            self._log_history: List[str] = []
+            self._log_filter_text = ""
             self._log_flush_timer = QtCore.QTimer(self)
             self._log_flush_timer.setInterval(100)
             self._log_flush_timer.timeout.connect(self._flush_log)
             self._log_flush_timer.start()
 
+            self._job_queue: List[dict[str, object]] = []
+            self._job_active: Optional[dict[str, object]] = None
+            self._job_paused = False
+            self._job_counter = 0
+            self._current_op: Optional[str] = None
+
             self.log_signal.connect(self._append_log)
             self.tools_signal.connect(self._on_tools_status)
             self._install_log_handler()
+
+            self.log_filter_edit.textChanged.connect(self._apply_log_filter)
+            self.log_filter_clear_btn.clicked.connect(lambda: self.log_filter_edit.setText(""))
+            self.queue_pause_btn.clicked.connect(self._pause_jobs)
+            self.queue_resume_btn.clicked.connect(self._resume_jobs)
+            self.queue_clear_btn.clicked.connect(self._clear_job_queue)
 
             self.btn_source.clicked.connect(self._choose_source)
             self.btn_dest.clicked.connect(self._choose_dest)
@@ -1190,9 +1360,13 @@ def run() -> int:
             self.btn_igir_browse.clicked.connect(self._choose_igir_exe)
             self.btn_igir_save.clicked.connect(self._save_igir_settings_to_config)
             self.btn_igir_probe.clicked.connect(self._probe_igir)
+            self.btn_igir_apply_template.clicked.connect(self._apply_igir_template)
+            self.btn_igir_apply_profile.clicked.connect(self._apply_igir_profile)
             self.btn_igir_plan.clicked.connect(self._start_igir_plan)
             self.btn_igir_execute.clicked.connect(self._start_igir_execute)
             self.btn_igir_cancel.clicked.connect(self._cancel_igir)
+            self.btn_igir_open_diff_csv.clicked.connect(lambda: self._open_igir_diff(self._igir_diff_csv))
+            self.btn_igir_open_diff_json.clicked.connect(lambda: self._open_igir_diff(self._igir_diff_json))
             self.btn_scan.clicked.connect(self._start_scan)
             self.btn_preview.clicked.connect(self._start_preview)
             self.btn_execute.clicked.connect(self._start_execute)
@@ -1204,18 +1378,22 @@ def run() -> int:
             self.btn_export_scan_json.clicked.connect(self._export_scan_json)
             self.btn_export_plan_csv.clicked.connect(self._export_plan_csv)
             self.btn_export_plan_json.clicked.connect(self._export_plan_json)
+            self.btn_export_frontend_es.clicked.connect(self._export_frontend_es)
+            self.btn_export_frontend_launchbox.clicked.connect(self._export_frontend_launchbox)
             self.menu_export_scan_csv.triggered.connect(self._export_scan_csv)
             self.menu_export_scan_json.triggered.connect(self._export_scan_json)
             self.menu_export_plan_csv.triggered.connect(self._export_plan_csv)
             self.menu_export_plan_json.triggered.connect(self._export_plan_json)
+            self.menu_export_frontend_es.triggered.connect(self._export_frontend_es)
+            self.menu_export_frontend_launchbox.triggered.connect(self._export_frontend_launchbox)
             self.menu_export_audit_csv.triggered.connect(self._export_audit_csv)
             self.menu_export_audit_json.triggered.connect(self._export_audit_json)
             self.btn_resume.clicked.connect(self._start_resume)
             self.btn_retry_failed.clicked.connect(self._start_retry_failed)
             self.btn_cancel.clicked.connect(self._cancel)
-            self.lang_filter.currentTextChanged.connect(self._on_filters_changed)
+            self.lang_filter.itemSelectionChanged.connect(self._on_filters_changed)
             self.ver_filter.currentTextChanged.connect(self._on_filters_changed)
-            self.region_filter.currentTextChanged.connect(self._on_filters_changed)
+            self.region_filter.itemSelectionChanged.connect(self._on_filters_changed)
             self.dedupe_checkbox.stateChanged.connect(lambda _v: self._on_filters_changed())
             self.hide_unknown_checkbox.stateChanged.connect(lambda _v: self._on_filters_changed())
             self.ext_filter_edit.textChanged.connect(self._on_filters_changed)
@@ -1227,11 +1405,14 @@ def run() -> int:
             self.btn_cancel_dat.clicked.connect(self._cancel_dat_index)
             self.dat_auto_load_checkbox.stateChanged.connect(self._on_dat_auto_load_changed)
             self.btn_clear_dat_cache.clicked.connect(self._clear_dat_cache)
+            self.btn_manage_dat.clicked.connect(self._open_dat_sources_dialog)
+            self.btn_open_overrides.clicked.connect(self._open_identification_overrides)
             self.theme_combo.currentTextChanged.connect(self._on_theme_changed)
             self.btn_db_manager.clicked.connect(self._open_db_manager)
             self.chk_console_folders.stateChanged.connect(self._on_sort_settings_changed)
             self.chk_region_subfolders.stateChanged.connect(self._on_sort_settings_changed)
             self.chk_preserve_structure.stateChanged.connect(self._on_sort_settings_changed)
+            self.rebuild_checkbox.stateChanged.connect(self._on_rebuild_toggle)
 
             self._apply_theme(self._theme_manager.get_theme())
             self._load_theme_from_config()
@@ -1292,8 +1473,103 @@ def run() -> int:
                 args_text = "\n".join(str(arg) for arg in args_template if str(arg).strip())
                 self.igir_exe_edit.setText(exe_path)
                 self.igir_args_edit.setPlainText(args_text)
+                templates = data.get("templates") or {}
+                self._igir_templates = templates if isinstance(templates, dict) else {}
+                self.igir_template_combo.blockSignals(True)
+                self.igir_template_combo.clear()
+                self.igir_template_combo.addItem("-")
+                if isinstance(self._igir_templates, dict):
+                    for name in sorted(self._igir_templates.keys()):
+                        self.igir_template_combo.addItem(str(name))
+                self.igir_template_combo.blockSignals(False)
+                templates_text = ""
+                if isinstance(templates, dict):
+                    blocks = []
+                    for name, spec in templates.items():
+                        if not isinstance(spec, dict):
+                            continue
+                        plan = spec.get("plan") or []
+                        execute = spec.get("execute") or []
+                        if isinstance(plan, str):
+                            plan = [plan]
+                        if isinstance(execute, str):
+                            execute = [execute]
+                        blocks.append(
+                            "\n".join(
+                                [
+                                    f"[{name}]",
+                                    "plan:",
+                                    *[f"  {arg}" for arg in plan],
+                                    "execute:",
+                                    *[f"  {arg}" for arg in execute],
+                                ]
+                            )
+                        )
+                    templates_text = "\n\n".join(blocks)
+                self.igir_templates_view.setPlainText(templates_text)
+                profiles = data.get("profiles") or {}
+                self._igir_profiles = profiles if isinstance(profiles, dict) else {}
+                self.igir_profile_combo.blockSignals(True)
+                self.igir_profile_combo.clear()
+                self.igir_profile_combo.addItem("-")
+                if isinstance(self._igir_profiles, dict):
+                    for name in sorted(self._igir_profiles.keys()):
+                        self.igir_profile_combo.addItem(str(name))
+                active_profile = str(data.get("active_profile") or "").strip()
+                if active_profile:
+                    idx_profile = self.igir_profile_combo.findText(active_profile)
+                    if idx_profile >= 0:
+                        self.igir_profile_combo.setCurrentIndex(idx_profile)
+                        self._igir_selected_profile = active_profile
+                self.igir_profile_combo.blockSignals(False)
+                try:
+                    self.igir_copy_first_checkbox.setChecked(bool(data.get("copy_first", False)))
+                except Exception:
+                    pass
             except Exception:
                 return
+
+        def _apply_igir_template(self) -> None:
+            try:
+                name = str(self.igir_template_combo.currentText() or "").strip()
+                if not name or name == "-":
+                    self.igir_status_label.setText("Status: Template wählen")
+                    return
+                templates = getattr(self, "_igir_templates", {}) or {}
+                spec = templates.get(name) if isinstance(templates, dict) else None
+                if not isinstance(spec, dict):
+                    self.igir_status_label.setText("Status: Template ungültig")
+                    return
+                args = spec.get("execute") or []
+                if isinstance(args, str):
+                    args = [args]
+                args_text = "\n".join(str(arg) for arg in args if str(arg).strip())
+                self.igir_args_edit.setPlainText(args_text)
+                self._igir_selected_template = name
+                self.igir_status_label.setText(f"Status: Template '{name}' übernommen")
+            except Exception as exc:
+                self.igir_status_label.setText(f"Status: Template Fehler ({exc})")
+
+        def _apply_igir_profile(self) -> None:
+            try:
+                name = str(self.igir_profile_combo.currentText() or "").strip()
+                if not name or name == "-":
+                    self.igir_status_label.setText("Status: Profil wählen")
+                    return
+                profiles = getattr(self, "_igir_profiles", {}) or {}
+                spec = profiles.get(name) if isinstance(profiles, dict) else None
+                if not isinstance(spec, dict):
+                    self.igir_status_label.setText("Status: Profil ungültig")
+                    return
+                args = spec.get("execute") or []
+                if isinstance(args, str):
+                    args = [args]
+                args_text = "\n".join(str(arg) for arg in args if str(arg).strip())
+                self.igir_args_edit.setPlainText(args_text)
+                self._igir_selected_profile = name
+                self.igir_status_label.setText(f"Status: Profil '{name}' aktiviert")
+            except Exception as exc:
+                self.igir_status_label.setText(f"Status: Profil Fehler ({exc})")
 
         def _save_igir_settings_to_config(self) -> None:
             try:
@@ -1318,6 +1594,23 @@ def run() -> int:
                 data.setdefault("args_templates", {})
                 if isinstance(data["args_templates"], dict):
                     data["args_templates"]["execute"] = args_lines
+                    template_name = getattr(self, "_igir_selected_template", None)
+                    templates = data.get("templates") or {}
+                    if template_name and isinstance(templates, dict):
+                        spec = templates.get(template_name)
+                        if isinstance(spec, dict):
+                            plan_args = spec.get("plan") or []
+                            if isinstance(plan_args, str):
+                                plan_args = [plan_args]
+                            plan_args = [str(arg) for arg in plan_args if str(arg).strip()]
+                            if plan_args:
+                                data["args_templates"]["plan"] = plan_args
+                profile_name = getattr(self, "_igir_selected_profile", None)
+                if profile_name:
+                    data["active_profile"] = profile_name
+                else:
+                    data["active_profile"] = ""
+                data["copy_first"] = bool(self.igir_copy_first_checkbox.isChecked())
                 payload = None
                 try:
                     import yaml  # type: ignore
@@ -1391,6 +1684,27 @@ def run() -> int:
             if not self._igir_plan_ready:
                 QtWidgets.QMessageBox.information(self, "IGIR", "Bitte zuerst IGIR Plan ausführen.")
                 return
+            if not self._igir_diff_csv and not self._igir_diff_json:
+                QtWidgets.QMessageBox.information(
+                    self,
+                    "IGIR",
+                    "Bitte zuerst einen Plan mit Diff-Report erstellen.",
+                )
+                return
+            if self._igir_diff_csv and not Path(self._igir_diff_csv).exists():
+                QtWidgets.QMessageBox.warning(
+                    self,
+                    "IGIR",
+                    "Diff-CSV fehlt. Bitte Plan erneut ausführen.",
+                )
+                return
+            if self._igir_diff_json and not Path(self._igir_diff_json).exists():
+                QtWidgets.QMessageBox.warning(
+                    self,
+                    "IGIR",
+                    "Diff-JSON fehlt. Bitte Plan erneut ausführen.",
+                )
+                return
             if self._igir_thread is not None and self._igir_thread.isRunning():
                 QtWidgets.QMessageBox.information(self, "IGIR läuft", "IGIR läuft bereits.")
                 return
@@ -1434,6 +1748,7 @@ def run() -> int:
                 self._igir_cancel_token,
                 self._igir_plan_ready,
                 True,
+                bool(self.igir_copy_first_checkbox.isChecked()),
             )
             worker.moveToThread(thread)
 
@@ -1457,6 +1772,9 @@ def run() -> int:
             if self._igir_cancel_token is None:
                 return
             try:
+                self._append_log("IGIR cancel requested by user")
+                self.igir_status_label.setText("Status: Abbruch angefordert…")
+                self.btn_igir_cancel.setEnabled(False)
                 self._igir_cancel_token.cancel()
             except Exception:
                 pass
@@ -1476,6 +1794,12 @@ def run() -> int:
             self._igir_worker = None
             self._igir_cancel_token = None
 
+        def _update_igir_diff_buttons(self) -> None:
+            has_csv = bool(self._igir_diff_csv)
+            has_json = bool(self._igir_diff_json)
+            self.btn_igir_open_diff_csv.setEnabled(has_csv)
+            self.btn_igir_open_diff_json.setEnabled(has_json)
+
         def _on_igir_plan_finished(self, result: object) -> None:
             self.btn_igir_plan.setEnabled(True)
             self.btn_igir_cancel.setEnabled(False)
@@ -1484,37 +1808,62 @@ def run() -> int:
                 self._igir_plan_ready = True
                 self._igir_diff_csv = getattr(result, "diff_csv", None)
                 self._igir_diff_json = getattr(result, "diff_json", None)
+                self._update_igir_diff_buttons()
                 self.btn_igir_execute.setEnabled(True)
                 self.igir_status_label.setText("Status: Plan ok")
                 QtWidgets.QMessageBox.information(self, "IGIR", f"Plan erstellt ({message}).")
+                self._complete_job("igir_plan")
             elif getattr(result, "cancelled", False):
                 self.igir_status_label.setText("Status: Plan abgebrochen")
+                self._update_igir_diff_buttons()
                 QtWidgets.QMessageBox.information(self, "IGIR", "Plan abgebrochen.")
+                self._complete_job("igir_plan")
             else:
                 self.igir_status_label.setText(f"Status: Plan fehlgeschlagen ({message})")
+                self._update_igir_diff_buttons()
                 QtWidgets.QMessageBox.warning(self, "IGIR", f"Plan fehlgeschlagen: {message}")
+                self._complete_job("igir_plan")
 
         def _on_igir_execute_finished(self, result: object) -> None:
             self.btn_igir_plan.setEnabled(True)
             self.btn_igir_execute.setEnabled(True)
             self.btn_igir_cancel.setEnabled(False)
+            self._update_igir_diff_buttons()
             message = getattr(result, "message", "ok")
             if getattr(result, "success", False):
                 self.igir_status_label.setText("Status: Execute ok")
                 QtWidgets.QMessageBox.information(self, "IGIR", f"Execute abgeschlossen ({message}).")
+                self._complete_job("igir_execute")
             elif getattr(result, "cancelled", False):
                 self.igir_status_label.setText("Status: Execute abgebrochen")
                 QtWidgets.QMessageBox.information(self, "IGIR", "Execute abgebrochen.")
+                self._complete_job("igir_execute")
             else:
                 self.igir_status_label.setText(f"Status: Execute fehlgeschlagen ({message})")
                 QtWidgets.QMessageBox.warning(self, "IGIR", f"Execute fehlgeschlagen: {message}")
+                self._complete_job("igir_execute")
 
         def _on_igir_failed(self, message: str) -> None:
             self.btn_igir_plan.setEnabled(True)
             self.btn_igir_execute.setEnabled(self._igir_plan_ready)
             self.btn_igir_cancel.setEnabled(False)
+            self._update_igir_diff_buttons()
             self.igir_status_label.setText(f"Status: fehlgeschlagen ({message})")
             QtWidgets.QMessageBox.warning(self, "IGIR", f"IGIR fehlgeschlagen: {message}")
+            self._complete_job("igir_plan")
+            self._complete_job("igir_execute")
+
+        def _open_igir_diff(self, path: Optional[str]) -> None:
+            if not path:
+                QtWidgets.QMessageBox.information(self, "IGIR", "Kein Diff vorhanden.")
+                return
+            try:
+                if not Path(path).exists():
+                    QtWidgets.QMessageBox.warning(self, "IGIR", f"Diff nicht gefunden: {path}")
+                    return
+                QtGui.QDesktopServices.openUrl(QtCore.QUrl.fromLocalFile(str(path)))
+            except Exception as exc:
+                QtWidgets.QMessageBox.warning(self, "IGIR", f"Diff konnte nicht geöffnet werden: {exc}")
 
         def _start_dat_auto_load(self) -> None:
             try:
@@ -1677,7 +2026,15 @@ def run() -> int:
         def _on_dat_index_done(self, result: object) -> None:
             self.btn_refresh_dat.setEnabled(True)
             self.btn_cancel_dat.setEnabled(False)
-            self.dat_status.setText(f"DAT: Index fertig ({result})")
+            if isinstance(result, dict):
+                processed = result.get("processed", 0)
+                skipped = result.get("skipped", 0)
+                inserted = result.get("inserted", 0)
+                self.dat_status.setText(
+                    f"DAT: Index fertig (processed {processed}, skipped {skipped}, inserted {inserted})"
+                )
+            else:
+                self.dat_status.setText(f"DAT: Index fertig ({result})")
 
         def _on_dat_index_failed(self, message: str) -> None:
             self.btn_refresh_dat.setEnabled(True)
@@ -1742,6 +2099,52 @@ def run() -> int:
         def _open_db_manager(self) -> None:
             dialog = DBManagerDialog(self)
             dialog.exec()
+
+        def _open_dat_sources_dialog(self) -> None:
+            try:
+                dialog = DatSourcesDialog(self)
+                dialog.exec()
+            except Exception as exc:
+                logging.getLogger(__name__).exception("Failed to open DAT sources dialog")
+                QtWidgets.QMessageBox.warning(
+                    self,
+                    "DAT Quellen",
+                    f"Dialog konnte nicht geöffnet werden:\n{exc}",
+                )
+
+        def _resolve_override_path(self) -> Path:
+            try:
+                cfg = load_config()
+            except Exception:
+                cfg = {}
+            override_cfg = cfg.get("identification_overrides", {}) if isinstance(cfg, dict) else {}
+            if isinstance(override_cfg, str):
+                override_cfg = {"path": override_cfg}
+            raw_path = str(override_cfg.get("path") or "config/identify_overrides.yaml").strip()
+            if not raw_path:
+                raw_path = "config/identify_overrides.yaml"
+            path = Path(raw_path)
+            if not path.is_absolute():
+                path = (Path(__file__).resolve().parents[3] / path).resolve()
+            return path
+
+        def _open_identification_overrides(self) -> None:
+            try:
+                path = self._resolve_override_path()
+                if not path.exists():
+                    QtWidgets.QMessageBox.information(
+                        self,
+                        "Mapping Overrides",
+                        f"Override-Datei nicht gefunden:\n{path}",
+                    )
+                    return
+                QtGui.QDesktopServices.openUrl(QtCore.QUrl.fromLocalFile(str(path)))
+            except Exception as exc:
+                QtWidgets.QMessageBox.warning(
+                    self,
+                    "Mapping Overrides",
+                    f"Öffnen fehlgeschlagen:\n{exc}",
+                )
 
         def _apply_theme(self, theme) -> None:
             try:
@@ -1913,6 +2316,8 @@ def run() -> int:
                         pass
 
         def _on_filters_changed(self, _value: str = "") -> None:
+            self._enforce_all_exclusive(self.lang_filter)
+            self._enforce_all_exclusive(self.region_filter)
             # Changing filters invalidates existing plan.
             if self._sort_plan is not None:
                 self._sort_plan = None
@@ -1933,6 +2338,17 @@ def run() -> int:
                 reason = f"low-confidence (<{min_conf:.2f})"
             return str(reason or "")
 
+        def _format_normalization_hint(self, input_path: str, platform_id: str) -> str:
+            if not input_path:
+                return "-"
+            try:
+                norm = normalize_input(input_path, platform_hint=str(platform_id or ""))
+                if norm.issues:
+                    return "; ".join(issue.message for issue in norm.issues)
+                return "ok"
+            except Exception as exc:
+                return f"Fehler: {exc}"
+
         def _show_why_unknown(self) -> None:
             row = self.table.currentRow()
             if row < 0 or row >= len(self._table_items):
@@ -1946,6 +2362,7 @@ def run() -> int:
             source = str(item.detection_source or "-")
             confidence = self._format_confidence(item.detection_confidence)
             exact = "ja" if getattr(item, "is_exact", False) else "nein"
+            normalization_hint = self._format_normalization_hint(item.input_path, item.detected_system)
             msg = (
                 f"System: {item.detected_system}\n"
                 f"Reason: {reason}\n"
@@ -1953,7 +2370,8 @@ def run() -> int:
                 f"Sicherheit: {confidence}\n"
                 f"Exact: {exact}\n"
                 f"Signale: {signals}\n"
-                f"Kandidaten: {candidates}"
+                f"Kandidaten: {candidates}\n"
+                f"Normalisierung: {normalization_hint}"
             )
             QtWidgets.QMessageBox.information(self, "Why Unknown", msg)
 
@@ -1965,9 +2383,9 @@ def run() -> int:
                 else:
                     combo.setCurrentIndex(0)
 
-            _set_combo(self.lang_filter, "All")
+            self._select_filter_values(self.lang_filter, ["All"])
             _set_combo(self.ver_filter, "All")
-            _set_combo(self.region_filter, "All")
+            self._select_filter_values(self.region_filter, ["All"])
             self.ext_filter_edit.clear()
             self.min_size_edit.clear()
             self.max_size_edit.clear()
@@ -1975,13 +2393,38 @@ def run() -> int:
             self.hide_unknown_checkbox.setChecked(False)
             self._on_filters_changed()
 
+        def _get_selected_filter_values(self, widget: QtWidgets.QListWidget) -> list[str]:
+            selected = [item.text() for item in widget.selectedItems()]
+            return selected if selected else ["All"]
+
+        def _select_filter_values(self, widget: QtWidgets.QListWidget, values: Iterable[str]) -> None:
+            widget.blockSignals(True)
+            widget.clearSelection()
+            values_set = {str(v) for v in values if str(v)} or {"All"}
+            for idx in range(widget.count()):
+                item = widget.item(idx)
+                if item.text() in values_set:
+                    item.setSelected(True)
+            if not widget.selectedItems():
+                for idx in range(widget.count()):
+                    item = widget.item(idx)
+                    if item.text() == "All":
+                        item.setSelected(True)
+                        break
+            widget.blockSignals(False)
+
+        def _enforce_all_exclusive(self, widget: QtWidgets.QListWidget) -> None:
+            selected = [item.text() for item in widget.selectedItems()]
+            if "All" in selected and len(selected) > 1:
+                self._select_filter_values(widget, ["All"])
+
         def _get_filtered_scan_result(self) -> ScanResult:
             if self._scan_result is None:
                 raise RuntimeError("No scan result available")
 
-            lang = str(self.lang_filter.currentText() or "All")
+            lang = self._get_selected_filter_values(self.lang_filter)
             ver = str(self.ver_filter.currentText() or "All")
-            region = str(self.region_filter.currentText() or "All")
+            region = self._get_selected_filter_values(self.region_filter)
             dedupe = bool(self.dedupe_checkbox.isChecked())
             hide_unknown = bool(self.hide_unknown_checkbox.isChecked())
             ext_filter = str(self.ext_filter_edit.text() or "").strip()
@@ -2048,10 +2491,12 @@ def run() -> int:
                 lang_defaults, ver_defaults, region_defaults = self._load_filter_defaults()
                 self.lang_filter.clear()
                 self.lang_filter.addItems(lang_defaults)
+                self._select_filter_values(self.lang_filter, ["All"])
                 self.ver_filter.clear()
                 self.ver_filter.addItems(ver_defaults)
                 self.region_filter.clear()
                 self.region_filter.addItems(region_defaults)
+                self._select_filter_values(self.region_filter, ["All"])
                 return
 
             langs = set()
@@ -2096,20 +2541,19 @@ def run() -> int:
                 else:
                     regions.add(str(r))
 
-            current_lang = str(self.lang_filter.currentText() or "All")
+            current_langs = self._get_selected_filter_values(self.lang_filter)
             current_ver = str(self.ver_filter.currentText() or "All")
-            current_region = str(self.region_filter.currentText() or "All")
+            current_regions = self._get_selected_filter_values(self.region_filter)
 
             self.lang_filter.blockSignals(True)
             self.lang_filter.clear()
             self.lang_filter.addItem("All")
             if has_unknown_lang:
                 self.lang_filter.addItem("Unknown")
-            for l in sorted(langs):
-                self.lang_filter.addItem(str(l))
-            idx = self.lang_filter.findText(current_lang)
-            self.lang_filter.setCurrentIndex(idx if idx >= 0 else 0)
+            for lang in sorted(langs):
+                self.lang_filter.addItem(str(lang))
             self.lang_filter.blockSignals(False)
+            self._select_filter_values(self.lang_filter, current_langs)
 
             self.ver_filter.blockSignals(True)
             self.ver_filter.clear()
@@ -2129,9 +2573,8 @@ def run() -> int:
                 self.region_filter.addItem("Unknown")
             for r in sorted(regions):
                 self.region_filter.addItem(str(r))
-            idx3 = self.region_filter.findText(current_region)
-            self.region_filter.setCurrentIndex(idx3 if idx3 >= 0 else 0)
             self.region_filter.blockSignals(False)
+            self._select_filter_values(self.region_filter, current_regions)
 
         def _load_filter_defaults(self) -> tuple[list[str], list[str], list[str]]:
             lang_values = ["All", "Unknown"]
@@ -2191,9 +2634,131 @@ def run() -> int:
         def _flush_log(self) -> None:
             if not self._log_buffer:
                 return
-            payload = "\n".join(self._log_buffer)
+            lines: List[str] = []
+            for entry in self._log_buffer:
+                lines.extend(str(entry).splitlines())
             self._log_buffer.clear()
-            self.log_view.appendPlainText(payload)
+            if lines:
+                self._log_history.extend(lines)
+                if len(self._log_history) > 2000:
+                    self._log_history = self._log_history[-2000:]
+            if not self._log_filter_text:
+                if lines:
+                    self.log_view.appendPlainText("\n".join(lines))
+                return
+            filtered = [line for line in lines if self._log_filter_text in line.lower()]
+            if filtered:
+                self.log_view.appendPlainText("\n".join(filtered))
+
+        def _apply_log_filter(self) -> None:
+            text = str(self.log_filter_edit.text() or "").strip().lower()
+            self._log_filter_text = text
+            try:
+                self.log_view.clear()
+            except Exception:
+                return
+            if not self._log_history:
+                return
+            if not text:
+                self.log_view.appendPlainText("\n".join(self._log_history))
+                return
+            filtered = [line for line in self._log_history if text in line.lower()]
+            if filtered:
+                self.log_view.appendPlainText("\n".join(filtered))
+
+        def _priority_value(self, label: str) -> int:
+            value = str(label or "").strip().lower()
+            if value == "high":
+                return 0
+            if value == "low":
+                return 2
+            return 1
+
+        def _queue_or_run(self, op: str, label: str, func) -> None:
+            priority = self._priority_value(self.queue_priority_combo.currentText())
+            if self.queue_mode_checkbox.isChecked() or self._job_active is not None:
+                self._enqueue_job(op, label, func, priority)
+                return
+            func()
+
+        def _enqueue_job(self, op: str, label: str, func, priority: int) -> None:
+            self._job_counter += 1
+            job = {
+                "id": self._job_counter,
+                "op": op,
+                "label": label,
+                "priority": priority,
+                "status": "queued",
+                "func": func,
+            }
+            self._job_queue.append(job)
+            self._job_queue.sort(key=lambda item: (int(item.get("priority", 1)), int(item.get("id", 0))))
+            self._refresh_job_queue()
+            self._maybe_start_next_job()
+
+        def _maybe_start_next_job(self) -> None:
+            if self._job_active is not None:
+                return
+            if self._job_paused:
+                return
+            if not self._job_queue:
+                return
+            job = self._job_queue[0]
+            job["status"] = "running"
+            self._job_active = job
+            self._refresh_job_queue()
+            try:
+                job_func = job.get("func")
+                if callable(job_func):
+                    job_func()
+            except Exception:
+                job["status"] = "error"
+                self._job_active = None
+                self._refresh_job_queue()
+
+        def _complete_job(self, op: str) -> None:
+            if not self._job_active:
+                return
+            if str(self._job_active.get("op")) != str(op):
+                return
+            try:
+                self._job_queue.remove(self._job_active)
+            except Exception:
+                pass
+            self._job_active = None
+            if self._current_op == op:
+                self._current_op = None
+            self._refresh_job_queue()
+            self._maybe_start_next_job()
+
+        def _refresh_job_queue(self) -> None:
+            try:
+                self.queue_list.clear()
+                for job in self._job_queue:
+                    priority = int(job.get("priority", 1))
+                    label = str(job.get("label", "job"))
+                    status = str(job.get("status", "queued"))
+                    pid = int(job.get("id", 0))
+                    prio_text = {0: "High", 1: "Normal", 2: "Low"}.get(priority, "Normal")
+                    self.queue_list.addItem(f"#{pid} [{prio_text}] {label} - {status}")
+            except Exception:
+                return
+
+        def _pause_jobs(self) -> None:
+            self._job_paused = True
+            self.queue_pause_btn.setEnabled(False)
+            self.queue_resume_btn.setEnabled(True)
+            self.status_label.setText("Jobs pausiert")
+
+        def _resume_jobs(self) -> None:
+            self._job_paused = False
+            self.queue_pause_btn.setEnabled(True)
+            self.queue_resume_btn.setEnabled(False)
+            self._maybe_start_next_job()
+
+        def _clear_job_queue(self) -> None:
+            self._job_queue = [job for job in self._job_queue if job is self._job_active]
+            self._refresh_job_queue()
 
         def _toggle_log_visibility(self) -> None:
             self._set_log_visible(not self._log_visible)
@@ -2327,12 +2892,16 @@ def run() -> int:
             self.btn_export_scan_json.setEnabled(not running and self._scan_result is not None)
             self.btn_export_plan_csv.setEnabled(not running and self._sort_plan is not None)
             self.btn_export_plan_json.setEnabled(not running and self._sort_plan is not None)
+            self.btn_export_frontend_es.setEnabled(not running and self._sort_plan is not None)
+            self.btn_export_frontend_launchbox.setEnabled(not running and self._sort_plan is not None)
             self.menu_export_audit_csv.setEnabled(not running and self._audit_report is not None)
             self.menu_export_audit_json.setEnabled(not running and self._audit_report is not None)
             self.menu_export_scan_csv.setEnabled(not running and self._scan_result is not None)
             self.menu_export_scan_json.setEnabled(not running and self._scan_result is not None)
             self.menu_export_plan_csv.setEnabled(not running and self._sort_plan is not None)
             self.menu_export_plan_json.setEnabled(not running and self._sort_plan is not None)
+            self.menu_export_frontend_es.setEnabled(not running and self._sort_plan is not None)
+            self.menu_export_frontend_launchbox.setEnabled(not running and self._sort_plan is not None)
             self.btn_cancel.setEnabled(running)
             self.btn_resume.setEnabled(not running and self._can_resume())
             self.btn_retry_failed.setEnabled(not running and self._can_retry_failed())
@@ -2348,11 +2917,36 @@ def run() -> int:
                 self.output_edit.setEnabled(not running)
             if self.temp_edit is not None:
                 self.temp_edit.setEnabled(not running)
-            self.mode_combo.setEnabled(not running)
-            self.conflict_combo.setEnabled(not running)
+            self.rebuild_checkbox.setEnabled(not running)
+            self._sync_rebuild_controls(running=running)
             self.btn_clear_filters.setEnabled(not running)
+            self.btn_add_dat.setEnabled(not running)
+            self.btn_refresh_dat.setEnabled(not running)
+            self.btn_cancel_dat.setEnabled(not running and self._dat_index_cancel_token is not None)
+            self.btn_manage_dat.setEnabled(not running)
+            self.btn_open_overrides.setEnabled(not running)
+            self.dat_auto_load_checkbox.setEnabled(not running)
+            self.btn_clear_dat_cache.setEnabled(not running)
             if not running:
                 self._update_resume_buttons()
+
+        def _sync_rebuild_controls(self, *, running: bool = False) -> None:
+            try:
+                rebuild_active = bool(self.rebuild_checkbox.isChecked())
+            except Exception:
+                rebuild_active = False
+
+            if rebuild_active:
+                if self.mode_combo.currentText() != "copy":
+                    self.mode_combo.setCurrentText("copy")
+                if self.conflict_combo.currentText() != "skip":
+                    self.conflict_combo.setCurrentText("skip")
+
+            self.mode_combo.setEnabled(not running and not rebuild_active)
+            self.conflict_combo.setEnabled(not running and not rebuild_active)
+
+        def _on_rebuild_toggle(self, _state: int) -> None:
+            self._sync_rebuild_controls(running=False)
 
         def _can_resume(self) -> bool:
             try:
@@ -2414,6 +3008,8 @@ def run() -> int:
             values = self._validate_paths(require_dest=op in ("plan", "execute"))
             if values is None:
                 return
+
+            self._current_op = op
 
             try:
                 self._append_log(f"Starting {op}…")
@@ -2478,6 +3074,9 @@ def run() -> int:
             self._thread.start()
 
         def _start_scan(self) -> None:
+            self._queue_or_run("scan", "Scan", self._start_scan_now)
+
+        def _start_scan_now(self) -> None:
             self._failed_action_indices.clear()
             self._audit_report = None
             self._update_resume_buttons()
@@ -2488,24 +3087,36 @@ def run() -> int:
             self._start_operation("scan")
 
         def _start_preview(self) -> None:
+            self._queue_or_run("plan", "Preview", self._start_preview_now)
+
+        def _start_preview_now(self) -> None:
             self._failed_action_indices.clear()
             self._audit_report = None
             self._update_resume_buttons()
             self._start_operation("plan")
 
         def _start_execute(self) -> None:
+            self._queue_or_run("execute", "Execute", self._start_execute_now)
+
+        def _start_execute_now(self) -> None:
             self._failed_action_indices.clear()
             self._audit_report = None
             self._update_resume_buttons()
             self._start_operation("execute", conversion_mode="skip")
 
         def _start_convert_only(self) -> None:
+            self._queue_or_run("execute", "Convert only", self._start_convert_only_now)
+
+        def _start_convert_only_now(self) -> None:
             self._failed_action_indices.clear()
             self._audit_report = None
             self._update_resume_buttons()
             self._start_operation("execute", conversion_mode="only")
 
         def _start_audit(self) -> None:
+            self._queue_or_run("audit", "Audit", self._start_audit_now)
+
+        def _start_audit_now(self) -> None:
             self._failed_action_indices.clear()
             self._audit_report = None
             self._update_resume_buttons()
@@ -2537,6 +3148,10 @@ def run() -> int:
 
         def _cancel(self) -> None:
             self._append_log("Cancel requested by user")
+            try:
+                self.status_label.setText("Abbrechen…")
+            except Exception:
+                pass
             self._cancel_token.cancel()
             self.btn_cancel.setEnabled(False)
 
@@ -2624,7 +3239,14 @@ def run() -> int:
                     except Exception:
                         pass
                 self.table.setItem(row, 8, status_item)
-                self.table.setItem(row, 9, QtWidgets.QTableWidgetItem(self._format_reason(item)))
+                self.table.setItem(
+                    row,
+                    9,
+                    QtWidgets.QTableWidgetItem(
+                        self._format_normalization_hint(item.input_path, item.detected_system)
+                    ),
+                )
+                self.table.setItem(row, 10, QtWidgets.QTableWidgetItem(self._format_reason(item)))
 
             try:
                 self.table.setUpdatesEnabled(True)
@@ -2676,7 +3298,14 @@ def run() -> int:
                 self.table.setItem(row, 6, QtWidgets.QTableWidgetItem(act.planned_target_path or ""))
                 self.table.setItem(row, 7, QtWidgets.QTableWidgetItem(act.action))
                 self.table.setItem(row, 8, QtWidgets.QTableWidgetItem(act.error or act.status))
-                self.table.setItem(row, 9, QtWidgets.QTableWidgetItem(""))
+                self.table.setItem(
+                    row,
+                    9,
+                    QtWidgets.QTableWidgetItem(
+                        self._format_normalization_hint(act.input_path, act.detected_system)
+                    ),
+                )
+                self.table.setItem(row, 10, QtWidgets.QTableWidgetItem(""))
 
             try:
                 self.table.setUpdatesEnabled(True)
@@ -2735,7 +3364,8 @@ def run() -> int:
                 if item.reason:
                     status = f"{status}: {item.reason}"
                 self.table.setItem(row, 8, QtWidgets.QTableWidgetItem(status))
-                self.table.setItem(row, 9, QtWidgets.QTableWidgetItem(item.reason or ""))
+                self.table.setItem(row, 9, QtWidgets.QTableWidgetItem("-"))
+                self.table.setItem(row, 10, QtWidgets.QTableWidgetItem(item.reason or ""))
 
             try:
                 self.table.setUpdatesEnabled(True)
@@ -2848,6 +3478,36 @@ def run() -> int:
                 return
             self._run_export_task("Plan CSV", lambda: write_plan_csv(plan, filename))
 
+        def _export_frontend_es(self) -> None:
+            plan = self._sort_plan
+            if plan is None:
+                QtWidgets.QMessageBox.information(self, "Kein Plan", "Bitte zuerst Vorschau ausführen.")
+                return
+            filename, _ = QtWidgets.QFileDialog.getSaveFileName(
+                self,
+                "Save EmulationStation gamelist",
+                "gamelist.xml",
+                "XML Files (*.xml)",
+            )
+            if not filename:
+                return
+            self._run_export_task("Frontend EmulationStation", lambda: write_emulationstation_gamelist(plan, filename))
+
+        def _export_frontend_launchbox(self) -> None:
+            plan = self._sort_plan
+            if plan is None:
+                QtWidgets.QMessageBox.information(self, "Kein Plan", "Bitte zuerst Vorschau ausführen.")
+                return
+            filename, _ = QtWidgets.QFileDialog.getSaveFileName(
+                self,
+                "Save LaunchBox CSV",
+                "launchbox_export.csv",
+                "CSV Files (*.csv)",
+            )
+            if not filename:
+                return
+            self._run_export_task("Frontend LaunchBox", lambda: write_launchbox_csv(plan, filename))
+
         def _export_audit_json(self) -> None:
             report = self._audit_report
             if report is None:
@@ -2938,6 +3598,7 @@ def run() -> int:
                     QtWidgets.QMessageBox.information(self, "Abgebrochen", "Scan abgebrochen.")
                 else:
                     QtWidgets.QMessageBox.information(self, "Scan abgeschlossen", f"ROMs gefunden: {len(payload.items)}")
+                self._complete_job("scan")
                 return
 
             if op == "plan":
@@ -2948,6 +3609,7 @@ def run() -> int:
                 self._populate_plan_table(payload)
                 self._last_view = "plan"
                 QtWidgets.QMessageBox.information(self, "Vorschau bereit", f"Geplante Aktionen: {len(payload.actions)}")
+                self._complete_job("plan")
                 return
 
             if op == "execute":
@@ -2960,6 +3622,7 @@ def run() -> int:
                     "Fertig",
                     f"Fertig. Kopiert: {payload.copied}, Verschoben: {payload.moved}\nFehler: {len(payload.errors)}\n\nSiehe Log für Details.",
                 )
+                self._complete_job("execute")
                 return
 
             if op == "audit":
@@ -2973,6 +3636,7 @@ def run() -> int:
                     "Audit abgeschlossen",
                     f"Geprüft: {len(payload.items)}\n\nSiehe Tabelle für Vorschläge.",
                 )
+                self._complete_job("audit")
                 self._set_running(False)
                 return
 
@@ -2983,6 +3647,9 @@ def run() -> int:
             self._set_running(False)
             self.status_label.setText("Error")
             QtWidgets.QMessageBox.critical(self, "Arbeitsfehler", f"{message}\n\n{tb}")
+            if self._current_op:
+                self._complete_job(self._current_op)
+                self._current_op = None
 
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
     win = MainWindow()

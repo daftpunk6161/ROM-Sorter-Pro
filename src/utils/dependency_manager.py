@@ -14,13 +14,12 @@ Features:
 - Platform-specific adaptations
 """
 
-import os
 import sys
 import subprocess
 import logging
 import platform
 import importlib.util
-from typing import Dict, List, Set, Tuple, Optional, Union, Any
+from typing import Dict, List, Tuple
 
 # Try to import PKG_Resources (optional dependency)
 try:
@@ -190,7 +189,7 @@ class DependencyManager:
 
             # Carry out the PIP command
             logger.debug(f"Ausführen: {' '.join(cmd)}")
-            process = subprocess.run(cmd, check=True, capture_output=True, text=True)
+            subprocess.run(cmd, check=True, capture_output=True, text=True)
 
             # Update the list of installed packages
             self.installed_packages = self._get_installed_packages()

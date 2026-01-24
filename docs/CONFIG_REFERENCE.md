@@ -53,3 +53,10 @@ Primäre Konfiguration: [src/config.json](../src/config.json)
 - Converter-Regeln: [src/conversion/converters.yaml](../src/conversion/converters.yaml)
 - DAT-Quellen: [src/dats/dat_sources.yaml](../src/dats/dat_sources.yaml)
 - IGIR-Config: [src/tools/igir.yaml](../src/tools/igir.yaml)
+
+### IGIR (Copy-first)
+`igir.yaml` unterstützt `copy_first` für Copy-first-Staging vor dem finalen Output.
+
+### Plattform-Formate (preferred outputs)
+`platform_formats.yaml` kann pro Plattform `preferred_outputs` definieren. 
+Diese Liste steuert, welcher Converter bevorzugt gewählt wird, wenn mehrere Ausgänge möglich sind.

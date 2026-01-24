@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import csv
 import json
+import shutil
 import re
 import subprocess
 import threading
@@ -109,6 +110,25 @@ def _load_cfg(config: Optional[ConfigLike]) -> Config:
         return Config()
     except Exception:
         return Config()
+
+
+def _resolve_igir_args_template(cfg: Dict[str, Any], mode: str) -> List[str]:
+    profiles = cfg.get("profiles") or {}
+    active_profile = str(cfg.get("active_profile") or "").strip()
+    if active_profile and isinstance(profiles, dict):
+        profile = profiles.get(active_profile)
+        if isinstance(profile, dict):
+            args = profile.get(mode)
+            if isinstance(args, str):
+                return [args]
+            if isinstance(args, list):
+                return [str(arg) for arg in args if str(arg).strip()]
+    args_template = (cfg.get("args_templates") or {}).get(mode) or []
+    if isinstance(args_template, str):
+        return [args_template]
+    if isinstance(args_template, list):
+        return [str(arg) for arg in args_template if str(arg).strip()]
+    return []
 
 
 def _get_tool_config(config: Optional[ConfigLike], tool_key: str) -> Tuple[str, List[str]]:
@@ -832,14 +852,22 @@ def igir_plan(
         return IgirPlanResult(True, False, "dry-run (no external tool executed)", "")
 
     exe_path = str(cfg.get("exe_path") or "").strip()
-    args_template = (cfg.get("args_templates") or {}).get("plan") or []
+    args_template = _resolve_igir_args_template(cfg, "plan")
     if not exe_path:
         return IgirPlanResult(False, False, "igir path not configured", "")
     if not os.path.exists(exe_path):
         return IgirPlanResult(False, False, "igir executable not found", "")
 
-    if cfg.get("enforce_dest_root", True) and dest_root:
+    if cfg.get("enforce_dest_root", True):
+        if not dest_root:
+            return IgirPlanResult(False, False, "dest_root required", "")
         validate_file_operation(output_dir, base_dir=dest_root, allow_read=True, allow_write=True)
+
+    try:
+        os.makedirs(report_dir, exist_ok=True)
+        os.makedirs(temp_dir, exist_ok=True)
+    except Exception as exc:
+        return IgirPlanResult(False, False, f"failed to prepare directories: {exc}", "")
 
     template_error = _validate_args_template(args_template, "igir")
     if template_error:
@@ -889,6 +917,7 @@ def igir_execute(
     cancel_token: Optional[Any] = None,
     plan_confirmed: bool = False,
     explicit_user_action: bool = False,
+    copy_first: Optional[bool] = None,
     timeout_sec: Optional[float] = None,
 ) -> IgirRunResult:
     cfg = _get_igir_yaml_config()
@@ -897,14 +926,32 @@ def igir_execute(
     if cfg.get("execute_requires_explicit_user_action", True) and not explicit_user_action:
         return IgirRunResult(False, False, "explicit user action required", "")
     exe_path = str(cfg.get("exe_path") or "").strip()
-    args_template = (cfg.get("args_templates") or {}).get("execute") or []
+    args_template = _resolve_igir_args_template(cfg, "execute")
     if not exe_path:
         return IgirRunResult(False, False, "igir path not configured", "")
     if not os.path.exists(exe_path):
         return IgirRunResult(False, False, "igir executable not found", "")
 
-    if cfg.get("enforce_dest_root", True) and dest_root:
+    if cfg.get("enforce_dest_root", True):
+        if not dest_root:
+            return IgirRunResult(False, False, "dest_root required", "")
         validate_file_operation(output_dir, base_dir=dest_root, allow_read=True, allow_write=True)
+
+    try:
+        os.makedirs(temp_dir, exist_ok=True)
+    except Exception as exc:
+        return IgirRunResult(False, False, f"failed to prepare temp dir: {exc}", "")
+
+    copy_first_enabled = bool(copy_first) if copy_first is not None else bool(cfg.get("copy_first", False))
+    stage_dir: Optional[str] = None
+    effective_output_dir = output_dir
+    if copy_first_enabled:
+        stage_dir = os.path.join(temp_dir, "igir_copy_first")
+        try:
+            os.makedirs(stage_dir, exist_ok=True)
+        except Exception as exc:
+            return IgirRunResult(False, False, f"failed to prepare staging dir: {exc}", "")
+        effective_output_dir = stage_dir
 
     template_error = _validate_args_template(args_template, "igir")
     if template_error:
@@ -914,7 +961,7 @@ def igir_execute(
         args_template,
         input_path=input_path,
         output_file="",
-        output_dir=output_dir,
+        output_dir=effective_output_dir,
         temp_dir=temp_dir,
     )
 
@@ -938,6 +985,13 @@ def igir_execute(
         return IgirRunResult(False, False, "timeout", combined, timed_out=True)
 
     if exit_code == 0:
+        if copy_first_enabled and stage_dir:
+            try:
+                if not os.path.exists(stage_dir):
+                    return IgirRunResult(False, False, "copy-first staging missing", combined)
+                shutil.copytree(stage_dir, output_dir, dirs_exist_ok=True)
+            except Exception as exc:
+                return IgirRunResult(False, False, f"copy-first failed: {exc}", combined)
         return IgirRunResult(True, False, "ok", combined)
 
     return IgirRunResult(False, False, "igir failed", combined)

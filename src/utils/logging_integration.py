@@ -5,16 +5,16 @@
 Unified logging interface backed by logging_config.
 """
 
-import os
 import sys
 import json
+import atexit
 import logging
 import logging.handlers
 import time
 import threading
 import traceback
 from pathlib import Path
-from typing import Dict, Any, Optional, Callable, Union
+from typing import Dict, Any, Optional
 from datetime import datetime
 from functools import wraps
 from contextlib import contextmanager
@@ -313,5 +313,4 @@ def log_stats():
 
 
 # Automatic logging of the performance statistics when ending
-import atexit
 atexit.register(log_stats)

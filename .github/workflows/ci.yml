@@ -85,6 +85,7 @@ jobs:
             dev/tests/test_mvp_optional_deps_metadata.py \
             dev/tests/test_mvp_db_migration_backfill.py \
             dev/tests/test_mvp_db_controller.py \
+            dev/tests/test_mvp_golden_fixtures.py \
             dev/tests/test_mvp_region_dedupe.py \
             dev/tests/test_mvp_platform_detection_known_exts.py \
             dev/tests/test_mvp_execute_semantics.py \

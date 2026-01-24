@@ -11,12 +11,22 @@ if (-not $Repo -or $Repo -eq "OWNER/REPO") {
 }
 
 foreach ($epic in $manifest.epics) {
+    $existing = gh issue list --repo $Repo --search $epic.title --json title,number | ConvertFrom-Json | Where-Object { $_.title -eq $epic.title } | Select-Object -First 1
+    if ($existing) {
+        Write-Host "Epic existiert bereits: $($epic.title)"
+        continue
+    }
+
     $labels = $epic.labels -join ","
+    $bodyFile = New-TemporaryFile
+    Set-Content -Path $bodyFile -Value $epic.body -Encoding UTF8
     try {
-        gh issue create --repo $Repo --title $epic.title --body $epic.body --label $labels --milestone $epic.milestone | Out-Null
+        gh issue create --repo $Repo --title $epic.title --body-file $bodyFile --label $labels --milestone $epic.milestone | Out-Null
         Write-Host "Epic erstellt: $($epic.title)"
     } catch {
         Write-Host "Epic übersprungen: $($epic.title)"
+    } finally {
+        Remove-Item $bodyFile -ErrorAction SilentlyContinue
     }
 }
 

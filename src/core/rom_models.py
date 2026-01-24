@@ -7,7 +7,7 @@ This module contains the central data models for ROM files.
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Set, Any
+from typing import Dict, List, Set, Any
 from datetime import datetime
 from pathlib import Path
 

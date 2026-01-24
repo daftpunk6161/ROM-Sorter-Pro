@@ -8,7 +8,7 @@ This module contains sorting-related configuration classes.
 """
 
 from dataclasses import dataclass
-from typing import Dict, Any, List, Optional
+from typing import Any, List
 import logging
 
 from . import BaseConfigModule
