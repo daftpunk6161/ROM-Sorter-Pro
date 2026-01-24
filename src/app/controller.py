@@ -2412,6 +2412,20 @@ def execute_external_tools(
 
         output_file = out_dir / Path(action.planned_target_path).name
 
+        src_raw = Path(action.input_path)
+        if src_raw.is_symlink():
+            raise InvalidPathError(f"Symlink source not allowed: {src_raw}")
+        if output_file.exists() and output_file.is_symlink():
+            raise InvalidPathError(f"Symlink destination not allowed: {output_file}")
+        if _has_symlink_parent(output_file):
+            raise InvalidPathError(f"Symlink parent not allowed: {output_file}")
+
+        src = src_raw.resolve()
+        dst = output_file.resolve()
+
+        validate_file_operation(src, base_dir=None, allow_read=True, allow_write=True)
+        validate_file_operation(dst, base_dir=out_dir, allow_read=True, allow_write=True)
+
         if action_status_cb is not None:
             action_status_cb(row_index, "converting (external)…")
 

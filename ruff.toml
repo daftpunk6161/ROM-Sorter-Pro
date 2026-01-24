@@ -10,6 +10,20 @@ exclude = [
   "temp",
 ]
 
+select = ["E", "F"]
+ignore = [
+  "E402",
+  "E501",
+  "E722",
+  "E741",
+  "F401",
+  "F811",
+  "F821",
+  "F841",
+  "F541",
+]
+per-file-ignores = { "dev/tests/*.py" = ["E402"], "src/utils/__init__.py" = ["F401"] }
+
 [lint]
 select = ["E", "F"]
 ignore = [
