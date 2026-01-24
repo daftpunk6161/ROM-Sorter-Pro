@@ -42,6 +42,7 @@
 - `pytest -q dev/tests/test_mvp_execute_cancel.py`
 - `pytest -q dev/tests/test_mvp_execute_cancel_mid_copy.py`
 - `pytest -q dev/tests/test_mvp_lang_version_parsing.py`
+- `pytest -q dev/tests/test_mvp_start_version.py`
 
 ## Security Invariants
 - Writes nur unter dest-root (temp/output eingeschlossen)

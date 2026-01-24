@@ -189,6 +189,7 @@ Empfohlene Tests:
 - `dev/tests/test_mvp_plan_cancel.py`
 - `dev/tests/test_mvp_rebuilder_mode.py`
 - `dev/tests/test_mvp_golden_fixtures.py`
+- `dev/tests/test_mvp_start_version.py`
 
 ## 9.1) GUI‑Threading (Kurzüberblick)
 
