@@ -214,6 +214,10 @@ class TkMVPApp:
         self.queue_mode_var = tk.BooleanVar(value=False)
         self.queue_priority_var = tk.StringVar(value="Normal")
         self._current_op: Optional[str] = None
+        self.dashboard_source_var = tk.StringVar(value="-")
+        self.dashboard_dest_var = tk.StringVar(value="-")
+        self.dashboard_status_var = tk.StringVar(value="-")
+        self.dashboard_dat_var = tk.StringVar(value="-")
         self._install_log_handler()
         self._apply_theme(self._theme_manager.get_theme())
         self._load_window_size()
@@ -223,6 +227,7 @@ class TkMVPApp:
         self._load_igir_settings_from_config()
         self._refresh_filter_options()
         self._set_running(False)
+        self._refresh_dashboard()
 
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
         self.root.after(50, self._poll_queue)
@@ -231,14 +236,49 @@ class TkMVPApp:
         notebook = ttk.Notebook(self.root)
         notebook.pack(fill=tk.BOTH, expand=True)
 
+        dashboard_tab = ttk.Frame(notebook, padding=12)
         main_tab = ttk.Frame(notebook, padding=10)
         conversions_tab = ttk.Frame(notebook, padding=10)
         igir_tab = ttk.Frame(notebook, padding=10)
         settings_tab = ttk.Frame(notebook, padding=10)
-        notebook.add(main_tab, text="Haupt")
+        notebook.add(dashboard_tab, text="Dashboard")
+        notebook.add(main_tab, text="Arbeitsbereich")
         notebook.add(conversions_tab, text="Konvertierungen")
         notebook.add(igir_tab, text="IGIR")
         notebook.add(settings_tab, text="Einstellungen")
+        notebook.select(dashboard_tab)
+
+        dash_title = ttk.Label(dashboard_tab, text="Willkommen", font=("Segoe UI", 14, "bold"))
+        dash_title.pack(anchor="w", pady=(0, 6))
+        dash_hint = ttk.Label(
+            dashboard_tab,
+            text="Starte mit einem Scan oder öffne den Arbeitsbereich für Details.",
+        )
+        dash_hint.pack(anchor="w", pady=(0, 10))
+
+        quick_frame = ttk.LabelFrame(dashboard_tab, text="Schnellstart")
+        quick_frame.pack(fill=tk.X, pady=(0, 10))
+        quick_row = ttk.Frame(quick_frame)
+        quick_row.pack(fill=tk.X, padx=8, pady=8)
+        self.btn_dash_scan = ttk.Button(quick_row, text="Scannen", command=self._start_scan)
+        self.btn_dash_preview = ttk.Button(quick_row, text="Vorschau (Dry-run)", command=self._start_preview)
+        self.btn_dash_execute = ttk.Button(quick_row, text="Sortieren ausführen", command=self._start_execute)
+        self.btn_dash_scan.pack(side=tk.LEFT)
+        self.btn_dash_preview.pack(side=tk.LEFT, padx=(8, 0))
+        self.btn_dash_execute.pack(side=tk.LEFT, padx=(8, 0))
+
+        status_frame = ttk.LabelFrame(dashboard_tab, text="Status")
+        status_frame.pack(fill=tk.X, pady=(0, 10))
+        status_grid = ttk.Frame(status_frame)
+        status_grid.pack(fill=tk.X, padx=8, pady=8)
+        ttk.Label(status_grid, text="Quelle:").grid(row=0, column=0, sticky="w")
+        ttk.Label(status_grid, textvariable=self.dashboard_source_var).grid(row=0, column=1, sticky="w")
+        ttk.Label(status_grid, text="Ziel:").grid(row=1, column=0, sticky="w")
+        ttk.Label(status_grid, textvariable=self.dashboard_dest_var).grid(row=1, column=1, sticky="w")
+        ttk.Label(status_grid, text="Status:").grid(row=2, column=0, sticky="w")
+        ttk.Label(status_grid, textvariable=self.dashboard_status_var).grid(row=2, column=1, sticky="w")
+        ttk.Label(status_grid, text="DAT:").grid(row=3, column=0, sticky="w")
+        ttk.Label(status_grid, textvariable=self.dashboard_dat_var).grid(row=3, column=1, sticky="w")
 
         outer = main_tab
 
@@ -2552,6 +2592,9 @@ class TkMVPApp:
         self.btn_execute.configure(state=state_normal)
         self.btn_execute_convert.configure(state=state_normal)
         self.btn_audit.configure(state=state_normal)
+        self.btn_dash_scan.configure(state=state_normal)
+        self.btn_dash_preview.configure(state=state_normal)
+        self.btn_dash_execute.configure(state=state_normal)
         export_scan_state = "normal" if (not running and self._scan_result is not None) else "disabled"
         export_plan_state = "normal" if (not running and self._sort_plan is not None) else "disabled"
         self.btn_export_scan_csv.configure(state=export_scan_state)
@@ -2594,6 +2637,21 @@ class TkMVPApp:
         self.btn_clear_dat_cache.configure(state=state_normal)
         if not running:
             self._update_resume_buttons()
+        self._refresh_dashboard()
+
+    def _refresh_dashboard(self) -> None:
+        try:
+            source = (self.source_var.get() or "").strip()
+            dest = (self.dest_var.get() or "").strip()
+            status = (self.status_var.get() or "").strip()
+            dat_status = (self.dat_status_var.get() or "").strip()
+            self.dashboard_source_var.set(source or "-")
+            self.dashboard_dest_var.set(dest or "-")
+            self.dashboard_status_var.set(status or "-")
+            self.dashboard_dat_var.set(dat_status or "-")
+        except Exception:
+            pass
+        self.root.after(600, self._refresh_dashboard)
 
     def _sync_rebuild_controls(self, *, running: bool = False) -> None:
         rebuild_active = bool(self.rebuild_var.get())

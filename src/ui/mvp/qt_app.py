@@ -754,24 +754,68 @@ def run() -> int:
             tabs = QtWidgets.QTabWidget()
             root_layout.addWidget(tabs)
 
+            dashboard_tab = QtWidgets.QWidget()
             main_tab = QtWidgets.QWidget()
             settings_tab = QtWidgets.QWidget()
             tools_tab = QtWidgets.QWidget()
             conversions_tab = QtWidgets.QWidget()
             igir_tab = QtWidgets.QWidget()
-            tabs.addTab(main_tab, "Haupt")
+            tabs.addTab(dashboard_tab, "Dashboard")
+            tabs.addTab(main_tab, "Arbeitsbereich")
             tabs.addTab(conversions_tab, "Konvertierungen")
             tabs.addTab(igir_tab, "IGIR")
             tabs.addTab(settings_tab, "Einstellungen")
             show_external_tools = False
             if show_external_tools:
                 tabs.addTab(tools_tab, "External Tools")
+            tabs.setCurrentIndex(0)
 
+            dashboard_layout = QtWidgets.QVBoxLayout(dashboard_tab)
             main_layout = QtWidgets.QVBoxLayout(main_tab)
             conversions_layout = QtWidgets.QVBoxLayout(conversions_tab)
             igir_layout = QtWidgets.QVBoxLayout(igir_tab)
             settings_layout = QtWidgets.QVBoxLayout(settings_tab)
             tools_layout = QtWidgets.QVBoxLayout(tools_tab)
+
+            dashboard_title = QtWidgets.QLabel("Willkommen")
+            dashboard_title.setStyleSheet("font-size: 18px; font-weight: 700;")
+            dashboard_layout.addWidget(dashboard_title)
+
+            dashboard_hint = QtWidgets.QLabel(
+                "Starte mit einem Scan oder öffne den Arbeitsbereich für Details."
+            )
+            dashboard_hint.setWordWrap(True)
+            dashboard_layout.addWidget(dashboard_hint)
+
+            quick_group = QtWidgets.QGroupBox("Schnellstart")
+            quick_layout = QtWidgets.QHBoxLayout(quick_group)
+            self.btn_dash_scan = QtWidgets.QPushButton("Scannen")
+            self.btn_dash_preview = QtWidgets.QPushButton("Vorschau (Dry-run)")
+            self.btn_dash_execute = QtWidgets.QPushButton("Sortieren ausführen")
+            quick_layout.addWidget(self.btn_dash_scan)
+            quick_layout.addWidget(self.btn_dash_preview)
+            quick_layout.addWidget(self.btn_dash_execute)
+            quick_layout.addStretch(1)
+            dashboard_layout.addWidget(quick_group)
+
+            status_group = QtWidgets.QGroupBox("Status")
+            status_layout = QtWidgets.QGridLayout(status_group)
+            status_layout.addWidget(QtWidgets.QLabel("Quelle:"), 0, 0)
+            self.dashboard_source_label = QtWidgets.QLabel("-")
+            self.dashboard_source_label.setWordWrap(True)
+            status_layout.addWidget(self.dashboard_source_label, 0, 1)
+            status_layout.addWidget(QtWidgets.QLabel("Ziel:"), 1, 0)
+            self.dashboard_dest_label = QtWidgets.QLabel("-")
+            self.dashboard_dest_label.setWordWrap(True)
+            status_layout.addWidget(self.dashboard_dest_label, 1, 1)
+            status_layout.addWidget(QtWidgets.QLabel("Status:"), 2, 0)
+            self.dashboard_status_label = QtWidgets.QLabel("-")
+            status_layout.addWidget(self.dashboard_status_label, 2, 1)
+            status_layout.addWidget(QtWidgets.QLabel("DAT:"), 3, 0)
+            self.dashboard_dat_label = QtWidgets.QLabel("-")
+            status_layout.addWidget(self.dashboard_dat_label, 3, 1)
+            dashboard_layout.addWidget(status_group)
+            dashboard_layout.addStretch(1)
 
             paths_group = QtWidgets.QGroupBox("Pfade")
             actions_group = QtWidgets.QGroupBox("Aktionen")
@@ -1424,6 +1468,9 @@ def run() -> int:
             self.chk_region_subfolders.stateChanged.connect(self._on_sort_settings_changed)
             self.chk_preserve_structure.stateChanged.connect(self._on_sort_settings_changed)
             self.rebuild_checkbox.stateChanged.connect(self._on_rebuild_toggle)
+            self.btn_dash_scan.clicked.connect(self._start_scan)
+            self.btn_dash_preview.clicked.connect(self._start_preview)
+            self.btn_dash_execute.clicked.connect(self._start_execute)
 
             self._apply_theme(self._theme_manager.get_theme())
             self._load_theme_from_config()
@@ -1434,6 +1481,11 @@ def run() -> int:
             self._refresh_db_status()
             self._load_window_size()
             self._load_log_visibility()
+            self._dashboard_timer = QtCore.QTimer(self)
+            self._dashboard_timer.setInterval(600)
+            self._dashboard_timer.timeout.connect(self._refresh_dashboard)
+            self._dashboard_timer.start()
+            self._refresh_dashboard()
             if show_external_tools:
                 self._probe_tools_async()
 
@@ -2897,6 +2949,9 @@ def run() -> int:
             self.btn_execute.setEnabled(not running)
             self.btn_execute_convert.setEnabled(not running)
             self.btn_audit.setEnabled(not running)
+            self.btn_dash_scan.setEnabled(not running)
+            self.btn_dash_preview.setEnabled(not running)
+            self.btn_dash_execute.setEnabled(not running)
             self.btn_export_audit_csv.setEnabled(not running and self._audit_report is not None)
             self.btn_export_audit_json.setEnabled(not running and self._audit_report is not None)
             self.btn_export_scan_csv.setEnabled(not running and self._scan_result is not None)
@@ -2940,6 +2995,19 @@ def run() -> int:
             self.btn_clear_dat_cache.setEnabled(not running)
             if not running:
                 self._update_resume_buttons()
+            self._refresh_dashboard()
+
+        def _refresh_dashboard(self) -> None:
+            if not hasattr(self, "dashboard_status_label"):
+                return
+            source = self.source_edit.text().strip() if self.source_edit is not None else ""
+            dest = self.dest_edit.text().strip() if self.dest_edit is not None else ""
+            status = self.status_label.text() if self.status_label is not None else "-"
+            dat_status = self.dat_status.text() if self.dat_status is not None else "-"
+            self.dashboard_source_label.setText(source or "-")
+            self.dashboard_dest_label.setText(dest or "-")
+            self.dashboard_status_label.setText(status or "-")
+            self.dashboard_dat_label.setText(dat_status or "-")
 
         def _sync_rebuild_controls(self, *, running: bool = False) -> None:
             try:
