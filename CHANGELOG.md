@@ -16,7 +16,7 @@ und dieses Projekt verwendet [Semantic Versioning](https://semver.org/lang/de/).
 
 ### Security
 
-## [2.1.8] - 2026-01-24
+## [1.0.0] - 2026-01-24
 
 ### Added
 - Golden-Fixture-Test für Sortierplan (Basis für Regression-Suite).

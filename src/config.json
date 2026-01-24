@@ -1,12 +1,12 @@
 {
   "_metadata": {
-    "version": "2.1.8",
-    "description": "ROM Sorter Pro v2.1.8 - Optimized Configuration for Maximum Performance",
-    "last_updated": "2024-01-15",
+    "version": "1.0.0",
+    "description": "ROM Sorter Pro v1.0.0 - Initial Release",
+    "last_updated": "2026-01-24",
     "encoding": "utf-8",
     "config_version": 2,
     "author": "ROM Sorter Pro Team",
-    "compatibility": "2.1.x"
+    "compatibility": "1.0.x"
   },
   "file_detection": {
     "rom_extensions": [
