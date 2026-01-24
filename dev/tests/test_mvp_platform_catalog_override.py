@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from src.core import platform_heuristics
+from src.core import platform_heuristics  # noqa: E402
 
 pytestmark = pytest.mark.integration
 

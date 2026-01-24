@@ -11,8 +11,8 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from src.app.controller import CancelToken
-from src.utils.external_tools import (
+from src.app.controller import CancelToken  # noqa: E402
+from src.utils.external_tools import (  # noqa: E402
     PROBE_INPUT_PATH,
     probe_wud2app,
     probe_wudcompress,

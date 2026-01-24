@@ -10,10 +10,10 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from src.app.controller import ScanItem, identify
-from src.core.dat_index_sqlite import DatIndexSqlite
-from src.hash_utils import calculate_crc32
-from src.core.file_utils import calculate_file_hash
+from src.app.controller import ScanItem, identify  # noqa: E402
+from src.core.dat_index_sqlite import DatIndexSqlite  # noqa: E402
+from src.hash_utils import calculate_crc32  # noqa: E402
+from src.core.file_utils import calculate_file_hash  # noqa: E402
 
 pytestmark = pytest.mark.integration
 
@@ -79,6 +79,7 @@ def test_identify_returns_dat_match(tmp_path):
     rom.write_text("data", encoding="utf-8")
 
     sha1 = calculate_file_hash(str(rom), algorithm="sha1")
+    assert sha1
     crc32 = calculate_crc32(str(rom))
     size_bytes = os.stat(rom).st_size
 

@@ -268,17 +268,25 @@ def load_platform_formats() -> List[Dict[str, Any]]:
 
 
 def load_converters() -> List[Dict[str, Any]]:
-    data = _load_yaml_or_json(_converters_path()) or {}
+    raw_data = _load_yaml_or_json(_converters_path())
+    if raw_data is None:
+        converters = _load_converters_from_config()
+        _write_converters_file(converters)
+        return converters
+
+    data = raw_data if isinstance(raw_data, dict) else {}
+
     if JSONSCHEMA_AVAILABLE:
         try:
             is_valid, _ = validate_config_schema(data, schema_path=str(_converters_schema_path()))
         except Exception:
             is_valid = False
-        if not is_valid:
+        if not is_valid or not _basic_validate_converters(data):
             return []
     else:
         if not _basic_validate_converters(data):
             return []
+
     converters = data.get("converters")
     if isinstance(converters, list) and converters:
         return list(converters)

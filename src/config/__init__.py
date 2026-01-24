@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*-coding: utf-8-*-
+# ruff: noqa: E402,F401
 """Rome Sarter Pro - Configuration Package V2.1.8 This module Initialities the Configuration Package and Provides Helper Functions. The package is organized in a modular way to improve."""
-# ruff: noqa: E402
 
 import logging
 from typing import Any, Dict, Optional
