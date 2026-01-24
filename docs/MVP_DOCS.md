@@ -173,12 +173,22 @@ Bei Verstößen wird die Aktion übersprungen und der Fehler im Report protokoll
 Empfohlene Tests:
 - `dev/tests/test_mvp_backend_selection.py`
 - `dev/tests/test_mvp_controller_planning.py`
+- `dev/tests/test_mvp_conversion_runner.py`
+- `dev/tests/test_mvp_format_validation.py`
 - `dev/tests/test_mvp_execute_cancel.py`
 - `dev/tests/test_mvp_execute_cancel_mid_copy.py`
 - `dev/tests/test_mvp_security_paths.py`
 - `dev/tests/test_mvp_lang_version_parsing.py`
 - `dev/tests/test_mvp_igir_gates.py`
 - `dev/tests/test_mvp_identify_rules.py`
+- `dev/tests/test_mvp_dat_sources.py`
+- `dev/tests/test_mvp_dat_index.py`
+- `dev/tests/test_mvp_frontend_exports.py`
+- `dev/tests/test_mvp_logging_json.py`
+- `dev/tests/test_mvp_hash_cache.py`
+- `dev/tests/test_mvp_plan_cancel.py`
+- `dev/tests/test_mvp_rebuilder_mode.py`
+- `dev/tests/test_mvp_golden_fixtures.py`
 
 ## 9.1) GUI‑Threading (Kurzüberblick)
 
