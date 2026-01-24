@@ -10,6 +10,7 @@ und dieses Projekt verwendet [Semantic Versioning](https://semver.org/lang/de/).
 ### Added
 
 ### Changed
+- Docs aktualisiert: Feature Catalog, DAT Import & Index, Identification Strategy, Test Strategy.
 
 ### Fixed
 

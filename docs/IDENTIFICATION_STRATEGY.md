@@ -59,10 +59,10 @@ Regeln werden top‑down ausgewertet (first match wins). Overrides erzeugen das 
 - 7z/rar: optional (wenn Tool vorhanden), sonst Unknown
 - Mixed Content: Unknown (außer deterministischer Entry-Consensus)
 
-## Ist-Zustand (Gap)
-- Heuristik/DB/ML existiert parallel zur DAT-Logik
-- DAT-Index ist in-memory/pickle, nicht sqlite-basiert
-- Archive erkennt nur Dateinamen, keine Entry-Hashes
+## Ist-Zustand (MVP)
+- DAT/Hash-first Pipeline aktiv, Unknown bei Ambiguität
+- SQLite-DAT-Index als primäre Quelle für Exact Matches
+- Lokale Mapping-Overrides (YAML/JSON) verfügbar
 
 ## Ziel-Metriken
 - False Positive Rate: ~0

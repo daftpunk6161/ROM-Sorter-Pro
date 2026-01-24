@@ -18,6 +18,8 @@
 - Folderset missing manifest → Fail + reason
 - Dry-run: keine Writes, kein Subprocess
 - Cancel: stoppt Hashing/IGIR, konsistente Reports
+- Progress-Batching: Callbacks nicht pro Item
+- JSON-Logging optional (Env-Flag), Struktur bleibt stabil
 
 ## Index Tests
 - Incremental ingest: skip unverändert

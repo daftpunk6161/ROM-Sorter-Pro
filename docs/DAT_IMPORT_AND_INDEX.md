@@ -69,7 +69,8 @@ Coverage wird aus dem SQLite Index berechnet und kann im GUI als Statistik angez
 - Stale detection via PID + process start time
 - Immer release in finally
 
-## Ist-Zustand (Gap)
-- core/dat_index.py: in-memory index + pickle cache (cache/dat_index.pkl)
-- Kein sqlite, kein inkrementeller Import
-- Kein Lockfile
+## Ist-Zustand (MVP)
+- SQLite Index aktiv (data/index/romsorter_dat_index.sqlite)
+- Inkrementeller Import inkl. Remove/Deactivate
+- Lockfile für parallele Index-Jobs
+- Coverage-Report im UI verfügbar
