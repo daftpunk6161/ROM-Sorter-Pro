@@ -77,6 +77,7 @@ def run() -> int:
         audit_conversion_candidates,
         analyze_dat_sources,
         build_dat_index,
+        build_library_report,
         execute_sort,
         filter_scan_items,
         get_dat_sources,
@@ -922,7 +923,29 @@ def run() -> int:
             left_layout.addWidget(main_status_group)
             left_layout.addLayout(sections_row)
 
+            presets_group = QtWidgets.QGroupBox("Presets & Auswahl")
+            presets_layout = QtWidgets.QGridLayout(presets_group)
+            presets_layout.setHorizontalSpacing(6)
+            presets_layout.setVerticalSpacing(6)
+            self.preset_combo = QtWidgets.QComboBox()
+            self.preset_combo.addItem("-")
+            self.preset_name_edit = QtWidgets.QLineEdit()
+            self.preset_name_edit.setPlaceholderText("Preset-Name")
+            self.btn_preset_apply = QtWidgets.QPushButton("Übernehmen")
+            self.btn_preset_save = QtWidgets.QPushButton("Speichern")
+            self.btn_preset_delete = QtWidgets.QPushButton("Löschen")
+            self.btn_execute_selected = QtWidgets.QPushButton("Auswahl ausführen")
+            presets_layout.addWidget(QtWidgets.QLabel("Preset:"), 0, 0)
+            presets_layout.addWidget(self.preset_combo, 0, 1)
+            presets_layout.addWidget(self.btn_preset_apply, 0, 2)
+            presets_layout.addWidget(self.preset_name_edit, 1, 0, 1, 2)
+            presets_layout.addWidget(self.btn_preset_save, 1, 2)
+            presets_layout.addWidget(self.btn_preset_delete, 2, 2)
+            presets_layout.addWidget(self.btn_execute_selected, 2, 0, 1, 2)
+            presets_layout.setColumnStretch(1, 1)
+
             left_layout.addWidget(filters_group)
+            left_layout.addWidget(presets_group)
 
             dnd_enabled = self._is_drag_drop_enabled()
             self.source_edit = DropLineEdit(self._on_drop_source, enabled=dnd_enabled)
@@ -1430,6 +1453,14 @@ def run() -> int:
             self.btn_why_unknown.clicked.connect(self._show_why_unknown)
             right_layout.addWidget(self.btn_why_unknown)
 
+            report_row = QtWidgets.QHBoxLayout()
+            self.btn_library_report = QtWidgets.QPushButton("Bibliothek-Report")
+            self.btn_library_report_save = QtWidgets.QPushButton("Report speichern…")
+            report_row.addWidget(self.btn_library_report)
+            report_row.addWidget(self.btn_library_report_save)
+            report_row.addStretch(1)
+            right_layout.addLayout(report_row)
+
             results_intro = QtWidgets.QLabel(
                 "Die Ergebnistabelle zeigt geplante Ziele und Status. Nutze die Vorschau vor dem Ausführen."
             )
@@ -1619,6 +1650,12 @@ def run() -> int:
             self.log_visible_checkbox.stateChanged.connect(self._on_log_visible_changed)
             self.remember_window_checkbox.stateChanged.connect(self._on_remember_window_changed)
             self.drag_drop_checkbox.stateChanged.connect(self._on_drag_drop_changed)
+            self.btn_preset_apply.clicked.connect(self._apply_selected_preset)
+            self.btn_preset_save.clicked.connect(self._save_preset)
+            self.btn_preset_delete.clicked.connect(self._delete_selected_preset)
+            self.btn_execute_selected.clicked.connect(self._start_execute_selected)
+            self.btn_library_report.clicked.connect(self._show_library_report)
+            self.btn_library_report_save.clicked.connect(self._save_library_report)
             self.default_mode_combo.currentTextChanged.connect(self._on_default_mode_changed)
             self.default_conflict_combo.currentTextChanged.connect(self._on_default_conflict_changed)
             self.chk_console_folders.stateChanged.connect(self._on_sort_settings_changed)
@@ -1639,6 +1676,7 @@ def run() -> int:
             self._load_window_size()
             self._load_log_visibility()
             self._load_general_settings_from_config()
+            self._load_presets_from_config()
             self._dashboard_timer = QtCore.QTimer(self)
             self._dashboard_timer.setInterval(600)
             self._dashboard_timer.timeout.connect(self._refresh_dashboard)
@@ -2708,6 +2746,206 @@ def run() -> int:
             self.hide_unknown_checkbox.setChecked(False)
             self._on_filters_changed()
 
+        def _collect_preset_values(self) -> dict:
+            return {
+                "sort": {
+                    "mode": str(self.mode_combo.currentText()),
+                    "conflict": str(self.conflict_combo.currentText()),
+                    "console_folders": bool(self.chk_console_folders.isChecked()),
+                    "region_subfolders": bool(self.chk_region_subfolders.isChecked()),
+                    "preserve_structure": bool(self.chk_preserve_structure.isChecked()),
+                },
+                "filters": {
+                    "languages": self._get_selected_filter_values(self.lang_filter),
+                    "version": str(self.ver_filter.currentText() or "All"),
+                    "regions": self._get_selected_filter_values(self.region_filter),
+                    "extension": str(self.ext_filter_edit.text() or ""),
+                    "min_size": str(self.min_size_edit.text() or ""),
+                    "max_size": str(self.max_size_edit.text() or ""),
+                    "dedupe": bool(self.dedupe_checkbox.isChecked()),
+                    "hide_unknown": bool(self.hide_unknown_checkbox.isChecked()),
+                },
+            }
+
+        def _apply_preset_values(self, payload: dict) -> None:
+            sort_cfg = payload.get("sort") or {}
+            filters_cfg = payload.get("filters") or {}
+
+            if str(sort_cfg.get("mode")) in ("copy", "move"):
+                idx = self.mode_combo.findText(str(sort_cfg.get("mode")))
+                if idx >= 0:
+                    self.mode_combo.setCurrentIndex(idx)
+            if str(sort_cfg.get("conflict")) in ("rename", "skip", "overwrite"):
+                idx = self.conflict_combo.findText(str(sort_cfg.get("conflict")))
+                if idx >= 0:
+                    self.conflict_combo.setCurrentIndex(idx)
+            self.chk_console_folders.setChecked(bool(sort_cfg.get("console_folders", True)))
+            self.chk_region_subfolders.setChecked(bool(sort_cfg.get("region_subfolders", False)))
+            self.chk_preserve_structure.setChecked(bool(sort_cfg.get("preserve_structure", False)))
+
+            self._select_filter_values(self.lang_filter, filters_cfg.get("languages") or ["All"])
+            ver_value = str(filters_cfg.get("version") or "All")
+            ver_idx = self.ver_filter.findText(ver_value)
+            self.ver_filter.setCurrentIndex(ver_idx if ver_idx >= 0 else 0)
+            self._select_filter_values(self.region_filter, filters_cfg.get("regions") or ["All"])
+            self.ext_filter_edit.setText(str(filters_cfg.get("extension") or ""))
+            self.min_size_edit.setText(str(filters_cfg.get("min_size") or ""))
+            self.max_size_edit.setText(str(filters_cfg.get("max_size") or ""))
+            self.dedupe_checkbox.setChecked(bool(filters_cfg.get("dedupe", True)))
+            self.hide_unknown_checkbox.setChecked(bool(filters_cfg.get("hide_unknown", False)))
+            self._on_filters_changed()
+
+        def _load_presets_from_config(self) -> None:
+            self._presets = {}
+            try:
+                cfg = load_config()
+                gui_cfg = cfg.get("gui_settings", {}) if isinstance(cfg, dict) else {}
+                presets = gui_cfg.get("presets", []) or []
+                for preset in presets:
+                    name = str(preset.get("name") or "").strip()
+                    if not name:
+                        continue
+                    self._presets[name] = preset
+            except Exception:
+                self._presets = {}
+            self._refresh_presets_combo()
+
+        def _save_presets_to_config(self) -> None:
+            try:
+                cfg = load_config()
+                if not isinstance(cfg, dict):
+                    cfg = {}
+                gui_cfg = cfg.get("gui_settings", {}) or {}
+                gui_cfg["presets"] = list(self._presets.values())
+                cfg["gui_settings"] = gui_cfg
+                self._save_config_async(cfg)
+            except Exception:
+                return
+
+        def _refresh_presets_combo(self) -> None:
+            self.preset_combo.blockSignals(True)
+            self.preset_combo.clear()
+            self.preset_combo.addItem("-")
+            for name in sorted(self._presets.keys()):
+                self.preset_combo.addItem(name)
+            self.preset_combo.blockSignals(False)
+
+        def _apply_selected_preset(self) -> None:
+            name = str(self.preset_combo.currentText() or "").strip()
+            if not name or name == "-":
+                QtWidgets.QMessageBox.information(self, "Preset", "Bitte ein Preset wählen.")
+                return
+            preset = self._presets.get(name)
+            if not isinstance(preset, dict):
+                return
+            self._apply_preset_values(preset)
+
+        def _save_preset(self) -> None:
+            name = str(self.preset_name_edit.text() or "").strip()
+            if not name:
+                QtWidgets.QMessageBox.information(self, "Preset", "Bitte einen Namen eingeben.")
+                return
+            self._presets[name] = {"name": name, **self._collect_preset_values()}
+            self._save_presets_to_config()
+            self._refresh_presets_combo()
+            self.preset_combo.setCurrentText(name)
+
+        def _delete_selected_preset(self) -> None:
+            name = str(self.preset_combo.currentText() or "").strip()
+            if not name or name == "-":
+                return
+            if name in self._presets:
+                self._presets.pop(name, None)
+                self._save_presets_to_config()
+                self._refresh_presets_combo()
+
+        def _get_selected_plan_indices(self) -> list[int]:
+            try:
+                selection = self.table.selectionModel().selectedRows()
+            except Exception:
+                selection = []
+            indices: list[int] = []
+            for idx in selection:
+                row = idx.row()
+                item = self.table.item(row, 0)
+                if item is None:
+                    continue
+                data = item.data(QtCore.Qt.ItemDataRole.UserRole)
+                try:
+                    action_index = int(data)
+                except Exception:
+                    action_index = int(row)
+                indices.append(action_index)
+            return sorted(set(indices))
+
+        def _start_execute_selected(self) -> None:
+            if self._sort_plan is None or self._last_view != "plan":
+                QtWidgets.QMessageBox.information(self, "Auswahl ausführen", "Bitte zuerst einen Sortierplan anzeigen.")
+                return
+            indices = self._get_selected_plan_indices()
+            if not indices:
+                QtWidgets.QMessageBox.information(self, "Auswahl ausführen", "Bitte Zeilen in der Tabelle auswählen.")
+                return
+            self._start_operation("execute", only_indices=indices, conversion_mode="skip")
+
+        def _build_library_report(self) -> dict:
+            return build_library_report(self._scan_result, self._sort_plan)
+
+        def _format_library_report_text(self, report: dict) -> str:
+            lines: list[str] = []
+            scan = report.get("scan") or {}
+            plan = report.get("plan") or {}
+            if scan:
+                lines.append("Scan")
+                lines.append(f"Quelle: {scan.get('source_path', '-')}")
+                lines.append(f"Gesamt: {scan.get('total_items', 0)}")
+                lines.append(f"Unknown: {scan.get('unknown_items', 0)}")
+                systems = scan.get("systems") or {}
+                if systems:
+                    top = list(systems.items())[:5]
+                    lines.append("Top Systeme: " + ", ".join(f"{k}={v}" for k, v in top))
+                regions = scan.get("regions") or {}
+                if regions:
+                    top = list(regions.items())[:5]
+                    lines.append("Top Regionen: " + ", ".join(f"{k}={v}" for k, v in top))
+                lines.append("")
+            if plan:
+                lines.append("Plan")
+                lines.append(f"Ziel: {plan.get('dest_path', '-')}")
+                lines.append(f"Aktionen gesamt: {plan.get('total_actions', 0)}")
+                actions = plan.get("actions") or {}
+                if actions:
+                    lines.append("Aktionen: " + ", ".join(f"{k}={v}" for k, v in actions.items()))
+                statuses = plan.get("statuses") or {}
+                if statuses:
+                    lines.append("Status: " + ", ".join(f"{k}={v}" for k, v in statuses.items()))
+            if not lines:
+                return "Kein Report verfügbar. Bitte zuerst scannen oder planen."
+            return "\n".join(lines)
+
+        def _show_library_report(self) -> None:
+            report = self._build_library_report()
+            text = self._format_library_report_text(report)
+            QtWidgets.QMessageBox.information(self, "Bibliothek-Report", text)
+
+        def _save_library_report(self) -> None:
+            report = self._build_library_report()
+            if not report:
+                QtWidgets.QMessageBox.information(self, "Bibliothek-Report", "Kein Report verfügbar.")
+                return
+            filename, _ = QtWidgets.QFileDialog.getSaveFileName(
+                self,
+                "Report speichern",
+                "library_report.json",
+                "JSON Files (*.json)",
+            )
+            if not filename:
+                return
+            try:
+                write_json(report, filename)
+            except Exception as exc:
+                QtWidgets.QMessageBox.warning(self, "Bibliothek-Report", f"Speichern fehlgeschlagen:\n{exc}")
+
         def _get_selected_filter_values(self, widget: object) -> list[str]:
             widget_list = cast(Any, widget)
             selected = [item.text() for item in widget_list.selectedItems()]
@@ -3713,7 +3951,9 @@ def run() -> int:
             self.table.setRowCount(len(plan.actions))
             self._table_items = []
             for row, act in enumerate(plan.actions):
-                self.table.setItem(row, 0, QtWidgets.QTableWidgetItem(act.error or act.status))
+                status_item = QtWidgets.QTableWidgetItem(act.error or act.status)
+                status_item.setData(QtCore.Qt.ItemDataRole.UserRole, row)
+                self.table.setItem(row, 0, status_item)
                 self.table.setItem(row, 1, QtWidgets.QTableWidgetItem(act.action))
 
                 path_item = QtWidgets.QTableWidgetItem(str(act.input_path or ""))

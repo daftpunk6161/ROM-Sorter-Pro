@@ -41,6 +41,7 @@ from ...app.api import (
     audit_conversion_candidates,
     analyze_dat_sources,
     build_dat_index,
+    build_library_report,
     execute_sort,
     filter_scan_items,
     get_dat_sources,
@@ -198,6 +199,7 @@ class TkMVPApp:
         self.dashboard_dest_var = tk.StringVar(value="-")
         self.dashboard_status_var = tk.StringVar(value="-")
         self.dashboard_dat_var = tk.StringVar(value="-")
+        self.preset_name_var = tk.StringVar()
 
         self._build_ui()
         try:
@@ -230,6 +232,7 @@ class TkMVPApp:
         self._load_window_size()
         self._load_log_visibility()
         self._load_general_settings_from_config()
+        self._load_presets_from_config()
         self._load_sort_settings_from_config()
         self._load_dat_settings_from_config()
         self._load_igir_settings_from_config()
@@ -481,6 +484,27 @@ class TkMVPApp:
 
         self.btn_clear_filters = ttk.Button(filters_grid, text="Filter zurücksetzen", command=self._clear_filters)
         self.btn_clear_filters.grid(row=8, column=1, sticky="w", pady=(6, 0))
+
+        presets_frame = ttk.LabelFrame(control_frame, text="Presets & Auswahl")
+        presets_frame.pack(fill=tk.X, pady=(8, 0))
+        presets_frame.columnconfigure(1, weight=1)
+        ttk.Label(presets_frame, text="Preset:").grid(row=0, column=0, sticky="w")
+        self.preset_combo = ttk.Combobox(presets_frame, state="readonly", values=("-",))
+        self.preset_combo.grid(row=0, column=1, sticky="ew", padx=6)
+        self.btn_preset_apply = ttk.Button(presets_frame, text="Übernehmen", command=self._apply_selected_preset)
+        self.btn_preset_apply.grid(row=0, column=2)
+        self.preset_name_entry = ttk.Entry(presets_frame, textvariable=self.preset_name_var)
+        self.preset_name_entry.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(6, 0))
+        self.btn_preset_save = ttk.Button(presets_frame, text="Speichern", command=self._save_preset)
+        self.btn_preset_save.grid(row=1, column=2, pady=(6, 0))
+        self.btn_preset_delete = ttk.Button(presets_frame, text="Löschen", command=self._delete_selected_preset)
+        self.btn_preset_delete.grid(row=2, column=2, pady=(6, 0))
+        self.btn_execute_selected = ttk.Button(
+            presets_frame,
+            text="Auswahl ausführen",
+            command=self._start_execute_selected,
+        )
+        self.btn_execute_selected.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(6, 0))
 
         self.lang_filter_list.bind("<<ListboxSelect>>", self._on_filter_listbox_changed)
         self.ver_filter_combo.bind("<<ComboboxSelected>>", self._on_filters_changed)
@@ -901,6 +925,13 @@ class TkMVPApp:
             text="Noch keine Ergebnisse. Starte mit Scan oder Vorschau.",
         )
         self.results_empty_label.pack(fill=tk.X, pady=(0, 6))
+
+        report_row = ttk.Frame(results_frame)
+        report_row.pack(fill=tk.X, pady=(0, 6))
+        self.btn_library_report = ttk.Button(report_row, text="Bibliothek-Report", command=self._show_library_report)
+        self.btn_library_report.pack(side=tk.LEFT)
+        self.btn_library_report_save = ttk.Button(report_row, text="Report speichern…", command=self._save_library_report)
+        self.btn_library_report_save.pack(side=tk.LEFT, padx=(8, 0))
 
         table_frame = ttk.Frame(results_frame)
         table_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 0))
@@ -2411,6 +2442,184 @@ class TkMVPApp:
         self.dedupe_var.set(True)
         self.hide_unknown_var.set(False)
         self._on_filters_changed()
+
+    def _collect_preset_values(self) -> dict:
+        return {
+            "sort": {
+                "mode": str(self.mode_var.get() or "copy"),
+                "conflict": str(self.conflict_var.get() or "rename"),
+                "console_folders": bool(self.console_folders_var.get()),
+                "region_subfolders": bool(self.region_subfolders_var.get()),
+                "preserve_structure": bool(self.preserve_structure_var.get()),
+            },
+            "filters": {
+                "languages": self._get_listbox_values(self.lang_filter_list),
+                "version": str(self.ver_filter_var.get() or "All"),
+                "regions": self._get_listbox_values(self.region_filter_list),
+                "extension": str(self.extension_filter_var.get() or ""),
+                "min_size": str(self.min_size_var.get() or ""),
+                "max_size": str(self.max_size_var.get() or ""),
+                "dedupe": bool(self.dedupe_var.get()),
+                "hide_unknown": bool(self.hide_unknown_var.get()),
+            },
+        }
+
+    def _apply_preset_values(self, payload: dict) -> None:
+        sort_cfg = payload.get("sort") or {}
+        filters_cfg = payload.get("filters") or {}
+        if str(sort_cfg.get("mode")) in ("copy", "move"):
+            self.mode_var.set(str(sort_cfg.get("mode")))
+        if str(sort_cfg.get("conflict")) in ("rename", "skip", "overwrite"):
+            self.conflict_var.set(str(sort_cfg.get("conflict")))
+        self.console_folders_var.set(bool(sort_cfg.get("console_folders", True)))
+        self.region_subfolders_var.set(bool(sort_cfg.get("region_subfolders", False)))
+        self.preserve_structure_var.set(bool(sort_cfg.get("preserve_structure", False)))
+
+        self._select_listbox_values(self.lang_filter_list, filters_cfg.get("languages") or ["All"])
+        self.ver_filter_var.set(str(filters_cfg.get("version") or "All"))
+        self._select_listbox_values(self.region_filter_list, filters_cfg.get("regions") or ["All"])
+        self.extension_filter_var.set(str(filters_cfg.get("extension") or ""))
+        self.min_size_var.set(str(filters_cfg.get("min_size") or ""))
+        self.max_size_var.set(str(filters_cfg.get("max_size") or ""))
+        self.dedupe_var.set(bool(filters_cfg.get("dedupe", True)))
+        self.hide_unknown_var.set(bool(filters_cfg.get("hide_unknown", False)))
+        self._on_filters_changed()
+
+    def _load_presets_from_config(self) -> None:
+        self._presets = {}
+        try:
+            cfg = load_config()
+            gui_cfg = cfg.get("gui_settings", {}) if isinstance(cfg, dict) else {}
+            presets = gui_cfg.get("presets", []) or []
+            for preset in presets:
+                name = str(preset.get("name") or "").strip()
+                if not name:
+                    continue
+                self._presets[name] = preset
+        except Exception:
+            self._presets = {}
+        self._refresh_presets_combo()
+
+    def _save_presets_to_config(self) -> None:
+        try:
+            cfg = load_config()
+            if not isinstance(cfg, dict):
+                cfg = {}
+            gui_cfg = cfg.get("gui_settings", {}) or {}
+            gui_cfg["presets"] = list(self._presets.values())
+            cfg["gui_settings"] = gui_cfg
+            save_config(cfg)
+        except Exception:
+            return
+
+    def _refresh_presets_combo(self) -> None:
+        values = ["-"] + sorted(self._presets.keys())
+        self.preset_combo.configure(values=values)
+        self.preset_combo.set(values[0])
+
+    def _apply_selected_preset(self) -> None:
+        name = str(self.preset_combo.get() or "").strip()
+        if not name or name == "-":
+            messagebox.showinfo("Preset", "Bitte ein Preset wählen.")
+            return
+        preset = self._presets.get(name)
+        if isinstance(preset, dict):
+            self._apply_preset_values(preset)
+
+    def _save_preset(self) -> None:
+        name = str(self.preset_name_var.get() or "").strip()
+        if not name:
+            messagebox.showinfo("Preset", "Bitte einen Namen eingeben.")
+            return
+        self._presets[name] = {"name": name, **self._collect_preset_values()}
+        self._save_presets_to_config()
+        self._refresh_presets_combo()
+        self.preset_combo.set(name)
+
+    def _delete_selected_preset(self) -> None:
+        name = str(self.preset_combo.get() or "").strip()
+        if not name or name == "-":
+            return
+        if name in self._presets:
+            self._presets.pop(name, None)
+            self._save_presets_to_config()
+            self._refresh_presets_combo()
+
+    def _get_selected_plan_indices(self) -> list[int]:
+        selection = self.table.selection()
+        indices: list[int] = []
+        for iid in selection:
+            try:
+                indices.append(self._plan_row_iids.index(str(iid)))
+            except ValueError:
+                continue
+        return sorted(set(indices))
+
+    def _start_execute_selected(self) -> None:
+        if self._sort_plan is None:
+            messagebox.showinfo("Auswahl ausführen", "Bitte zuerst Vorschau ausführen.")
+            return
+        indices = self._get_selected_plan_indices()
+        if not indices:
+            messagebox.showinfo("Auswahl ausführen", "Bitte Zeilen in der Tabelle auswählen.")
+            return
+        self._start_op("execute", only_indices=indices, conversion_mode="skip")
+
+    def _build_library_report(self) -> dict:
+        return build_library_report(self._scan_result, self._sort_plan)
+
+    def _format_library_report_text(self, report: dict) -> str:
+        lines: list[str] = []
+        scan = report.get("scan") or {}
+        plan = report.get("plan") or {}
+        if scan:
+            lines.append("Scan")
+            lines.append(f"Quelle: {scan.get('source_path', '-')}")
+            lines.append(f"Gesamt: {scan.get('total_items', 0)}")
+            lines.append(f"Unknown: {scan.get('unknown_items', 0)}")
+            systems = scan.get("systems") or {}
+            if systems:
+                top = list(systems.items())[:5]
+                lines.append("Top Systeme: " + ", ".join(f"{k}={v}" for k, v in top))
+            regions = scan.get("regions") or {}
+            if regions:
+                top = list(regions.items())[:5]
+                lines.append("Top Regionen: " + ", ".join(f"{k}={v}" for k, v in top))
+            lines.append("")
+        if plan:
+            lines.append("Plan")
+            lines.append(f"Ziel: {plan.get('dest_path', '-')}")
+            lines.append(f"Aktionen gesamt: {plan.get('total_actions', 0)}")
+            actions = plan.get("actions") or {}
+            if actions:
+                lines.append("Aktionen: " + ", ".join(f"{k}={v}" for k, v in actions.items()))
+            statuses = plan.get("statuses") or {}
+            if statuses:
+                lines.append("Status: " + ", ".join(f"{k}={v}" for k, v in statuses.items()))
+        if not lines:
+            return "Kein Report verfügbar. Bitte zuerst scannen oder planen."
+        return "\n".join(lines)
+
+    def _show_library_report(self) -> None:
+        report = self._build_library_report()
+        messagebox.showinfo("Bibliothek-Report", self._format_library_report_text(report))
+
+    def _save_library_report(self) -> None:
+        report = self._build_library_report()
+        if not report:
+            messagebox.showinfo("Bibliothek-Report", "Kein Report verfügbar.")
+            return
+        filename = filedialog.asksaveasfilename(
+            title="Report speichern",
+            defaultextension=".json",
+            filetypes=[("JSON Files", "*.json")],
+        )
+        if not filename:
+            return
+        try:
+            write_json(report, filename)
+        except Exception as exc:
+            messagebox.showwarning("Bibliothek-Report", f"Speichern fehlgeschlagen:\n{exc}")
 
     def _get_listbox_values(self, listbox: tk.Listbox) -> list[str]:
         selection = listbox.curselection()

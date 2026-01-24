@@ -62,6 +62,7 @@ Die Tabelle enthält:
 Zusatzaktionen:
 - **ⓘ Details** öffnet die komplette Detailansicht (Tk).
 - **Warum unbekannt?** ist nur für Unknown/Low‑Confidence aktiv.
+- **Bibliothek‑Report** fasst Scan/Plan zusammen und kann als JSON gespeichert werden.
 
 ## 6) IGIR (Plan/Execute)
 
@@ -69,6 +70,11 @@ Zusatzaktionen:
 - **Ausführen** → nur nach vorhandenem Plan/Diff
 - **Erweitert anzeigen** zeigt Konfiguration/Args/Templates
 - Quelle/Ziel sind read‑only und folgen dem Arbeitsbereich
+
+## 6.1) Presets + Bulk‑Actions
+
+- **Presets** speichern/aktivieren Sort‑ und Filter‑Einstellungen.
+- **Auswahl ausführen** führt nur die markierten Plan‑Zeilen aus.
 
 ## 7) DAT‑Matching
 

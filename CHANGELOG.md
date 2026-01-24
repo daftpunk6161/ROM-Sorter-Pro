@@ -11,6 +11,7 @@ und dieses Projekt verwendet [Semantic Versioning](https://semver.org/lang/de/).
 
 ### Changed
 - Docs aktualisiert: Feature Catalog, DAT Import & Index, Identification Strategy, Test Strategy.
+- GUI: Library-Report, Presets und Auswahl-Ausführung ergänzt (Qt/Tk).
 
 ### Fixed
 
