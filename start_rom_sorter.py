@@ -27,6 +27,17 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+def _load_version() -> str:
+    config_path = os.path.join(os.path.dirname(__file__), "src", "config.json")
+    try:
+        with open(config_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        meta = data.get("_metadata", {}) if isinstance(data, dict) else {}
+        version = str(meta.get("version") or "").strip()
+        return version or "2.1.8"
+    except Exception:
+        return "2.1.8"
+
 def check_environment():
     """Checks the runtime environment."""
     # Check Python version
@@ -88,7 +99,7 @@ def main() -> int:
     args = parse_arguments()
 
     if args.version:
-        print("ROM Sorter Pro v2.1.8")
+        print(f"ROM Sorter Pro v{_load_version()}")
         print("Copyright (c) 2025")
         return 0
 
