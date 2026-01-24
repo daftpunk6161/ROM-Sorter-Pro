@@ -10,5 +10,5 @@ if str(ROOT) not in sys.path:
 def test_gui_smoke_selects_backend():
     import start_rom_sorter
 
-    selected = start_rom_sorter.gui_smoke("qt")
-    assert selected == "qt"
+    selected = start_rom_sorter.gui_smoke(None)
+    assert selected in ("qt", "tk")

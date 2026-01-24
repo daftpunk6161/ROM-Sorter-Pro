@@ -45,11 +45,24 @@ def gui_smoke(backend: str | None = None) -> str:
 
     selected = select_backend(backend)
     if selected == "qt":
+        try:
+            import PySide6  # noqa: F401
+        except Exception:
+            try:
+                import PyQt5  # noqa: F401
+            except Exception as exc:
+                raise RuntimeError("Qt binding not available") from exc
+
         from src.ui.mvp import qt_app  # noqa: F401
 
         if not hasattr(qt_app, "run"):
             raise RuntimeError("Qt app entry not found")
     elif selected == "tk":
+        try:
+            import tkinter  # noqa: F401
+        except Exception as exc:
+            raise RuntimeError("Tk backend not available") from exc
+
         from src.ui.mvp import tk_app  # noqa: F401
 
         if not hasattr(tk_app, "run"):
