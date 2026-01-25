@@ -2631,7 +2631,7 @@ def run() -> int:
             if not val:
                 return None
             low = val.lower()
-            if low == "auto":
+            if low in ("auto", "system"):
                 return self._theme_manager.get_current_theme_name()
             if low == "light":
                 return "Light"
@@ -2647,11 +2647,13 @@ def run() -> int:
                 gui_cfg = cfg.get("gui_settings", {}) or {}
                 theme_value = gui_cfg.get("theme")
                 if not theme_value:
+                    theme_value = (cfg.get("ui", {}) or {}).get("theme")
+                if not theme_value:
                     return
                 theme_name = self._resolve_theme_name(str(theme_value))
                 if not theme_name:
                     return
-                if str(theme_value).strip().lower() == "auto":
+                if str(theme_value).strip().lower() in ("auto", "system"):
                     idx = self.theme_combo.findText("Auto")
                     if idx >= 0:
                         self.theme_combo.setCurrentIndex(idx)
@@ -2738,7 +2740,7 @@ def run() -> int:
                 return
             theme_value = name
             if name == "Auto":
-                theme_value = "auto"
+                theme_value = "system"
                 resolved = self._resolve_theme_name("auto")
                 if resolved and self._theme_manager.set_current_theme(resolved):
                     self._apply_theme(self._theme_manager.get_theme(resolved))
@@ -2753,6 +2755,9 @@ def run() -> int:
                 gui_cfg = cfg.get("gui_settings", {}) or {}
                 gui_cfg["theme"] = theme_value
                 cfg["gui_settings"] = gui_cfg
+                ui_cfg = cfg.get("ui", {}) or {}
+                ui_cfg["theme"] = theme_value
+                cfg["ui"] = ui_cfg
                 self._save_config_async(cfg)
             except Exception:
                 pass
@@ -3512,6 +3517,14 @@ def run() -> int:
         def _update_results_empty_state(self) -> None:
             try:
                 has_rows = self.results_proxy.rowCount() > 0
+                filter_text = str(self.quick_filter_edit.text() or "").strip()
+                if not has_rows:
+                    if filter_text:
+                        self.results_empty_label.setText("Keine Treffer für den aktuellen Filter.")
+                    else:
+                        self.results_empty_label.setText(
+                            "Noch keine Ergebnisse. Starte mit Scan oder Vorschau, um Einträge zu sehen."
+                        )
                 self.results_empty_label.setVisible(not has_rows)
                 self.table.setVisible(has_rows)
             except Exception:
@@ -3775,12 +3788,19 @@ def run() -> int:
                 self.btn_igir_execute,
                 self.btn_igir_probe,
                 self.btn_igir_browse,
-                self.btn_igir_cancel,
             ):
                 try:
                     btn.setEnabled(self._external_tools_enabled)
                 except Exception:
                     continue
+            try:
+                igir_running = self._igir_thread is not None and self._igir_thread.isRunning()
+            except Exception:
+                igir_running = False
+            try:
+                self.btn_igir_cancel.setEnabled(igir_running or self._external_tools_enabled)
+            except Exception:
+                pass
             if hasattr(self, "tools_group"):
                 self.tools_group.setEnabled(self._external_tools_enabled)
             self._update_safety_pill()

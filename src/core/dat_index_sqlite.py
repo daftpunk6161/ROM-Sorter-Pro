@@ -161,28 +161,29 @@ class DatIndexSqlite:
         inserted = 0
         removed = 0
 
-        file_paths = self._collect_dat_files(paths)
-        current_paths = {str(path) for path in file_paths}
-        removed = self._deactivate_missing_paths(current_paths)
+        with self._lock:
+            file_paths = self._collect_dat_files(paths)
+            current_paths = {str(path) for path in file_paths}
+            removed = self._deactivate_missing_paths(current_paths)
 
-        for file_path in file_paths:
-            if cancel_event is not None and getattr(cancel_event, "is_set", lambda: False)():
-                break
-            dat_id, changed = self._ensure_dat_file(file_path)
-            if not dat_id:
-                continue
+            for file_path in file_paths:
+                if cancel_event is not None and getattr(cancel_event, "is_set", lambda: False)():
+                    break
+                dat_id, changed = self._ensure_dat_file(file_path)
+                if not dat_id:
+                    continue
 
-            if not changed:
-                skipped += 1
-                continue
+                if not changed:
+                    skipped += 1
+                    continue
 
-            self._clear_dat_rows(dat_id)
-            rows = list(self._parse_dat_file(file_path, dat_id))
-            processed += 1
-            for i in range(0, len(rows), 10000):
-                self._insert_rows(rows[i : i + 10000])
-                inserted += len(rows[i : i + 10000])
-            self.conn.commit()
+                self._clear_dat_rows(dat_id)
+                rows = list(self._parse_dat_file(file_path, dat_id))
+                processed += 1
+                for i in range(0, len(rows), 10000):
+                    self._insert_rows(rows[i : i + 10000])
+                    inserted += len(rows[i : i + 10000])
+                self.conn.commit()
 
         return {"processed": processed, "skipped": skipped, "inserted": inserted, "removed": removed}
 

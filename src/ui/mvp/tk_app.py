@@ -1650,7 +1650,7 @@ class TkMVPApp:
         if not val:
             return None
         low = val.lower()
-        if low == "auto":
+        if low in ("auto", "system"):
             return self._theme_manager.get_current_theme_name()
         if low == "light":
             return "Light"
@@ -1666,11 +1666,13 @@ class TkMVPApp:
             gui_cfg = cfg.get("gui_settings", {}) or {}
             theme_value = gui_cfg.get("theme")
             if not theme_value:
+                theme_value = (cfg.get("ui", {}) or {}).get("theme")
+            if not theme_value:
                 return
             theme_name = self._resolve_theme_name(str(theme_value))
             if not theme_name:
                 return
-            if str(theme_value).strip().lower() == "auto":
+            if str(theme_value).strip().lower() in ("auto", "system"):
                 self.theme_var.set("Auto")
             if theme_name in self._theme_manager.get_theme_names():
                 self._theme_manager.set_current_theme(theme_name)
