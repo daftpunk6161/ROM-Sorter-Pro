@@ -244,7 +244,49 @@ class TkMVPApp:
         self.root.after(50, self._poll_queue)
 
     def _build_ui(self) -> None:
-        notebook = ttk.Notebook(self.root)
+        container = ttk.Frame(self.root)
+        container.pack(fill=tk.BOTH, expand=True)
+
+        canvas = tk.Canvas(container, highlightthickness=0)
+        self._scroll_canvas = canvas
+        vscroll = ttk.Scrollbar(container, orient=tk.VERTICAL, command=canvas.yview)
+        canvas.configure(yscrollcommand=vscroll.set)
+
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        vscroll.pack(side=tk.RIGHT, fill=tk.Y)
+
+        scroll_inner = ttk.Frame(canvas)
+        self._scroll_inner = scroll_inner
+        window_id = canvas.create_window((0, 0), window=scroll_inner, anchor="nw")
+
+        def _on_inner_config(_event):
+            try:
+                canvas.configure(scrollregion=canvas.bbox("all"))
+            except Exception:
+                return
+
+        def _on_canvas_config(event):
+            try:
+                canvas.itemconfigure(window_id, width=event.width)
+            except Exception:
+                return
+
+        scroll_inner.bind("<Configure>", _on_inner_config)
+        canvas.bind("<Configure>", _on_canvas_config)
+
+        def _on_mousewheel(event):
+            try:
+                delta = int(-1 * (event.delta / 120))
+                canvas.yview_scroll(delta, "units")
+            except Exception:
+                return
+
+        try:
+            self.root.bind_all("<MouseWheel>", _on_mousewheel)
+        except Exception:
+            pass
+
+        notebook = ttk.Notebook(scroll_inner)
         self.notebook = notebook
         notebook.pack(fill=tk.BOTH, expand=True)
 
@@ -256,58 +298,36 @@ class TkMVPApp:
         db_tab = ttk.Frame(notebook, padding=10)
         settings_tab = ttk.Frame(notebook, padding=10)
         notebook.add(dashboard_tab, text="🏠 Dashboard")
-        notebook.add(main_tab, text="🧭 Arbeitsbereich")
         notebook.add(sort_tab, text="🗂️ Sortierung")
         notebook.add(conversions_tab, text="🧰 Konvertierungen")
         notebook.add(igir_tab, text="🧪 IGIR")
         notebook.add(db_tab, text="🗃️ Datenbank")
         notebook.add(settings_tab, text="⚙️ Einstellungen")
         notebook.select(dashboard_tab)
-        self._tab_main = main_tab
+        self._tab_main = sort_tab
 
         dash_title = ttk.Label(dashboard_tab, text="Willkommen", font=("Segoe UI", 14, "bold"))
         dash_title.pack(anchor="w", pady=(0, 6))
         dash_hint = ttk.Label(
             dashboard_tab,
-            text="Starte mit einem Scan oder öffne den Arbeitsbereich für Details.",
+            text="Dashboard für Überblick und Reports. Arbeitsabläufe findest du in den Tabs.",
         )
         dash_hint.pack(anchor="w", pady=(0, 10))
 
-        quick_frame = ttk.LabelFrame(dashboard_tab, text="Schnellstart")
-        quick_frame.pack(fill=tk.X, pady=(0, 10))
-        quick_row = ttk.Frame(quick_frame)
-        quick_row.pack(fill=tk.X, padx=8, pady=8)
-        self.btn_dash_scan = ttk.Button(quick_row, text="🔍 Scannen", command=self._start_scan)
-        self.btn_dash_preview = ttk.Button(quick_row, text="🧾 Vorschau (Dry-run)", command=self._start_preview)
-        self.btn_dash_execute = ttk.Button(quick_row, text="🚀 Sortieren ausführen", command=self._start_execute)
-        self.btn_dash_scan.pack(side=tk.LEFT)
-        self.btn_dash_preview.pack(side=tk.LEFT, padx=(8, 0))
-        self.btn_dash_execute.pack(side=tk.LEFT, padx=(8, 0))
-        _ToolTip(self.btn_dash_scan, "Scannt den Quellordner")
-        _ToolTip(self.btn_dash_preview, "Erstellt einen Plan ohne Änderungen")
-        _ToolTip(self.btn_dash_execute, "Führt den Plan aus")
-
-        paths_frame = ttk.LabelFrame(dashboard_tab, text="Pfade")
-        paths_frame.pack(fill=tk.X, pady=(0, 10))
-        paths_frame.columnconfigure(1, weight=1)
-        ttk.Label(paths_frame, text="Quelle:").grid(row=0, column=0, sticky="w")
-        self.dashboard_source_entry = ttk.Entry(paths_frame, textvariable=self.source_var)
-        self.dashboard_source_entry.grid(row=0, column=1, sticky="ew", padx=6)
-        self.btn_dashboard_source = ttk.Button(paths_frame, text="Quelle wählen…", command=self._choose_source)
-        self.btn_dashboard_source.grid(row=0, column=2)
-        ttk.Label(paths_frame, text="Ziel:").grid(row=1, column=0, sticky="w", pady=(6, 0))
-        self.dashboard_dest_entry = ttk.Entry(paths_frame, textvariable=self.dest_var)
-        self.dashboard_dest_entry.grid(row=1, column=1, sticky="ew", padx=6, pady=(6, 0))
-        self.btn_dashboard_dest = ttk.Button(paths_frame, text="Ziel wählen…", command=self._choose_dest)
-        self.btn_dashboard_dest.grid(row=1, column=2, pady=(6, 0))
-        self.btn_dashboard_open_dest = ttk.Button(paths_frame, text="Ziel öffnen", command=self._open_dest)
-        self.btn_dashboard_open_dest.grid(row=1, column=3, padx=(6, 0), pady=(6, 0))
-
-        self.dashboard_path_hint = ttk.Label(
-            dashboard_tab,
-            text="Quelle/Ziel setzen, um Schnellstart zu aktivieren.",
-        )
-        self.dashboard_path_hint.pack(anchor="w", pady=(0, 10))
+        nav_frame = ttk.LabelFrame(dashboard_tab, text="Navigation")
+        nav_frame.pack(fill=tk.X, pady=(0, 10))
+        nav_row = ttk.Frame(nav_frame)
+        nav_row.pack(fill=tk.X, padx=8, pady=8)
+        self.btn_nav_sort = ttk.Button(nav_row, text="Sortierung öffnen", command=lambda: notebook.select(sort_tab))
+        self.btn_nav_conversions = ttk.Button(nav_row, text="Konvertierungen öffnen", command=lambda: notebook.select(conversions_tab))
+        self.btn_nav_igir = ttk.Button(nav_row, text="IGIR öffnen", command=lambda: notebook.select(igir_tab))
+        self.btn_nav_db = ttk.Button(nav_row, text="Datenbank öffnen", command=lambda: notebook.select(db_tab))
+        self.btn_nav_settings = ttk.Button(nav_row, text="Einstellungen öffnen", command=lambda: notebook.select(settings_tab))
+        self.btn_nav_sort.pack(side=tk.LEFT)
+        self.btn_nav_conversions.pack(side=tk.LEFT, padx=(8, 0))
+        self.btn_nav_igir.pack(side=tk.LEFT, padx=(8, 0))
+        self.btn_nav_db.pack(side=tk.LEFT, padx=(8, 0))
+        self.btn_nav_settings.pack(side=tk.LEFT, padx=(8, 0))
 
         status_frame = ttk.LabelFrame(dashboard_tab, text="Status")
         status_frame.pack(fill=tk.X, pady=(0, 10))
@@ -325,7 +345,16 @@ class TkMVPApp:
         ttk.Label(status_grid, textvariable=self.dashboard_dat_var).grid(row=4, column=1, sticky="w")
         status_grid.columnconfigure(1, weight=1)
 
-        outer = main_tab
+        reports_frame = ttk.LabelFrame(dashboard_tab, text="Reports")
+        reports_frame.pack(fill=tk.X, pady=(0, 10))
+        reports_row = ttk.Frame(reports_frame)
+        reports_row.pack(fill=tk.X, padx=8, pady=8)
+        self.btn_library_report = ttk.Button(reports_row, text="Bibliothek-Report", command=self._show_library_report)
+        self.btn_library_report.pack(side=tk.LEFT)
+        self.btn_library_report_save = ttk.Button(reports_row, text="Report speichern…", command=self._save_library_report)
+        self.btn_library_report_save.pack(side=tk.LEFT, padx=(8, 0))
+
+        outer = sort_tab
 
         main_split = ttk.Panedwindow(outer, orient=tk.HORIZONTAL)
         main_split.pack(fill=tk.BOTH, expand=True)
@@ -925,13 +954,6 @@ class TkMVPApp:
             text="Noch keine Ergebnisse. Starte mit Scan oder Vorschau.",
         )
         self.results_empty_label.pack(fill=tk.X, pady=(0, 6))
-
-        report_row = ttk.Frame(results_frame)
-        report_row.pack(fill=tk.X, pady=(0, 6))
-        self.btn_library_report = ttk.Button(report_row, text="Bibliothek-Report", command=self._show_library_report)
-        self.btn_library_report.pack(side=tk.LEFT)
-        self.btn_library_report_save = ttk.Button(report_row, text="Report speichern…", command=self._save_library_report)
-        self.btn_library_report_save.pack(side=tk.LEFT, padx=(8, 0))
 
         table_frame = ttk.Frame(results_frame)
         table_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 0))
@@ -3078,18 +3100,7 @@ class TkMVPApp:
 
     def _update_quick_actions(self) -> None:
         ready = self._has_required_paths()
-        enabled = "normal" if (ready and not self._current_op) else "disabled"
-        try:
-            self.btn_dash_scan.configure(state=enabled)
-            self.btn_dash_preview.configure(state=enabled)
-            self.btn_dash_execute.configure(state=enabled)
-        except Exception:
-            pass
-        try:
-            if hasattr(self, "dashboard_path_hint"):
-                self.dashboard_path_hint.configure(text="Pfad gesetzt" if ready else "Quelle/Ziel setzen, um Schnellstart zu aktivieren.")
-        except Exception:
-            pass
+        _ = ready
         self.dat_auto_load_check.configure(state=state_normal)
         self.btn_clear_dat_cache.configure(state=state_normal)
         if not running:

@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import sqlite3
 import zipfile
+import threading
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Iterable, Iterator, List, Optional, Tuple
@@ -30,7 +31,8 @@ class DatIndexSqlite:
     def __init__(self, db_path: Path) -> None:
         self.db_path = db_path
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        self.conn = sqlite3.connect(str(self.db_path))
+        self._lock = threading.RLock()
+        self.conn = sqlite3.connect(str(self.db_path), check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
         self._apply_pragmas()
         self._init_schema()
@@ -185,20 +187,21 @@ class DatIndexSqlite:
         return {"processed": processed, "skipped": skipped, "inserted": inserted, "removed": removed}
 
     def coverage_report(self) -> Dict[str, object]:
-        cur = self.conn.cursor()
-        cur.execute("SELECT COUNT(*) AS count FROM dat_files WHERE active=1")
-        active_files = int(cur.fetchone()[0])
-        cur.execute("SELECT COUNT(*) AS count FROM dat_files WHERE active=0")
-        inactive_files = int(cur.fetchone()[0])
-        cur.execute("SELECT COUNT(*) AS count FROM rom_hashes")
-        rom_hashes = int(cur.fetchone()[0])
-        cur.execute("SELECT COUNT(*) AS count FROM game_names")
-        game_names = int(cur.fetchone()[0])
+        with self._lock:
+            cur = self.conn.cursor()
+            cur.execute("SELECT COUNT(*) AS count FROM dat_files WHERE active=1")
+            active_files = int(cur.fetchone()[0])
+            cur.execute("SELECT COUNT(*) AS count FROM dat_files WHERE active=0")
+            inactive_files = int(cur.fetchone()[0])
+            cur.execute("SELECT COUNT(*) AS count FROM rom_hashes")
+            rom_hashes = int(cur.fetchone()[0])
+            cur.execute("SELECT COUNT(*) AS count FROM game_names")
+            game_names = int(cur.fetchone()[0])
 
-        cur.execute("SELECT platform_id, COUNT(*) AS count FROM rom_hashes GROUP BY platform_id")
-        rom_counts = {str(row["platform_id"] or "Unknown"): int(row["count"]) for row in cur.fetchall()}
-        cur.execute("SELECT platform_id, COUNT(*) AS count FROM game_names GROUP BY platform_id")
-        game_counts = {str(row["platform_id"] or "Unknown"): int(row["count"]) for row in cur.fetchall()}
+            cur.execute("SELECT platform_id, COUNT(*) AS count FROM rom_hashes GROUP BY platform_id")
+            rom_counts = {str(row["platform_id"] or "Unknown"): int(row["count"]) for row in cur.fetchall()}
+            cur.execute("SELECT platform_id, COUNT(*) AS count FROM game_names GROUP BY platform_id")
+            game_counts = {str(row["platform_id"] or "Unknown"): int(row["count"]) for row in cur.fetchall()}
 
         platforms = {}
         for platform in sorted(set(rom_counts.keys()) | set(game_counts.keys())):
@@ -351,9 +354,10 @@ class DatIndexSqlite:
                 )
 
     def lookup_sha1(self, sha1: str) -> Optional[DatHashRow]:
-        cur = self.conn.cursor()
-        cur.execute("SELECT * FROM rom_hashes WHERE sha1=? LIMIT 1", (sha1.lower(),))
-        row = cur.fetchone()
+        with self._lock:
+            cur = self.conn.cursor()
+            cur.execute("SELECT * FROM rom_hashes WHERE sha1=? LIMIT 1", (sha1.lower(),))
+            row = cur.fetchone()
         if not row:
             return None
         return DatHashRow(
@@ -367,9 +371,10 @@ class DatIndexSqlite:
         )
 
     def lookup_crc_size(self, crc32: str, size_bytes: int) -> Optional[DatHashRow]:
-        cur = self.conn.cursor()
-        cur.execute("SELECT * FROM rom_hashes WHERE crc32=? AND size_bytes=? LIMIT 1", (crc32.lower(), int(size_bytes)))
-        row = cur.fetchone()
+        with self._lock:
+            cur = self.conn.cursor()
+            cur.execute("SELECT * FROM rom_hashes WHERE crc32=? AND size_bytes=? LIMIT 1", (crc32.lower(), int(size_bytes)))
+            row = cur.fetchone()
         if not row:
             return None
         return DatHashRow(
@@ -391,12 +396,13 @@ class DatIndexSqlite:
     def lookup_game(self, game_name: str) -> Optional[Tuple[str, int]]:
         if not game_name:
             return None
-        cur = self.conn.cursor()
-        cur.execute(
-            "SELECT platform_id, dat_id FROM game_names WHERE game_name=? LIMIT 1",
-            (str(game_name).lower(),),
-        )
-        row = cur.fetchone()
+        with self._lock:
+            cur = self.conn.cursor()
+            cur.execute(
+                "SELECT platform_id, dat_id FROM game_names WHERE game_name=? LIMIT 1",
+                (str(game_name).lower(),),
+            )
+            row = cur.fetchone()
         if not row:
             return None
         return (row["platform_id"] or "Unknown", int(row["dat_id"]))

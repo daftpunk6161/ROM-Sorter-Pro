@@ -21,10 +21,28 @@ from .chd_detector import detect_console_from_chd, is_chd_file
 from .detection_result import DetectionResult
 ML_ENABLED = os.environ.get("ROM_SORTER_ENABLE_ML", "").strip() == "1"
 
-try:
-    from .ml_detector import detect_console_with_ml, MLEnhancedConsoleDetector, get_ml_detector
-    ML_AVAILABLE = ML_ENABLED
-except Exception:
+if ML_ENABLED:
+    try:
+        from .ml_detector import detect_console_with_ml, MLEnhancedConsoleDetector, get_ml_detector
+        ML_AVAILABLE = True
+    except Exception:
+        ML_AVAILABLE = False
+
+        def detect_console_with_ml(file_path: str) -> "DetectionResult":
+            return DetectionResult(
+                "Unknown",
+                0.0,
+                method="ml",
+                file_path=file_path,
+                metadata={"error": "ml_unavailable"},
+            )
+
+        class MLEnhancedConsoleDetector:  # type: ignore[no-redef]
+            pass
+
+        def get_ml_detector():
+            return None
+else:
     ML_AVAILABLE = False
 
     def detect_console_with_ml(file_path: str) -> "DetectionResult":
@@ -33,7 +51,7 @@ except Exception:
             0.0,
             method="ml",
             file_path=file_path,
-            metadata={"error": "ml_disabled" if not ML_ENABLED else "ml_unavailable"},
+            metadata={"error": "ml_disabled"},
         )
 
     class MLEnhancedConsoleDetector:  # type: ignore[no-redef]

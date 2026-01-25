@@ -28,6 +28,7 @@ import traceback
 import threading
 import json
 from pathlib import Path
+from dataclasses import dataclass
 from typing import Any, Iterable, List, Optional, cast
 
 
@@ -230,6 +231,136 @@ def run() -> int:
                 self.finished.emit(result)
             except Exception as exc:
                 self.failed.emit(str(exc))
+
+    @dataclass
+    class ResultRow:
+        status: str
+        action: str
+        input_path: str
+        name: str
+        detected_system: str
+        security: str
+        signals: str
+        candidates: str
+        planned_target: str
+        normalization: str
+        reason: str
+        meta_index: int
+        status_tooltip: str = ""
+        status_color: Optional[str] = None
+
+    class ResultsTableModel(QtCore.QAbstractTableModel):
+        headers = [
+            "Status/Fehler",
+            "Aktion",
+            "Eingabepfad",
+            "Name",
+            "Erkannte Konsole/Typ",
+            "Sicherheit",
+            "Signale",
+            "Kandidaten",
+            "Geplantes Ziel",
+            "Normalisierung",
+            "Grund",
+        ]
+
+        def __init__(self, parent=None) -> None:
+            super().__init__(parent)
+            self._rows: List[ResultRow] = []
+
+        def rowCount(self, parent=QtCore.QModelIndex()) -> int:
+            if parent.isValid():
+                return 0
+            return len(self._rows)
+
+        def columnCount(self, parent=QtCore.QModelIndex()) -> int:
+            if parent.isValid():
+                return 0
+            return len(self.headers)
+
+        def data(self, index, role=QtCore.Qt.ItemDataRole.DisplayRole):
+            if not index.isValid():
+                return None
+            row = self._rows[index.row()]
+            column = index.column()
+            values = [
+                row.status,
+                row.action,
+                row.input_path,
+                row.name,
+                row.detected_system,
+                row.security,
+                row.signals,
+                row.candidates,
+                row.planned_target,
+                row.normalization,
+                row.reason,
+            ]
+            if role in (QtCore.Qt.ItemDataRole.DisplayRole, QtCore.Qt.ItemDataRole.EditRole):
+                try:
+                    return values[column]
+                except Exception:
+                    return ""
+            if role == QtCore.Qt.ItemDataRole.ToolTipRole and column == 0:
+                return row.status_tooltip or None
+            if role == QtCore.Qt.ItemDataRole.ForegroundRole and column == 0 and row.status_color:
+                try:
+                    return QtGui.QBrush(QtGui.QColor(row.status_color))
+                except Exception:
+                    return None
+            if role == QtCore.Qt.ItemDataRole.UserRole:
+                return row.meta_index
+            return None
+
+        def headerData(self, section, orientation, role=QtCore.Qt.ItemDataRole.DisplayRole):
+            if orientation == QtCore.Qt.Orientation.Horizontal and role == QtCore.Qt.ItemDataRole.DisplayRole:
+                if 0 <= section < len(self.headers):
+                    return self.headers[section]
+            return None
+
+        def flags(self, index):
+            if not index.isValid():
+                return QtCore.Qt.ItemFlag.NoItemFlags
+            return QtCore.Qt.ItemFlag.ItemIsEnabled | QtCore.Qt.ItemFlag.ItemIsSelectable
+
+        def set_rows(self, rows: List[ResultRow]) -> None:
+            self.beginResetModel()
+            self._rows = list(rows)
+            self.endResetModel()
+
+        def clear(self) -> None:
+            self.set_rows([])
+
+        def append_row(self, row: ResultRow) -> None:
+            position = len(self._rows)
+            self.beginInsertRows(QtCore.QModelIndex(), position, position)
+            self._rows.append(row)
+            self.endInsertRows()
+
+        def update_status(self, row_index: int, status: str, tooltip: Optional[str] = None, color: Optional[str] = None) -> None:
+            if row_index < 0 or row_index >= len(self._rows):
+                return
+            row = self._rows[row_index]
+            row.status = str(status)
+            if tooltip is not None:
+                row.status_tooltip = tooltip
+            if color is not None:
+                row.status_color = color
+            top_left = self.index(row_index, 0)
+            self.dataChanged.emit(
+                top_left,
+                top_left,
+                [
+                    QtCore.Qt.ItemDataRole.DisplayRole,
+                    QtCore.Qt.ItemDataRole.ToolTipRole,
+                    QtCore.Qt.ItemDataRole.ForegroundRole,
+                ],
+            )
+
+        def get_row(self, row_index: int) -> Optional[ResultRow]:
+            if 0 <= row_index < len(self._rows):
+                return self._rows[row_index]
+            return None
 
     class QtLogHandler(logging.Handler):
         def __init__(self, emit_fn):
@@ -713,8 +844,12 @@ def run() -> int:
 
             self._theme_manager = ThemeManager()
             self._syncing_paths = False
+            self._syncing_theme = False
             self._log_visible = True
+            self._log_autoscroll = True
             self._is_running = False
+            self._has_warnings = False
+            self._external_tools_enabled = False
 
             self._last_view: str = "scan"  # scan|plan
             self._table_items: List[ScanItem] = []
@@ -753,9 +888,130 @@ def run() -> int:
 
             root_layout = QtWidgets.QVBoxLayout(central)
 
+            header_bar = QtWidgets.QWidget()
+            header_layout = QtWidgets.QHBoxLayout(header_bar)
+            header_layout.setContentsMargins(8, 8, 8, 8)
+            header_layout.setSpacing(10)
+
+            app_title = QtWidgets.QLabel("ROM Sorter Pro")
+            app_title.setStyleSheet("font-size: 18px; font-weight: 700;")
+            self._app_version = _load_version()
+            app_version = QtWidgets.QLabel(f"v{self._app_version}")
+            app_version.setStyleSheet("color: #777;")
+
+            self.stepper_scan = QtWidgets.QLabel("1. Scan")
+            self.stepper_plan = QtWidgets.QLabel("2. Plan")
+            self.stepper_execute = QtWidgets.QLabel("3. Execute")
+            for step in (self.stepper_scan, self.stepper_plan, self.stepper_execute):
+                step.setStyleSheet("padding: 4px 8px; border-radius: 10px; background: #f0f0f0;")
+
+            stepper_layout = QtWidgets.QHBoxLayout()
+            stepper_layout.addWidget(self.stepper_scan)
+            stepper_layout.addWidget(self.stepper_plan)
+            stepper_layout.addWidget(self.stepper_execute)
+            stepper_widget = QtWidgets.QWidget()
+            stepper_widget.setLayout(stepper_layout)
+
+            self.header_btn_scan = QtWidgets.QPushButton("Scan")
+            self.header_btn_preview = QtWidgets.QPushButton("Preview")
+            self.header_btn_execute = QtWidgets.QPushButton("Execute")
+            self.header_btn_cancel = QtWidgets.QPushButton("Cancel")
+            self.header_btn_cancel.setEnabled(False)
+
+            self.header_cmd_btn = QtWidgets.QPushButton("⌘ Palette")
+            self.header_log_btn = QtWidgets.QPushButton("Log")
+
+            theme_names_header = self._theme_manager.get_theme_names()
+            if "Auto" not in theme_names_header:
+                theme_names_header = ["Auto"] + theme_names_header
+            self.header_theme_combo = QtWidgets.QComboBox()
+            self.header_theme_combo.addItems(theme_names_header)
+
+            self.review_gate_checkbox = QtWidgets.QCheckBox("Review Gate")
+            self.review_gate_checkbox.setChecked(True)
+            self.external_tools_checkbox = QtWidgets.QCheckBox("External Tools")
+            self.external_tools_checkbox.setChecked(False)
+
+            self.pill_status = QtWidgets.QLabel("Idle")
+            self.pill_queue = QtWidgets.QLabel("Queue: 0")
+            self.pill_dat = QtWidgets.QLabel("DAT: -")
+            self.pill_safety = QtWidgets.QLabel("Safe")
+            for pill in (self.pill_status, self.pill_queue, self.pill_dat, self.pill_safety):
+                pill.setStyleSheet("padding: 2px 8px; border-radius: 10px; background: #e8e8e8;")
+
+            header_layout.addWidget(app_title)
+            header_layout.addWidget(app_version)
+            header_layout.addSpacing(6)
+            header_layout.addWidget(stepper_widget)
+            header_layout.addSpacing(10)
+            header_layout.addWidget(self.header_btn_scan)
+            header_layout.addWidget(self.header_btn_preview)
+            header_layout.addWidget(self.header_btn_execute)
+            header_layout.addWidget(self.header_btn_cancel)
+            header_layout.addWidget(self.header_cmd_btn)
+            header_layout.addWidget(self.header_log_btn)
+            header_layout.addStretch(1)
+            header_layout.addWidget(self.review_gate_checkbox)
+            header_layout.addWidget(self.external_tools_checkbox)
+            header_layout.addWidget(self.header_theme_combo)
+            header_layout.addWidget(self.pill_status)
+            header_layout.addWidget(self.pill_queue)
+            header_layout.addWidget(self.pill_dat)
+            header_layout.addWidget(self.pill_safety)
+
+            root_layout.addWidget(header_bar)
+
+            content_layout = QtWidgets.QHBoxLayout()
+            root_layout.addLayout(content_layout, 1)
+
+            sidebar = QtWidgets.QFrame()
+            sidebar.setMinimumWidth(180)
+            sidebar_layout = QtWidgets.QVBoxLayout(sidebar)
+            sidebar_layout.setContentsMargins(8, 8, 8, 8)
+            sidebar_layout.setSpacing(6)
+
+            self.btn_nav_dashboard = QtWidgets.QPushButton("Dashboard")
+            self.btn_nav_sort = QtWidgets.QPushButton("Sortierung")
+            self.btn_nav_conversions = QtWidgets.QPushButton("Konvertierungen")
+            self.btn_nav_igir = QtWidgets.QPushButton("IGIR")
+            self.btn_nav_db = QtWidgets.QPushButton("Datenbank")
+            self.btn_nav_settings = QtWidgets.QPushButton("Einstellungen")
+            for btn in (
+                self.btn_nav_dashboard,
+                self.btn_nav_sort,
+                self.btn_nav_conversions,
+                self.btn_nav_igir,
+                self.btn_nav_db,
+                self.btn_nav_settings,
+            ):
+                btn.setMinimumHeight(32)
+                sidebar_layout.addWidget(btn)
+
+            sidebar_layout.addStretch(1)
+            sidebar_layout.addWidget(QtWidgets.QLabel("Status"))
+            self.sidebar_status_label = QtWidgets.QLabel("-")
+            self.sidebar_summary_label = QtWidgets.QLabel("-")
+            self.sidebar_status_label.setWordWrap(True)
+            self.sidebar_summary_label.setWordWrap(True)
+            sidebar_layout.addWidget(self.sidebar_status_label)
+            sidebar_layout.addWidget(self.sidebar_summary_label)
+
             tabs = QtWidgets.QTabWidget()
             self.tabs = tabs
-            root_layout.addWidget(tabs)
+            try:
+                tabs.tabBar().hide()
+            except Exception:
+                pass
+
+            content_layout.addWidget(sidebar)
+            content_layout.addWidget(tabs, 1)
+
+            def _wrap_tab_scroll(widget: QtWidgets.QWidget) -> QtWidgets.QScrollArea:
+                scroll = QtWidgets.QScrollArea()
+                scroll.setWidgetResizable(True)
+                scroll.setFrameShape(QtWidgets.QFrame.NoFrame)
+                scroll.setWidget(widget)
+                return scroll
 
             dashboard_tab = QtWidgets.QWidget()
             main_tab = QtWidgets.QWidget()
@@ -765,18 +1021,30 @@ def run() -> int:
             db_tab = QtWidgets.QWidget()
             settings_tab = QtWidgets.QWidget()
             tools_tab = QtWidgets.QWidget()
-            tabs.addTab(dashboard_tab, "🏠 Dashboard")
-            tabs.addTab(main_tab, "🧭 Arbeitsbereich")
-            tabs.addTab(sort_tab, "🗂️ Sortierung")
-            tabs.addTab(conversions_tab, "🧰 Konvertierungen")
-            tabs.addTab(igir_tab, "🧪 IGIR")
-            tabs.addTab(db_tab, "🗃️ Datenbank")
-            tabs.addTab(settings_tab, "⚙️ Einstellungen")
-            self._tab_index_main = tabs.indexOf(main_tab)
-            self._tab_index_dashboard = tabs.indexOf(dashboard_tab)
+            dashboard_scroll = _wrap_tab_scroll(dashboard_tab)
+            sort_scroll = _wrap_tab_scroll(sort_tab)
+            conversions_scroll = _wrap_tab_scroll(conversions_tab)
+            igir_scroll = _wrap_tab_scroll(igir_tab)
+            db_scroll = _wrap_tab_scroll(db_tab)
+            settings_scroll = _wrap_tab_scroll(settings_tab)
+
+            tabs.addTab(dashboard_scroll, "🏠 Dashboard")
+            tabs.addTab(sort_scroll, "🗂️ Sortierung")
+            tabs.addTab(conversions_scroll, "🧰 Konvertierungen")
+            tabs.addTab(igir_scroll, "🧪 IGIR")
+            tabs.addTab(db_scroll, "🗃️ Datenbank")
+            tabs.addTab(settings_scroll, "⚙️ Einstellungen")
+            self._tab_index_dashboard = tabs.indexOf(dashboard_scroll)
+            self._tab_index_sort = tabs.indexOf(sort_scroll)
+            self._tab_index_main = self._tab_index_sort
+            self._tab_index_conversions = tabs.indexOf(conversions_scroll)
+            self._tab_index_igir = tabs.indexOf(igir_scroll)
+            self._tab_index_db = tabs.indexOf(db_scroll)
+            self._tab_index_settings = tabs.indexOf(settings_scroll)
             show_external_tools = False
             if show_external_tools:
-                tabs.addTab(tools_tab, "External Tools")
+                tools_scroll = _wrap_tab_scroll(tools_tab)
+                tabs.addTab(tools_scroll, "External Tools")
             tabs.setCurrentIndex(0)
 
             dashboard_layout = QtWidgets.QVBoxLayout(dashboard_tab)
@@ -793,58 +1061,33 @@ def run() -> int:
             dashboard_layout.addWidget(dashboard_title)
 
             dashboard_hint = QtWidgets.QLabel(
-                "Starte mit einem Scan oder öffne den Arbeitsbereich für Details."
+                "Dashboard für Überblick und Reports. Arbeitsabläufe findest du in den Tabs."
             )
             dashboard_hint.setWordWrap(True)
             dashboard_layout.addWidget(dashboard_hint)
 
-            quick_group = QtWidgets.QGroupBox("Schnellstart")
-            quick_layout = QtWidgets.QHBoxLayout(quick_group)
-            self.btn_dash_scan = QtWidgets.QPushButton("🔍 Scannen")
-            self.btn_dash_preview = QtWidgets.QPushButton("🧾 Vorschau (Dry-run)")
-            self.btn_dash_execute = QtWidgets.QPushButton("🚀 Sortieren ausführen")
-            self.btn_dash_scan.setToolTip("Scannt den Quellordner")
-            self.btn_dash_preview.setToolTip("Erstellt einen Sortierplan ohne Änderungen")
-            self.btn_dash_execute.setToolTip("Führt den Plan aus")
-            self.btn_dash_scan.setMinimumHeight(34)
-            self.btn_dash_preview.setMinimumHeight(34)
-            self.btn_dash_execute.setMinimumHeight(34)
-            quick_layout.addWidget(self.btn_dash_scan)
-            quick_layout.addWidget(self.btn_dash_preview)
-            quick_layout.addWidget(self.btn_dash_execute)
-            quick_layout.addStretch(1)
-            dashboard_layout.addWidget(quick_group)
+            nav_group = QtWidgets.QGroupBox("Navigation")
+            nav_layout = QtWidgets.QGridLayout(nav_group)
+            self.btn_nav_sort.setText("Sortierung öffnen")
+            self.btn_nav_conversions.setText("Konvertierungen öffnen")
+            self.btn_nav_igir.setText("IGIR öffnen")
+            self.btn_nav_db.setText("Datenbank öffnen")
+            self.btn_nav_settings.setText("Einstellungen öffnen")
+            nav_layout.addWidget(self.btn_nav_sort, 0, 0)
+            nav_layout.addWidget(self.btn_nav_conversions, 0, 1)
+            nav_layout.addWidget(self.btn_nav_igir, 1, 0)
+            nav_layout.addWidget(self.btn_nav_db, 1, 1)
+            nav_layout.addWidget(self.btn_nav_settings, 2, 0)
+            dashboard_layout.addWidget(nav_group)
 
-            dnd_enabled = self._is_drag_drop_enabled()
-            paths_dashboard_group = QtWidgets.QGroupBox("Pfade")
-            paths_dashboard_layout = QtWidgets.QGridLayout(paths_dashboard_group)
-            paths_dashboard_layout.addWidget(QtWidgets.QLabel("Quelle:"), 0, 0)
-            self.dashboard_source_edit = DropLineEdit(self._on_drop_source, enabled=dnd_enabled)
-            self.dashboard_source_edit.setPlaceholderText("ROM-Quelle auswählen")
-            paths_dashboard_layout.addWidget(self.dashboard_source_edit, 0, 1)
-            self.btn_dash_source = QtWidgets.QPushButton("Quelle wählen…")
-            self.btn_dash_source.clicked.connect(self._choose_source)
-            paths_dashboard_layout.addWidget(self.btn_dash_source, 0, 2)
-
-            paths_dashboard_layout.addWidget(QtWidgets.QLabel("Ziel:"), 1, 0)
-            self.dashboard_dest_edit = DropLineEdit(self._on_drop_dest, enabled=dnd_enabled)
-            self.dashboard_dest_edit.setPlaceholderText("Zielordner auswählen")
-            paths_dashboard_layout.addWidget(self.dashboard_dest_edit, 1, 1)
-            self.btn_dash_dest = QtWidgets.QPushButton("Ziel wählen…")
-            self.btn_dash_dest.clicked.connect(self._choose_dest)
-            paths_dashboard_layout.addWidget(self.btn_dash_dest, 1, 2)
-            self.btn_dash_open_dest = QtWidgets.QPushButton("Ziel öffnen")
-            self.btn_dash_open_dest.clicked.connect(self._open_destination)
-            paths_dashboard_layout.addWidget(self.btn_dash_open_dest, 1, 3)
-            paths_dashboard_layout.setColumnStretch(1, 1)
-            dashboard_layout.addWidget(paths_dashboard_group)
-
-            self.dashboard_path_hint = QtWidgets.QLabel(
-                "Quelle und Ziel setzen, damit Schnellstart aktiv wird."
-            )
-            self.dashboard_path_hint.setWordWrap(True)
-            self.dashboard_path_hint.setStyleSheet("color: #777;")
-            dashboard_layout.addWidget(self.dashboard_path_hint)
+            reports_group = QtWidgets.QGroupBox("Reports")
+            reports_layout = QtWidgets.QHBoxLayout(reports_group)
+            self.btn_library_report = QtWidgets.QPushButton("Bibliothek-Report")
+            self.btn_library_report_save = QtWidgets.QPushButton("Report speichern…")
+            reports_layout.addWidget(self.btn_library_report)
+            reports_layout.addWidget(self.btn_library_report_save)
+            reports_layout.addStretch(1)
+            dashboard_layout.addWidget(reports_group)
 
             status_group = QtWidgets.QGroupBox("Status")
             status_layout = QtWidgets.QGridLayout(status_group)
@@ -867,6 +1110,7 @@ def run() -> int:
             self.dashboard_dat_label = QtWidgets.QLabel("-")
             status_layout.addWidget(self.dashboard_dat_label, 4, 1)
             dashboard_layout.addWidget(status_group)
+
             dashboard_layout.addStretch(1)
 
             paths_group = QtWidgets.QGroupBox("Pfade")
@@ -886,7 +1130,7 @@ def run() -> int:
             sections_row.addWidget(actions_group, 1)
 
             main_splitter = QtWidgets.QSplitter(QtCore.Qt.Orientation.Horizontal)
-            main_layout.addWidget(main_splitter, 1)
+            sort_tab_layout.addWidget(main_splitter, 1)
             left_panel = QtWidgets.QWidget()
             right_panel = QtWidgets.QWidget()
             main_splitter.addWidget(left_panel)
@@ -1160,6 +1404,13 @@ def run() -> int:
             settings_form.addWidget(QtWidgets.QLabel("Theme:"), 0, 0)
             settings_form.addWidget(self.theme_combo, 0, 1)
             settings_form.setColumnStretch(1, 1)
+
+            theme_preview_group = QtWidgets.QGroupBox("Theme Preview")
+            theme_preview_layout = QtWidgets.QVBoxLayout(theme_preview_group)
+            self.theme_preview_list = QtWidgets.QListWidget()
+            self.theme_preview_list.setMinimumHeight(140)
+            theme_preview_layout.addWidget(self.theme_preview_list)
+            settings_layout.addWidget(theme_preview_group)
 
             self.log_visible_checkbox = QtWidgets.QCheckBox("Log standardmäßig anzeigen")
             self.remember_window_checkbox = QtWidgets.QCheckBox("Fenstergröße merken")
@@ -1453,14 +1704,6 @@ def run() -> int:
             self.btn_why_unknown.clicked.connect(self._show_why_unknown)
             right_layout.addWidget(self.btn_why_unknown)
 
-            report_row = QtWidgets.QHBoxLayout()
-            self.btn_library_report = QtWidgets.QPushButton("Bibliothek-Report")
-            self.btn_library_report_save = QtWidgets.QPushButton("Report speichern…")
-            report_row.addWidget(self.btn_library_report)
-            report_row.addWidget(self.btn_library_report_save)
-            report_row.addStretch(1)
-            right_layout.addLayout(report_row)
-
             results_intro = QtWidgets.QLabel(
                 "Die Ergebnistabelle zeigt geplante Ziele und Status. Nutze die Vorschau vor dem Ausführen."
             )
@@ -1473,6 +1716,37 @@ def run() -> int:
             self.results_empty_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
             self.results_empty_label.setStyleSheet("color: #777; padding: 8px;")
             right_layout.addWidget(self.results_empty_label)
+
+            details_group = QtWidgets.QGroupBox("Details")
+            details_layout = QtWidgets.QFormLayout(details_group)
+            self.details_input_label = QtWidgets.QLabel("-")
+            self.details_target_label = QtWidgets.QLabel("-")
+            self.details_status_label = QtWidgets.QLabel("-")
+            self.details_system_label = QtWidgets.QLabel("-")
+            self.details_reason_label = QtWidgets.QLabel("-")
+            for label in (
+                self.details_input_label,
+                self.details_target_label,
+                self.details_status_label,
+                self.details_system_label,
+                self.details_reason_label,
+            ):
+                label.setWordWrap(True)
+            details_layout.addRow("Eingabe:", self.details_input_label)
+            details_layout.addRow("Ziel:", self.details_target_label)
+            details_layout.addRow("Status:", self.details_status_label)
+            details_layout.addRow("System:", self.details_system_label)
+            details_layout.addRow("Grund:", self.details_reason_label)
+            right_layout.addWidget(details_group)
+
+            results_toolbar = QtWidgets.QHBoxLayout()
+            self.quick_filter_edit = QtWidgets.QLineEdit()
+            self.quick_filter_edit.setPlaceholderText("Ergebnis-Filter…")
+            self.quick_filter_clear_btn = QtWidgets.QPushButton("Filter löschen")
+            results_toolbar.addWidget(QtWidgets.QLabel("Schnellfilter:"))
+            results_toolbar.addWidget(self.quick_filter_edit)
+            results_toolbar.addWidget(self.quick_filter_clear_btn)
+            right_layout.addLayout(results_toolbar)
 
             queue_group = QtWidgets.QGroupBox("Jobs")
             queue_layout = QtWidgets.QGridLayout(queue_group)
@@ -1496,24 +1770,21 @@ def run() -> int:
             queue_layout.addWidget(self.queue_list, 2, 0, 1, 3)
             left_layout.addWidget(queue_group)
 
-            self.table = QtWidgets.QTableWidget(0, 11)
-            self.table.setHorizontalHeaderLabels(
-                [
-                    "Status/Fehler",
-                    "Aktion",
-                    "Eingabepfad",
-                    "Name",
-                    "Erkannte Konsole/Typ",
-                    "Sicherheit",
-                    "Signale",
-                    "Kandidaten",
-                    "Geplantes Ziel",
-                    "Normalisierung",
-                    "Grund",
-                ]
-            )
+            self.results_model = ResultsTableModel(self)
+            self.results_proxy = QtCore.QSortFilterProxyModel(self)
+            self.results_proxy.setSourceModel(self.results_model)
+            self.results_proxy.setFilterCaseSensitivity(QtCore.Qt.CaseSensitivity.CaseInsensitive)
+            self.results_proxy.setSortCaseSensitivity(QtCore.Qt.CaseSensitivity.CaseInsensitive)
+            self.results_proxy.setFilterKeyColumn(-1)
+
+            self.table = QtWidgets.QTableView()
+            self.table.setModel(self.results_proxy)
             self.table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)
+            self.table.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.ExtendedSelection)
             self.table.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
+            self.table.setAlternatingRowColors(True)
+            self.table.setSortingEnabled(True)
+            self.table.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
             header = self.table.horizontalHeader()
             header.setStretchLastSection(True)
             header.setSectionsMovable(True)
@@ -1526,12 +1797,6 @@ def run() -> int:
                 header.setMaximumSectionSize(600)
             except Exception:
                 pass
-            self.table.setAlternatingRowColors(True)
-            try:
-                self.table.setSortingEnabled(True)
-            except Exception:
-                pass
-            self.table.resizeColumnsToContents()
             right_layout.addWidget(self.table, 2)
 
             self.log_view = QtWidgets.QPlainTextEdit()
@@ -1550,17 +1815,28 @@ def run() -> int:
             self.log_filter_edit = QtWidgets.QLineEdit()
             self.log_filter_edit.setPlaceholderText("Log filtern…")
             self.log_filter_clear_btn = QtWidgets.QPushButton("Filter löschen")
+            self.log_autoscroll_checkbox = QtWidgets.QCheckBox("Auto-Scroll")
+            self.log_autoscroll_checkbox.setChecked(True)
 
             log_header = QtWidgets.QHBoxLayout()
             log_header.addWidget(log_title)
             log_header.addWidget(self.log_filter_edit)
             log_header.addWidget(self.log_filter_clear_btn)
+            log_header.addWidget(self.log_autoscroll_checkbox)
             log_header.addStretch(1)
             log_header.addWidget(self.log_toggle_btn)
-            root_layout.addLayout(log_header)
-            root_layout.addWidget(self.log_view, 1)
-            root_layout.addWidget(log_hint)
+
+            log_container = QtWidgets.QWidget()
+            log_layout = QtWidgets.QVBoxLayout(log_container)
+            log_layout.addLayout(log_header)
+            log_layout.addWidget(self.log_view, 1)
+            log_layout.addWidget(log_hint)
             self.log_hint_label = log_hint
+
+            self.log_dock = QtWidgets.QDockWidget("Log", self)
+            self.log_dock.setWidget(log_container)
+            self.log_dock.setAllowedAreas(QtCore.Qt.DockWidgetArea.BottomDockWidgetArea)
+            self.addDockWidget(QtCore.Qt.DockWidgetArea.BottomDockWidgetArea, self.log_dock)
 
 
             self._log_buffer = []
@@ -1583,6 +1859,7 @@ def run() -> int:
 
             self.log_filter_edit.textChanged.connect(self._apply_log_filter)
             self.log_filter_clear_btn.clicked.connect(lambda: self.log_filter_edit.setText(""))
+            self.log_autoscroll_checkbox.stateChanged.connect(self._on_log_autoscroll_changed)
             self.queue_pause_btn.clicked.connect(self._pause_jobs)
             self.queue_resume_btn.clicked.connect(self._resume_jobs)
             self.queue_clear_btn.clicked.connect(self._clear_job_queue)
@@ -1633,6 +1910,29 @@ def run() -> int:
             self.ver_filter.currentTextChanged.connect(self._on_filters_changed)
             self.region_filter.itemSelectionChanged.connect(self._on_filters_changed)
             self.dedupe_checkbox.stateChanged.connect(lambda _v: self._on_filters_changed())
+
+            self.header_btn_scan.clicked.connect(self._start_scan)
+            self.header_btn_preview.clicked.connect(self._start_preview)
+            self.header_btn_execute.clicked.connect(self._start_execute)
+            self.header_btn_cancel.clicked.connect(self._cancel)
+            self.header_cmd_btn.clicked.connect(self._open_command_palette)
+            self.header_log_btn.clicked.connect(self._toggle_log_visibility)
+            self.header_theme_combo.currentTextChanged.connect(self._on_header_theme_changed)
+            self.review_gate_checkbox.stateChanged.connect(self._on_review_gate_changed)
+            self.external_tools_checkbox.stateChanged.connect(self._on_external_tools_changed)
+
+            self.quick_filter_edit.textChanged.connect(self._apply_quick_filter)
+            self.quick_filter_clear_btn.clicked.connect(lambda: self.quick_filter_edit.setText(""))
+            self.table.customContextMenuRequested.connect(self._open_table_context_menu)
+            try:
+                self.table.selectionModel().selectionChanged.connect(self._on_table_selection_changed)
+            except Exception:
+                pass
+
+            self.cmd_palette_shortcut = QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+K"), self)
+            self.cmd_palette_shortcut.activated.connect(self._open_command_palette)
+            self.execute_shortcut = QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+Return"), self)
+            self.execute_shortcut.activated.connect(self._quick_execute_or_preview)
             self.hide_unknown_checkbox.stateChanged.connect(lambda _v: self._on_filters_changed())
             self.ext_filter_edit.textChanged.connect(self._on_filters_changed)
             self.min_size_edit.textChanged.connect(self._on_filters_changed)
@@ -1646,6 +1946,7 @@ def run() -> int:
             self.btn_manage_dat.clicked.connect(self._open_dat_sources_dialog)
             self.btn_open_overrides.clicked.connect(self._open_identification_overrides)
             self.theme_combo.currentTextChanged.connect(self._on_theme_changed)
+            self.theme_preview_list.itemClicked.connect(lambda item: self.theme_combo.setCurrentText(item.text()))
             self.btn_db_manager.clicked.connect(self._open_db_manager)
             self.log_visible_checkbox.stateChanged.connect(self._on_log_visible_changed)
             self.remember_window_checkbox.stateChanged.connect(self._on_remember_window_changed)
@@ -1662,11 +1963,16 @@ def run() -> int:
             self.chk_region_subfolders.stateChanged.connect(self._on_sort_settings_changed)
             self.chk_preserve_structure.stateChanged.connect(self._on_sort_settings_changed)
             self.rebuild_checkbox.stateChanged.connect(self._on_rebuild_toggle)
-            self.btn_dash_scan.clicked.connect(self._start_scan)
-            self.btn_dash_preview.clicked.connect(self._start_preview)
-            self.btn_dash_execute.clicked.connect(self._start_execute)
+            self.btn_nav_dashboard.clicked.connect(lambda: self.tabs.setCurrentIndex(int(self._tab_index_dashboard)))
+            self.btn_nav_sort.clicked.connect(lambda: self.tabs.setCurrentIndex(int(self._tab_index_sort)))
+            self.btn_nav_conversions.clicked.connect(lambda: self.tabs.setCurrentIndex(int(self._tab_index_conversions)))
+            self.btn_nav_igir.clicked.connect(lambda: self.tabs.setCurrentIndex(int(self._tab_index_igir)))
+            self.btn_nav_db.clicked.connect(lambda: self.tabs.setCurrentIndex(int(self._tab_index_db)))
+            self.btn_nav_settings.clicked.connect(lambda: self.tabs.setCurrentIndex(int(self._tab_index_settings)))
 
             self._apply_theme(self._theme_manager.get_theme())
+            self._sync_theme_combos()
+            self._build_theme_previews()
             self._load_theme_from_config()
             self._load_dat_settings_from_config()
             self._load_sort_settings_from_config()
@@ -1676,6 +1982,8 @@ def run() -> int:
             self._load_window_size()
             self._load_log_visibility()
             self._load_general_settings_from_config()
+            self._set_external_tools_enabled(False)
+            self._update_safety_pill()
             self._load_presets_from_config()
             self._dashboard_timer = QtCore.QTimer(self)
             self._dashboard_timer.setInterval(600)
@@ -1904,6 +2212,9 @@ def run() -> int:
                 self.igir_status_label.setText(f"Status: probe fehlgeschlagen ({exc})")
 
         def _start_igir_plan(self) -> None:
+            if not self._external_tools_enabled:
+                QtWidgets.QMessageBox.information(self, "IGIR", "External Tools sind deaktiviert. Bitte im Header aktivieren.")
+                return
             if self._igir_thread is not None and self._igir_thread.isRunning():
                 QtWidgets.QMessageBox.information(self, "IGIR läuft", "IGIR läuft bereits.")
                 return
@@ -1942,6 +2253,9 @@ def run() -> int:
             thread.start()
 
         def _start_igir_execute(self) -> None:
+            if not self._external_tools_enabled:
+                QtWidgets.QMessageBox.information(self, "IGIR", "External Tools sind deaktiviert. Bitte im Header aktivieren.")
+                return
             if not self._igir_plan_ready:
                 QtWidgets.QMessageBox.information(self, "IGIR", "Bitte zuerst IGIR Plan ausführen.")
                 return
@@ -2347,6 +2661,7 @@ def run() -> int:
                     if idx >= 0:
                         self.theme_combo.setCurrentIndex(idx)
                     self._apply_theme(self._theme_manager.get_theme(theme_name))
+                self._sync_theme_combos()
             except Exception:
                 return
 
@@ -2430,6 +2745,7 @@ def run() -> int:
             else:
                 if self._theme_manager.set_current_theme(name):
                     self._apply_theme(self._theme_manager.get_theme(name))
+            self._sync_theme_combos()
             try:
                 cfg = load_config()
                 if not isinstance(cfg, dict):
@@ -2703,7 +3019,12 @@ def run() -> int:
                 return f"Fehler: {exc}"
 
         def _show_why_unknown(self) -> None:
-            row = self.table.currentRow()
+            try:
+                view_index = self.table.currentIndex()
+                source_index = self.results_proxy.mapToSource(view_index)
+                row = source_index.row()
+            except Exception:
+                row = -1
             if row < 0 or row >= len(self._table_items):
                 QtWidgets.QMessageBox.information(self, "Why Unknown", "Keine Scan-Zeile ausgewählt.")
                 return
@@ -2866,16 +3187,17 @@ def run() -> int:
                 selection = []
             indices: list[int] = []
             for idx in selection:
-                row = idx.row()
-                item = self.table.item(row, 0)
-                if item is None:
-                    continue
-                data = item.data(QtCore.Qt.ItemDataRole.UserRole)
                 try:
-                    action_index = int(data)
+                    source_index = self.results_proxy.mapToSource(idx)
+                    row = source_index.row()
                 except Exception:
-                    action_index = int(row)
-                indices.append(action_index)
+                    row = idx.row()
+                row_data = self.results_model.get_row(row)
+                if row_data is None:
+                    continue
+                if int(row_data.meta_index) < 0:
+                    continue
+                indices.append(int(row_data.meta_index))
             return sorted(set(indices))
 
         def _start_execute_selected(self) -> None:
@@ -2885,6 +3207,8 @@ def run() -> int:
             indices = self._get_selected_plan_indices()
             if not indices:
                 QtWidgets.QMessageBox.information(self, "Auswahl ausführen", "Bitte Zeilen in der Tabelle auswählen.")
+                return
+            if not self._confirm_execute_if_warnings():
                 return
             self._start_operation("execute", only_indices=indices, conversion_mode="skip")
 
@@ -3162,30 +3486,32 @@ def run() -> int:
             return lang_values, ver_values, region_values
 
         def _append_summary_row(self, report: SortReport) -> None:
-            row = self.table.rowCount()
-            self.table.insertRow(row)
             text = (
                 f"Processed: {report.processed} | Copied: {report.copied} | Moved: {report.moved} | "
                 f"Skipped: {report.skipped} | Errors: {len(report.errors)} | Cancelled: {report.cancelled}"
             )
-            item = QtWidgets.QTableWidgetItem(text)
-            if report.errors:
-                item.setToolTip("\n".join(report.errors))
-            self.table.setItem(row, 0, item)
-            self.table.setItem(row, 1, QtWidgets.QTableWidgetItem(report.mode))
-            self.table.setItem(row, 2, QtWidgets.QTableWidgetItem("(Summary)"))
-            self.table.setItem(row, 3, QtWidgets.QTableWidgetItem(""))
-            self.table.setItem(row, 4, QtWidgets.QTableWidgetItem(""))
-            self.table.setItem(row, 5, QtWidgets.QTableWidgetItem(""))
-            self.table.setItem(row, 6, QtWidgets.QTableWidgetItem(""))
-            self.table.setItem(row, 7, QtWidgets.QTableWidgetItem(""))
-            self.table.setItem(row, 8, QtWidgets.QTableWidgetItem(report.dest_path))
-            self.table.setItem(row, 9, QtWidgets.QTableWidgetItem(""))
-            self.table.setItem(row, 10, QtWidgets.QTableWidgetItem(""))
+            tooltip = "\n".join(report.errors) if report.errors else ""
+            self.results_model.append_row(
+                ResultRow(
+                    status=text,
+                    action=str(report.mode),
+                    input_path="(Summary)",
+                    name="",
+                    detected_system="",
+                    security="",
+                    signals="",
+                    candidates="",
+                    planned_target=str(report.dest_path or ""),
+                    normalization="",
+                    reason="",
+                    meta_index=-1,
+                    status_tooltip=tooltip,
+                )
+            )
 
         def _update_results_empty_state(self) -> None:
             try:
-                has_rows = self.table.rowCount() > 0
+                has_rows = self.results_proxy.rowCount() > 0
                 self.results_empty_label.setVisible(not has_rows)
                 self.table.setVisible(has_rows)
             except Exception:
@@ -3207,13 +3533,23 @@ def run() -> int:
                 self._log_history.extend(lines)
                 if len(self._log_history) > 2000:
                     self._log_history = self._log_history[-2000:]
+            try:
+                bar = self.log_view.verticalScrollBar()
+                at_bottom = bar.value() >= bar.maximum()
+            except Exception:
+                bar = None
+                at_bottom = True
             if not self._log_filter_text:
                 if lines:
                     self.log_view.appendPlainText("\n".join(lines))
+                if bar is not None and (self._log_autoscroll or at_bottom):
+                    bar.setValue(bar.maximum())
                 return
             filtered = [line for line in lines if self._log_filter_text in line.lower()]
             if filtered:
                 self.log_view.appendPlainText("\n".join(filtered))
+                if bar is not None and (self._log_autoscroll or at_bottom):
+                    bar.setValue(bar.maximum())
 
         def _apply_log_filter(self) -> None:
             text = str(self.log_filter_edit.text() or "").strip().lower()
@@ -3230,6 +3566,270 @@ def run() -> int:
             filtered = [line for line in self._log_history if text in line.lower()]
             if filtered:
                 self.log_view.appendPlainText("\n".join(filtered))
+
+        def _on_log_autoscroll_changed(self, _value: int) -> None:
+            self._log_autoscroll = bool(self.log_autoscroll_checkbox.isChecked())
+
+        def _apply_quick_filter(self) -> None:
+            text = str(self.quick_filter_edit.text() or "").strip()
+            if not text:
+                try:
+                    self.results_proxy.setFilterRegularExpression(QtCore.QRegularExpression())
+                except Exception:
+                    self.results_proxy.setFilterFixedString("")
+                self._update_results_empty_state()
+                return
+            try:
+                pattern = QtCore.QRegularExpression.escape(text)
+                regex = QtCore.QRegularExpression(
+                    pattern,
+                    QtCore.QRegularExpression.PatternOption.CaseInsensitiveOption,
+                )
+                self.results_proxy.setFilterRegularExpression(regex)
+            except Exception:
+                self.results_proxy.setFilterFixedString(text)
+            self._update_results_empty_state()
+
+        def _get_selected_source_rows(self) -> list[int]:
+            rows: list[int] = []
+            try:
+                selection = self.table.selectionModel().selectedRows()
+            except Exception:
+                return rows
+            for idx in selection:
+                try:
+                    source_index = self.results_proxy.mapToSource(idx)
+                    rows.append(int(source_index.row()))
+                except Exception:
+                    rows.append(int(idx.row()))
+            return sorted(set(rows))
+
+        def _on_table_selection_changed(self, *_args) -> None:
+            rows = self._get_selected_source_rows()
+            if not rows:
+                self.details_input_label.setText("-")
+                self.details_target_label.setText("-")
+                self.details_status_label.setText("-")
+                self.details_system_label.setText("-")
+                self.details_reason_label.setText("-")
+                return
+            row_data = self.results_model.get_row(rows[0])
+            if row_data is None:
+                return
+            self.details_input_label.setText(row_data.input_path or "-")
+            self.details_target_label.setText(row_data.planned_target or "-")
+            self.details_status_label.setText(row_data.status or "-")
+            self.details_system_label.setText(row_data.detected_system or "-")
+            self.details_reason_label.setText(row_data.reason or "-")
+
+        def _open_table_context_menu(self, pos) -> None:
+            index = self.table.indexAt(pos)
+            if not index.isValid():
+                return
+            try:
+                source_index = self.results_proxy.mapToSource(index)
+                row = source_index.row()
+            except Exception:
+                row = index.row()
+            row_data = self.results_model.get_row(row)
+            if row_data is None:
+                return
+            menu = QtWidgets.QMenu(self)
+            action_copy_path = menu.addAction("Pfad kopieren")
+            action_open_input = menu.addAction("Eingabe in Explorer öffnen")
+            action_open_target = menu.addAction("Ziel öffnen")
+            action_reveal_target = menu.addAction("Zielordner zeigen")
+            chosen = menu.exec(self.table.viewport().mapToGlobal(pos))
+            if chosen == action_copy_path:
+                QtWidgets.QApplication.clipboard().setText(row_data.input_path or "")
+            elif chosen == action_open_input:
+                self._open_path_in_explorer(row_data.input_path)
+            elif chosen == action_open_target:
+                self._open_path_in_explorer(row_data.planned_target)
+            elif chosen == action_reveal_target:
+                target = row_data.planned_target or ""
+                if target:
+                    self._open_path_in_explorer(str(Path(target).parent))
+
+        def _open_path_in_explorer(self, path: Optional[str]) -> None:
+            if not path:
+                return
+            try:
+                QtGui.QDesktopServices.openUrl(QtCore.QUrl.fromLocalFile(str(path)))
+            except Exception:
+                return
+
+        def _open_command_palette(self) -> None:
+            dialog = QtWidgets.QDialog(self)
+            dialog.setWindowTitle("Command Palette")
+            dialog.setModal(True)
+            dialog.resize(520, 360)
+            layout = QtWidgets.QVBoxLayout(dialog)
+            filter_edit = QtWidgets.QLineEdit()
+            filter_edit.setPlaceholderText("Befehl suchen…")
+            list_widget = QtWidgets.QListWidget()
+            layout.addWidget(filter_edit)
+            layout.addWidget(list_widget, 1)
+
+            actions = self._get_command_actions()
+
+            def refresh():
+                query = filter_edit.text().strip().lower()
+                list_widget.clear()
+                for label, callback in actions:
+                    if query and query not in label.lower():
+                        continue
+                    item = QtWidgets.QListWidgetItem(label)
+                    item.setData(QtCore.Qt.ItemDataRole.UserRole, callback)
+                    list_widget.addItem(item)
+
+            def run_selected():
+                item = list_widget.currentItem()
+                if item is None:
+                    return
+                func = item.data(QtCore.Qt.ItemDataRole.UserRole)
+                dialog.accept()
+                try:
+                    func()
+                except Exception:
+                    return
+
+            filter_edit.textChanged.connect(refresh)
+            list_widget.itemActivated.connect(lambda _item: run_selected())
+            filter_edit.returnPressed.connect(run_selected)
+            refresh()
+            filter_edit.setFocus()
+            dialog.exec()
+
+        def _get_command_actions(self) -> list[tuple[str, object]]:
+            return [
+                ("Navigation: Dashboard", lambda: self.tabs.setCurrentIndex(int(self._tab_index_dashboard))),
+                ("Navigation: Sortierung", lambda: self.tabs.setCurrentIndex(int(self._tab_index_sort))),
+                ("Navigation: Konvertierungen", lambda: self.tabs.setCurrentIndex(int(self._tab_index_conversions))),
+                ("Navigation: IGIR", lambda: self.tabs.setCurrentIndex(int(self._tab_index_igir))),
+                ("Navigation: Datenbank", lambda: self.tabs.setCurrentIndex(int(self._tab_index_db))),
+                ("Navigation: Einstellungen", lambda: self.tabs.setCurrentIndex(int(self._tab_index_settings))),
+                ("Aktion: Scan starten", self._start_scan),
+                ("Aktion: Preview Sort (Dry-run)", self._start_preview),
+                ("Aktion: Execute Sort", self._start_execute),
+                ("Aktion: Cancel", self._cancel),
+                ("Log umschalten", self._toggle_log_visibility),
+                ("Toggle External Tools", lambda: self.external_tools_checkbox.setChecked(not self.external_tools_checkbox.isChecked())),
+                ("Toggle Review Gate", lambda: self.review_gate_checkbox.setChecked(not self.review_gate_checkbox.isChecked())),
+                ("Theme: Neo Dark", lambda: self._set_theme_by_name("Neo Dark")),
+                ("Theme: Nord Frost", lambda: self._set_theme_by_name("Nord Frost")),
+                ("Theme: Solar Light", lambda: self._set_theme_by_name("Solar Light")),
+            ]
+
+        def _set_theme_by_name(self, name: str) -> None:
+            if name in self._theme_manager.get_theme_names():
+                self.theme_combo.setCurrentText(name)
+
+        def _on_header_theme_changed(self, name: str) -> None:
+            if self._syncing_theme:
+                return
+            self._syncing_theme = True
+            try:
+                if self.theme_combo.currentText() != name:
+                    self.theme_combo.setCurrentText(name)
+            finally:
+                self._syncing_theme = False
+
+        def _sync_theme_combos(self) -> None:
+            if self._syncing_theme:
+                return
+            self._syncing_theme = True
+            try:
+                current = self.theme_combo.currentText()
+                if self.header_theme_combo.currentText() != current:
+                    self.header_theme_combo.setCurrentText(current)
+            finally:
+                self._syncing_theme = False
+
+        def _build_theme_previews(self) -> None:
+            try:
+                self.theme_preview_list.clear()
+            except Exception:
+                return
+            for name in self._theme_manager.get_theme_names():
+                theme = self._theme_manager.get_theme(name)
+                item = QtWidgets.QListWidgetItem(name)
+                try:
+                    if theme and theme.colors:
+                        item.setBackground(QtGui.QColor(theme.colors.background))
+                        item.setForeground(QtGui.QColor(theme.colors.text))
+                except Exception:
+                    pass
+                self.theme_preview_list.addItem(item)
+
+        def _on_review_gate_changed(self, _value: int) -> None:
+            self._update_safety_pill()
+
+        def _on_external_tools_changed(self, _value: int) -> None:
+            self._set_external_tools_enabled(bool(self.external_tools_checkbox.isChecked()))
+
+        def _set_external_tools_enabled(self, enabled: bool) -> None:
+            self._external_tools_enabled = bool(enabled)
+            for btn in (
+                self.btn_igir_plan,
+                self.btn_igir_execute,
+                self.btn_igir_probe,
+                self.btn_igir_browse,
+                self.btn_igir_cancel,
+            ):
+                try:
+                    btn.setEnabled(self._external_tools_enabled)
+                except Exception:
+                    continue
+            if hasattr(self, "tools_group"):
+                self.tools_group.setEnabled(self._external_tools_enabled)
+            self._update_safety_pill()
+
+        def _confirm_execute_if_warnings(self) -> bool:
+            if not self.review_gate_checkbox.isChecked():
+                return True
+            if not self._has_warnings:
+                return True
+            result = QtWidgets.QMessageBox.warning(
+                self,
+                "Review Gate",
+                "Es gibt Warnungen oder unsichere Einträge im Plan. Trotzdem ausführen?",
+                QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No,
+                QtWidgets.QMessageBox.StandardButton.No,
+            )
+            return result == QtWidgets.QMessageBox.StandardButton.Yes
+
+        def _update_safety_pill(self) -> None:
+            if not self.review_gate_checkbox.isChecked():
+                self.pill_safety.setText("Gate: Off")
+                self.pill_safety.setStyleSheet("padding: 2px 8px; border-radius: 10px; background: #f5c542;")
+                return
+            if self._has_warnings:
+                self.pill_safety.setText("Warnings")
+                self.pill_safety.setStyleSheet("padding: 2px 8px; border-radius: 10px; background: #f28b82;")
+            else:
+                self.pill_safety.setText("Safe")
+                self.pill_safety.setStyleSheet("padding: 2px 8px; border-radius: 10px; background: #d7f7c2;")
+
+        def _update_stepper(self, phase: str) -> None:
+            active_style = "padding: 4px 8px; border-radius: 10px; background: #cfe8ff;"
+            inactive_style = "padding: 4px 8px; border-radius: 10px; background: #f0f0f0;"
+            if phase == "scan":
+                self.stepper_scan.setStyleSheet(active_style)
+                self.stepper_plan.setStyleSheet(inactive_style)
+                self.stepper_execute.setStyleSheet(inactive_style)
+            elif phase == "plan":
+                self.stepper_scan.setStyleSheet(inactive_style)
+                self.stepper_plan.setStyleSheet(active_style)
+                self.stepper_execute.setStyleSheet(inactive_style)
+            elif phase == "execute":
+                self.stepper_scan.setStyleSheet(inactive_style)
+                self.stepper_plan.setStyleSheet(inactive_style)
+                self.stepper_execute.setStyleSheet(active_style)
+            else:
+                self.stepper_scan.setStyleSheet(inactive_style)
+                self.stepper_plan.setStyleSheet(inactive_style)
+                self.stepper_execute.setStyleSheet(inactive_style)
 
         def _priority_value(self, label: str) -> int:
             value = str(label or "").strip().lower()
@@ -3335,18 +3935,21 @@ def run() -> int:
                     self.queue_list.addItem(f"#{pid} [{prio_text}] {label} - {status}")
             except Exception:
                 return
+            self._update_header_pills()
 
         def _pause_jobs(self) -> None:
             self._job_paused = True
             self.queue_pause_btn.setEnabled(False)
             self.queue_resume_btn.setEnabled(True)
             self.status_label.setText("Jobs pausiert")
+            self._update_header_pills()
 
         def _resume_jobs(self) -> None:
             self._job_paused = False
             self.queue_pause_btn.setEnabled(True)
             self.queue_resume_btn.setEnabled(False)
             self._maybe_start_next_job()
+            self._update_header_pills()
 
         def _clear_job_queue(self) -> None:
             self._job_queue = [job for job in self._job_queue if job is self._job_active]
@@ -3364,10 +3967,11 @@ def run() -> int:
 
         def _set_log_visible(self, visible: bool, persist: bool = True) -> None:
             self._log_visible = bool(visible)
-            self.log_view.setVisible(self._log_visible)
-            if hasattr(self, "log_hint_label"):
-                self.log_hint_label.setVisible(self._log_visible)
+            if hasattr(self, "log_dock"):
+                self.log_dock.setVisible(self._log_visible)
             self.log_toggle_btn.setText("Log ausblenden" if self._log_visible else "Log anzeigen")
+            if hasattr(self, "header_log_btn"):
+                self.header_log_btn.setText("Log" if not self._log_visible else "Log ▾")
             if persist:
                 self._save_log_visibility()
 
@@ -3510,6 +4114,7 @@ def run() -> int:
             self.btn_cancel.setEnabled(running)
             self.btn_resume.setEnabled(not running and self._can_resume())
             self.btn_retry_failed.setEnabled(not running and self._can_retry_failed())
+            self.header_btn_cancel.setEnabled(running)
 
             self.btn_source.setEnabled(not running)
             self.btn_dest.setEnabled(not running)
@@ -3537,6 +4142,7 @@ def run() -> int:
             self._is_running = bool(running)
             self._refresh_dashboard()
             self._update_quick_actions()
+            self._update_header_pills()
 
         def _has_required_paths(self) -> bool:
             source = self.source_edit.text().strip() if self.source_edit is not None else ""
@@ -3547,16 +4153,18 @@ def run() -> int:
             ready = self._has_required_paths()
             enabled = ready and not self._is_running
             try:
-                self.btn_dash_scan.setEnabled(enabled)
-                self.btn_dash_preview.setEnabled(enabled)
-                self.btn_dash_execute.setEnabled(enabled)
+                if hasattr(self, "btn_dash_scan"):
+                    self.btn_dash_scan.setEnabled(enabled)
+                if hasattr(self, "btn_dash_preview"):
+                    self.btn_dash_preview.setEnabled(enabled)
+                if hasattr(self, "btn_dash_execute"):
+                    self.btn_dash_execute.setEnabled(enabled)
+                self.header_btn_scan.setEnabled(enabled)
+                self.header_btn_preview.setEnabled(enabled)
+                self.header_btn_execute.setEnabled(enabled)
             except Exception:
                 pass
-            try:
-                if hasattr(self, "dashboard_path_hint"):
-                    self.dashboard_path_hint.setVisible(not ready)
-            except Exception:
-                pass
+            return
 
         def _refresh_dashboard(self) -> None:
             if not hasattr(self, "dashboard_status_label"):
@@ -3573,7 +4181,34 @@ def run() -> int:
                 self.main_source_label.setText(source or "-")
             if hasattr(self, "main_dest_label"):
                 self.main_dest_label.setText(dest or "-")
+            self._sync_sidebar_status()
             self._update_quick_actions()
+
+        def _sync_sidebar_status(self) -> None:
+            if hasattr(self, "sidebar_status_label"):
+                self.sidebar_status_label.setText(self.status_label.text() if self.status_label else "-")
+            if hasattr(self, "sidebar_summary_label"):
+                self.sidebar_summary_label.setText(self.summary_label.text() if self.summary_label else "-")
+            self._update_header_pills()
+
+        def _update_header_pills(self) -> None:
+            if self._is_running:
+                self.pill_status.setText("Running")
+                self.pill_status.setStyleSheet("padding: 2px 8px; border-radius: 10px; background: #cfe8ff;")
+            else:
+                self.pill_status.setText("Idle")
+                self.pill_status.setStyleSheet("padding: 2px 8px; border-radius: 10px; background: #e8e8e8;")
+            queue_len = len(self._job_queue)
+            self.pill_queue.setText(f"Queue: {queue_len}")
+            if self._job_paused:
+                self.pill_queue.setStyleSheet("padding: 2px 8px; border-radius: 10px; background: #f5c542;")
+            else:
+                self.pill_queue.setStyleSheet("padding: 2px 8px; border-radius: 10px; background: #e8e8e8;")
+            try:
+                dat_text = self.dat_status.text() if self.dat_status is not None else "-"
+            except Exception:
+                dat_text = "-"
+            self.pill_dat.setText(dat_text or "DAT: -")
 
         def _sync_rebuild_controls(self, *, running: bool = False) -> None:
             try:
@@ -3677,7 +4312,8 @@ def run() -> int:
             if op == "scan":
                 self._scan_result = None
                 self._sort_plan = None
-                self.table.setRowCount(0)
+                self._has_warnings = False
+                self.results_model.clear()
                 self._update_results_empty_state()
                 self.log_view.clear()
 
@@ -3746,10 +4382,18 @@ def run() -> int:
         def _start_execute(self) -> None:
             self._queue_or_run("execute", "Execute", self._start_execute_now)
 
+        def _quick_execute_or_preview(self) -> None:
+            if self._sort_plan is not None and self._last_view == "plan":
+                self._start_execute()
+            else:
+                self._start_preview()
+
         def _start_execute_now(self) -> None:
             self._failed_action_indices.clear()
             self._audit_report = None
             self._update_resume_buttons()
+            if not self._confirm_execute_if_warnings():
+                return
             self._start_operation("execute", conversion_mode="skip")
 
         def _start_convert_only(self) -> None:
@@ -3759,6 +4403,8 @@ def run() -> int:
             self._failed_action_indices.clear()
             self._audit_report = None
             self._update_resume_buttons()
+            if not self._confirm_execute_if_warnings():
+                return
             self._start_operation("execute", conversion_mode="only")
 
         def _start_audit(self) -> None:
@@ -3804,6 +4450,7 @@ def run() -> int:
             self.btn_cancel.setEnabled(False)
 
         def _on_phase_changed(self, phase: str, total: int) -> None:
+            self._update_stepper(phase)
             if phase == "scan":
                 self.status_label.setText("Scan läuft…")
                 self.progress.setRange(0, 100)
@@ -3853,71 +4500,44 @@ def run() -> int:
             self._worker = None
 
         def _populate_scan_table(self, scan: ScanResult) -> None:
-            try:
-                sorting_enabled = self.table.isSortingEnabled()
-            except Exception:
-                sorting_enabled = False
-            try:
-                self.table.setSortingEnabled(False)
-                self.table.setUpdatesEnabled(False)
-            except Exception:
-                pass
-
-            self.table.setRowCount(len(scan.items))
+            rows: List[ResultRow] = []
             self._table_items = list(scan.items)
-            for row, item in enumerate(scan.items):
-
-                status_item = QtWidgets.QTableWidgetItem("found")
+            min_conf = self._get_min_confidence()
+            for row_index, item in enumerate(scan.items):
+                status_text = "found"
+                status_tooltip = ""
+                status_color = None
                 try:
                     source = str(item.detection_source or "-")
                     exact = "ja" if getattr(item, "is_exact", False) else "nein"
-                    status_item.setToolTip(f"Quelle: {source}\nExact: {exact}")
+                    status_tooltip = f"Quelle: {source}\nExact: {exact}"
                 except Exception:
-                    pass
-                min_conf = self._get_min_confidence()
+                    status_tooltip = ""
                 if not self._is_confident_for_display(item, min_conf):
-                    status_item.setText("unknown/low-confidence")
-                    try:
-                        status_item.setForeground(QtGui.QBrush(QtGui.QColor("#b00020")))
-                    except Exception:
-                        pass
-                self.table.setItem(row, 0, status_item)
-
-                self.table.setItem(row, 1, QtWidgets.QTableWidgetItem("scan"))
-
-                path_item = QtWidgets.QTableWidgetItem(str(item.input_path or ""))
-                self.table.setItem(row, 2, path_item)
-
-                name_item = QtWidgets.QTableWidgetItem(self._rom_display_name(item.input_path))
-                if item.input_path:
-                    name_item.setToolTip(str(item.input_path))
-                self.table.setItem(row, 3, name_item)
-
-                sys_item = QtWidgets.QTableWidgetItem(item.detected_system)
-                self.table.setItem(row, 4, sys_item)
-                conf_item = QtWidgets.QTableWidgetItem(self._format_confidence(item.detection_confidence))
-                try:
-                    source = str(item.detection_source or "-")
-                    exact = "ja" if getattr(item, "is_exact", False) else "nein"
-                    conf_item.setToolTip(f"Quelle: {source}\nExact: {exact}")
-                except Exception:
-                    pass
-                self.table.setItem(row, 5, conf_item)
-                self.table.setItem(row, 6, QtWidgets.QTableWidgetItem(self._format_signals(item)))
-                self.table.setItem(row, 7, QtWidgets.QTableWidgetItem(self._format_candidates(item)))
-                self.table.setItem(row, 8, QtWidgets.QTableWidgetItem(""))
-                self.table.setItem(
-                    row,
-                    9,
-                    QtWidgets.QTableWidgetItem(
-                        self._format_normalization_hint(item.input_path, item.detected_system)
-                    ),
+                    status_text = "unknown/low-confidence"
+                    status_color = "#b00020"
+                rows.append(
+                    ResultRow(
+                        status=status_text,
+                        action="scan",
+                        input_path=str(item.input_path or ""),
+                        name=self._rom_display_name(item.input_path),
+                        detected_system=str(item.detected_system or ""),
+                        security=self._format_confidence(item.detection_confidence),
+                        signals=self._format_signals(item),
+                        candidates=self._format_candidates(item),
+                        planned_target="",
+                        normalization=self._format_normalization_hint(item.input_path, item.detected_system),
+                        reason=self._format_reason(item),
+                        meta_index=row_index,
+                        status_tooltip=status_tooltip,
+                        status_color=status_color,
+                    )
                 )
-                self.table.setItem(row, 10, QtWidgets.QTableWidgetItem(self._format_reason(item)))
 
+            self.results_model.set_rows(rows)
             try:
-                self.table.setUpdatesEnabled(True)
-                self.table.setSortingEnabled(sorting_enabled)
+                self.results_proxy.invalidate()
             except Exception:
                 pass
 
@@ -3932,55 +4552,52 @@ def run() -> int:
                 min_conf = self._get_min_confidence()
                 unknown_count = sum(1 for item in scan.items if not self._is_confident_for_display(item, min_conf))
                 self.summary_label.setText(f"{len(scan.items)} gesamt | {unknown_count} unbekannt/niedrige Sicherheit")
+                self._has_warnings = unknown_count > 0
             except Exception:
                 self.summary_label.setText("-")
+
+            self._sync_sidebar_status()
+            self._update_safety_pill()
 
             self._update_results_empty_state()
 
         def _populate_plan_table(self, plan: SortPlan) -> None:
-            try:
-                sorting_enabled = self.table.isSortingEnabled()
-            except Exception:
-                sorting_enabled = False
-            try:
-                self.table.setSortingEnabled(False)
-                self.table.setUpdatesEnabled(False)
-            except Exception:
-                pass
-
-            self.table.setRowCount(len(plan.actions))
+            rows: List[ResultRow] = []
             self._table_items = []
-            for row, act in enumerate(plan.actions):
-                status_item = QtWidgets.QTableWidgetItem(act.error or act.status)
-                status_item.setData(QtCore.Qt.ItemDataRole.UserRole, row)
-                self.table.setItem(row, 0, status_item)
-                self.table.setItem(row, 1, QtWidgets.QTableWidgetItem(act.action))
-
-                path_item = QtWidgets.QTableWidgetItem(str(act.input_path or ""))
-                self.table.setItem(row, 2, path_item)
-
-                name_item = QtWidgets.QTableWidgetItem(self._rom_display_name(act.input_path))
-                if act.input_path:
-                    name_item.setToolTip(str(act.input_path))
-                self.table.setItem(row, 3, name_item)
-
-                self.table.setItem(row, 4, QtWidgets.QTableWidgetItem(act.detected_system))
-                self.table.setItem(row, 5, QtWidgets.QTableWidgetItem(""))
-                self.table.setItem(row, 6, QtWidgets.QTableWidgetItem(""))
-                self.table.setItem(row, 7, QtWidgets.QTableWidgetItem(""))
-                self.table.setItem(row, 8, QtWidgets.QTableWidgetItem(act.planned_target_path or ""))
-                self.table.setItem(
-                    row,
-                    9,
-                    QtWidgets.QTableWidgetItem(
-                        self._format_normalization_hint(act.input_path, act.detected_system)
-                    ),
+            warnings = 0
+            for row_index, act in enumerate(plan.actions):
+                status_text = str(act.error or act.status)
+                status_color = None
+                tooltip = ""
+                if act.error:
+                    tooltip = str(act.error)
+                    status_color = "#b00020"
+                    warnings += 1
+                elif str(act.status).lower().startswith(("error", "skipped")):
+                    warnings += 1
+                rows.append(
+                    ResultRow(
+                        status=status_text,
+                        action=str(act.action),
+                        input_path=str(act.input_path or ""),
+                        name=self._rom_display_name(act.input_path),
+                        detected_system=str(act.detected_system or ""),
+                        security="",
+                        signals="",
+                        candidates="",
+                        planned_target=str(act.planned_target_path or ""),
+                        normalization=self._format_normalization_hint(act.input_path, act.detected_system),
+                        reason="",
+                        meta_index=row_index,
+                        status_tooltip=tooltip,
+                        status_color=status_color,
+                    )
                 )
-                self.table.setItem(row, 10, QtWidgets.QTableWidgetItem(""))
 
+            self._has_warnings = warnings > 0
+            self.results_model.set_rows(rows)
             try:
-                self.table.setUpdatesEnabled(True)
-                self.table.setSortingEnabled(sorting_enabled)
+                self.results_proxy.invalidate()
             except Exception:
                 pass
 
@@ -3996,22 +4613,15 @@ def run() -> int:
             except Exception:
                 self.summary_label.setText("-")
 
+            self._sync_sidebar_status()
+            self._update_safety_pill()
+
             self._update_results_empty_state()
 
         def _populate_audit_table(self, report: ConversionAuditReport) -> None:
-            try:
-                sorting_enabled = self.table.isSortingEnabled()
-            except Exception:
-                sorting_enabled = False
-            try:
-                self.table.setSortingEnabled(False)
-                self.table.setUpdatesEnabled(False)
-            except Exception:
-                pass
-
-            self.table.setRowCount(len(report.items))
+            rows: List[ResultRow] = []
             self._table_items = []
-            for row, item in enumerate(report.items):
+            for row_index, item in enumerate(report.items):
                 suggestion = item.current_extension
                 if item.recommended_extension and item.recommended_extension != item.current_extension:
                     suggestion = f"{item.current_extension} -> {item.recommended_extension}".strip()
@@ -4021,28 +4631,26 @@ def run() -> int:
                 if item.reason:
                     status = f"{status}: {item.reason}"
 
-                self.table.setItem(row, 0, QtWidgets.QTableWidgetItem(status))
-                self.table.setItem(row, 1, QtWidgets.QTableWidgetItem(action))
+                rows.append(
+                    ResultRow(
+                        status=status,
+                        action=action,
+                        input_path=str(item.input_path or ""),
+                        name=self._rom_display_name(item.input_path),
+                        detected_system=str(item.detected_system or ""),
+                        security="",
+                        signals="",
+                        candidates="",
+                        planned_target=suggestion,
+                        normalization="-",
+                        reason=str(item.reason or ""),
+                        meta_index=row_index,
+                    )
+                )
 
-                path_item = QtWidgets.QTableWidgetItem(str(item.input_path or ""))
-                self.table.setItem(row, 2, path_item)
-
-                name_item = QtWidgets.QTableWidgetItem(self._rom_display_name(item.input_path))
-                if item.input_path:
-                    name_item.setToolTip(str(item.input_path))
-                self.table.setItem(row, 3, name_item)
-
-                self.table.setItem(row, 4, QtWidgets.QTableWidgetItem(item.detected_system))
-                self.table.setItem(row, 5, QtWidgets.QTableWidgetItem(""))
-                self.table.setItem(row, 6, QtWidgets.QTableWidgetItem(""))
-                self.table.setItem(row, 7, QtWidgets.QTableWidgetItem(""))
-                self.table.setItem(row, 8, QtWidgets.QTableWidgetItem(suggestion))
-                self.table.setItem(row, 9, QtWidgets.QTableWidgetItem("-"))
-                self.table.setItem(row, 10, QtWidgets.QTableWidgetItem(item.reason or ""))
-
+            self.results_model.set_rows(rows)
             try:
-                self.table.setUpdatesEnabled(True)
-                self.table.setSortingEnabled(sorting_enabled)
+                self.results_proxy.invalidate()
             except Exception:
                 pass
 
@@ -4054,26 +4662,23 @@ def run() -> int:
             except Exception:
                 self.summary_label.setText("-")
 
+            self._sync_sidebar_status()
+            self._has_warnings = False
+            self._update_safety_pill()
+
             self._update_results_empty_state()
 
         def _on_action_status(self, row_index: int, status: str) -> None:
             try:
                 row = int(row_index)
-                if row < 0 or row >= self.table.rowCount():
-                    return
-                existing = self.table.item(row, 0)
-                if existing is None:
-                    existing = QtWidgets.QTableWidgetItem(str(status))
-                    self.table.setItem(row, 0, existing)
-                else:
-                    existing.setText(str(status))
-
                 text = str(status)
-                if text.lower().startswith("error") or len(text) > 80:
-                    existing.setToolTip(text)
+                tooltip = text if text.lower().startswith("error") or len(text) > 80 else None
                 if text.lower().startswith("error"):
                     self._failed_action_indices.add(row)
                     self._update_resume_buttons()
+                    self.results_model.update_status(row, text, tooltip=tooltip, color="#b00020")
+                else:
+                    self.results_model.update_status(row, text, tooltip=tooltip)
             except Exception:
                 # UI must not crash on status update
                 return

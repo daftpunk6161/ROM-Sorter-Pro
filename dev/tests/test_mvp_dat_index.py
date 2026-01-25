@@ -106,3 +106,40 @@ def test_sqlite_dat_index_incremental_rebuild_and_coverage(tmp_path):
     assert coverage2["inactive_dat_files"] == 1
     assert coverage2["rom_hashes"] == 1
     assert coverage2["game_names"] == 1
+
+
+def test_sqlite_dat_index_threadsafe_lookup(tmp_path):
+    import threading
+
+    from src.core.dat_index_sqlite import DatIndexSqlite, build_index_from_config
+
+    dat_dir = tmp_path / "dats"
+    dat_dir.mkdir()
+    dat_a = dat_dir / "a.dat"
+    _write_sqlite_dat(
+        dat_a,
+        "Nintendo - Nintendo Entertainment System",
+        "Thread Game",
+        "thread.nes",
+        "cccccccc",
+        "cccccccccccccccccccccccccccccccccccccccc",
+    )
+
+    index_path = tmp_path / "index.sqlite"
+    lock_path = tmp_path / "index.lock"
+    cfg = {"dats": {"import_paths": [str(dat_dir)], "index_path": str(index_path), "lock_path": str(lock_path)}}
+
+    build_index_from_config(config=cfg)
+
+    index = DatIndexSqlite(index_path)
+    result_holder = {}
+
+    def worker():
+        result_holder["row"] = index.lookup_sha1("cccccccccccccccccccccccccccccccccccccccc")
+
+    thread = threading.Thread(target=worker)
+    thread.start()
+    thread.join(timeout=2)
+
+    assert result_holder.get("row") is not None
+    index.close()

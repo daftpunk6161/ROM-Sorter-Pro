@@ -798,12 +798,63 @@ class ThemeManager:
             border_radius=0
         )
 
+        neo_dark_theme = Theme(
+            name="Neo Dark",
+            type=ThemeType.DARK,
+            colors=ColorScheme(
+                primary="#4c8bf5",
+                secondary="#8ae9c1",
+                background="#0f111a",
+                text="#e6e6e6",
+                accent="#c792ea",
+                error="#ff5370",
+                warning="#ffcb6b",
+                success="#c3e88d",
+                border="#1f2233"
+            )
+        )
+
+        nord_frost_theme = Theme(
+            name="Nord Frost",
+            type=ThemeType.DARK,
+            colors=ColorScheme(
+                primary="#5e81ac",
+                secondary="#88c0d0",
+                background="#2e3440",
+                text="#d8dee9",
+                accent="#81a1c1",
+                error="#bf616a",
+                warning="#ebcb8b",
+                success="#a3be8c",
+                border="#3b4252"
+            )
+        )
+
+        solar_light_theme = Theme(
+            name="Solar Light",
+            type=ThemeType.LIGHT,
+            colors=ColorScheme(
+                primary="#268bd2",
+                secondary="#2aa198",
+                background="#fdf6e3",
+                text="#657b83",
+                accent="#b58900",
+                error="#dc322f",
+                warning="#cb4b16",
+                success="#859900",
+                border="#eee8d5"
+            )
+        )
+
         # Add the Standarddthemes
         self.themes["Light"] = light_theme
         self.themes["Dark"] = dark_theme
         self.themes["Blue"] = blue_theme
         self.themes["Dark Blue"] = dark_blue_theme
         self.themes["Retro Gaming"] = retro_theme
+        self.themes["Neo Dark"] = neo_dark_theme
+        self.themes["Nord Frost"] = nord_frost_theme
+        self.themes["Solar Light"] = solar_light_theme
 
         # Set the standard.
         if self._detect_system_theme() == ThemeType.DARK:
@@ -889,7 +940,7 @@ class ThemeManager:
     def remove_theme(self, theme_name: str) -> bool:
         """Removes a theme. Args: Theme_Name: Name of the Theme to Be Removed Return: True in the event of Success, False in the event of errors"""
         # Standarddthemes cannot be removed
-        if theme_name in ['Light', 'Dark', 'Blue', 'Dark Blue', 'Retro Gaming']:
+        if theme_name in ['Light', 'Dark', 'Blue', 'Dark Blue', 'Retro Gaming', 'Neo Dark', 'Nord Frost', 'Solar Light']:
             logger.warning(f"Standardtheme '{theme_name}' kann nicht entfernt werden")
             return False
 

@@ -2,6 +2,7 @@
 # -*-coding: utf-8-*-
 """Rome Sorter Pro - Detector Package This package contains all detector modules for the detection of ROM types, including console, archive and CHD detectors."""
 
+import os
 import logging
 
 # Import and re-export of the basic functions
@@ -18,10 +19,11 @@ from .chd_detector import detect_console_from_chd, is_chd_file
 
 detect_console_with_ml = None
 MLEnhancedConsoleDetector = None
-try:
-    from .ml_detector import detect_console_with_ml, MLEnhancedConsoleDetector
-except ImportError:
-    pass
+if os.environ.get("ROM_SORTER_ENABLE_ML", "").strip() == "1":
+    try:
+        from .ml_detector import detect_console_with_ml, MLEnhancedConsoleDetector
+    except ImportError:
+        pass
 
 # Import and re-export of the new consolidated functions
 try:
