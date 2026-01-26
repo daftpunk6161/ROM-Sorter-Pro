@@ -29,7 +29,10 @@ import threading
 import json
 from pathlib import Path
 from dataclasses import dataclass
+import logging
 from typing import Any, Iterable, List, Optional, cast
+
+logger = logging.getLogger(__name__)
 
 
 def _load_version() -> str:
@@ -96,25 +99,32 @@ def run() -> int:
     from ...ui.theme_manager import ThemeManager
     try:
         from ...ui.qt.assets import label
-    except Exception:
+    except Exception as exc:
+        logger.debug("Optional Qt assets import failed: %s", exc)
+
         def label(text: str, icon_key: str) -> str:
             return text
     try:
         from ...ui.qt.layouts import LAYOUTS
-    except Exception:
+    except Exception as exc:
+        logger.debug("Optional Qt layouts import failed: %s", exc)
         LAYOUTS = {}
     try:
         from ...ui.qt.themes import ThemeManager as QtPaletteThemeManager, THEMES as QT_PALETTE_THEMES
-    except Exception:
+    except Exception as exc:
+        logger.debug("Optional Qt themes import failed: %s", exc)
         QtPaletteThemeManager = None
         QT_PALETTE_THEMES = {}
     try:
         from ...ui.qt.shell import UIShellController
         from ...ui.qt.themes import ThemeManager as ShellThemeManager
-    except Exception:
+    except Exception as exc:
+        logger.debug("Optional Qt shell import failed: %s", exc)
         UIShellController = None
         ShellThemeManager = None
     from ...utils.external_tools import probe_igir, probe_wud2app, probe_wudcompress, igir_plan, igir_execute
+    from ...ui.state_machine import UIStateMachine, UIState
+    from ...ui.backend_worker import BackendWorkerHandle
     from .export_utils import (
         audit_report_to_dict,
         plan_report_to_dict,
@@ -677,7 +687,10 @@ def run() -> int:
             worker.failed.connect(self._on_igir_failed)
             worker.finished.connect(thread.quit)
             worker.failed.connect(thread.quit)
+            worker.finished.connect(worker.deleteLater)
+            worker.failed.connect(worker.deleteLater)
             thread.finished.connect(lambda: self._cleanup_igir_thread())
+            thread.finished.connect(thread.deleteLater)
 
             self._igir_thread = thread
             self._igir_worker = worker
@@ -881,6 +894,8 @@ def run() -> int:
             self._is_running = False
             self._has_warnings = False
             self._external_tools_enabled = False
+            self._ui_fsm = UIStateMachine()
+            self._backend_worker = None
 
             self._last_view: str = "scan"  # scan|plan
             self._table_items: List[ScanItem] = []
@@ -1503,30 +1518,27 @@ def run() -> int:
             settings_form.addWidget(self.drag_drop_checkbox, log_row + 2, 1)
             settings_form.addWidget(self.dat_auto_load_checkbox, log_row + 3, 1)
 
-            sort_intro = QtWidgets.QLabel("Sortieroptionen für die Zielstruktur.")
-            sort_intro.setWordWrap(True)
-            sort_tab_layout.addWidget(sort_intro)
-            defaults_group = QtWidgets.QGroupBox("Standardwerte")
-            defaults_layout = QtWidgets.QGridLayout(defaults_group)
-            defaults_layout.setHorizontalSpacing(10)
-            defaults_layout.setVerticalSpacing(6)
             self.default_mode_combo = QtWidgets.QComboBox()
             self.default_mode_combo.addItems(["copy", "move"])
             self.default_conflict_combo = QtWidgets.QComboBox()
             self.default_conflict_combo.addItems(["rename", "skip", "overwrite"])
-            defaults_layout.addWidget(QtWidgets.QLabel("Standardmodus:"), 0, 0)
-            defaults_layout.addWidget(self.default_mode_combo, 0, 1)
-            defaults_layout.addWidget(QtWidgets.QLabel("Standard-Konflikte:"), 1, 0)
-            defaults_layout.addWidget(self.default_conflict_combo, 1, 1)
-            defaults_layout.setColumnStretch(1, 1)
-            sort_tab_layout.addWidget(defaults_group)
-            sort_group = QtWidgets.QGroupBox("Sortieroptionen")
-            sort_layout = QtWidgets.QVBoxLayout(sort_group)
-            sort_layout.addWidget(self.chk_console_folders)
-            sort_layout.addWidget(self.chk_region_subfolders)
-            sort_layout.addWidget(self.chk_preserve_structure)
-            sort_tab_layout.addWidget(sort_group)
-            sort_tab_layout.addStretch(1)
+
+            structure_group = QtWidgets.QGroupBox("Zielstruktur")
+            structure_layout = QtWidgets.QGridLayout(structure_group)
+            structure_layout.setHorizontalSpacing(10)
+            structure_layout.setVerticalSpacing(6)
+            structure_intro = QtWidgets.QLabel("Sortieroptionen für die Zielstruktur.")
+            structure_intro.setWordWrap(True)
+            structure_layout.addWidget(structure_intro, 0, 0, 1, 2)
+            structure_layout.addWidget(QtWidgets.QLabel("Standardmodus:"), 1, 0)
+            structure_layout.addWidget(self.default_mode_combo, 1, 1)
+            structure_layout.addWidget(QtWidgets.QLabel("Standard-Konflikte:"), 2, 0)
+            structure_layout.addWidget(self.default_conflict_combo, 2, 1)
+            structure_layout.addWidget(self.chk_console_folders, 3, 0, 1, 2)
+            structure_layout.addWidget(self.chk_region_subfolders, 4, 0, 1, 2)
+            structure_layout.addWidget(self.chk_preserve_structure, 5, 0, 1, 2)
+            structure_layout.setColumnStretch(1, 1)
+            workflow_layout.addWidget(structure_group)
 
             db_intro = QtWidgets.QLabel("Datenbank- und DAT-Index-Verwaltung.")
             db_intro.setWordWrap(True)
@@ -2334,7 +2346,10 @@ def run() -> int:
             worker.failed.connect(self._on_igir_failed)
             worker.finished.connect(thread.quit)
             worker.failed.connect(thread.quit)
+            worker.finished.connect(worker.deleteLater)
+            worker.failed.connect(worker.deleteLater)
             thread.finished.connect(lambda: self._cleanup_igir_thread())
+            thread.finished.connect(thread.deleteLater)
 
             self._igir_thread = thread
             self._igir_worker = worker
@@ -2425,7 +2440,10 @@ def run() -> int:
             worker.failed.connect(self._on_igir_failed)
             worker.finished.connect(thread.quit)
             worker.failed.connect(thread.quit)
+            worker.finished.connect(worker.deleteLater)
+            worker.failed.connect(worker.deleteLater)
             thread.finished.connect(lambda: self._cleanup_igir_thread())
+            thread.finished.connect(thread.deleteLater)
 
             self._igir_thread = thread
             self._igir_worker = worker
@@ -2663,7 +2681,10 @@ def run() -> int:
                 worker.failed.connect(self._on_dat_index_failed)
                 worker.finished.connect(thread.quit)
                 worker.failed.connect(thread.quit)
+                worker.finished.connect(worker.deleteLater)
+                worker.failed.connect(worker.deleteLater)
                 thread.finished.connect(self._cleanup_dat_index_thread)
+                thread.finished.connect(thread.deleteLater)
 
                 self._dat_index_worker = worker
                 self._dat_index_thread = thread
@@ -3911,7 +3932,7 @@ def run() -> int:
                 )
                 if self.layout_combo is not None:
                     try:
-                        key = self._shell_controller.layout_key
+                        key = getattr(self._shell_controller, "layout_key", None)
                         idx = self.layout_combo.findData(key)
                         if idx >= 0:
                             self.layout_combo.setCurrentIndex(idx)
@@ -4312,6 +4333,10 @@ def run() -> int:
             self._append_log(f"DnD external temp: {path}")
 
         def _set_running(self, running: bool) -> None:
+            if running:
+                self._ui_fsm.transition(UIState.EXECUTING)
+            else:
+                self._ui_fsm.transition(UIState.IDLE)
             self.btn_scan.setEnabled(not running)
             self.btn_preview.setEnabled(not running)
             self.btn_execute.setEnabled(not running)
@@ -4419,24 +4444,53 @@ def run() -> int:
                     pass
             self._update_header_pills()
 
+        def _safe_set_label(self, label_attr: str, text: str, style: str | None = None) -> bool:
+            label = getattr(self, label_attr, None)
+            if label is None:
+                return False
+            try:
+                label.setText(text)
+                if style is not None:
+                    label.setStyleSheet(style)
+            except RuntimeError:
+                try:
+                    setattr(self, label_attr, None)
+                except Exception:
+                    pass
+                return False
+            return True
+
         def _update_header_pills(self) -> None:
             if self._is_running:
-                self.pill_status.setText("Running")
-                self.pill_status.setStyleSheet("padding: 2px 8px; border-radius: 10px; background: #cfe8ff;")
+                self._safe_set_label(
+                    "pill_status",
+                    "Running",
+                    "padding: 2px 8px; border-radius: 10px; background: #cfe8ff;",
+                )
             else:
-                self.pill_status.setText("Idle")
-                self.pill_status.setStyleSheet("padding: 2px 8px; border-radius: 10px; background: #e8e8e8;")
+                self._safe_set_label(
+                    "pill_status",
+                    "Idle",
+                    "padding: 2px 8px; border-radius: 10px; background: #e8e8e8;",
+                )
             queue_len = len(self._job_queue)
-            self.pill_queue.setText(f"Queue: {queue_len}")
             if self._job_paused:
-                self.pill_queue.setStyleSheet("padding: 2px 8px; border-radius: 10px; background: #f5c542;")
+                self._safe_set_label(
+                    "pill_queue",
+                    f"Queue: {queue_len}",
+                    "padding: 2px 8px; border-radius: 10px; background: #f5c542;",
+                )
             else:
-                self.pill_queue.setStyleSheet("padding: 2px 8px; border-radius: 10px; background: #e8e8e8;")
+                self._safe_set_label(
+                    "pill_queue",
+                    f"Queue: {queue_len}",
+                    "padding: 2px 8px; border-radius: 10px; background: #e8e8e8;",
+                )
             try:
                 dat_text = self.dat_status.text() if self.dat_status is not None else "-"
             except Exception:
                 dat_text = "-"
-            self.pill_dat.setText(dat_text or "DAT: -")
+            self._safe_set_label("pill_dat", dat_text or "DAT: -")
 
         def _sync_rebuild_controls(self, *, running: bool = False) -> None:
             try:
@@ -4579,8 +4633,13 @@ def run() -> int:
                 cancel_token=self._cancel_token,
                 signals=signals,
             )
-            self._worker.moveToThread(self._thread)
-            self._thread.started.connect(self._worker.run)
+            worker = self._worker
+            worker.moveToThread(self._thread)
+            self._thread.started.connect(worker.run)
+            self._thread.finished.connect(self._thread.deleteLater)
+            signals.finished.connect(worker.deleteLater)
+            signals.failed.connect(worker.deleteLater)
+            self._backend_worker = BackendWorkerHandle(self._thread, self._cancel_token)
 
             self._set_running(True)
             self._thread.start()
@@ -4675,11 +4734,14 @@ def run() -> int:
             except Exception:
                 pass
             self._cancel_token.cancel()
+            if self._backend_worker is not None:
+                self._backend_worker.cancel()
             self.btn_cancel.setEnabled(False)
 
         def _on_phase_changed(self, phase: str, total: int) -> None:
             self._update_stepper(phase)
             if phase == "scan":
+                self._ui_fsm.transition(UIState.SCANNING)
                 self.status_label.setText("Scan läuft…")
                 self.progress.setRange(0, 100)
                 self.progress.setValue(0)
@@ -4687,6 +4749,7 @@ def run() -> int:
                     self.dashboard_progress.setRange(0, 100)
                     self.dashboard_progress.setValue(0)
             elif phase == "plan":
+                self._ui_fsm.transition(UIState.PLANNING)
                 self.status_label.setText("Plane…")
                 self.progress.setRange(0, max(1, int(total)))
                 self.progress.setValue(0)
@@ -4694,6 +4757,7 @@ def run() -> int:
                     self.dashboard_progress.setRange(0, max(1, int(total)))
                     self.dashboard_progress.setValue(0)
             elif phase == "execute":
+                self._ui_fsm.transition(UIState.EXECUTING)
                 self.status_label.setText("Ausführen…")
                 self.progress.setRange(0, max(1, int(total)))
                 self.progress.setValue(0)
@@ -4701,6 +4765,7 @@ def run() -> int:
                     self.dashboard_progress.setRange(0, max(1, int(total)))
                     self.dashboard_progress.setValue(0)
             elif phase == "audit":
+                self._ui_fsm.transition(UIState.AUDITING)
                 self.status_label.setText("Prüfe Konvertierungen…")
                 self.progress.setRange(0, max(1, int(total)))
                 self.progress.setValue(0)
@@ -5062,6 +5127,9 @@ def run() -> int:
             worker.failed.connect(lambda msg: self._on_export_failed(msg))
             worker.finished.connect(thread.quit)
             worker.failed.connect(thread.quit)
+            worker.finished.connect(worker.deleteLater)
+            worker.failed.connect(worker.deleteLater)
+            thread.finished.connect(thread.deleteLater)
             thread.finished.connect(lambda: self._cleanup_export_thread())
 
             self._export_thread = thread
@@ -5154,6 +5222,7 @@ def run() -> int:
             self._append_log(tb)
             self._cleanup_thread()
             self._set_running(False)
+            self._ui_fsm.transition(UIState.ERROR)
             self.status_label.setText("Error")
             self._set_log_visible(True, persist=False)
             QtWidgets.QMessageBox.critical(self, "Arbeitsfehler", f"{message}\n\n{tb}")

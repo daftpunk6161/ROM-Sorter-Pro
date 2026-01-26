@@ -1,1 +1,3 @@
-"""Qt-specific UI helpers."""
+"""Qt-specific UI helpers (legacy stubs)."""
+
+__all__ = []

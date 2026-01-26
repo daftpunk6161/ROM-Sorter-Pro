@@ -15,3 +15,6 @@
 
 # Optional YAML support (catalogs/convert rules)
 PyYAML>=6.0.1
+
+# Optional config validation
+pydantic>=2.7

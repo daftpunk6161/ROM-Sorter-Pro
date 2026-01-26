@@ -1,0 +1,3 @@
+[bandit]
+exclude: .venv,dev/tests,cache,temp,logs
+skips: B101

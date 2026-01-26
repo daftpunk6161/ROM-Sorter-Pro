@@ -54,6 +54,13 @@ Primäre Konfiguration: [src/config.json](../src/config.json)
 - DAT-Quellen: [src/dats/dat_sources.yaml](../src/dats/dat_sources.yaml)
 - IGIR-Config: [src/tools/igir.yaml](../src/tools/igir.yaml)
 
+## Environment Variablen
+- `ROM_SORTER_USE_PYDANTIC=1` – aktiviert optionale Pydantic-Config-Validierung beim Laden.
+- `ROM_SORTER_PROFILE=1` – aktiviert Scan-Profiling.
+- `ROM_SORTER_PROFILE_PATH=/path/scan.prof` – Zielpfad für das Profiling-Output.
+- `ROM_SORTER_PLATFORM_FORMATS=/path/platform_formats.yaml` – Override für Plattform-Formate.
+- `ROM_SORTER_CONVERTERS=/path/converters.yaml` – Override für Converter-Regeln.
+
 ### IGIR (Copy-first)
 `igir.yaml` unterstützt `copy_first` für Copy-first-Staging vor dem finalen Output.
 

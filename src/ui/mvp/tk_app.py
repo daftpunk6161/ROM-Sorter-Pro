@@ -18,15 +18,23 @@ import tkinter as tk
 import tkinter.font as tkfont
 from tkinter import filedialog, messagebox, ttk
 
+from ..state_machine import UIStateMachine, UIState
+from ..backend_worker import BackendWorkerHandle
+
+
+logger = logging.getLogger(__name__)
+
 
 def _import_symbol(module_names: tuple[str, ...], symbol: str):
     for module_name in module_names:
         try:
             module = importlib.import_module(module_name)
-        except Exception:
+        except Exception as exc:
+            logger.debug("Optional import failed: %s (%s)", module_name, exc)
             continue
         if hasattr(module, symbol):
             return getattr(module, symbol)
+        logger.debug("Optional symbol missing: %s.%s", module_name, symbol)
     return None
 
 
@@ -351,6 +359,8 @@ class TkMVPApp:
         self._job_paused = False
         self._job_counter = 0
         self._current_op: Optional[str] = None
+        self._ui_fsm = UIStateMachine()
+        self._backend_worker = None
         self._install_log_handler()
         self._apply_theme(self._theme_manager.get_theme())
         self._load_window_size()
@@ -3088,6 +3098,10 @@ class TkMVPApp:
             messagebox.showwarning("Öffnen fehlgeschlagen", "Zielordner konnte nicht geöffnet werden.")
 
     def _set_running(self, running: bool) -> None:
+        if running:
+            self._ui_fsm.transition(UIState.EXECUTING)
+        else:
+            self._ui_fsm.transition(UIState.IDLE)
         state_normal = "disabled" if running else "normal"
 
         self.btn_scan.configure(state=state_normal)
@@ -3523,6 +3537,7 @@ class TkMVPApp:
 
         self._worker_thread = threading.Thread(target=worker, daemon=True)
         self._worker_thread.start()
+        self._backend_worker = BackendWorkerHandle(self._worker_thread, self._cancel_token)
 
     def _start_scan(self) -> None:
         self._queue_or_run("scan", "Scan", self._start_scan_now)
@@ -3761,6 +3776,8 @@ class TkMVPApp:
         except Exception:
             pass
         self._cancel_token.cancel()
+        if self._backend_worker is not None:
+            self._backend_worker.cancel()
         self.btn_cancel.configure(state="disabled")
 
     def _poll_queue(self) -> None:
@@ -3776,15 +3793,19 @@ class TkMVPApp:
                         continue
                     phase, total = payload
                     if phase == "scan":
+                        self._ui_fsm.transition(UIState.SCANNING)
                         self.status_var.set("Scanning…")
                         self.progress.configure(mode="determinate", maximum=100, value=0)
                     elif phase == "plan":
+                        self._ui_fsm.transition(UIState.PLANNING)
                         self.status_var.set("Plane…")
                         self.progress.configure(mode="determinate", maximum=max(1, int(total)), value=0)
                     elif phase == "execute":
+                        self._ui_fsm.transition(UIState.EXECUTING)
                         self.status_var.set("Ausführen…")
                         self.progress.configure(mode="determinate", maximum=max(1, int(total)), value=0)
                     elif phase == "audit":
+                        self._ui_fsm.transition(UIState.AUDITING)
                         self.status_var.set("Checking conversions…")
                         self.progress.configure(mode="determinate", maximum=max(1, int(total)), value=0)
                 elif event == "progress":
@@ -3989,6 +4010,7 @@ class TkMVPApp:
                     self.status_var.set("Error")
                     self.dat_status_var.set("DAT: -")
                     self._set_running(False)
+                    self._ui_fsm.transition(UIState.ERROR)
                     self._set_log_visible(True, persist=False)
                     messagebox.showerror("Arbeitsfehler", f"{msg}\n\n{tb}")
                     if self._current_op:

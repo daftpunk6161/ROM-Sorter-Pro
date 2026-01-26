@@ -44,6 +44,7 @@ from ..core.normalization import (
 )
 from ..core.dat_index_sqlite import DatIndexSqlite, build_index_from_config
 from ..detectors.dat_identifier import identify_by_hash
+from ..exceptions import ScannerError, FileOperationError
 
 # Reuse existing stable core implementation for scanning.
 from ..core.scan_service import run_scan as _core_run_scan
@@ -875,6 +876,25 @@ def _resolve_repo_root() -> Path:
     return Path(__file__).resolve().parents[3]
 
 
+def _has_symlink_parent(path: Path) -> bool:
+    for parent in path.parents:
+        try:
+            if not parent.exists():
+                continue
+            if parent.is_symlink():
+                return True
+            try:
+                resolved = parent.resolve(strict=False)
+                absolute = parent.absolute()
+                if resolved != absolute:
+                    return True
+            except Exception:
+                continue
+        except Exception:
+            continue
+    return False
+
+
 def _load_identification_overrides(cfg: Config) -> List[Dict[str, Any]]:
     override_cfg = cfg.get("identification_overrides", {})
     if isinstance(override_cfg, str):
@@ -1172,10 +1192,10 @@ def run_scan(
 
     source_sanitized = sanitize_path(str(source_path or ""))
     if not source_sanitized:
-        raise ValueError("Source directory is empty")
+        raise ScannerError("Source directory is empty")
 
     if not is_valid_directory(source_sanitized, must_exist=True):
-        raise ValueError(f"Invalid source directory: {source_sanitized}")
+        raise ScannerError(f"Invalid source directory: {source_sanitized}", file_path=source_sanitized)
 
     cfg = _load_cfg(config)
     cancel_event = cancel_token.event if cancel_token is not None else None
@@ -1583,7 +1603,26 @@ def plan_sort(
     if not dest_sanitized:
         raise ValueError("Destination directory is empty")
 
-    dest_root = Path(dest_sanitized).resolve()
+    raw_dest = Path(dest_sanitized)
+    if raw_dest.exists():
+        try:
+            if raw_dest.is_symlink():
+                raise InvalidPathError(f"Symlink destination not allowed: {raw_dest}")
+            try:
+                resolved = raw_dest.resolve(strict=False)
+                absolute = raw_dest.absolute()
+                if resolved != absolute:
+                    raise InvalidPathError(f"Symlink destination not allowed: {raw_dest}")
+            except InvalidPathError:
+                raise
+            except Exception:
+                pass
+        except InvalidPathError:
+            raise
+        except Exception:
+            pass
+
+    dest_root = raw_dest.resolve()
 
     # Destination may not exist yet for planning; validate shape only.
     if dest_root.exists() and not dest_root.is_dir():
@@ -1629,9 +1668,16 @@ def plan_sort(
     # Determinism: sort by input path.
     items = sorted(scan_result.items, key=lambda it: (it.input_path or ""))
 
-    for item in items:
-        if cancel_token is not None and cancel_token.is_cancelled():
-            break
+    last_cancel_check = time.monotonic()
+    for idx, item in enumerate(items):
+        if cancel_token is not None:
+            if cancel_token.is_cancelled():
+                break
+            if idx % 100 == 0:
+                now = time.monotonic()
+                if (now - last_cancel_check) >= 0.1 and cancel_token.is_cancelled():
+                    break
+                last_cancel_check = now
 
         if not item.input_path:
             actions.append(
@@ -1739,6 +1785,8 @@ def plan_sort(
 
             # Validate planned destination path stays within destination root.
             validate_file_operation(final_target, base_dir=dest_root, allow_read=True, allow_write=True)
+            if _has_symlink_parent(final_target):
+                raise InvalidPathError(f"Symlink parent not allowed: {final_target}")
 
             action_value = mode
             status = "planned"
@@ -1879,13 +1927,6 @@ def execute_sort(
                         pass
 
             if cancelled_midway or (cancel_token is not None and cancel_token.is_cancelled()):
-                try:
-                    tmp.unlink()
-                except Exception:
-                    try:
-                        os.remove(str(tmp))
-                    except Exception:
-                        pass
                 return False
 
             os.replace(str(tmp), str(dst))
@@ -1897,16 +1938,15 @@ def execute_sort(
 
             return True
 
-        except Exception:
-            try:
-                if tmp.exists():
-                    tmp.unlink()
-            except Exception:
+        finally:
+            if tmp.exists():
                 try:
-                    os.remove(str(tmp))
+                    tmp.unlink()
                 except Exception:
-                    pass
-            raise
+                    try:
+                        os.remove(str(tmp))
+                    except Exception:
+                        pass
 
     def _run_conversion_with_cancel(
         cmd: List[str],
@@ -1990,15 +2030,6 @@ def execute_sort(
             f"Starting execute_sort into: {dest_root} (dry_run={dry_run}, mode={sort_plan.mode}, on_conflict={sort_plan.on_conflict})"
         )
 
-    def _has_symlink_parent(path: Path) -> bool:
-        for parent in path.parents:
-            try:
-                if parent.exists() and parent.is_symlink():
-                    return True
-            except Exception:
-                continue
-        return False
-
     progress_every = max(1, total // 100) if batch_progress and total > 0 else 1
     last_progress_ts = 0.0
 
@@ -2054,7 +2085,21 @@ def execute_sort(
             if action_status_cb is not None:
                 action_status_cb(row_index, "converting…" if is_conversion else f"{sort_plan.mode}ing…")
 
-            if is_conversion:
+            if is_conversion and dry_run:
+                if action_status_cb is not None:
+                    action_status_cb(row_index, "dry-run (convert)")
+
+                processed += 1
+
+                if sort_plan.mode == "copy":
+                    copied += 1
+                else:
+                    moved += 1
+
+                if log_cb is not None:
+                    log_cb(f"[DRY-RUN] Would convert: {src.name} -> {dst}")
+
+            elif is_conversion:
                 if not dry_run:
                     dst.parent.mkdir(parents=True, exist_ok=True)
 
@@ -2239,7 +2284,7 @@ def execute_sort(
                 action_status_cb(row_index, f"error: {exc}")
             if log_cb is not None:
                 log_cb(msg)
-            raise
+            raise FileOperationError(str(exc), file_path=action.input_path, operation=action.action) from exc
         except Exception as exc:
             processed += 1
             msg = f"Error sorting {action.input_path}: {exc}"
@@ -2320,15 +2365,6 @@ def build_external_tools_commands(
 
         output_file = out_dir / Path(action.planned_target_path).name
 
-        def _has_symlink_parent(path: Path) -> bool:
-            for parent in path.parents:
-                try:
-                    if parent.exists() and parent.is_symlink():
-                        return True
-                except Exception:
-                    continue
-            return False
-
         try:
             src_raw = Path(action.input_path)
             if src_raw.is_symlink():
@@ -2397,15 +2433,6 @@ def execute_external_tools(
     if not dry_run:
         out_dir.mkdir(parents=True, exist_ok=True)
         tmp_dir.mkdir(parents=True, exist_ok=True)
-
-    def _has_symlink_parent(path: Path) -> bool:
-        for parent in path.parents:
-            try:
-                if parent.exists() and parent.is_symlink():
-                    return True
-            except Exception:
-                continue
-        return False
 
     for step, (row_index, action) in enumerate(actions, start=1):
         if cancel_token is not None and cancel_token.is_cancelled():

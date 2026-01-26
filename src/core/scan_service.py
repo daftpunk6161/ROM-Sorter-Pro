@@ -112,9 +112,21 @@ def run_scan(
         return "DAT: index fehlt"
 
     def on_file_found(path: str) -> None:
+        if cancel_event is not None and cancel_event.is_set():
+            try:
+                scanner.stop()
+            except Exception:
+                pass
+            return
         _log(on_log, f"Found file: {path}")
 
     def on_rom_found(rom_info: Dict[str, Any]) -> None:
+        if cancel_event is not None and cancel_event.is_set():
+            try:
+                scanner.stop()
+            except Exception:
+                pass
+            return
         roms.append(rom_info)
         name = rom_info.get("name") or Path(rom_info.get("path", "")).name
         system = rom_info.get("system", "Unknown")
@@ -206,9 +218,14 @@ def run_scan(
     if profiler is not None:
         profiler.disable()
         try:
-            cache_dir = Path(os.getcwd()) / "cache" / "logs"
-            cache_dir.mkdir(parents=True, exist_ok=True)
-            output_path = cache_dir / f"scan_profile_{int(time.time())}.prof"
+            override = os.getenv("ROM_SORTER_PROFILE_PATH", "").strip()
+            if override:
+                output_path = Path(override)
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+            else:
+                cache_dir = Path(os.getcwd()) / "cache" / "logs"
+                cache_dir.mkdir(parents=True, exist_ok=True)
+                output_path = cache_dir / f"scan_profile_{int(time.time())}.prof"
             profiler.dump_stats(str(output_path))
             _log(on_log, f"Profile saved: {output_path}")
         except Exception:

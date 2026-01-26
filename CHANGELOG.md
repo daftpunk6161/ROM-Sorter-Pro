@@ -8,14 +8,26 @@ und dieses Projekt verwendet [Semantic Versioning](https://semver.org/lang/de/).
 ## [Unreleased]
 
 ### Added
+- UI-Helfer: minimaler State-Machine-Helper und Backend-Worker-Handle für GUI-Jobs.
+- Controller-Facades (Scan/Sort/Conversion) als dünne API-Schicht.
+- Optionales Pydantic-Config-Model + Validation (Env-Flag gesteuert).
+- Sphinx API-Doku-Grundgerüst (docs/api).
+- Fixture-Export-Skript und echte DAT/ROM Fixtures für Regression-Tests.
 
 ### Changed
 - Docs aktualisiert: Feature Catalog, DAT Import & Index, Identification Strategy, Test Strategy.
 - GUI: Library-Report, Presets und Auswahl-Ausführung ergänzt (Qt/Tk).
+- Controller: Cancel-Checks in Planung, Dry-run Conversion Guard, .part Cleanup und Custom Exceptions.
+- Scan-Service: Cancel-Checks in Callbacks + Profile-Output-Pfad per Env.
+- Optional-Import-Logging (Qt/Tk) + Legacy-Qt-Module als stubs (ohne Qt-Import).
+- CI: Smoke-Liste erweitert, Docs/Security Jobs ergänzt, workflow_dispatch aktiviert.
+- requirements-full.txt ergänzt um optionales pydantic.
 
 ### Fixed
+- Symlink-Zielpfade werden im Plan frühzeitig abgewiesen.
 
 ### Security
+- Symlink-Parent-Checks + striktere Pfadvalidierung bei geplanten Zielen.
 
 ## [1.0.0] - 2026-01-24
 

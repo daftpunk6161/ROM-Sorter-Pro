@@ -4,7 +4,13 @@ from __future__ import annotations
 
 import json
 import os
+import logging
 from typing import Any, Dict, Optional
+
+from .schema import validate_config_schema
+from .pydantic_models import validate_with_pydantic
+
+logger = logging.getLogger(__name__)
 
 
 def _normalize_gui_settings(config_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -52,7 +58,14 @@ def load_config(config_path: Optional[str] = None) -> Dict[str, Any]:
         with open(config_path, "r", encoding="utf-8") as f:
             data = json.load(f)
             if isinstance(data, dict):
-                return _normalize_gui_settings(data)
+                data = _normalize_gui_settings(data)
+                ok, error = validate_config_schema(data)
+                if not ok:
+                    logger.warning("Config schema validation failed: %s", error)
+                if os.getenv("ROM_SORTER_USE_PYDANTIC") == "1":
+                    if not validate_with_pydantic(data):
+                        logger.warning("Pydantic config validation failed")
+                return data
             return {}
     except Exception:
         return {}

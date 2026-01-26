@@ -100,6 +100,34 @@ def test_execute_sort_rejects_traversal_target(tmp_path):
         execute_sort(plan)
 
 
+def test_plan_sort_rejects_symlink_parent(tmp_path):
+    from src.app.controller import ScanItem, ScanResult, plan_sort
+
+    source = tmp_path / "source"
+    source.mkdir()
+    rom = source / "game.rom"
+    rom.write_text("data")
+
+    dest_real = tmp_path / "dest_real"
+    dest_real.mkdir()
+    dest_link = tmp_path / "dest_link"
+
+    try:
+        os.symlink(dest_real, dest_link, target_is_directory=True)
+    except (OSError, NotImplementedError):
+        pytest.skip("Symlinks not supported in this environment")
+
+    scan = ScanResult(
+        source_path=str(source),
+        items=[ScanItem(input_path=str(rom), detected_system="NES")],
+        stats={},
+        cancelled=False,
+    )
+
+    with pytest.raises(Exception):
+        plan_sort(scan, str(dest_link))
+
+
 def test_safe_extract_zip_blocks_symlink(tmp_path):
     from src.security.security_utils import safe_extract_zip
 

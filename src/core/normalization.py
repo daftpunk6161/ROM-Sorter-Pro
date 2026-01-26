@@ -10,6 +10,7 @@ import os
 import re
 import subprocess
 import time
+import logging
 from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any, Dict, Iterable, List, Literal, Optional, Tuple
@@ -72,6 +73,24 @@ class NormalizationResultItem:
     converter_id: Optional[str] = None
 
 
+class NormalizationPlanBuilder:
+    """Builder for normalization plans (minimal helper)."""
+
+    def __init__(self) -> None:
+        self._items: List[NormalizationItem] = []
+
+    def add(self, item: NormalizationItem) -> "NormalizationPlanBuilder":
+        self._items.append(item)
+        return self
+
+    def extend(self, items: Iterable[NormalizationItem]) -> "NormalizationPlanBuilder":
+        self._items.extend(list(items))
+        return self
+
+    def build(self, *, output_root: Optional[str] = None, temp_root: Optional[str] = None) -> NormalizationPlan:
+        return plan_normalization(self._items, output_root=output_root, temp_root=temp_root)
+
+
 def _platform_formats_path() -> Path:
     override = os.environ.get("ROM_SORTER_PLATFORM_FORMATS", "").strip()
     if override:
@@ -100,7 +119,8 @@ def _load_yaml_or_json(path: Path) -> Optional[Dict[str, Any]]:
     raw = path.read_text(encoding="utf-8")
     try:
         import yaml  # type: ignore
-    except Exception:
+    except Exception as exc:
+        logging.getLogger(__name__).debug("Optional YAML import failed: %s", exc)
         yaml = None
     if yaml is not None:
         try:

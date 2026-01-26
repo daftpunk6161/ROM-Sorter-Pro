@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<datafile>
+  <header>
+    <name>Nintendo - NES</name>
+  </header>
+  <game name="Fixture Game 1">
+    <rom name="fixture_game1.nes" size="20" crc="fc9cc400" sha1="0f041c41fb0c660552e6ffc1bb4926fb4c305ba1" />
+  </game>
+  <game name="Fixture Game 2">
+    <rom name="fixture_game2.bin" size="20" crc="659595ba" />
+  </game>
+</datafile>

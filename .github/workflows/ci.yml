@@ -5,6 +5,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   smoke:
@@ -43,7 +44,20 @@ jobs:
             dev/tests/test_mvp_db_schema_unified.py \
             dev/tests/test_mvp_optional_deps_metadata.py \
             dev/tests/test_mvp_db_migration_backfill.py \
-            dev/tests/test_mvp_db_controller.py
+            dev/tests/test_mvp_db_controller.py \
+            dev/tests/test_mvp_real_fixtures.py \
+            dev/tests/test_mvp_execute_part_cleanup.py \
+            dev/tests/test_mvp_scanner_threadpool.py \
+            dev/tests/test_mvp_optional_import_logging.py \
+            dev/tests/test_mvp_backend_worker.py \
+            dev/tests/test_mvp_profile_scan.py \
+            dev/tests/test_mvp_fixture_export.py \
+            dev/tests/test_mvp_normalization_builder.py \
+            dev/tests/test_mvp_custom_exceptions.py \
+            dev/tests/test_mvp_poetry_config.py \
+            dev/tests/test_mvp_ui_state_machine.py \
+            dev/tests/test_mvp_controller_facades.py \
+            dev/tests/test_mvp_pydantic_optional.py
 
   test:
     runs-on: ubuntu-latest
@@ -92,6 +106,39 @@ jobs:
             dev/tests/test_mvp_scan_and_conflict.py \
             dev/tests/test_mvp_archive_security.py \
             dev/tests/test_mvp_dat_index.py
+
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install docs dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install sphinx
+      - name: Build API docs
+        run: |
+          sphinx-build -b html docs/api docs/api/_build/html
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install security tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install bandit pip-audit
+      - name: Bandit scan
+        run: |
+          bandit -c .bandit -r src
+      - name: Pip audit (best effort)
+        run: |
+          pip-audit -r requirements-gui.txt -r requirements-full.txt || true
 
   lint:
     runs-on: ubuntu-latest

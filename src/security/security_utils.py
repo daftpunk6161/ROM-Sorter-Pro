@@ -86,16 +86,21 @@ def resolve_path_safe(path: Union[str, Path]) -> Path:
     return Path(sanitized).resolve()
 
 
+def validate_path(path: Union[str, Path]) -> Path:
+    """Validate and resolve a path for security checks."""
+    return resolve_path_safe(path)
+
+
 def validate_file_operation(file_path: Union[str, Path],
                           base_dir: Optional[Union[str, Path]] = None,
                           allow_read: bool = True,
                           allow_write: bool = True) -> bool:
     """Validates a File Surgery in Terms of Security. Check Whether the File Path is Safe and is Within the Permitted Area. Args: File_Path: The File Path to Be validated base_dir: The basic directory in which the file should be allow_read: Whether reading access is allow_write: Whether wring access is allowed Return: True When Safe Raises: Invalid Path is unsavory"""
-    file_path = resolve_path_safe(file_path)
+    file_path = validate_path(file_path)
 
 # Check basic directory, if specified
     if base_dir:
-        base_dir = resolve_path_safe(base_dir)
+        base_dir = validate_path(base_dir)
 
 # Make sure the file is in the base directory (prefix-safe)
         try:
@@ -127,10 +132,8 @@ def validate_file_operation(file_path: Union[str, Path],
                 logger.warning(f"Security warning: Access to protected directory denied: {file_path}")
                 raise InvalidPathError(f"Access to protected directory not allowed: {file_path}")
         except Exception:
-            if os.name == "nt":
-                if str(file_path).lower().startswith(str(sensitive_path).lower()):
-                    logger.warning(f"Security warning: Access to protected directory denied: {file_path}")
-                    raise InvalidPathError(f"Access to protected directory not allowed: {file_path}")
+            # If relative_to fails, file_path is not within sensitive_path.
+            continue
 
 # Check for hidden files (Unix) and system files (Windows)
     if file_path.name.startswith('.') and sys.platform != 'win32':

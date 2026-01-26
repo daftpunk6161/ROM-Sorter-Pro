@@ -6,6 +6,7 @@ Notes:
 - Thread count and chunk size are derived from config (scanner/performance.processing).
 - Progress updates are throttled when batching is enabled.
 - In-memory cache avoids repeated work within a scan session.
+- File processing (including hashing) runs inside a ThreadPoolExecutor worker pool.
 """
 
 import os
@@ -180,7 +181,8 @@ class HighPerformanceScanner:
                     self._dat_index = None
                 else:
                     self._dat_index = DatIndexSqlite(Path(index_path))
-            except Exception:
+            except Exception as exc:
+                logger.debug("Optional DAT index load failed: %s", exc)
                 self._dat_index = None
             return self._dat_index
 
