@@ -1,0 +1,22 @@
+{
+  "source_path": "<TMP>/src",
+  "stats": {
+    "total": 1
+  },
+  "cancelled": false,
+  "items": [
+    {
+      "input_path": "<TMP>/src/game.nes",
+      "detected_system": "NES",
+      "detection_source": "manual",
+      "detection_confidence": 1.0,
+      "is_exact": true,
+      "signals": [
+        "EXT"
+      ],
+      "candidates": [
+        "NES"
+      ]
+    }
+  ]
+}

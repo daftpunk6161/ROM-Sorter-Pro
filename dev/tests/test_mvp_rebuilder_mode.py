@@ -8,7 +8,7 @@ if str(ROOT) not in sys.path:
 
 
 def test_plan_rebuild_forces_copy_and_skip(tmp_path):
-    from src.app.controller import ScanItem, ScanResult, plan_rebuild
+    from src.app.controller import ScanItem, ScanResult, plan_rebuild, execute_sort
 
     source_dir = tmp_path / "src"
     source_dir.mkdir()
@@ -33,3 +33,10 @@ def test_plan_rebuild_forces_copy_and_skip(tmp_path):
     plan = plan_rebuild(scan, str(tmp_path / "dest"))
     assert plan.mode == "copy"
     assert plan.on_conflict == "skip"
+
+    report = execute_sort(plan, dry_run=False)
+    assert report.copied == 1
+    target = plan.actions[0].planned_target_path
+    assert target is not None
+    assert Path(target).exists()
+    assert rom_path.exists()

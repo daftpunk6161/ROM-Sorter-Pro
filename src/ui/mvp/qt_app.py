@@ -29,7 +29,6 @@ import threading
 import json
 from pathlib import Path
 from dataclasses import dataclass
-import logging
 from typing import Any, Iterable, List, Optional, cast
 
 logger = logging.getLogger(__name__)
@@ -44,6 +43,22 @@ def _load_version() -> str:
         return version or "1.0.0"
     except Exception:
         return "1.0.0"
+
+
+def handle_worker_failure(
+    message: str,
+    traceback_text: str,
+    log_cb,
+    dialog_cb,
+) -> None:
+    """Log worker failures and route them to an error dialog callback."""
+    if log_cb is not None:
+        if message:
+            log_cb(message)
+        if traceback_text:
+            log_cb(traceback_text)
+    if dialog_cb is not None:
+        dialog_cb(message, traceback_text)
 
 
 def _load_qt():
@@ -125,6 +140,7 @@ def run() -> int:
     from ...utils.external_tools import probe_igir, probe_wud2app, probe_wudcompress, igir_plan, igir_execute
     from ...ui.state_machine import UIStateMachine, UIState
     from ...ui.backend_worker import BackendWorkerHandle
+    from ...ui.queue_utils import sort_job_queue
     from .export_utils import (
         audit_report_to_dict,
         plan_report_to_dict,
@@ -4122,12 +4138,7 @@ def run() -> int:
                 "func": func,
             }
             self._job_queue.append(job)
-            self._job_queue.sort(
-                key=lambda item: (
-                    self._job_int(item.get("priority", 1), 1),
-                    self._job_int(item.get("id", 0), 0),
-                )
-            )
+            sort_job_queue(self._job_queue)
             self._refresh_job_queue()
             self._maybe_start_next_job()
 
@@ -5218,14 +5229,21 @@ def run() -> int:
                 return
 
         def _on_failed(self, message: str, tb: str) -> None:
-            self._append_log(message)
-            self._append_log(tb)
+            handle_worker_failure(
+                message,
+                tb,
+                self._append_log,
+                lambda msg, trace: QtWidgets.QMessageBox.critical(
+                    self,
+                    "Arbeitsfehler",
+                    f"{msg}\n\n{trace}",
+                ),
+            )
             self._cleanup_thread()
             self._set_running(False)
             self._ui_fsm.transition(UIState.ERROR)
             self.status_label.setText("Error")
             self._set_log_visible(True, persist=False)
-            QtWidgets.QMessageBox.critical(self, "Arbeitsfehler", f"{message}\n\n{tb}")
             if self._current_op:
                 self._complete_job(self._current_op)
                 self._current_op = None

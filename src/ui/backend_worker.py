@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import Any, Protocol
+
+logger = logging.getLogger(__name__)
 
 
 class BackendWorker(Protocol):
@@ -17,18 +20,22 @@ class BackendWorkerHandle:
     thread: Any
     cancel_token: Any
 
-    def start(self) -> None:
+    def start(self) -> bool:
         try:
             self.thread.start()
-        except Exception:
-            return None
+            return True
+        except Exception as exc:
+            logger.exception("Backend worker start failed: %s", exc)
+            return False
 
-    def cancel(self) -> None:
+    def cancel(self) -> bool:
         try:
             if self.cancel_token is not None:
                 self.cancel_token.cancel()
-        except Exception:
-            return None
+            return True
+        except Exception as exc:
+            logger.exception("Backend worker cancel failed: %s", exc)
+            return False
 
     def is_running(self) -> bool:
         try:

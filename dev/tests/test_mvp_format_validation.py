@@ -81,6 +81,17 @@ def _write_converters_with_multiple_outputs(path: Path) -> None:
     path.write_text(json.dumps(payload), encoding="utf-8")
 
 
+def test_validate_trackset_reports_missing_bin(tmp_path: Path) -> None:
+    cue_path = tmp_path / "disc.cue"
+    cue_path.write_text(
+        "FILE \"track01.bin\" BINARY\n  TRACK 01 MODE1/2352\n  INDEX 01 00:00:00\n",
+        encoding="utf-8",
+    )
+
+    missing = normalization.validate_trackset(str(cue_path))
+    assert "track01.bin" in missing
+
+
 def _write_cue(path: Path, files: list[str]) -> None:
     lines = []
     for name in files:

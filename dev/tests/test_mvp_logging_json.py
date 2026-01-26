@@ -1,5 +1,6 @@
 import json
 import logging
+import sys
 
 from src.logging_config import JsonFormatter
 
@@ -26,3 +27,23 @@ def test_json_formatter_outputs_expected_fields():
     assert "timestamp" in payload
     assert "thread" in payload
     assert "process" in payload
+
+
+def test_json_formatter_includes_exc_info():
+    formatter = JsonFormatter()
+    try:
+        raise ValueError("boom")
+    except Exception:
+        record = logging.LogRecord(
+            name="rom_sorter.test",
+            level=logging.ERROR,
+            pathname=__file__,
+            lineno=55,
+            msg="failed",
+            args=(),
+            exc_info=sys.exc_info(),
+        )
+
+    payload = json.loads(formatter.format(record))
+    assert "exc_info" in payload
+    assert "ValueError" in payload["exc_info"]

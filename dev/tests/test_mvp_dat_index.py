@@ -37,6 +37,19 @@ def test_dat_index_parses_xml(tmp_path):
     assert hash_match.system == "NES"
 
 
+def test_dat_index_logs_warning_on_invalid_xml(tmp_path):
+    from src.core.dat_index import DatIndex
+
+    dat_xml = tmp_path / "broken.dat"
+    dat_xml.write_text("<datfile><header></datfile>", encoding="utf-8")
+
+    index = DatIndex()
+    index.load_paths([str(dat_xml)])
+
+    status = index.get_load_status()
+    assert status["last_warning"] is not None
+
+
 def _write_sqlite_dat(path: Path, system_name: str, game_name: str, rom_name: str, crc: str, sha1: str) -> None:
     path.write_text(
         f"""<?xml version=\"1.0\"?>

@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 # -*-coding: utf-8-*-
-"""ROM SARTER PRO - Safety validation This module contains functions for the safe validation of paths And user inputs to prevent directory traversal and other attacks."""
+"""ROM Sorter Pro - Safety validation.
+
+Contains path and input validation helpers to prevent traversal and unsafe file operations.
+"""
 
 import os
 import re

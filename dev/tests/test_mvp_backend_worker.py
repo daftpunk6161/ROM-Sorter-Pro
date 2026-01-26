@@ -19,5 +19,16 @@ def test_backend_worker_handle_cancel_calls_token():
 
     handle = BackendWorkerHandle(DummyThread(), token)
     assert token.is_cancelled() is False
-    handle.cancel()
+    assert handle.cancel() is True
     assert token.is_cancelled() is True
+
+
+def test_backend_worker_handle_start_failure_returns_false():
+    from src.ui.backend_worker import BackendWorkerHandle
+
+    class BrokenThread:
+        def start(self):
+            raise RuntimeError("boom")
+
+    handle = BackendWorkerHandle(BrokenThread(), None)
+    assert handle.start() is False

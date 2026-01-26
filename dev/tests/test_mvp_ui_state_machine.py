@@ -15,3 +15,11 @@ def test_ui_state_machine_transitions():
     assert fsm.transition(UIState.SCANNING) is True
     assert fsm.state == UIState.SCANNING
     assert fsm.transition(UIState.IDLE) is True
+
+
+def test_ui_state_machine_rejects_invalid_transition():
+    from src.ui.state_machine import UIStateMachine, UIState
+
+    fsm = UIStateMachine(state=UIState.SCANNING)
+    assert fsm.transition(UIState.PLANNING) is False
+    assert fsm.state == UIState.SCANNING
