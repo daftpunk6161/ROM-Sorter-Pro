@@ -139,7 +139,7 @@ jobs:
           python -m pip install bandit pip-audit
       - name: Bandit scan
         run: |
-          bandit -c .bandit -r src
+          bandit -c .bandit.yaml -r src
       - name: Pip audit (best effort)
         run: |
           pip-audit -r requirements-gui.txt -r requirements-full.txt || true
