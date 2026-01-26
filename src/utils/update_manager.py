@@ -384,6 +384,8 @@ class UpdateManager:
             logger.error(f"Unsicheres Extract-Verzeichnis: {e}")
             return False
 
+        backup_dir = None
+        program_dir = None
         try:
             # Pfad zum Programmverzeichnis
             program_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -439,7 +441,7 @@ class UpdateManager:
 
             # Try to restore the backup
             try:
-                if os.path.exists(backup_dir):
+                if backup_dir and program_dir and os.path.exists(backup_dir):
                     self._report_progress(0, "Update fehlgeschlagen - stelle Backup wieder her...")
                     self._restore_backup(backup_dir, program_dir)
                     self._report_progress(100, "Backup erfolgreich wiederhergestellt")

@@ -18,14 +18,16 @@ import sys
 import subprocess
 import logging
 import platform
+import importlib
 import importlib.util
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 # Try to import PKG_Resources (optional dependency)
 try:
-    import pkg_resources
+    pkg_resources = importlib.import_module("pkg_resources")
     HAS_PKG_RESOURCES = True
-except ImportError:
+except Exception:
+    pkg_resources = None
     HAS_PKG_RESOURCES = False
 
 # Configure logger
@@ -97,7 +99,7 @@ class DependencyManager:
         installed = {}
         try:
             # Use PKG_Resources to determine installed packages
-            if HAS_PKG_RESOURCES:
+            if HAS_PKG_RESOURCES and pkg_resources is not None:
                 for package in pkg_resources.working_set:
                     # Speichere sowohl den key als auch den Projektnamen
                     installed[package.key] = package.version
@@ -133,7 +135,7 @@ class DependencyManager:
         return package_name in self.installed_packages
 
     def get_missing_packages(self, include_optional: bool = False,
-                           optional_groups: List[str] = None) -> List[str]:
+                           optional_groups: Optional[List[str]] = None) -> List[str]:
         """Determine missing necessary and optional packages. Args: Include_optional: whether optional packages should be checked Optional_Groups: List of optional package groups that are to be checked Return: List missing packages"""
         missing = []
 
@@ -315,10 +317,9 @@ def has_gpu_support() -> bool:
     # Check GPU support in Tensorflow
     if tf_available:
         try:
-            # Try to import tensorflow, but handle ImportError for PyLint
             try:
-                import tensorflow as tf
-                gpus = tf.config.list_physical_devices('GPU')
+                tf_module = importlib.import_module("tensorflow")
+                gpus = tf_module.config.list_physical_devices('GPU')
                 return len(gpus) > 0
             except ImportError:
                 logger.debug("TensorFlow konnte nicht importiert werden")
@@ -329,10 +330,9 @@ def has_gpu_support() -> bool:
     # Check GPU support in Pytorch
     if torch_available:
         try:
-            # Try to import torch, but handle ImportError for PyLint
             try:
-                import torch
-                return torch.cuda.is_available()
+                torch_module = importlib.import_module("torch")
+                return bool(torch_module.cuda.is_available())
             except ImportError:
                 logger.debug("PyTorch konnte nicht importiert werden")
                 return False

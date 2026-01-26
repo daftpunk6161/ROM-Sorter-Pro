@@ -30,7 +30,7 @@ import threading
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, BinaryIO, Dict, Iterator, List, Optional, Sequence, Tuple
+from typing import Any, Dict, IO, Iterator, List, Optional, Sequence, Tuple
 import xml.etree.ElementTree as ET
 
 logger = logging.getLogger(__name__)
@@ -443,7 +443,7 @@ class DatIndex:
                     else:
                         self._load_clrmamepro_text_stream(fh, source_label=source_label)
 
-    def _load_logiqx_xml_stream(self, stream: BinaryIO, source_label: str) -> None:
+    def _load_logiqx_xml_stream(self, stream: IO[bytes], source_label: str) -> None:
         dat_name: Optional[str] = None
         normalized_system: Optional[str] = None
 
@@ -461,7 +461,8 @@ class DatIndex:
                 # Logiqx typically has <header><name>..</name></header>
                 if dat_name is None:
                     dat_name = elem.text.strip()
-                    normalized_system, _ = _normalize_system_name(dat_name)
+                    if dat_name:
+                        normalized_system, _ = _normalize_system_name(dat_name)
 
             if event == "start" and tag.endswith("game"):
                 current_game_name = (elem.attrib.get("name") or "").strip() or None
@@ -513,7 +514,7 @@ class DatIndex:
             label = normalized_system or dat_name
             logger.info("Loaded DAT: %s (%s)", label, source_label)
 
-    def _load_clrmamepro_text_stream(self, stream: BinaryIO, source_label: str) -> None:
+    def _load_clrmamepro_text_stream(self, stream: IO[bytes], source_label: str) -> None:
         """Best-effort parser for ClrMamePro text DATs.
 
         Typical structure:
@@ -586,7 +587,8 @@ class DatIndex:
                 m = re_name.search(line)
                 if m:
                     dat_name = m.group(1).strip()
-                    normalized_system, _ = _normalize_system_name(dat_name)
+                    if dat_name:
+                        normalized_system, _ = _normalize_system_name(dat_name)
                     continue
 
             if in_game:

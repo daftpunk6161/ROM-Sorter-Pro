@@ -8,12 +8,20 @@ import zipfile
 import threading
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterable, Iterator, List, Optional, Tuple
+from typing import Any, Dict, Iterable, Iterator, List, Optional, Tuple
 import xml.etree.ElementTree as ET
 
 from .index_lock import acquire_index_lock, release_index_lock
 from .dat_index import _normalize_system_name
 from ..config import Config, load_config
+
+
+def _normalize_config(config: Optional[object]) -> Config:
+    if isinstance(config, Config):
+        return config
+    if isinstance(config, dict):
+        return Config(config)
+    return Config(load_config())
 
 
 @dataclass(frozen=True)
@@ -38,8 +46,8 @@ class DatIndexSqlite:
         self._init_schema()
 
     @classmethod
-    def from_config(cls, config: Optional[Config] = None) -> "DatIndexSqlite":
-        cfg = config or load_config()
+    def from_config(cls, config: Optional[object] = None) -> "DatIndexSqlite":
+        cfg = _normalize_config(config)
         dat_cfg = cfg.get("dats", {}) or {}
         index_path = dat_cfg.get("index_path") or os.path.join("data", "index", "romsorter_dat_index.sqlite")
         return cls(Path(index_path))
@@ -133,27 +141,43 @@ class DatIndexSqlite:
         row = cur.fetchone()
         mtime, size, _ = self._file_signature(path)
         if row:
-            if int(row["mtime"] or 0) == mtime and int(row["size_bytes"] or 0) == size:
-                return int(row["dat_id"]), False
-            cur.execute("UPDATE dat_files SET mtime=?, size_bytes=?, active=1 WHERE dat_id=?", (mtime, size, int(row["dat_id"])))
-            return int(row["dat_id"]), True
+            row_id = int(row["dat_id"]) if row["dat_id"] is not None else None
+            row_mtime = int(row["mtime"]) if row["mtime"] is not None else 0
+            row_size = int(row["size_bytes"]) if row["size_bytes"] is not None else 0
+            if row_id is not None and row_mtime == mtime and row_size == size:
+                return row_id, False
+            if row_id is not None:
+                cur.execute("UPDATE dat_files SET mtime=?, size_bytes=?, active=1 WHERE dat_id=?", (mtime, size, row_id))
+                return row_id, True
         cur.execute(
             "INSERT INTO dat_files (source_path, mtime, size_bytes, active) VALUES (?, ?, ?, 1)",
             (str(path), mtime, size),
         )
-        return int(cur.lastrowid), True
+        lastrowid = cur.lastrowid
+        return (int(lastrowid) if lastrowid is not None else None), True
 
     def _clear_dat_rows(self, dat_id: int) -> None:
         cur = self.conn.cursor()
         cur.execute("DELETE FROM rom_hashes WHERE dat_id=?", (dat_id,))
         cur.execute("DELETE FROM game_names WHERE dat_id=?", (dat_id,))
 
-    def _insert_rows(self, rows: List[DatHashRow]) -> None:
+    def _insert_rows(self, rows: List[DatHashRow]) -> int:
         cur = self.conn.cursor()
+        before = int(self.conn.total_changes)
         cur.executemany(
-            "INSERT INTO rom_hashes (dat_id, platform_id, rom_name, set_name, crc32, sha1, size_bytes) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            "INSERT OR IGNORE INTO rom_hashes (dat_id, platform_id, rom_name, set_name, crc32, sha1, size_bytes) VALUES (?, ?, ?, ?, ?, ?, ?)",
             [(r.dat_id, r.platform_id, r.rom_name, r.set_name, r.crc32, r.sha1, r.size_bytes) for r in rows],
         )
+        after = int(self.conn.total_changes)
+        return max(after - before, 0)
+
+    def reset_index(self) -> None:
+        with self._lock:
+            cur = self.conn.cursor()
+            cur.execute("DELETE FROM rom_hashes")
+            cur.execute("DELETE FROM game_names")
+            cur.execute("DELETE FROM dat_files")
+            self.conn.commit()
 
     def ingest(self, paths: Iterable[str], *, cancel_event: Optional[object] = None) -> Dict[str, int]:
         processed = 0
@@ -181,8 +205,7 @@ class DatIndexSqlite:
                 rows = list(self._parse_dat_file(file_path, dat_id))
                 processed += 1
                 for i in range(0, len(rows), 10000):
-                    self._insert_rows(rows[i : i + 10000])
-                    inserted += len(rows[i : i + 10000])
+                    inserted += self._insert_rows(rows[i : i + 10000])
                 self.conn.commit()
 
         return {"processed": processed, "skipped": skipped, "inserted": inserted, "removed": removed}
@@ -328,17 +351,19 @@ class DatIndexSqlite:
             if re_header.search(line) and "name" in line.lower():
                 m = re_name.search(line)
                 if m:
-                    dat_name = m.group(1).strip()
-                    platform_id, _ = _normalize_system_name(dat_name)
+                    name = m.group(1).strip()
+                    dat_name = name
+                    platform_id, _ = _normalize_system_name(name)
             if line.strip().lower().startswith("game"):
                 m = re_name.search(line)
                 if m:
                     game_name = m.group(1).strip()
-                    cur = self.conn.cursor()
-                    cur.execute(
-                        "INSERT INTO game_names (dat_id, platform_id, game_name) VALUES (?, ?, ?)",
-                        (dat_id, platform_id, game_name.lower()),
-                    )
+                    if game_name:
+                        cur = self.conn.cursor()
+                        cur.execute(
+                            "INSERT INTO game_names (dat_id, platform_id, game_name) VALUES (?, ?, ?)",
+                            (dat_id, platform_id, game_name.lower()),
+                        )
             if re_rom.search(line):
                 rn = re_name.search(line)
                 rc = re_crc.search(line)
@@ -409,8 +434,8 @@ class DatIndexSqlite:
         return (row["platform_id"] or "Unknown", int(row["dat_id"]))
 
 
-def build_index_from_config(config: Optional[Config] = None, *, cancel_event: Optional[object] = None) -> Dict[str, int]:
-    cfg = config or load_config()
+def build_index_from_config(config: Optional[object] = None, *, cancel_event: Optional[object] = None) -> Dict[str, int]:
+    cfg = _normalize_config(config)
     dat_cfg = cfg.get("dats", {}) or {}
     paths = dat_cfg.get("import_paths") or []
     if isinstance(paths, str):

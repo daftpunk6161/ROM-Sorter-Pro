@@ -1,157 +1,281 @@
-"""ROM Sorter Pro - MVP Tk GUI (fallback).
+"""ROM Sorter Pro - MVP Tk GUI (fallback)."""
 
-Used only when Qt is not available.
-
-MVP requirements implemented here:
-- Source folder picker
-- Destination folder picker
-- Buttons: Scan, Preview Sort (Dry-run), Execute Sort, Cancel
-- Progress bar + live log (ring buffer)
-- Result list (table): InputPath, DetectedConsole/Type, Confidence, Signals, Candidates, PlannedTargetPath, Action, Status/Error
-- Worker thread + queue-based UI updates + cancel token
-"""
-
-from __future__ import annotations
-
-import os
+import importlib
+import json
 import logging
-import time
-import threading
-import traceback
+import os
 import re
 import subprocess
 import sys
-import json
+import threading
+import time
+import traceback
 from pathlib import Path
-from queue import Queue, Empty
-from typing import Any, Callable, Optional, Tuple
+from queue import Empty, Queue
+from typing import Any, Callable, Literal, Optional, Tuple, cast
 
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
-from tkinter import font as tkfont
+import tkinter.font as tkfont
+from tkinter import filedialog, messagebox, ttk
 
-from ...app.api import (
-    CancelToken,
-    ConversionAuditReport,
-    DatSourceReport,
-    ScanItem,
-    ScanResult,
-    SortPlan,
-    SortReport,
-    audit_conversion_candidates,
-    analyze_dat_sources,
-    build_dat_index,
-    build_library_report,
-    execute_sort,
-    filter_scan_items,
-    get_dat_sources,
-    infer_languages_and_version_from_name,
-    infer_region_from_name,
-    load_sort_resume_state,
-    normalize_input,
-    plan_sort,
-    run_scan,
-    save_dat_sources,
-)
-from ...config.io import load_config, save_config
-from ...core.dat_index_sqlite import DatIndexSqlite
-from ...dnd_support import (
-    DropFrame,
-    get_dnd_mode,
-    init_drag_drop,
-    is_dnd_available,
-    patch_tkinter_root,
-)
-from ...database.database_gui import DatabaseManagerDialog
-from ...ui.theme_manager import ThemeManager
-from ...utils.external_tools import probe_igir, igir_plan, igir_execute
-from .export_utils import (
-    audit_report_to_dict,
-    plan_report_to_dict,
-    scan_report_to_dict,
-    write_audit_csv,
-    write_emulationstation_gamelist,
-    write_json,
-    write_launchbox_csv,
-    write_plan_csv,
-    write_scan_csv,
-)
-from .model_utils import (
-    format_candidates,
-    format_confidence,
-    format_signals,
-    rom_display_name,
+
+def _import_symbol(module_names: tuple[str, ...], symbol: str):
+    for module_name in module_names:
+        try:
+            module = importlib.import_module(module_name)
+        except Exception:
+            continue
+        if hasattr(module, symbol):
+            return getattr(module, symbol)
+    return None
+
+
+def _missing_feature(name: str):
+    def _raise(*_args, **_kwargs):
+        raise RuntimeError(f"{name} ist nicht verfügbar.")
+    return _raise
+
+
+def _missing_type(name: str):
+    class _Missing:
+        def __init__(self, *_args, **_kwargs):
+            raise RuntimeError(f"{name} ist nicht verfügbar.")
+    _Missing.__name__ = name
+    return _Missing
+
+
+ThemeManager = cast(
+    Any,
+    _import_symbol(
+        ("src.ui.theme_manager", "src.ui.theme", "ui.theme_manager", "ui.theme"),
+        "ThemeManager",
+    )
+    or _missing_type("ThemeManager"),
 )
 
+_DropFrame = _import_symbol(
+    ("src.ui.mvp.tk_helpers", "src.ui.mvp.tk_widgets", "src.ui.tk_helpers", "src.ui.tk_widgets"),
+    "DropFrame",
+)
 
-def _load_version() -> str:
-    config_path = Path(__file__).resolve().parents[3] / "src" / "config.json"
-    try:
-        data = json.loads(config_path.read_text(encoding="utf-8"))
-        meta = data.get("_metadata", {}) if isinstance(data, dict) else {}
-        version = str(meta.get("version") or "").strip()
-        return version or "1.0.0"
-    except Exception:
-        return "1.0.0"
+init_drag_drop = _import_symbol(
+    ("src.ui.mvp.tk_helpers", "src.ui.mvp.tk_widgets", "src.ui.tk_helpers", "src.ui.tk_widgets"),
+    "init_drag_drop",
+) or (lambda: False)
+
+_ToolTipImpl = _import_symbol(
+    ("src.ui.mvp.tk_helpers", "src.ui.mvp.tk_widgets", "src.ui.tk_helpers", "src.ui.tk_widgets"),
+    "_ToolTip",
+)
+
+if _DropFrame is None:
+    class DropFrame(ttk.Frame):
+        def __init__(self, *args, **kwargs):
+            kwargs.pop("drop_callback", None)
+            super().__init__(*args, **kwargs)
+else:
+    DropFrame = _DropFrame
+
+DropFrame = cast(Any, DropFrame)
 
 
-class _ToolTip:
-    def __init__(self, widget: tk.Widget, text: str) -> None:
-        self._widget = widget
-        self._text = text
-        self._tip_window: Optional[tk.Toplevel] = None
-        widget.bind("<Enter>", self._show, add="+")
-        widget.bind("<Leave>", self._hide, add="+")
-
-    def _show(self, _event: object = None) -> None:
-        if self._tip_window or not self._text:
+if _ToolTipImpl is None:
+    class _ToolTip:
+        def __init__(self, *_args, **_kwargs):
             return
-        try:
-            x = self._widget.winfo_rootx() + 16
-            y = self._widget.winfo_rooty() + self._widget.winfo_height() + 4
-            self._tip_window = tk.Toplevel(self._widget)
-            self._tip_window.wm_overrideredirect(True)
-            self._tip_window.wm_geometry(f"+{x}+{y}")
-            label = tk.Label(
-                self._tip_window,
-                text=self._text,
-                background="#ffffe0",
-                foreground="#000000",
-                relief="solid",
-                borderwidth=1,
-                font=("TkDefaultFont", 9),
-            )
-            label.pack(ipadx=4, ipady=2)
-        except Exception:
-            self._tip_window = None
+else:
+    _ToolTip = _ToolTipImpl
 
-    def _hide(self, _event: object = None) -> None:
-        try:
-            if self._tip_window is not None:
-                self._tip_window.destroy()
-        except Exception:
-            pass
-        self._tip_window = None
+_ToolTip = cast(Any, _ToolTip)
+
+
+run_scan = _import_symbol(("src.app.controller", "app.controller"), "run_scan") or _missing_feature("run_scan")
+plan_sort = _import_symbol(("src.app.controller", "app.controller"), "plan_sort") or _missing_feature("plan_sort")
+execute_sort = _import_symbol(("src.app.controller", "app.controller"), "execute_sort") or _missing_feature("execute_sort")
+
+load_config = _import_symbol(("src.config", "src.core.config", "config"), "load_config") or _missing_feature("load_config")
+save_config = _import_symbol(("src.config", "src.core.config", "config"), "save_config") or _missing_feature("save_config")
+
+ScanResult = _import_symbol(
+    ("src.scanning.models", "src.scanning.core", "src.core.models", "src.core.scan"),
+    "ScanResult",
+) or _missing_type("ScanResult")
+ScanItem = _import_symbol(
+    ("src.scanning.models", "src.scanning.core", "src.core.models", "src.core.scan"),
+    "ScanItem",
+) or _missing_type("ScanItem")
+SortPlan = _import_symbol(
+    ("src.core.sorting", "src.core.models", "src.core.sort"),
+    "SortPlan",
+) or _missing_type("SortPlan")
+SortReport = _import_symbol(
+    ("src.core.sorting", "src.core.models", "src.core.sort"),
+    "SortReport",
+) or _missing_type("SortReport")
+ConversionAuditReport = _import_symbol(
+    ("src.conversion.audit", "src.core.conversion", "src.core.audit"),
+    "ConversionAuditReport",
+) or _missing_type("ConversionAuditReport")
+
+SortMode = _import_symbol(
+    ("src.core.sorting", "src.core.models", "src.core.sort"),
+    "SortMode",
+) or _missing_type("SortMode")
+ConflictPolicy = _import_symbol(
+    ("src.core.sorting", "src.core.models", "src.core.sort"),
+    "ConflictPolicy",
+) or _missing_type("ConflictPolicy")
+ConversionMode = _import_symbol(
+    ("src.core.sorting", "src.core.models", "src.core.sort"),
+    "ConversionMode",
+) or _missing_type("ConversionMode")
+
+filter_scan_items = _import_symbol(
+    ("src.scanning.filters", "src.core.filters", "src.scanning.filtering"),
+    "filter_scan_items",
+) or _missing_feature("filter_scan_items")
+infer_languages_and_version_from_name = _import_symbol(
+    ("src.scanning.infer", "src.core.infer", "src.core.naming"),
+    "infer_languages_and_version_from_name",
+) or _missing_feature("infer_languages_and_version_from_name")
+infer_region_from_name = _import_symbol(
+    ("src.scanning.infer", "src.core.infer", "src.core.naming"),
+    "infer_region_from_name",
+) or _missing_feature("infer_region_from_name")
+normalize_input = _import_symbol(
+    ("src.scanning.normalize", "src.core.normalize", "src.scanning.normalization"),
+    "normalize_input",
+) or _missing_feature("normalize_input")
+format_confidence = _import_symbol(
+    ("src.scanning.formatters", "src.core.formatting", "src.scanning.formatting"),
+    "format_confidence",
+) or _missing_feature("format_confidence")
+format_signals = _import_symbol(
+    ("src.scanning.formatters", "src.core.formatting", "src.scanning.formatting"),
+    "format_signals",
+) or _missing_feature("format_signals")
+format_candidates = _import_symbol(
+    ("src.scanning.formatters", "src.core.formatting", "src.scanning.formatting"),
+    "format_candidates",
+) or _missing_feature("format_candidates")
+rom_display_name = _import_symbol(
+    ("src.scanning.formatters", "src.core.naming", "src.scanning.naming"),
+    "rom_display_name",
+) or _missing_feature("rom_display_name")
+
+audit_conversion_candidates = _import_symbol(
+    ("src.conversion.audit", "src.core.conversion", "src.conversion.core"),
+    "audit_conversion_candidates",
+) or _missing_feature("audit_conversion_candidates")
+audit_report_to_dict = _import_symbol(
+    ("src.conversion.audit", "src.core.reports", "src.core.reporting"),
+    "audit_report_to_dict",
+) or _missing_feature("audit_report_to_dict")
+scan_report_to_dict = _import_symbol(
+    ("src.core.reports", "src.core.reporting", "src.reporting"),
+    "scan_report_to_dict",
+) or _missing_feature("scan_report_to_dict")
+plan_report_to_dict = _import_symbol(
+    ("src.core.reports", "src.core.reporting", "src.reporting"),
+    "plan_report_to_dict",
+) or _missing_feature("plan_report_to_dict")
+build_library_report = _import_symbol(
+    ("src.core.reports", "src.core.reporting", "src.reporting"),
+    "build_library_report",
+) or _missing_feature("build_library_report")
+
+write_json = _import_symbol(("src.core.io", "src.core.reports", "src.reporting"), "write_json") or _missing_feature("write_json")
+write_scan_csv = _import_symbol(("src.core.reports", "src.reporting"), "write_scan_csv") or _missing_feature("write_scan_csv")
+write_plan_csv = _import_symbol(("src.core.reports", "src.reporting"), "write_plan_csv") or _missing_feature("write_plan_csv")
+write_audit_csv = _import_symbol(("src.core.reports", "src.reporting"), "write_audit_csv") or _missing_feature("write_audit_csv")
+write_emulationstation_gamelist = _import_symbol(
+    ("src.core.reports", "src.reporting"),
+    "write_emulationstation_gamelist",
+) or _missing_feature("write_emulationstation_gamelist")
+write_launchbox_csv = _import_symbol(
+    ("src.core.reports", "src.reporting"),
+    "write_launchbox_csv",
+) or _missing_feature("write_launchbox_csv")
+
+load_sort_resume_state = _import_symbol(
+    ("src.core.resume", "src.core.sort_resume"),
+    "load_sort_resume_state",
+) or _missing_feature("load_sort_resume_state")
+
+DatIndexSqlite = cast(
+    Any,
+    _import_symbol(
+    ("src.database.dat_index", "src.database.datindex"),
+    "DatIndexSqlite",
+) or _missing_type("DatIndexSqlite"),
+)
+DatSourceReport = _import_symbol(
+    ("src.database.dat_index", "src.database.datindex"),
+    "DatSourceReport",
+) or _missing_type("DatSourceReport")
+analyze_dat_sources = _import_symbol(
+    ("src.database.dat_index", "src.database.datindex"),
+    "analyze_dat_sources",
+) or _missing_feature("analyze_dat_sources")
+build_dat_index = _import_symbol(
+    ("src.database.dat_index", "src.database.datindex"),
+    "build_dat_index",
+) or _missing_feature("build_dat_index")
+get_dat_sources = _import_symbol(
+    ("src.database.dat_index", "src.database.datindex"),
+    "get_dat_sources",
+) or _missing_feature("get_dat_sources")
+save_dat_sources = _import_symbol(
+    ("src.database.dat_index", "src.database.datindex"),
+    "save_dat_sources",
+) or _missing_feature("save_dat_sources")
+
+DatabaseManagerDialog = _import_symbol(
+    ("src.database.manager", "src.ui.database.manager"),
+    "DatabaseManagerDialog",
+) or _missing_type("DatabaseManagerDialog")
+
+probe_igir = _import_symbol(
+    ("src.integrations.igir", "src.tools.igir", "src.igir"),
+    "probe_igir",
+) or _missing_feature("probe_igir")
+igir_plan = _import_symbol(
+    ("src.integrations.igir", "src.tools.igir", "src.igir"),
+    "igir_plan",
+) or _missing_feature("igir_plan")
+igir_execute = _import_symbol(
+    ("src.integrations.igir", "src.tools.igir", "src.igir"),
+    "igir_execute",
+) or _missing_feature("igir_execute")
+
+CancelToken = cast(
+    Any,
+    _import_symbol(
+        ("src.core.cancel", "src.core.cancel_token", "src.core.utils"),
+        "CancelToken",
+    )
+    or _missing_type("CancelToken"),
+)
+
+ScanResultType = Any
+ScanItemType = Any
+SortPlanType = Any
+SortReportType = Any
+ConversionAuditReportType = Any
+DatSourceReportType = Any
+DatIndexSqliteType = Any
+CancelTokenType = Any
 
 
 class TkMVPApp:
-    def __init__(self):
+    def __init__(self) -> None:
         self.root = tk.Tk()
-        self.root.title(f"ROM Sorter Pro v{_load_version()} - MVP GUI")
-        self.root.geometry("900x600")
-        self.root.minsize(800, 500)
-
-        self._dnd_available = self._is_drag_drop_enabled() and is_dnd_available()
-        if self._dnd_available and get_dnd_mode() == "tkdnd":
-            patch_tkinter_root(self.root)
-
-        self._queue: "Queue[Tuple[str, Any]]" = Queue()
-        self._cancel_token = CancelToken()
-        self._worker_thread: Optional[threading.Thread] = None
-
-        self._scan_result: Optional[ScanResult] = None
-        self._sort_plan: Optional[SortPlan] = None
-        self._audit_report: Optional[ConversionAuditReport] = None
+        self._queue: Queue[tuple[str, object]] = Queue()
+        self._dnd_available = bool(init_drag_drop())
+        self._cancel_token: CancelTokenType = CancelToken()
+        self._scan_result: Optional[ScanResultType] = None
+        self._sort_plan: Optional[SortPlanType] = None
+        self._audit_report: Optional[ConversionAuditReportType] = None
         self._plan_row_iids: list[str] = []
         self._row_meta: dict[str, dict[str, object]] = {}
         self._failed_action_indices: set[int] = set()
@@ -180,10 +304,10 @@ class TkMVPApp:
         self.preserve_structure_var = tk.BooleanVar(value=False)
         self.dat_auto_load_var = tk.BooleanVar(value=False)
 
-        self._theme_manager = ThemeManager()
+        self._theme_manager: Any = ThemeManager()
         self.theme_var = tk.StringVar(value=self._theme_manager.get_current_theme_name())
         self._load_theme_from_config()
-        self._dat_index: Optional[DatIndexSqlite] = None
+        self._dat_index: Optional[DatIndexSqliteType] = None
         self._dat_poll_job: Optional[str] = None
         self._igir_cancel_token = CancelToken()
         self._igir_thread: Optional[threading.Thread] = None
@@ -194,12 +318,14 @@ class TkMVPApp:
         self._igir_selected_profile: Optional[str] = None
         self.igir_copy_first_var = tk.BooleanVar(value=False)
         self._dat_index_thread: Optional[threading.Thread] = None
-        self._dat_index_cancel_token: Optional[CancelToken] = None
+        self._dat_index_cancel_token: Optional[CancelTokenType] = None
         self.dashboard_source_var = tk.StringVar(value="-")
         self.dashboard_dest_var = tk.StringVar(value="-")
         self.dashboard_status_var = tk.StringVar(value="-")
         self.dashboard_dat_var = tk.StringVar(value="-")
         self.preset_name_var = tk.StringVar()
+        self.queue_mode_var = tk.BooleanVar(value=False)
+        self.queue_priority_var = tk.StringVar(value="Normal")
 
         self._build_ui()
         try:
@@ -224,8 +350,6 @@ class TkMVPApp:
         self._job_active: Optional[dict] = None
         self._job_paused = False
         self._job_counter = 0
-        self.queue_mode_var = tk.BooleanVar(value=False)
-        self.queue_priority_var = tk.StringVar(value="Normal")
         self._current_op: Optional[str] = None
         self._install_log_handler()
         self._apply_theme(self._theme_manager.get_theme())
@@ -707,12 +831,12 @@ class TkMVPApp:
             text="Frontend LaunchBox exportieren",
             command=self._export_frontend_launchbox,
         )
-        def _safe_pack(widget: ttk.Widget, *, side=tk.LEFT, padx=(0, 0)) -> None:
-            try:
-                if widget.master is not conversions_row_bottom:
-                    widget.configure(master=conversions_row_bottom)
-            except Exception:
-                pass
+        def _safe_pack(
+            widget: ttk.Widget,
+            *,
+            side: Literal["left", "right", "top", "bottom"] = tk.LEFT,
+            padx=(0, 0),
+        ) -> None:
             try:
                 widget.pack(side=side, padx=padx)
             except Exception:
@@ -1829,7 +1953,7 @@ class TkMVPApp:
             def _get_paths() -> list[str]:
                 return [str(listbox.get(i)) for i in range(listbox.size())]
 
-            def _format_report(report: DatSourceReport) -> str:
+            def _format_report(report: DatSourceReportType) -> str:
                 total = len(report.paths)
                 existing = len(report.existing_paths)
                 missing = len(report.missing_paths)
@@ -2002,31 +2126,6 @@ class TkMVPApp:
         if path:
             self.dest_var.set(path)
             self._append_log(f"DnD destination: {path}")
-
-    def _choose_source(self) -> None:
-        directory = filedialog.askdirectory(title="Select source folder")
-        if directory:
-            self.source_var.set(directory)
-
-    def _choose_dest(self) -> None:
-        directory = filedialog.askdirectory(title="Select destination folder")
-        if directory:
-            self.dest_var.set(directory)
-
-    def _open_dest(self) -> None:
-        directory = self.dest_var.get().strip()
-        if not directory:
-            messagebox.showinfo("Kein Ziel", "Bitte zuerst einen Zielordner wählen.")
-            return
-        try:
-            if os.name == "nt":
-                os.startfile(directory)  # type: ignore[attr-defined]
-            elif sys.platform == "darwin":
-                subprocess.Popen(["open", directory])
-            else:
-                subprocess.Popen(["xdg-open", directory])
-        except Exception:
-            messagebox.showwarning("Öffnen fehlgeschlagen", "Zielordner konnte nicht geöffnet werden.")
 
     def _append_log(self, text: str) -> None:
         if not text:
@@ -2342,65 +2441,6 @@ class TkMVPApp:
         except Exception:
             return
 
-    def _on_row_selected(self, _event: object = None) -> None:
-        try:
-            selection = self.table.selection()
-            if not selection:
-                return
-            iid = selection[0]
-            values = self.table.item(iid, "values")
-            if not values:
-                return
-            status = values[0] if len(values) >= 1 else ""
-            confidence = values[5] if len(values) >= 6 else ""
-            signals = values[6] if len(values) >= 7 else ""
-            candidates = values[7] if len(values) >= 8 else ""
-            reason = values[10] if len(values) >= 11 else ""
-            full = values[2] if len(values) >= 3 else ""
-
-            meta = self._row_meta.get(str(iid), {})
-            source = meta.get("source") or "-"
-            exact = meta.get("is_exact")
-            if exact is True:
-                exact_text = "ja"
-            elif exact is False:
-                exact_text = "nein"
-            else:
-                exact_text = "-"
-
-            extra_lines = []
-            if meta.get("action"):
-                extra_lines.append(f"Aktion: {meta.get('action')}")
-            if meta.get("target"):
-                extra_lines.append(f"Ziel: {meta.get('target')}")
-            if meta.get("conversion_rule"):
-                extra_lines.append(f"Regel: {meta.get('conversion_rule')}")
-            if meta.get("conversion_tool"):
-                extra_lines.append(f"Tool: {meta.get('conversion_tool')}")
-            if meta.get("conversion_output"):
-                extra_lines.append(f"Output: {meta.get('conversion_output')}")
-            if meta.get("current_extension"):
-                extra_lines.append(f"Aktuell: {meta.get('current_extension')}")
-            if meta.get("recommended_extension"):
-                extra_lines.append(f"Empfohlen: {meta.get('recommended_extension')}")
-            if meta.get("rule_name"):
-                extra_lines.append(f"Audit‑Regel: {meta.get('rule_name')}")
-            if meta.get("tool_key"):
-                extra_lines.append(f"Audit‑Tool: {meta.get('tool_key')}")
-            if meta.get("reason"):
-                extra_lines.append(f"Hinweis: {meta.get('reason')}")
-            if reason:
-                extra_lines.append(f"Grund: {reason}")
-
-            self._set_details(
-                f"{full}\n\nConfidence: {confidence}\nQuelle: {source}\nExact: {exact_text}"
-                f"\nSignale: {signals}\nKandidaten: {candidates}"
-                + ("\n" + "\n".join(extra_lines) if extra_lines else "")
-                + f"\n\n{status}"
-            )
-        except Exception:
-            return
-
     def _format_confidence(self, value: Optional[float]) -> str:
         return format_confidence(value)
 
@@ -2410,7 +2450,7 @@ class TkMVPApp:
     def _format_candidates(self, item: object) -> str:
         return format_candidates(item)
 
-    def _format_reason(self, item: ScanItem) -> str:
+    def _format_reason(self, item: ScanItemType) -> str:
         raw = item.raw or {}
         reason = raw.get("reason") or raw.get("policy") or ""
         if not reason:
@@ -2667,7 +2707,7 @@ class TkMVPApp:
         if "All" in values and len(values) > 1:
             self._select_listbox_values(listbox, ["All"])
 
-    def _get_filtered_scan_result(self) -> ScanResult:
+    def _get_filtered_scan_result(self) -> ScanResultType:
         if self._scan_result is None:
             raise RuntimeError("No scan result available")
 
@@ -2725,7 +2765,7 @@ class TkMVPApp:
             return None
         return value
 
-    def _is_confident_for_display(self, item: "ScanItem", min_confidence: float) -> bool:
+    def _is_confident_for_display(self, item: ScanItemType, min_confidence: float) -> bool:
         system = (item.detected_system or "Unknown").strip()
         if not system or system == "Unknown":
             return False
@@ -3101,13 +3141,14 @@ class TkMVPApp:
         return bool(source and dest)
 
     def _update_quick_actions(self) -> None:
+        running = self._worker_thread is not None and self._worker_thread.is_alive()
+        state_normal = "disabled" if running else "normal"
         ready = self._has_required_paths()
         _ = ready
         self.dat_auto_load_check.configure(state=state_normal)
         self.btn_clear_dat_cache.configure(state=state_normal)
         if not running:
             self._update_resume_buttons()
-        self._refresh_dashboard()
 
     def _refresh_dashboard(self) -> None:
         try:
@@ -3154,253 +3195,6 @@ class TkMVPApp:
         self.btn_resume.configure(state="normal" if self._can_resume() else "disabled")
         self.btn_retry_failed.configure(state="normal" if self._can_retry_failed() else "disabled")
 
-    def _on_filters_changed(self, _event: object = None) -> None:
-        # Changing filters invalidates existing plan.
-        if self._sort_plan is not None:
-            self._sort_plan = None
-            self._append_log("Filters changed: sort plan invalidated. Please run Preview Sort again.")
-
-        if self._scan_result is not None:
-            self._populate_scan_table(self._get_filtered_scan_result())
-
-    def _on_filter_listbox_changed(self, _event: object = None) -> None:
-        self._enforce_all_listbox(self.lang_filter_list)
-        self._enforce_all_listbox(self.region_filter_list)
-        self._on_filters_changed()
-
-    def _clear_filters(self) -> None:
-        self._select_listbox_values(self.lang_filter_list, ["All"])
-        self.ver_filter_var.set("All")
-        self._select_listbox_values(self.region_filter_list, ["All"])
-        self.extension_filter_var.set("")
-        self.min_size_var.set("")
-        self.max_size_var.set("")
-        self.dedupe_var.set(True)
-        self.hide_unknown_var.set(False)
-        self._on_filters_changed()
-
-    def _get_listbox_values(self, listbox: tk.Listbox) -> list[str]:
-        selection = listbox.curselection()
-        values = [str(listbox.get(idx)) for idx in selection]
-        return values if values else ["All"]
-
-    def _select_listbox_values(self, listbox: tk.Listbox, values: list[str]) -> None:
-        listbox.selection_clear(0, "end")
-        values_set = {str(v) for v in values if str(v)} or {"All"}
-        for idx in range(listbox.size()):
-            if str(listbox.get(idx)) in values_set:
-                listbox.selection_set(idx)
-        if not listbox.curselection():
-            for idx in range(listbox.size()):
-                if str(listbox.get(idx)) == "All":
-                    listbox.selection_set(idx)
-                    break
-
-    def _enforce_all_listbox(self, listbox: tk.Listbox) -> None:
-        values = self._get_listbox_values(listbox)
-        if "All" in values and len(values) > 1:
-            self._select_listbox_values(listbox, ["All"])
-
-    def _validate_size_entry(self, value: str) -> bool:
-        if value == "":
-            return True
-        if value in (".", ","):
-            return True
-        if not re.match(r"^\d*(?:[\.,]\d*)?$", value):
-            return False
-        try:
-            return float(value.replace(",", ".")) >= 0
-        except Exception:
-            return False
-
-    def _get_filtered_scan_result(self) -> ScanResult:
-        if self._scan_result is None:
-            raise RuntimeError("No scan result available")
-
-        lang = self._get_listbox_values(self.lang_filter_list)
-        ver = (self.ver_filter_var.get() or "All").strip() or "All"
-        region = self._get_listbox_values(self.region_filter_list)
-        extension_filter = (self.extension_filter_var.get() or "").strip()
-        min_size = self._parse_size_mb(self.min_size_var.get())
-        max_size = self._parse_size_mb(self.max_size_var.get())
-        dedupe = bool(self.dedupe_var.get())
-        hide_unknown = bool(self.hide_unknown_var.get())
-
-        filtered = filter_scan_items(
-            list(self._scan_result.items),
-            language_filter=lang,
-            version_filter=ver,
-            region_filter=region,
-            extension_filter=extension_filter,
-            min_size_mb=min_size,
-            max_size_mb=max_size,
-            dedupe_variants=dedupe,
-        )
-
-        if hide_unknown:
-            min_conf = self._get_min_confidence()
-            filtered = [it for it in filtered if self._is_confident_for_display(it, min_conf)]
-
-        return ScanResult(
-            source_path=self._scan_result.source_path,
-            items=filtered,
-            stats=dict(self._scan_result.stats),
-            cancelled=bool(self._scan_result.cancelled),
-        )
-
-    def _get_min_confidence(self) -> float:
-        try:
-            from ...config.io import load_config
-            cfg = load_config()
-        except Exception:
-            return 0.95
-        try:
-            sorting_cfg = cfg.get("features", {}).get("sorting", {}) or {}
-            return float(sorting_cfg.get("confidence_threshold", 0.95))
-        except Exception:
-            return 0.95
-
-    def _parse_size_mb(self, text: str) -> Optional[float]:
-        cleaned = (text or "").strip()
-        if not cleaned:
-            return None
-        try:
-            value = float(cleaned)
-        except Exception:
-            return None
-        if value < 0:
-            return None
-        return value
-
-    def _is_confident_for_display(self, item: "ScanItem", min_confidence: float) -> bool:
-        system = (item.detected_system or "Unknown").strip()
-        if not system or system == "Unknown":
-            return False
-        source = str(item.detection_source or "").lower()
-        if source.startswith("dat:"):
-            return True
-        try:
-            conf = float(item.detection_confidence or 0.0)
-        except Exception:
-            conf = 0.0
-        return conf >= min_confidence
-
-    def _refresh_filter_options(self) -> None:
-        if self._scan_result is None:
-            lang_values, ver_values, region_values = self._load_filter_defaults()
-            self.lang_filter_list.delete(0, "end")
-            for value in lang_values:
-                self.lang_filter_list.insert("end", value)
-            self._select_listbox_values(self.lang_filter_list, ["All"])
-            self.ver_filter_combo.configure(values=tuple(ver_values))
-            self.ver_filter_var.set(ver_values[0])
-            self.region_filter_list.delete(0, "end")
-            for value in region_values:
-                self.region_filter_list.insert("end", value)
-            self._select_listbox_values(self.region_filter_list, ["All"])
-            return
-
-        langs = set()
-        has_unknown_lang = False
-        vers = set()
-        has_unknown_ver = False
-
-        regions = set()
-        has_unknown_region = False
-
-        for item in self._scan_result.items:
-            item_langs = getattr(item, "languages", ()) or ()
-            if not item_langs:
-                try:
-                    inferred_langs, inferred_ver = infer_languages_and_version_from_name(item.input_path)
-                    if inferred_langs:
-                        item_langs = inferred_langs
-                    if inferred_ver and not getattr(item, "version", None):
-                        vers.add(str(inferred_ver))
-                except Exception:
-                    pass
-            if not item_langs:
-                has_unknown_lang = True
-            else:
-                langs.update(item_langs)
-
-            v = getattr(item, "version", None)
-            if not v:
-                has_unknown_ver = True
-            else:
-                vers.add(str(v))
-
-            r = getattr(item, "region", None)
-            if not r:
-                try:
-                    r = infer_region_from_name(item.input_path)
-                except Exception:
-                    r = None
-            if not r or str(r) == "Unknown":
-                has_unknown_region = True
-            else:
-                regions.add(str(r))
-
-        lang_values = ["All"]
-        if has_unknown_lang:
-            lang_values.append("Unknown")
-        lang_values.extend(sorted(langs))
-
-        ver_values = ["All"]
-        if has_unknown_ver:
-            ver_values.append("Unknown")
-        ver_values.extend(sorted(vers))
-
-        region_values = ["All"]
-        if has_unknown_region:
-            region_values.append("Unknown")
-        region_values.extend(sorted(regions))
-
-        current_langs = self._get_listbox_values(self.lang_filter_list)
-        self.lang_filter_list.delete(0, "end")
-        for value in lang_values:
-            self.lang_filter_list.insert("end", value)
-        self._select_listbox_values(self.lang_filter_list, current_langs)
-
-        self.ver_filter_combo.configure(values=tuple(ver_values))
-        if self.ver_filter_var.get() not in ver_values:
-            self.ver_filter_var.set("All")
-
-        current_regions = self._get_listbox_values(self.region_filter_list)
-        self.region_filter_list.delete(0, "end")
-        for value in region_values:
-            self.region_filter_list.insert("end", value)
-        self._select_listbox_values(self.region_filter_list, current_regions)
-
-    def _load_filter_defaults(self) -> Tuple[list[str], list[str], list[str]]:
-        lang_values = ["All", "Unknown"]
-        ver_values = ["All", "Unknown"]
-        region_values = ["All", "Unknown"]
-
-        try:
-            cfg = load_config()
-            prioritization = cfg.get("prioritization", {}) or {}
-            langs = prioritization.get("language_order", []) or []
-            regions = prioritization.get("region_order", []) or []
-            lang_priority = prioritization.get("language_priorities", {}) or {}
-            region_priority = prioritization.get("region_priorities", {}) or {}
-            for lang in langs:
-                if str(lang) not in lang_values:
-                    lang_values.append(str(lang))
-            for region in regions:
-                if str(region) not in region_values:
-                    region_values.append(str(region))
-            for lang in lang_priority.keys():
-                if str(lang) not in lang_values:
-                    lang_values.append(str(lang))
-            for region in region_priority.keys():
-                if str(region) not in region_values:
-                    region_values.append(str(region))
-        except Exception:
-            pass
-
-        return lang_values, ver_values, region_values
-
     def _validate_paths(self, *, require_dest: bool = True) -> Optional[Tuple[str, str]]:
         source = self.source_var.get().strip()
         dest = self.dest_var.get().strip()
@@ -3429,7 +3223,7 @@ class TkMVPApp:
         except Exception:
             return
 
-    def _populate_scan_table(self, scan: ScanResult) -> None:
+    def _populate_scan_table(self, scan: ScanResultType) -> None:
         self._clear_table()
         for item in scan.items:
             min_conf = self._get_min_confidence()
@@ -3477,7 +3271,7 @@ class TkMVPApp:
 
         self._update_results_empty_state()
 
-    def _populate_plan_table(self, plan: SortPlan) -> None:
+    def _populate_plan_table(self, plan: SortPlanType) -> None:
         self._clear_table()
         self._plan_row_iids = []
         self._set_details("")
@@ -3525,7 +3319,7 @@ class TkMVPApp:
 
         self._update_results_empty_state()
 
-    def _populate_audit_table(self, report: ConversionAuditReport) -> None:
+    def _populate_audit_table(self, report: ConversionAuditReportType) -> None:
         self._clear_table()
         self._plan_row_iids = []
         self._set_details("")
@@ -3575,7 +3369,7 @@ class TkMVPApp:
 
         self._update_results_empty_state()
 
-    def _append_summary_row(self, report: SortReport) -> None:
+    def _append_summary_row(self, report: SortReportType) -> None:
         text = (
             f"Processed: {report.processed} | Copied: {report.copied} | Moved: {report.moved} | "
             f"Skipped: {report.skipped} | Errors: {len(report.errors)} | Cancelled: {report.cancelled}"
@@ -3661,7 +3455,11 @@ class TkMVPApp:
                     return
 
                 if op == "execute":
-                    total_actions = len(self._sort_plan.actions if self._sort_plan else [])
+                    sort_plan = self._sort_plan
+                    if sort_plan is None:
+                        self._queue.put(("error", ("Kein Sortierplan", "Sortierplan fehlt.")))
+                        return
+                    total_actions = len(sort_plan.actions)
                     if only_indices:
                         filtered = [i for i in only_indices if 0 <= int(i) < total_actions]
                         total = len(set(filtered))
@@ -3670,7 +3468,7 @@ class TkMVPApp:
                     else:
                         total = total_actions
                     if conversion_mode != "all":
-                        convert_count = sum(1 for action in self._sort_plan.actions if action.action == "convert")
+                        convert_count = sum(1 for action in sort_plan.actions if action.action == "convert")
                         if conversion_mode == "only":
                             total = convert_count
                         elif conversion_mode == "skip":
@@ -3683,7 +3481,7 @@ class TkMVPApp:
                         )
                     )
                     report = execute_sort(
-                        self._sort_plan,
+                        sort_plan,
                         progress_cb=lambda c, t: self._queue.put(("progress", (int(c), int(t)))),
                         log_cb=lambda msg: self._queue.put(("log", str(msg))),
                         action_status_cb=lambda i, status: self._queue.put(("row_status", (int(i), str(status)))),
@@ -3692,7 +3490,7 @@ class TkMVPApp:
                         resume_path=resume_path,
                         start_index=start_index,
                         only_indices=only_indices,
-                        conversion_mode=conversion_mode,
+                        conversion_mode=str(conversion_mode),
                     )
                     self._queue.put(
                         (
@@ -3787,13 +3585,13 @@ class TkMVPApp:
         self._update_resume_buttons()
         self._start_op("audit")
 
-    def _audit_report_to_dict(self, report: ConversionAuditReport) -> dict:
+    def _audit_report_to_dict(self, report: ConversionAuditReportType) -> dict:
         return audit_report_to_dict(report)
 
-    def _scan_report_to_dict(self, scan: ScanResult) -> dict:
+    def _scan_report_to_dict(self, scan: ScanResultType) -> dict:
         return scan_report_to_dict(scan)
 
-    def _plan_report_to_dict(self, plan: SortPlan) -> dict:
+    def _plan_report_to_dict(self, plan: SortPlanType) -> dict:
         return plan_report_to_dict(plan)
 
     def _export_scan_json(self) -> None:
@@ -3974,6 +3772,8 @@ class TkMVPApp:
                 elif event == "dat":
                     self.dat_status_var.set(str(payload))
                 elif event == "phase":
+                    if not isinstance(payload, tuple) or len(payload) != 2:
+                        continue
                     phase, total = payload
                     if phase == "scan":
                         self.status_var.set("Scanning…")
@@ -3988,6 +3788,8 @@ class TkMVPApp:
                         self.status_var.set("Checking conversions…")
                         self.progress.configure(mode="determinate", maximum=max(1, int(total)), value=0)
                 elif event == "progress":
+                    if not isinstance(payload, tuple) or len(payload) != 2:
+                        continue
                     current, total = payload
                     if total and total > 0:
                         self.progress.configure(mode="determinate", maximum=int(total), value=int(current))
@@ -3995,6 +3797,8 @@ class TkMVPApp:
                         self.progress.configure(mode="indeterminate")
                         self.progress.start(20)
                 elif event == "row_status":
+                    if not isinstance(payload, tuple) or len(payload) != 2:
+                        continue
                     row_index, status = payload
                     try:
                         row = int(row_index)
@@ -4008,7 +3812,7 @@ class TkMVPApp:
                     except Exception:
                         continue
                 elif event == "scan_done":
-                    scan = payload
+                    scan = cast(Any, payload)
                     self._scan_result = scan
                     self._refresh_filter_options()
                     self._populate_scan_table(self._get_filtered_scan_result())
@@ -4021,7 +3825,7 @@ class TkMVPApp:
                         messagebox.showinfo("Scan abgeschlossen", f"ROMs gefunden: {len(scan.items)}")
                     self._complete_job("scan")
                 elif event == "plan_done":
-                    plan = payload
+                    plan = cast(Any, payload)
                     self._sort_plan = plan
                     self._populate_plan_table(plan)
                     self._set_running(False)
@@ -4029,7 +3833,7 @@ class TkMVPApp:
                     messagebox.showinfo("Vorschau bereit", f"Geplante Aktionen: {len(plan.actions)}")
                     self._complete_job("plan")
                 elif event == "exec_done":
-                    report: SortReport = payload
+                    report: SortReportType = cast(Any, payload)
                     self._set_running(False)
                     # Add summary row after execution, so row-index updates remain aligned.
                     self._append_summary_row(report)
@@ -4045,17 +3849,17 @@ class TkMVPApp:
                         )
                     self._complete_job("execute")
                 elif event == "audit_done":
-                    report: ConversionAuditReport = payload
+                    audit_report: ConversionAuditReportType = cast(Any, payload)
                     self._set_running(False)
-                    self._audit_report = report
-                    self._populate_audit_table(report)
+                    self._audit_report = audit_report
+                    self._populate_audit_table(audit_report)
                     self._update_resume_buttons()
-                    if report.cancelled:
+                    if audit_report.cancelled:
                         self.status_var.set("Cancelled")
                         messagebox.showinfo("Abgebrochen", "Audit abgebrochen.")
                     else:
                         self.status_var.set("Audit ready")
-                        messagebox.showinfo("Audit abgeschlossen", f"Geprüft: {len(report.items)}")
+                        messagebox.showinfo("Audit abgeschlossen", f"Geprüft: {len(audit_report.items)}")
                     self._complete_job("audit")
                 elif event == "dat_index_done":
                     result = payload
@@ -4090,7 +3894,7 @@ class TkMVPApp:
                     self._set_log_visible(True, persist=False)
                     messagebox.showerror("DAT", f"DAT-Index fehlgeschlagen: {message}")
                 elif event == "igir_plan_done":
-                    result = payload
+                    result = cast(Any, payload)
                     self._set_igir_running(False)
                     self._igir_thread = None
                     try:
@@ -4128,7 +3932,7 @@ class TkMVPApp:
                         messagebox.showwarning("IGIR", f"IGIR Plan fehlgeschlagen: {getattr(result, 'message', 'Fehler')}")
                         self._complete_job("igir_plan")
                 elif event == "igir_execute_done":
-                    result = payload
+                    result = cast(Any, payload)
                     self._set_igir_running(False)
                     self._igir_thread = None
                     try:
@@ -4160,7 +3964,7 @@ class TkMVPApp:
                         self._set_log_visible(True, persist=False)
                         messagebox.showerror("IGIR", f"{msg}\n\n{tb}")
                     else:
-                        result = payload
+                        result = cast(Any, payload)
                         self.igir_status_var.set("IGIR Fehler")
                         try:
                             if getattr(result, "raw_output", ""):
@@ -4177,6 +3981,8 @@ class TkMVPApp:
                 elif event == "export_error":
                     messagebox.showwarning("Export fehlgeschlagen", str(payload))
                 elif event == "error":
+                    if not isinstance(payload, tuple) or len(payload) != 2:
+                        continue
                     msg, tb = payload
                     self._append_log(msg)
                     self._append_log(tb)
@@ -4199,6 +4005,7 @@ class TkMVPApp:
 
 
 class _TkLogHandler(logging.Handler):
+    _tk_gui_handler: bool = False
     def __init__(self, app: "TkMVPApp") -> None:
         super().__init__()
         self._app = app

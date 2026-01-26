@@ -117,19 +117,35 @@ class EnhancedConfig(BaseConfig):
 
     def set_scanner_option(self, option: str, value: Any) -> bool:
         """Set A Scanner Configuration option. ARGS: Option: Name of the Option Value: New Value Return: True, IF Successful, False in the event of errors"""
-        return self.set(f"scanner.{option}", value)
+        try:
+            self.set(f"scanner.{option}", value)
+            return True
+        except Exception:
+            return False
 
     def set_ui_option(self, option: str, value: Any) -> bool:
         """Set a ui configuration option. ARGS: Option: Name of the Option Value: New Value Return: True, IF Successful, False in the event of errors"""
-        return self.set(f"ui.{option}", value)
+        try:
+            self.set(f"ui.{option}", value)
+            return True
+        except Exception:
+            return False
 
     def set_database_option(self, option: str, value: Any) -> bool:
         """Set A Database Configuration option. ARGS: Option: Name of the Option Value: New Value Return: True, IF Successful, False in the event of errors"""
-        return self.set(f"database.{option}", value)
+        try:
+            self.set(f"database.{option}", value)
+            return True
+        except Exception:
+            return False
 
     def set_cache_option(self, option: str, value: Any) -> bool:
         """Set a cache configuration option. ARGS: Option: Name of the Option Value: New Value Return: True, IF Successful, False in the event of errors"""
-        return self.set(f"cache.{option}", value)
+        try:
+            self.set(f"cache.{option}", value)
+            return True
+        except Exception:
+            return False
 
     def get_ui_theme(self) -> str:
         """Gives back the configured UI theme. Return: Name of the theme ('System', 'Light', 'Dark')"""
@@ -153,7 +169,7 @@ class EnhancedConfig(BaseConfig):
 
     def should_use_high_performance(self) -> bool:
         """Indicates whether the high performance scanner should be used. Return: True if the high-performance scanner is to be used, False for the classic scanner"""
-        return self.get_scanner_config().get("use_high_performance", True)
+        return bool(self.get_scanner_config().get("use_high_performance", True))
 
     def validate_scanner_config(self) -> List[str]:
         """Check the validity of the scanner configuration. Return: List of error messages (empty list if no errors)"""
@@ -226,17 +242,18 @@ class EnhancedConfig(BaseConfig):
             logger.error(f"Unerwarteter Fehler beim Laden der Konfiguration: {e}")
             self._config = {}
 
-    def save(self) -> bool:
+    def save(self, config_path: Optional[str] = None) -> bool:
         """Saves the configuration in the file. Return: True, if successful, false in the event of errors"""
         try:
             # Make sure the directory exists
-            os.makedirs(os.path.dirname(self.config_path), exist_ok=True)
+            target_path = config_path or self.config_path
+            os.makedirs(os.path.dirname(target_path), exist_ok=True)
 
             import json
-            with open(self.config_path, 'w', encoding='utf-8') as f:
+            with open(target_path, 'w', encoding='utf-8') as f:
                 json.dump(self._config, f, indent=4)
 
-            logger.info(f"Konfiguration in {self.config_path} gespeichert")
+            logger.info(f"Konfiguration in {target_path} gespeichert")
             return True
         except Exception as e:
             logger.error(f"Fehler beim Speichern der Konfiguration: {e}")
@@ -254,8 +271,8 @@ class EnhancedConfig(BaseConfig):
 
         return current
 
-    def set(self, key: str, value: Any) -> bool:
-        """Sets the value for a key. Args: Key: Key (can use point notation for nested keys) Value: Return: True, IF Successful, False in the event of errors"""
+    def set(self, key: str, value: Any) -> None:
+        """Sets the value for a key. Args: Key: Key (can use point notation for nested keys) Value:"""
         try:
             parts = key.split('.')
             current = self._config
@@ -268,11 +285,9 @@ class EnhancedConfig(BaseConfig):
 
             # Setze den Wert
             current[parts[-1]] = value
-
-            return True
         except Exception as e:
             logger.error(f"Fehler beim Setzen der Konfiguration: {e}")
-            return False
+            return
 
 # Create a global instance of the extended configuration
 enhanced_config_instance = None

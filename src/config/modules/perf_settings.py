@@ -75,13 +75,13 @@ class PerformanceConfig(BaseConfigModule):
         }
 
     @classmethod
-    def from_dict(cls, config_dict: Dict[str, Any]) -> "PerformanceConfig":
+    def from_dict(cls, data: Dict[str, Any]) -> "PerformanceConfig":
         """Create configuration from dictionary."""
         return cls(
-            max_threads=config_dict.get("max_threads", 0),
-            memory_limit_mb=config_dict.get("memory_limit_mb", 0),
-            cache_size=config_dict.get("cache_size", 1000),
-            scan_chunk_size=config_dict.get("scan_chunk_size", 500),
-            enable_lazy_loading=config_dict.get("enable_lazy_loading", True),
-            optimization_level=config_dict.get("optimization_level", 2),
+            max_threads=data.get("max_threads", 0),
+            memory_limit_mb=data.get("memory_limit_mb", 0),
+            cache_size=data.get("cache_size", 1000),
+            scan_chunk_size=data.get("scan_chunk_size", 500),
+            enable_lazy_loading=data.get("enable_lazy_loading", True),
+            optimization_level=data.get("optimization_level", 2),
         )

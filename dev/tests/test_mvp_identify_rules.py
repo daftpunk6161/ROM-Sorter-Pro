@@ -29,7 +29,7 @@ def _insert_hash_row(
     *,
     platform_id: str,
     sha1: str | None,
-    crc32: str,
+    crc32: str | None,
     size_bytes: int,
 ) -> None:
     conn = sqlite3.connect(str(index_path))

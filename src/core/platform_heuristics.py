@@ -207,11 +207,15 @@ def _load_catalog(_cache_key: str) -> Tuple[List[Dict[str, object]], str, Dict[s
             logger.warning("Platform catalog validation failed: %s", reason)
             return [], "invalid", {}
 
-    platforms = data.get("platforms", [])
-    policy = data.get("policy") if isinstance(data.get("policy"), dict) else {}
+    platforms_obj = data.get("platforms", [])
+    policy_obj = data.get("policy")
+    platforms: List[Dict[str, object]] = platforms_obj if isinstance(platforms_obj, list) else []
+    policy: Dict[str, Any] = policy_obj if isinstance(policy_obj, dict) else {}
 
-    if isinstance(platforms, list):
-        return platforms, "ok" if platforms else "empty", policy
+    if platforms:
+        return platforms, "ok", policy
+    if isinstance(platforms_obj, list):
+        return [], "empty", policy
 
     return [], "invalid", policy
 
@@ -236,6 +240,12 @@ def _match_token(haystack: str, token: str) -> bool:
     if not token:
         return False
     return token in haystack
+
+
+def _list_value(value: object) -> List[str]:
+    if isinstance(value, list):
+        return [str(x) for x in value]
+    return []
 
 
 def evaluate_platform_candidates(path: str, *, container: Optional[str] = None) -> Dict[str, object]:
@@ -267,11 +277,11 @@ def evaluate_platform_candidates(path: str, *, container: Optional[str] = None) 
         if not platform_id:
             continue
 
-        typical_exts = [str(x).lower() for x in (entry.get("typical_extensions") or [])]
-        allowed_containers = [str(x).lower() for x in (entry.get("allowed_containers") or [])]
-        positive_tokens = [str(x) for x in (entry.get("positive_tokens") or [])]
-        negative_tokens = [str(x) for x in (entry.get("negative_tokens") or [])]
-        minimum_signals = [str(x).lower() for x in (entry.get("minimum_signals") or [])]
+        typical_exts = [x.lower() for x in _list_value(entry.get("typical_extensions"))]
+        allowed_containers = [x.lower() for x in _list_value(entry.get("allowed_containers"))]
+        positive_tokens = _list_value(entry.get("positive_tokens"))
+        negative_tokens = _list_value(entry.get("negative_tokens"))
+        minimum_signals = [x.lower() for x in _list_value(entry.get("minimum_signals"))]
 
         score = 0.0
         signals: List[str] = []
@@ -316,7 +326,7 @@ def evaluate_platform_candidates(path: str, *, container: Optional[str] = None) 
                 score=score,
                 signals=tuple(signals),
                 signal_types=tuple(signal_types),
-                conflict_groups=tuple(str(x) for x in (entry.get("conflict_groups") or [])),
+                conflict_groups=tuple(_list_value(entry.get("conflict_groups"))),
             )
         )
 

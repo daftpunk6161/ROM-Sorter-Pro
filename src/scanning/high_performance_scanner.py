@@ -15,15 +15,13 @@ import logging
 import threading
 import queue
 import zipfile
+import zlib
 import concurrent.futures
 import re
 from pathlib import Path
-from typing import Dict, List, Set, Tuple, Optional, Any, TypeVar
+from typing import Dict, List, Set, Tuple, Optional, Any
 
 from ..config import Config
-
-# Define the type alias for the config class
-ConfigType = TypeVar('ConfigType')
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -64,7 +62,7 @@ DEFAULT_IGNORE_EXTENSIONS = IMAGE_EXTENSIONS | NON_ROM_EXTENSIONS
 class HighPerformanceScanner:
     """A Highly Optimized Scanner for Rome Files with Advanced Processing."""
 
-    def __init__(self, config: Optional[ConfigType] = None):
+    def __init__(self, config: Optional[Config | Dict[str, Any]] = None):
         """Initialized the scanner. Args: Config: Optional configuration instance. If None, the standard configuration is used."""
         self.config = config or Config()
         self.is_running = False
@@ -128,8 +126,9 @@ class HighPerformanceScanner:
             size = None
         if not size:
             try:
-                perf_cfg = self.config.get("performance", {}).get("processing", {}) or {}
-                size = perf_cfg.get("chunk_size")
+                perf_root = self.config.get("performance", {}) or {}
+                perf_cfg = perf_root.get("processing", {}) if isinstance(perf_root, dict) else {}
+                size = (perf_cfg or {}).get("chunk_size")
             except Exception:
                 size = None
         try:
@@ -207,7 +206,7 @@ class HighPerformanceScanner:
 
     def _ensure_directories(self):
         """Make sure that all the required directories exist."""
-        cache_dir = self.config.get("cache_directory", "cache")
+        cache_dir = str(self.config.get("cache_directory", "cache") or "cache")
         os.makedirs(cache_dir, exist_ok=True)
 
 # Other required directories
@@ -314,8 +313,9 @@ class HighPerformanceScanner:
 
             progress_batch = True
             try:
-                perf_cfg = self.config.get("performance", {}).get("optimization", {}) or {}
-                progress_batch = bool(perf_cfg.get("enable_progress_batching", True))
+                perf_root = self.config.get("performance", {}) or {}
+                perf_cfg = perf_root.get("optimization", {}) if isinstance(perf_root, dict) else {}
+                progress_batch = bool((perf_cfg or {}).get("enable_progress_batching", True))
             except Exception:
                 progress_batch = True
 
@@ -550,6 +550,11 @@ class HighPerformanceScanner:
 
             # Calculates checksums (used for DAT matching too)
             crc32, md5, sha1 = self._calculate_checksums(file_path)
+
+            # Defaults to avoid unbound locals
+            rom_system = "Unknown"
+            confidence = 0.0
+            detection_source = "unknown"
 
             # DAT/Hash-first: exact match is truth.
             dat_index = self._get_dat_index()
@@ -795,7 +800,7 @@ class HighPerformanceScanner:
                                 while chunk := entry_f.read(self.chunk_size):
                                     if self.should_stop:
                                         raise InterruptedError("Scan wurde abgebrochen")
-                                    crc32_val = zipfile.crc32(chunk, crc32_val)
+                                    crc32_val = zlib.crc32(chunk, crc32_val)
                                     sha1_hash.update(chunk)
                                 entry_sha1 = sha1_hash.hexdigest()
                                 match = dat_index.lookup_sha1(entry_sha1)
@@ -996,7 +1001,7 @@ class HighPerformanceScanner:
                     raise InterruptedError("Scan wurde abgebrochen")
 
                 # Updates all checksums at the same time for efficiency
-                crc32_value = zipfile.crc32(chunk, crc32_value)
+                crc32_value = zlib.crc32(chunk, crc32_value)
                 md5_hash.update(chunk)
                 sha1_hash.update(chunk)
 

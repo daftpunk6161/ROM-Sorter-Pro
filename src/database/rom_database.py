@@ -53,12 +53,32 @@ class ROMDatabase:
         self._ensure_directories()
 
 # Initialize connection
-        self.conn = None
-        self.cursor = None
+        self._conn: Optional[sqlite3.Connection] = None
+        self._cursor: Optional[sqlite3.Cursor] = None
         self._connect_db()
 
 # Check and initialize scheme
         self._init_schema()
+
+    @property
+    def conn(self) -> sqlite3.Connection:
+        if self._conn is None:
+            raise RuntimeError("Database connection is not initialized")
+        return self._conn
+
+    @conn.setter
+    def conn(self, value: Optional[sqlite3.Connection]) -> None:
+        self._conn = value
+
+    @property
+    def cursor(self) -> sqlite3.Cursor:
+        if self._cursor is None:
+            raise RuntimeError("Database cursor is not initialized")
+        return self._cursor
+
+    @cursor.setter
+    def cursor(self, value: Optional[sqlite3.Cursor]) -> None:
+        self._cursor = value
 
     def _ensure_directories(self):
         """Ensures that all required directories exist."""
@@ -74,12 +94,12 @@ class ROMDatabase:
     def _connect_db(self):
         """Make the database connection."""
         try:
-            if self.conn:
-                self.conn.close()
+            if self._conn:
+                self._conn.close()
 
-            self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
-            self.conn.row_factory = sqlite3.Row  # Ergebnisse als dict
-            self.cursor = self.conn.cursor()
+            self._conn = sqlite3.connect(self.db_path, check_same_thread=False)
+            self._conn.row_factory = sqlite3.Row  # Ergebnisse als dict
+            self._cursor = self._conn.cursor()
 
 # SQLite optimizations
             self.cursor.execute('PRAGMA journal_mode=WAL')
@@ -317,7 +337,9 @@ class ROMDatabase:
                     VALUES (?, ?, ?, ?, ?, ?, ?)
                     ''', (name, system_id, file_path, size, crc32, md5, sha1))
 
-                    rom_id = self.cursor.lastrowid
+                    rom_id = int(self.cursor.lastrowid or 0)
+                    if rom_id <= 0:
+                        raise sqlite3.Error("Invalid ROM id after insert")
 
 # Add Metadata If Available
                 if metadata and rom_id:
@@ -332,7 +354,7 @@ class ROMDatabase:
 
 # Update cache
                 if self.cache_enabled and crc32:
-                    self._update_rom_cache(rom_id, name, system_id, file_path,
+                    self._update_rom_cache(int(rom_id), name, system_id, file_path,
                                           size, crc32, md5, sha1, metadata)
 
                 return rom_id
@@ -360,7 +382,7 @@ class ROMDatabase:
                 JOIN systems s ON r.system_id = s.id
                 WHERE r.crc32 = ?
                 '''
-                params = [crc32]
+                params: List[Any] = [crc32]
 
                 if system_id is not None:
                     query += " AND r.system_id = ?"
@@ -437,7 +459,7 @@ class ROMDatabase:
                 WHERE (r.name LIKE ? OR m.value LIKE ?)
                 '''
 
-                params = [search_query, search_query]
+                params: List[Any] = [search_query, search_query]
 
                 if system_id is not None:
                     base_query += " AND r.system_id = ?"
@@ -607,7 +629,7 @@ class ROMDatabase:
                     (name, description)
                 )
 
-                collection_id = self.cursor.lastrowid
+                collection_id = int(self.cursor.lastrowid or -1)
 
                 if self.auto_commit:
                     self.conn.commit()
@@ -725,7 +747,8 @@ class ROMDatabase:
             backup_path = f"{self.db_path}.backup-{timestamp}"
 
         try:
-            self.conn.commit()  # Make sure all changes are saved
+            if self._conn is not None:
+                self._conn.commit()  # Make sure all changes are saved
             shutil.copy2(self.db_path, backup_path)
             logger.info(f"Datenbank-Backup erstellt: {backup_path}")
             return True
@@ -773,7 +796,9 @@ class ROMDatabase:
         """Commit all pending changes."""
         with self._lock:
             try:
-                self.conn.commit()
+                if self._conn is None:
+                    return
+                self._conn.commit()
             except sqlite3.Error as e:
                 logger.error(f"Fehler beim Commit: {e}")
                 raise
@@ -782,7 +807,9 @@ class ROMDatabase:
         """Rollback all pending changes."""
         with self._lock:
             try:
-                self.conn.rollback()
+                if self._conn is None:
+                    return
+                self._conn.rollback()
             except sqlite3.Error as e:
                 logger.error(f"Fehler beim Rollback: {e}")
                 raise
@@ -791,11 +818,11 @@ class ROMDatabase:
         """Closes the database connection."""
         with self._lock:
             try:
-                if self.conn:
-                    self.conn.commit()
-                    self.conn.close()
-                    self.conn = None
-                    self.cursor = None
+                if self._conn:
+                    self._conn.commit()
+                    self._conn.close()
+                    self._conn = None
+                    self._cursor = None
                     logger.debug("Datenbankverbindung geschlossen")
             except sqlite3.Error as e:
                 logger.error(f"Error closing database: {e}")

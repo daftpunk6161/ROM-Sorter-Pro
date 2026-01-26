@@ -22,6 +22,7 @@ try:
     import psutil
     PSUTIL_AVAILABLE = True
 except ImportError:
+    psutil = None
     PSUTIL_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
@@ -167,7 +168,7 @@ class PerformanceMonitor:
             self.metrics[operation_name].start()
         return start_time
 
-    def end_operation(self, operation_name: str, start_time: float = None) -> float:
+    def end_operation(self, operation_name: str, start_time: Optional[float] = None) -> float:
         """Ends the time measurement for an operation. Args: Operation_Name: Name of the Operation Start_Time: Optional, if not started via Start_Operation Return: Duration in seconds"""
         end_time = time.perf_counter()
         
@@ -194,7 +195,7 @@ class PerformanceMonitor:
         memory_info['gc_objects'] = len(gc.get_objects())
         
         # Use psutil for extended system information if available
-        if PSUTIL_AVAILABLE:
+        if PSUTIL_AVAILABLE and psutil is not None:
             process = psutil.Process()
             mem_info = process.memory_info()
             memory_info['rss'] = mem_info.rss  # Resident Set Size

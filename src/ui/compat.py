@@ -122,9 +122,9 @@ def launch_gui(backend: Optional[str] = None) -> int:
 
     if chosen == "qt":
         try:
-            from .mvp.qt_app import run as run_qt
+            from .mvp import qt_app
 
-            return int(run_qt())
+            return int(qt_app.run())
         except Exception as exc:
             qt_error = exc
             # Do not hard-crash if Qt isn't actually usable.
@@ -132,9 +132,9 @@ def launch_gui(backend: Optional[str] = None) -> int:
             logger.debug("Qt backend traceback:\n%s", traceback.format_exc())
 
     try:
-        from .mvp.tk_app import run as run_tk
+        from .mvp import tk_app
 
-        return int(run_tk())
+        return int(tk_app.run())
     except Exception as exc:
         tk_error = exc
         logger.exception("Tk backend failed to start.")

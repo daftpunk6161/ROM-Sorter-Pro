@@ -12,7 +12,7 @@ from functools import lru_cache
 logger = logging.getLogger(__name__)
 
 
-@dataclass
+@dataclass(init=False)
 class EnhancedConsoleMeta:
     """Enhanced console metadata."""
     folder_name: str
@@ -24,15 +24,28 @@ class EnhancedConsoleMeta:
     typical_rom_size_mb: float = 0.0
     patterns: Optional[List[str]] = None
 
-    def __post_init__(self):
-        if self.emulator_compatibility is None:
-            self.emulator_compatibility = []
-        if self.patterns is None:
-            self.patterns = []
+    def __init__(
+        self,
+        folder_name: str,
+        manufacturer: str,
+        release_year: int,
+        extensions: Set[str],
+        priority: int = 0,
+        emulator_compatibility: Optional[List[str]] = None,
+        typical_rom_size_mb: float = 0.0,
+        patterns: Optional[List[str]] = None,
+    ) -> None:
+        self.folder_name = folder_name
+        self.manufacturer = manufacturer
+        self.release_year = int(release_year)
+        self.priority = int(priority)
+        self.emulator_compatibility = emulator_compatibility or []
+        self.typical_rom_size_mb = float(typical_rom_size_mb)
+        self.patterns = patterns or []
         # Ensure extensions start with a dot
         self.extensions = {
             ext if ext.startswith('.') else f'.{ext}'
-            for ext in self.extensions
+            for ext in (extensions or set())
         }
 
 
@@ -385,6 +398,24 @@ def get_supported_consoles() -> List[Dict[str, Any]]:
             'typical_size_mb': meta.typical_rom_size_mb
         }
         consoles.append(console_info)
+    return consoles
+
+
+def get_console_metadata_all() -> Dict[str, Dict[str, Any]]:
+    """Return console metadata keyed by console name."""
+    consoles: Dict[str, Dict[str, Any]] = {}
+    for console_name, meta in ENHANCED_CONSOLE_DATABASE.items():
+        consoles[console_name] = {
+            "display_name": console_name,
+            "folder_name": meta.folder_name,
+            "manufacturer": meta.manufacturer,
+            "release_year": meta.release_year,
+            "extensions": list(meta.extensions),
+            "priority": meta.priority,
+            "emulator_compatibility": list(meta.emulator_compatibility or []),
+            "typical_rom_size_mb": meta.typical_rom_size_mb,
+            "patterns": list(meta.patterns or []),
+        }
     return consoles
 
 

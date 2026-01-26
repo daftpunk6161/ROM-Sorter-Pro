@@ -7,7 +7,7 @@ import os
 from typing import Any, Dict, Optional, Tuple
 
 try:
-    import jsonschema
+    import jsonschema  # type: ignore[import-not-found]
     JSONSCHEMA_AVAILABLE = True
 except Exception:
     jsonschema = None
@@ -15,7 +15,7 @@ except Exception:
 
 
 def validate_config_schema(config_data: Dict[str, Any], schema_path: Optional[str] = None) -> Tuple[bool, Optional[str]]:
-    if not JSONSCHEMA_AVAILABLE:
+    if not JSONSCHEMA_AVAILABLE or jsonschema is None:
         return True, None
 
     if schema_path is None:

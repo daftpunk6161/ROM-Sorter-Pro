@@ -3,7 +3,7 @@
 
 import os
 import sqlite3
-from typing import Dict, Tuple, Optional, Any
+from typing import Dict, Tuple, Optional, Any, Callable, Type
 from functools import lru_cache
 import logging
 
@@ -21,9 +21,20 @@ from .chd_detector import detect_console_from_chd, is_chd_file
 from .detection_result import DetectionResult
 ML_ENABLED = os.environ.get("ROM_SORTER_ENABLE_ML", "").strip() == "1"
 
+
+class _MLEnhancedConsoleDetector:
+    pass
+
+
+def get_ml_detector() -> Optional[Any]:
+    return None
+
 if ML_ENABLED:
     try:
-        from .ml_detector import detect_console_with_ml, MLEnhancedConsoleDetector, get_ml_detector
+        from . import ml_detector as _ml_detector
+        detect_console_with_ml = _ml_detector.detect_console_with_ml
+        MLEnhancedConsoleDetector = _ml_detector.MLEnhancedConsoleDetector
+        get_ml_detector = _ml_detector.get_ml_detector
         ML_AVAILABLE = True
     except Exception:
         ML_AVAILABLE = False
@@ -37,11 +48,7 @@ if ML_ENABLED:
                 metadata={"error": "ml_unavailable"},
             )
 
-        class MLEnhancedConsoleDetector:  # type: ignore[no-redef]
-            pass
-
-        def get_ml_detector():
-            return None
+        MLEnhancedConsoleDetector = _MLEnhancedConsoleDetector
 else:
     ML_AVAILABLE = False
 
@@ -54,11 +61,7 @@ else:
             metadata={"error": "ml_disabled"},
         )
 
-    class MLEnhancedConsoleDetector:  # type: ignore[no-redef]
-        pass
-
-    def get_ml_detector():
-        return None
+    MLEnhancedConsoleDetector = _MLEnhancedConsoleDetector
 
 # Database connections
 from ..database.connection_pool import ROM_DATABASE_PATH
@@ -225,17 +228,17 @@ class DetectionManager:
         self._cache_size = CACHE_SIZE
 
 # statistics
-        self.stats = {
-            "total_detections": 0,
-            "cache_hits": 0,
-            "cache_misses": 0,
-            "high_confidence": 0,
-            "acceptable_confidence": 0,
-            "low_confidence": 0,
-            "unknown": 0,
-            "archive_detections": 0,
-            "chd_detections": 0,
-            "standard_detections": 0
+        self.stats: Dict[str, float] = {
+            "total_detections": 0.0,
+            "cache_hits": 0.0,
+            "cache_misses": 0.0,
+            "high_confidence": 0.0,
+            "acceptable_confidence": 0.0,
+            "low_confidence": 0.0,
+            "unknown": 0.0,
+            "archive_detections": 0.0,
+            "chd_detections": 0.0,
+            "standard_detections": 0.0,
         }
 
     def detect_console(self, filename: str, file_path: Optional[str] = None) -> Tuple[str, float]:
@@ -247,27 +250,27 @@ class DetectionManager:
         """Recognize the Console for a File with Complete Metadata. ARGS: Filename: Name of the Rome File File_Path: Optional Full File Path for Context Analysis Return: Detection Result Object With Console, Confidence and Metadata"""
         try:
 # Update statistics
-            self.stats["total_detections"] += 1
+            self.stats["total_detections"] += 1.0
 
 # Check cache
             cache_key = f"{filename}|{file_path}"
             if cache_key in self._cache:
-                self.stats["cache_hits"] += 1
+                self.stats["cache_hits"] += 1.0
                 return self._cache[cache_key]
-            self.stats["cache_misses"] += 1
+            self.stats["cache_misses"] += 1.0
 
 # Recognize the file type
             file_path_str = str(file_path) if file_path else None
 
 # Check on archive files
             if file_path_str and is_archive_file(file_path_str):
-                self.stats["archive_detections"] += 1
+                self.stats["archive_detections"] += 1.0
                 console, confidence = detect_console_from_archive(file_path_str)
                 result = DetectionResult(console, confidence, metadata={"type": "archive"})
 
 # Check on CHD files
             elif file_path_str and is_chd_file(file_path_str):
-                self.stats["chd_detections"] += 1
+                self.stats["chd_detections"] += 1.0
                 console, confidence = detect_console_from_chd(file_path_str)
                 result = DetectionResult(console, confidence, metadata={"type": "chd"})
 
@@ -275,10 +278,10 @@ class DetectionManager:
             elif DATABASE_ENABLED and file_path_str and os.path.exists(file_path_str):
                 db_console, db_confidence = detect_console_by_database(file_path_str)
                 if db_confidence > 0.9:  # Very high confidence in database hits
-                    result = DetectionResult(db_console, db_confidence, method="database", file_path=file_path_str)
+                    result = DetectionResult(db_console, db_confidence, method="database", file_path=(file_path_str or ""))
                 else:
 # Try AI-based detection (newly implemented)
-                    self.stats["ml_detections"] = self.stats.get("ml_detections", 0) + 1
+                    self.stats["ml_detections"] = float(self.stats.get("ml_detections", 0.0)) + 1.0
                     ml_result = detect_console_with_ml(file_path_str)
 
 # If the AI detection has high confidence, use it
@@ -286,7 +289,7 @@ class DetectionManager:
                         return ml_result
 
 # Otherwise standard detection for normal ROM files
-                    self.stats["standard_detections"] += 1
+                    self.stats["standard_detections"] += 1.0
                     console, confidence = detect_console_enhanced(filename, file_path_str)
 
 # Combine both results at medium confidence
@@ -296,46 +299,46 @@ class DetectionManager:
                             combined_confidence = min(0.95, ml_result.confidence + 0.1)
                             result = DetectionResult(
                                 console, combined_confidence,
-                                method="ml_enhanced_combined", file_path=file_path_str
+                                method="ml_enhanced_combined", file_path=(file_path_str or "")
                             )
                         elif ml_result.confidence > confidence:
                             result = ml_result
                         else:
-                            result = DetectionResult(console, confidence, method="enhanced", file_path=file_path_str)
+                            result = DetectionResult(console, confidence, method="enhanced", file_path=(file_path_str or ""))
 # If low confidence, also try standard detection
                     elif confidence < ACCEPTABLE_CONFIDENCE_THRESHOLD:
                         std_console, std_confidence = detect_console_fast(filename, file_path_str)
                         if std_confidence > confidence and std_confidence > ml_result.confidence:
-                            result = DetectionResult(std_console, std_confidence, method="standard_fallback", file_path=file_path_str)
+                            result = DetectionResult(std_console, std_confidence, method="standard_fallback", file_path=(file_path_str or ""))
                         elif ml_result.confidence > confidence:
                             result = ml_result
                         else:
-                            result = DetectionResult(console, confidence, method="enhanced", file_path=file_path_str)
+                            result = DetectionResult(console, confidence, method="enhanced", file_path=(file_path_str or ""))
                     else:
-                        result = DetectionResult(console, confidence, method="enhanced", file_path=file_path_str)
+                        result = DetectionResult(console, confidence, method="enhanced", file_path=(file_path_str or ""))
             else:
 # Try AI-based detection if the file exists
                 if file_path_str and os.path.exists(file_path_str):
-                    self.stats["ml_detections"] = self.stats.get("ml_detections", 0) + 1
+                    self.stats["ml_detections"] = float(self.stats.get("ml_detections", 0.0)) + 1.0
                     ml_result = detect_console_with_ml(file_path_str)
 
                     if ml_result.confidence >= 0.7:
                         return ml_result
 
 # Standard Detection Without A Database
-                self.stats["standard_detections"] += 1
+                self.stats["standard_detections"] += 1.0
                 console, confidence = detect_console_enhanced(filename, file_path_str)
-                result = DetectionResult(console, confidence, method="enhanced", file_path=file_path_str)
+                result = DetectionResult(console, confidence, method="enhanced", file_path=(file_path_str or ""))
 
 # Update confidence statistics
             if result.is_unknown:
-                self.stats["unknown"] += 1
+                self.stats["unknown"] += 1.0
             elif result.is_confident:
-                self.stats["high_confidence"] += 1
+                self.stats["high_confidence"] += 1.0
             elif result.is_acceptable:
-                self.stats["acceptable_confidence"] += 1
+                self.stats["acceptable_confidence"] += 1.0
             else:
-                self.stats["low_confidence"] += 1
+                self.stats["low_confidence"] += 1.0
 
 # Result cachen
             if len(self._cache) >= self._cache_size:
@@ -371,6 +374,16 @@ def detect_console(filename: str, file_path: Optional[str] = None) -> Tuple[str,
     return DetectionManager.get_instance().detect_console(filename, file_path)
 
 
+def detect_console_with_metadata(filename: str, file_path: Optional[str] = None) -> DetectionResult:
+    """Central function for console detection returning full metadata."""
+    return DetectionManager.get_instance().detect_console_with_metadata(filename, file_path)
+
+
+def detect_rom_type(filename: str, file_path: Optional[str] = None) -> DetectionResult:
+    """Backward compatible alias for full detection result."""
+    return detect_console_with_metadata(filename, file_path)
+
+
 def get_console_list() -> Dict[str, Dict[str, Any]]:
     """Provides A Comprehensive List of Supported Consoles with Metadata. Return: Dictionary with console Names and Associated Metadata"""
     try:
@@ -383,15 +396,24 @@ def get_console_list() -> Dict[str, Dict[str, Any]]:
             from ..utils import ENHANCED_CONSOLE_DATABASE
 
 # Convert the console database into a dictionary
-            consoles = {}
+            consoles: Dict[str, Dict[str, Any]] = {}
             for console_name, meta in ENHANCED_CONSOLE_DATABASE.items():
-                consoles[console_name] = {
-                    'display_name': console_name,
-                    'extensions': meta.extensions if hasattr(meta, 'extensions') else [],
-                    'manufacturer': meta.manufacturer if hasattr(meta, 'manufacturer') else 'Unknown',
-                    'year': meta.release_year if hasattr(meta, 'release_year') else 'Unknown',
-                    'type': meta.console_type if hasattr(meta, 'console_type') else 'Unknown'
-                }
+                if isinstance(meta, dict):
+                    consoles[console_name] = {
+                        'display_name': console_name,
+                        'extensions': meta.get('extensions', []),
+                        'manufacturer': meta.get('manufacturer', 'Unknown'),
+                        'year': meta.get('release_year', meta.get('year', 'Unknown')),
+                        'type': meta.get('console_type', 'Unknown')
+                    }
+                else:
+                    consoles[console_name] = {
+                        'display_name': console_name,
+                        'extensions': meta.extensions if hasattr(meta, 'extensions') else [],
+                        'manufacturer': meta.manufacturer if hasattr(meta, 'manufacturer') else 'Unknown',
+                        'year': meta.release_year if hasattr(meta, 'release_year') else 'Unknown',
+                        'type': meta.console_type if hasattr(meta, 'console_type') else 'Unknown'
+                    }
             return consoles
         except Exception as e:
             logger.error(f"Fehler beim Laden der Konsolendatenbank: {e}")

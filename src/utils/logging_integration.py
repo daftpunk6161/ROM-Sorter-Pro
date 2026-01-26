@@ -14,7 +14,7 @@ import time
 import threading
 import traceback
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Iterator
 from datetime import datetime
 from functools import wraps
 from contextlib import contextmanager
@@ -145,9 +145,9 @@ def initialize_logging(log_dir: Optional[str] = None,
                 root_logger.removeHandler(handler)
 
         # Just add one file handler, no stream handler
-        log_dir = Path('logs')
-        log_dir.mkdir(parents=True, exist_ok=True)
-        error_log = log_dir / 'error_init.log'
+        fallback_dir = Path('logs')
+        fallback_dir.mkdir(parents=True, exist_ok=True)
+        error_log = fallback_dir / 'error_init.log'
 
         file_handler = logging.FileHandler(error_log)
         file_handler.setFormatter(logging.Formatter(DEFAULT_LOG_FORMAT))
@@ -186,7 +186,7 @@ def get_logger(name: str) -> logging.Logger:
 
 
 @contextmanager
-def log_context(**kwargs) -> None:
+def log_context(**kwargs) -> Iterator[None]:
     """Context Manager for setting thread local context for logging. Args: ** Kwargs: key value pairs for the context"""
     # Alten Kontext speichern
     if not hasattr(_context_local, 'context'):
@@ -203,19 +203,16 @@ def log_context(**kwargs) -> None:
         _context_local.context = old_context
 
 
-def log_performance(logger_name: str = None, operation: str = None, level: int = logging.DEBUG):
+def log_performance(logger_name: Optional[str] = None, operation: Optional[str] = None, level: int = logging.DEBUG):
     """Decorator for the performance measurement of functions. Args: Logger_Name: Name of the logger to be used Operation: Name of the Operation (Standard: Function Name) Level: Log level for the performance report"""
     def decorator(func):
         nonlocal logger_name, operation
 
-        if not logger_name:
-            logger_name = func.__module__
-
-        if not operation:
-            operation = func.__qualname__
+        local_logger_name = logger_name or func.__module__
+        local_operation = operation or func.__qualname__
 
         # Logger abrufen
-        logger = get_logger(logger_name)
+        logger = get_logger(local_logger_name)
 
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -229,19 +226,19 @@ def log_performance(logger_name: str = None, operation: str = None, level: int =
             finally:
                 # Measure and log in the end time
                 elapsed = time.time() - start_time
-                logger.log(level, f"Performance: {operation} - {elapsed:.6f} Sekunden")
+                logger.log(level, f"Performance: {local_operation} - {elapsed:.6f} Sekunden")
 
                 # Statistik aktualisieren
                 with _stats_lock:
-                    if operation not in _performance_stats:
-                        _performance_stats[operation] = {
+                    if local_operation not in _performance_stats:
+                        _performance_stats[local_operation] = {
                             'count': 0,
                             'total_time': 0.0,
                             'min_time': float('inf'),
                             'max_time': 0.0
                         }
 
-                    stats = _performance_stats[operation]
+                    stats = _performance_stats[local_operation]
                     stats['count'] += 1
                     stats['total_time'] += elapsed
                     stats['min_time'] = min(stats['min_time'], elapsed)
@@ -252,16 +249,15 @@ def log_performance(logger_name: str = None, operation: str = None, level: int =
     return decorator
 
 
-def log_exception(logger_name: str = None, level: int = logging.ERROR, reraise: bool = True):
+def log_exception(logger_name: Optional[str] = None, level: int = logging.ERROR, reraise: bool = True):
     """Decorator for logging exceptions. Args: Logger_Name: Name of the logger to be used Level: Log level for the exception Reraise: Whether the exception should be continued"""
     def decorator(func):
         nonlocal logger_name
 
-        if not logger_name:
-            logger_name = func.__module__
+        local_logger_name = logger_name or func.__module__
 
         # Logger abrufen
-        logger = get_logger(logger_name)
+        logger = get_logger(local_logger_name)
 
         @wraps(func)
         def wrapper(*args, **kwargs):

@@ -1,5 +1,6 @@
 import json
 import sys
+from typing import cast
 from pathlib import Path
 
 import pytest
@@ -42,4 +43,5 @@ def test_platform_catalog_path_override(monkeypatch, tmp_path):
 
     result = platform_heuristics.evaluate_platform_candidates("game.nes")
 
-    assert "nes" in result.get("candidate_systems", [])
+    candidates = cast(list[str], result.get("candidate_systems", []))
+    assert "nes" in candidates

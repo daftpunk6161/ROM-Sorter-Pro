@@ -3,6 +3,7 @@
 
 """ROM SARTER PRO - Extended statistics and reporting functions This module offers extensive analysis and report functions for Rome collections, including visualizations, export options and Detailed statistics. Features: - Detailed collection analysis (completeness, duplication) - Visualization of the collection statistics with diagrams - Export functions for reports (PDF, HTML, CSV) - custom reports and dashboards"""
 
+import importlib
 import os
 import csv
 import json
@@ -16,30 +17,38 @@ logger = logging.getLogger(__name__)
 
 # Attempts to import optional dependencies
 try:
-    import pandas as pd
+    pd = importlib.import_module("pandas")
     HAS_PANDAS = True
-except ImportError:
+except Exception:
+    pd = None
     HAS_PANDAS = False
 
 try:
-    import matplotlib.pyplot as plt
-    import matplotlib
+    matplotlib = importlib.import_module("matplotlib")
+    plt = importlib.import_module("matplotlib.pyplot")
     matplotlib.use('Agg')  # Non-interactive backend for server environments
     HAS_MATPLOTLIB = True
-except ImportError:
+except Exception:
+    matplotlib = None
+    plt = None
     HAS_MATPLOTLIB = False
 
 try:
-    from jinja2 import Environment, FileSystemLoader
-    HAS_JINJA = True
-except ImportError:
+    jinja2 = importlib.import_module("jinja2")
+    Environment = getattr(jinja2, "Environment", None)
+    FileSystemLoader = getattr(jinja2, "FileSystemLoader", None)
+    HAS_JINJA = Environment is not None and FileSystemLoader is not None
+except Exception:
+    Environment = None
+    FileSystemLoader = None
     HAS_JINJA = False
 
 try:
-    import weasyprint
+    weasyprint = importlib.import_module("weasyprint")
     HAS_WEASYPRINT = True
-except (ImportError, OSError) as e:
+except Exception as e:
     logger.warning(f"WeasyPrint konnte nicht importiert werden: {e}")
+    weasyprint = None
     HAS_WEASYPRINT = False
 
 # Constant
@@ -115,7 +124,7 @@ class CollectionAnalyzer:
             logger.error(f"Fehler beim Laden der Daten aus der Datenbank: {e}")
             return False
 
-    def load_data_from_files(self, rom_file: str, console_file: str = None) -> bool:
+    def load_data_from_files(self, rom_file: str, console_file: Optional[str] = None) -> bool:
         """Invites Rome data from JSON or CSV files. Args: ROM_FILE: path to the Rome Date file Console_file: path to the console data file (optional) Return: True in the event of success, false in the event of errors"""
         try:
 # Rome's shop
@@ -123,7 +132,7 @@ class CollectionAnalyzer:
                 with open(rom_file, 'r', encoding='utf-8') as f:
                     self.rom_data = json.load(f)
             elif rom_file.endswith('.csv'):
-                if HAS_PANDAS:
+                if HAS_PANDAS and pd is not None:
                     self.rom_data = pd.read_csv(rom_file).to_dict('records')
                 else:
                     with open(rom_file, 'r', encoding='utf-8') as f:
@@ -139,7 +148,7 @@ class CollectionAnalyzer:
                     with open(console_file, 'r', encoding='utf-8') as f:
                         self.console_data = json.load(f)
                 elif console_file.endswith('.csv'):
-                    if HAS_PANDAS:
+                    if HAS_PANDAS and pd is not None:
                         self.console_data = pd.read_csv(console_file).to_dict('records')
                     else:
                         with open(console_file, 'r', encoding='utf-8') as f:
@@ -168,7 +177,7 @@ class CollectionAnalyzer:
 # Basic statistics
             self.statistics = {
                 'total_roms': len(self.rom_data),
-                'total_size': sum(rom.get('size', 0) for rom in self.rom_data),
+                'total_size': sum(float(rom.get('size') or 0) for rom in self.rom_data),
                 'consoles': {},
                 'file_formats': {},
                 'size_distribution': {
@@ -193,7 +202,7 @@ class CollectionAnalyzer:
 
 # Size distribution
             for rom in self.rom_data:
-                size_mb = rom.get('size', 0) / (1024 * 1024)
+                size_mb = float(rom.get('size') or 0) / (1024 * 1024)
                 if size_mb < 1:
                     self.statistics['size_distribution']['small'] += 1
                 elif size_mb < 10:
@@ -229,7 +238,7 @@ class CollectionAnalyzer:
 
     def _analyze_missing_roms(self) -> None:
         """Analyzes missing ROMs based on complete sets in console_data."""
-        if not self.console_data:
+        if not self.console_data or not self.rom_data:
             return
 
         self.missing_roms = []
@@ -252,6 +261,8 @@ class CollectionAnalyzer:
 
 # Compare the complete set with the existing ROMs
             for rom in complete_set:
+                if not isinstance(rom, dict):
+                    continue
                 if rom.get('hash') not in existing_roms.get(console_id, set()):
                     missing_rom = rom.copy()
                     missing_rom['console_name'] = console.get('name', 'Unknown')
@@ -353,7 +364,7 @@ class ReportGenerator:
                 'rom_name': dup_group[0].get('name', 'Unbekannt'),
                 'console': dup_group[0].get('console_name', 'Unbekannt'),
                 'count': len(dup_group),
-                'total_size': self._format_size(sum(rom.get('size', 0) for rom in dup_group)),
+                'total_size': self._format_size(int(sum(float(rom.get('size') or 0) for rom in dup_group))),
                 'files': [
                     {
                         'path': rom.get('file_path', 'Unknown'),
@@ -386,12 +397,14 @@ class ReportGenerator:
 
     def generate_charts(self, output_dir: str = CHART_DIR) -> Dict[str, str]:
         """Generated diagrams for the report. Args: OutPut_dir: Output directory for diagrams Return: Dictionary with diagram paths"""
-        if not HAS_MATPLOTLIB:
+        if not HAS_MATPLOTLIB or plt is None:
             logger.warning("Matplotlib ist nicht installiert, keine Diagramme werden generiert")
             return {}
 
         if not self.report_data:
             self.prepare_report_data()
+        if not isinstance(self.report_data, dict):
+            return {}
 
         os.makedirs(output_dir, exist_ok=True)
 
@@ -422,18 +435,21 @@ class ReportGenerator:
 
     def _generate_console_chart(self, output_dir: str, timestamp: str) -> str:
         """Generates A Cake Diagram for the Console Distribution. Args: Output_dir: Edition Directory Timestamp: Time Stamp for the File Name Return: Path to Generated Diagram"""
+        if not self.report_data or plt is None:
+            return ""
 # Prepare data
         consoles = []
         counts = []
 
 # Sort by number and limit the top 10
+        report = self.report_data or {}
         console_data = sorted(
-            self.report_data['console_data'],
+            report.get('console_data', []),
             key=lambda x: x['count'],
             reverse=True
         )[:10]
 
-        total_count = sum(item['count'] for item in self.report_data['console_data'])
+        total_count = sum(item['count'] for item in report.get('console_data', []))
         other_count = total_count - sum(item['count'] for item in console_data)
 
         for item in console_data:
@@ -460,9 +476,12 @@ class ReportGenerator:
 
     def _generate_format_chart(self, output_dir: str, timestamp: str) -> str:
         """Generates A Bar Diagram for the File Format Distribution. Args: Output_dir: Edition Directory Timestamp: Time Stamp for the File Name Return: Path to Generated Diagram"""
+        if not self.report_data or plt is None:
+            return ""
 # Prepare data and sort by number
+        report = self.report_data or {}
         format_data = sorted(
-            self.report_data['format_data'],
+            report.get('format_data', []),
             key=lambda x: x['count'],
             reverse=True
         )[:8]  # Top 8 Formate
@@ -488,8 +507,11 @@ class ReportGenerator:
 
     def _generate_size_chart(self, output_dir: str, timestamp: str) -> str:
         """Generates A Bar Diagram for the Size Distribution. Args: Output_dir: Edition Directory Timestamp: Time Stamp for the File Name Return: Path to Generated Diagram"""
+        if not self.report_data or plt is None:
+            return ""
 # Data from the size distribution
-        size_distribution = self.report_data['size_distribution']
+        report = self.report_data or {}
+        size_distribution = report.get('size_distribution', {})
         categories = ['Klein (<1MB)', 'Mittel (1-10MB)', 'Groß (10-100MB)', 'Sehr groß (>100MB)']
         values = [
             size_distribution.get('small', 0),
@@ -517,13 +539,16 @@ class ReportGenerator:
         """Export the Statistics Data as a CSV File. Args: Output_file: Path to the Issuing File Return: True in the event of Success, False in the event of errors"""
         if not self.report_data:
             self.prepare_report_data()
+        if not isinstance(self.report_data, dict):
+            return False
 
         try:
 # Create a flat dictionary for csv export
             flat_data = []
 
 # Console data
-            for console in self.report_data['console_data']:
+            report = self.report_data or {}
+            for console in report.get('console_data', []):
                 flat_data.append({
                     'Typ': 'Konsole',
                     'Name': console['name'],
@@ -531,7 +556,7 @@ class ReportGenerator:
                 })
 
 # Format data
-            for format_item in self.report_data['format_data']:
+            for format_item in report.get('format_data', []):
                 flat_data.append({
                     'Typ': 'Format',
                     'Name': format_item['format'],
@@ -550,7 +575,7 @@ class ReportGenerator:
                 flat_data.append({
                     'Typ': 'Größe',
                     'Name': size_name,
-                    'Anzahl': self.report_data['size_distribution'].get(size_key, 0)
+                    'Anzahl': report.get('size_distribution', {}).get(size_key, 0)
                 })
 
 # Write the CSV file
@@ -571,7 +596,7 @@ class ReportGenerator:
 
     def export_html(self, output_file: str, include_charts: bool = True) -> bool:
         """Exports an HTML report. Args: output_file: path to the issuing file Include_charts: Whether diagrams should be included Return: True in the event of success, false in the event of errors"""
-        if not HAS_JINJA:
+        if not HAS_JINJA or Environment is None or FileSystemLoader is None:
             logger.error("Jinja2 ist nicht installiert, HTML-Export ist nicht möglich")
             return False
 
@@ -611,7 +636,7 @@ class ReportGenerator:
 
 # Renders the template
             html_content = template.render(
-                report=self.report_data,
+                report=self.report_data or {},
                 charts=rel_charts
             )
 
@@ -864,7 +889,7 @@ class ReportGenerator:
 
     def export_pdf(self, output_file: str) -> bool:
         """Export A PDF Report Based on the HTML Report. Args: Output_file: Path to the Issuing File Return: True in the event of Success, False in the event of errors"""
-        if not HAS_WEASYPRINT:
+        if not HAS_WEASYPRINT or weasyprint is None:
             logger.error("WeasyPrint ist nicht installiert, PDF-Export ist nicht möglich")
             return False
 
@@ -1019,7 +1044,7 @@ def export_scan_results_json(scan_result: Any, output_file: str) -> bool:
 
 
 def generate_collection_report(db_connection=None, output_dir: str = REPORT_DIR,
-                             formats: List[str] = None) -> Dict[str, str]:
+                             formats: Optional[List[str]] = None) -> Dict[str, str]:
     """Generates A Collection Report in different formats. ARGS: DB_CONNECTION: DATABASE Connection (optional) Output_Dir: Output Directory for Reports Format: List of the Desired Formats ('HTML', 'PDF', 'CSV', 'JSON') Return: Dictionary with paths to the generated Reports"""
     if formats is None:
         formats = ['html']

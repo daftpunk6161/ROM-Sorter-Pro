@@ -612,19 +612,33 @@ class ConversionAuditReport:
     cancelled: bool = False
 
 
-def _load_cfg(config: Optional[Config]) -> Config:
-    if config is not None:
+def _load_cfg(config: Optional[Config | Dict[str, Any]]) -> Config:
+    if isinstance(config, Config):
         return config
+    if isinstance(config, dict):
+        return Config(config)
     try:
-        return load_config()
+        return Config(load_config())
     except Exception:
         return Config()
+
+
+def _get_dict(cfg: Config, *keys: str) -> Dict[str, Any]:
+    if not keys:
+        return {}
+    current: Any = cfg.get(keys[0], {})
+    for key in keys[1:]:
+        if isinstance(current, dict):
+            current = current.get(key, {})
+        else:
+            current = {}
+    return current if isinstance(current, dict) else {}
 
 
 def _resolve_copy_buffer_size(cfg: Config) -> int:
     size = None
     try:
-        perf_cfg = cfg.get("performance", {}).get("processing", {}) or {}
+        perf_cfg = _get_dict(cfg, "performance", "processing")
         size = perf_cfg.get("io_buffer_size")
     except Exception:
         size = None
@@ -637,7 +651,7 @@ def _resolve_copy_buffer_size(cfg: Config) -> int:
 
 def _progress_batch_enabled(cfg: Config) -> bool:
     try:
-        opt_cfg = cfg.get("performance", {}).get("optimization", {}) or {}
+        opt_cfg = _get_dict(cfg, "performance", "optimization")
         return bool(opt_cfg.get("enable_progress_batching", True))
     except Exception:
         return True
@@ -687,7 +701,7 @@ def _resolve_tool_path(tool_value: Optional[str]) -> Optional[str]:
 
 def _resolve_conversion_settings(cfg: Config) -> Dict[str, Any]:
     try:
-        sorting_cfg = cfg.get("features", {}).get("sorting", {}) or {}
+        sorting_cfg = _get_dict(cfg, "features", "sorting")
     except Exception:
         sorting_cfg = {}
     conversion_cfg = sorting_cfg.get("conversion", {}) or {}
@@ -862,7 +876,7 @@ def _resolve_repo_root() -> Path:
 
 
 def _load_identification_overrides(cfg: Config) -> List[Dict[str, Any]]:
-    override_cfg = cfg.get("identification_overrides", {}) if isinstance(cfg, dict) else {}
+    override_cfg = cfg.get("identification_overrides", {})
     if isinstance(override_cfg, str):
         override_cfg = {"path": override_cfg}
     if not isinstance(override_cfg, dict):
@@ -1177,7 +1191,7 @@ def run_scan(
     items: List[ScanItem] = []
     min_confidence = 0.95
     try:
-        sorting_cfg = cfg.get("features", {}).get("sorting", {}) or {}
+        sorting_cfg = _get_dict(cfg, "features", "sorting")
         min_confidence = float(sorting_cfg.get("confidence_threshold", min_confidence))
     except Exception:
         min_confidence = 0.95
@@ -1261,7 +1275,7 @@ def run_scan(
 
 def identify(
     scan_items: List[ScanItem],
-    config: Optional[Config] = None,
+    config: Optional[Config | Dict[str, Any]] = None,
     progress_cb: Optional[ProgressCallback] = None,
     cancel_token: Optional[CancelToken] = None,
 ) -> List[IdentificationResult]:
@@ -1404,8 +1418,8 @@ def save_dat_sources(paths: Iterable[str], config: Optional[Config] = None) -> L
     dat_cfg = cfg.get("dats", {}) or {}
     normalized = _normalize_dat_sources(paths)
     dat_cfg["import_paths"] = normalized
-    cfg["dats"] = dat_cfg
-    save_config(cfg)
+    cfg.set("dats", dat_cfg)
+    save_config(cfg.config_data)
     return normalized
 
 
@@ -1595,7 +1609,7 @@ def plan_sort(
         "rules": [],
     }
     try:
-        sorting_cfg = cfg.get("features", {}).get("sorting", {}) or {}
+        sorting_cfg = _get_dict(cfg, "features", "sorting")
         rename_template = sorting_cfg.get("rename_template")
         create_unknown_folder = bool(sorting_cfg.get("create_unknown_folder", True))
         unknown_folder_name = str(sorting_cfg.get("unknown_folder_name") or "Unknown")

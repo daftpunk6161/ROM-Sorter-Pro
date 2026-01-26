@@ -8,7 +8,8 @@ import logging
 import ctypes
 import weakref
 import time
-from typing import List, Callable, NewType
+import importlib
+from typing import Any, Callable, List, NewType, Optional, TYPE_CHECKING
 
 # Type definitions for drag and drop
 FilePath = NewType('FilePath', str)
@@ -159,7 +160,9 @@ def _setup_tkinterdnd() -> bool:
 
     try:
 # Try to import tkinterdnd2
-        from tkinterdnd2 import TkinterDnD, DND_FILES
+        tkdnd_module = importlib.import_module("tkinterdnd2")
+        TkinterDnD = tkdnd_module.TkinterDnD
+        DND_FILES = tkdnd_module.DND_FILES
 
 # Register global
         globals()['TkinterDnD'] = TkinterDnD
@@ -178,6 +181,20 @@ def _setup_tkinterdnd() -> bool:
 
 class DragDropMixin:
     """Mixin class that adds Drag & Drop functionality to Tkinter widgets."""
+
+    if TYPE_CHECKING:
+        tk: Any
+        _w: str
+        _drop_target_registered: bool
+
+        def winfo_id(self) -> int: ...
+        def winfo_toplevel(self) -> Any: ...
+        def winfo_rootx(self) -> int: ...
+        def winfo_rooty(self) -> int: ...
+        def winfo_width(self) -> int: ...
+        def winfo_height(self) -> int: ...
+        def drop_target_register(self, *args: Any, **kwargs: Any) -> Any: ...
+        def dnd_bind(self, *args: Any, **kwargs: Any) -> Any: ...
 
     def __init__(self, *args, **kwargs):
 # Make sura that this method is not called without a parent class
@@ -222,6 +239,8 @@ class DragDropMixin:
     def _register_windows_drop_target(self) -> bool:
         """Register the widget as a drop goal under Windows."""
         try:
+            if _DragAcceptFiles is None or _DragQueryFileW is None:
+                return False
 # Set A Flag to Prevent the Widget from Being Registered Twice
             if hasattr(self, '_drop_target_registered') and self._drop_target_registered:
                 logger.warning(f"Widget {self.winfo_id()} ist bereits als Drop-Target registriert")
@@ -279,11 +298,13 @@ class DragDropMixin:
                             if message == WM_DROPFILES:
 # Call up all registered widget handler
                                 file_paths = _extract_drop_file_paths(wparam)
-                                _DragFinish(wparam)
+                                if _DragFinish is not None:
+                                    _DragFinish(wparam)
 
 # Get a mouse position in the drop
                                 point = POINT()
-                                _DragQueryPoint(wparam, ctypes.byref(point))
+                                if _DragQueryPoint is not None:
+                                    _DragQueryPoint(wparam, ctypes.byref(point))
 
 # Find the widget under the mouse pointer
                                 x, y = point.x, point.y
@@ -347,34 +368,11 @@ class DragDropMixin:
             traceback.print_exc()
             return False
 
-def _extract_drop_file_paths(hdrop) -> List[str]:
-    """Extract file paths from a Windows drop handle."""
-    try:
-# Determine the number of dropped files
-        file_count = _DragQueryFileW(hdrop, 0xFFFFFFFF, None, 0)
-        paths = []
-
-# Extract all file paths
-        for i in range(file_count):
-# Two runs: first determine size, then call up the path
-            buffer_size = _DragQueryFileW(hdrop, i, None, 0) + 1
-            buffer = ctypes.create_unicode_buffer(buffer_size)
-            _DragQueryFileW(hdrop, i, buffer, buffer_size)
-            paths.append(buffer.value)
-
-# Debug edition
-        logger.debug(f"Extrahierte Pfade aus Windows Drop: {paths}")
-        return paths
-    except Exception as e:
-        logger.error(f"Fehler beim Extrahieren der Drop-Dateien: {e}")
-        import traceback
-        traceback.print_exc()
-        return []
-
     def _register_tkdnd_drop_target(self) -> bool:
         """Register the widget as a drop goal with a tkinterdnd."""
         try:
-# Use tkinterdnd methods
+            if DND_FILES is None:
+                return False
             self.drop_target_register(DND_FILES)
             self.dnd_bind('<<Drop>>', self._handle_tkdnd_drop)
             self.dnd_bind('<<DragEnter>>', self._handle_tkdnd_enter)
@@ -388,33 +386,32 @@ def _extract_drop_file_paths(hdrop) -> List[str]:
 
     def _handle_windows_drop(self, hdrop):
         """Verarbeitet Windows-Drop-Events."""
+        if _DragQueryFileW is None:
+            return
         try:
-# Extract all the dropped file paths
             file_count = _DragQueryFileW(hdrop, 0xFFFFFFFF, None, 0)
             paths = []
 
             for i in range(file_count):
-# Two runs: first determine size, then call up the path
                 buffer_size = _DragQueryFileW(hdrop, i, None, 0) + 1
                 buffer = ctypes.create_unicode_buffer(buffer_size)
                 _DragQueryFileW(hdrop, i, buffer, buffer_size)
                 paths.append(buffer.value)
 
-# Complete the event and call callback
-            _DragFinish(hdrop)
+            if _DragFinish is not None:
+                _DragFinish(hdrop)
 
             if self._drop_callback and paths:
                 self._drop_callback(paths)
         except Exception as e:
             logger.error(f"Fehler bei der Windows Drop-Verarbeitung: {e}")
-            if hdrop:
+            if hdrop and _DragFinish is not None:
                 _DragFinish(hdrop)
 
     def _handle_tkdnd_drop(self, event):
         """Verarbeitet TkinterDnD Drop-Events."""
         try:
             if hasattr(event, 'data') and event.data:
-# Extract paths from event data
                 paths = self._extract_paths_from_data(event.data)
 
                 if self._drop_callback and paths:
@@ -445,20 +442,17 @@ def _extract_drop_file_paths(hdrop) -> List[str]:
         if not data:
             return paths
 
-# Convert to string
         data_str = str(data).strip()
 
-# Windows Explorer Specific Format with Casted Brackets
         if data_str.startswith('{') and data_str.endswith('}'):
             clean_path = data_str.strip('{}')
             if os.path.exists(clean_path):
                 return [clean_path]
 
-# URL format
         if data_str.startswith('file:'):
             import urllib.parse
 
-            if ' file:' in data_str:  # Mehrere URLs
+            if ' file:' in data_str:
                 for part in data_str.split():
                     if part.startswith('file:'):
                         try:
@@ -469,7 +463,7 @@ def _extract_drop_file_paths(hdrop) -> List[str]:
                                 paths.append(path)
                         except Exception:
                             pass
-            else:  # Einzelne URL
+            else:
                 try:
                     path = urllib.parse.unquote(data_str[5:])
                     if os.name == 'nt' and path.startswith('/'):
@@ -479,27 +473,49 @@ def _extract_drop_file_paths(hdrop) -> List[str]:
                 except Exception:
                     pass
 
-# Standard space separation
         elif ' ' in data_str:
             for part in data_str.split():
                 clean = part.strip('"\'{} ')
                 if os.path.exists(clean):
                     paths.append(clean)
 
-# Line breaks
         elif '\n' in data_str or '\r' in data_str:
-            import re  # Import at the top of function to ensure it's available
+            import re
             for line in re.split(r'\r\n|\r|\n', data_str):
                 clean = line.strip('"\'{} ')
                 if clean and os.path.exists(clean):
                     paths.append(clean)
 
-# Individual path
         elif os.path.exists(data_str):
             paths.append(data_str)
 
-# Cleaning paths
         return [os.path.normpath(p) for p in paths]
+
+def _extract_drop_file_paths(hdrop) -> List[str]:
+    """Extract file paths from a Windows drop handle."""
+    try:
+        if _DragQueryFileW is None:
+            return []
+# Determine the number of dropped files
+        file_count = _DragQueryFileW(hdrop, 0xFFFFFFFF, None, 0)
+        paths = []
+
+# Extract all file paths
+        for i in range(file_count):
+# Two runs: first determine size, then call up the path
+            buffer_size = _DragQueryFileW(hdrop, i, None, 0) + 1
+            buffer = ctypes.create_unicode_buffer(buffer_size)
+            _DragQueryFileW(hdrop, i, buffer, buffer_size)
+            paths.append(buffer.value)
+
+# Debug edition
+        logger.debug(f"Extrahierte Pfade aus Windows Drop: {paths}")
+        return paths
+    except Exception as e:
+        logger.error(f"Fehler beim Extrahieren der Drop-Dateien: {e}")
+        import traceback
+        traceback.print_exc()
+        return []
 
     def set_drop_enter_callback(self, callback: Callable[[], None]):
         """Sets the callback for DragEnter events."""
@@ -533,12 +549,15 @@ def patch_tkinter_root(root):
     """Patch an existing tkinter root window with drag & drop functionality. Args: Root: Tkinter Root window Return: Bool: True if successful, otherwise false"""
     try:
         if DND_MODE == "tkdnd":
+            tkdnd = TkinterDnD
+            if tkdnd is None:
+                return False
 # Activate the tkinterdnd for the root window
-            TkinterDnD._require(root.tk)
+            tkdnd._require(root.tk)
 
 # Add methods
-            root.drop_target_register = lambda *args, **kw: TkinterDnD._drop_target_register(root.tk, *args, **kw)
-            root.dnd_bind = lambda *args, **kw: TkinterDnD._dnd_bind(root.tk, *args, **kw)
+            root.drop_target_register = lambda *args, **kw: tkdnd._drop_target_register(root.tk, *args, **kw)
+            root.dnd_bind = lambda *args, **kw: tkdnd._dnd_bind(root.tk, *args, **kw)
 
             return True
 

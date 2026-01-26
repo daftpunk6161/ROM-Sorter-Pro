@@ -1,5 +1,6 @@
 import sys
 import zipfile
+import zlib
 import hashlib
 from pathlib import Path
 
@@ -24,7 +25,7 @@ def _write_dat_index(index_path: Path, entries: list[tuple[bytes, str]]) -> None
     )
     for payload, platform_id in entries:
         sha1 = hashlib.sha1(payload).hexdigest()
-        crc32 = f"{zipfile.crc32(payload) & 0xFFFFFFFF:08x}"
+        crc32 = f"{zlib.crc32(payload) & 0xFFFFFFFF:08x}"
         size_bytes = len(payload)
         cur.execute(
             "INSERT INTO rom_hashes (dat_id, platform_id, rom_name, set_name, crc32, sha1, size_bytes) VALUES (?, ?, ?, ?, ?, ?, ?)",

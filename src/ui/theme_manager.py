@@ -690,7 +690,7 @@ class Theme:
 class ThemeManager:
     """Manages themes for the application."""
 
-    def __init__(self, config_dir: str = None):
+    def __init__(self, config_dir: Optional[str] = None):
         """Initialized the theme manager. Args: Config_Dir: List for theme configuration files"""
         if config_dir is None:
             # Bestimme Standard-Konfigurationsverzeichnis
@@ -700,11 +700,13 @@ class ThemeManager:
             else:
                 config_dir = os.path.join(user_home, ".config", "rom-sorter-pro", "themes")
 
-        self.config_dir = config_dir
+        self.config_dir = str(config_dir) if config_dir is not None else ""
         self.themes: Dict[str, Theme] = {}
         self.current_theme_name = "default"
 
         # Make sure the configuration directory exists
+        if not self.config_dir:
+            self.config_dir = os.path.join(os.path.expanduser("~"), ".config", "rom-sorter-pro", "themes")
         os.makedirs(self.config_dir, exist_ok=True)
 
         # Lade Standardthemes
@@ -974,12 +976,10 @@ class ThemeManager:
             logger.error(f"Fehler beim Entfernen des Themes '{theme_name}': {e}")
             return False
 
-    def get_theme(self, theme_name: str = None) -> Theme:
+    def get_theme(self, theme_name: Optional[str] = None) -> Theme:
         """Gives back a theme. ARGS: Theme_Name: Name of the Themes Or None for the Current Theme Return: Theme Instance"""
-        if theme_name is None:
-            theme_name = self.current_theme_name
-
-        return self.themes.get(theme_name, self.themes["Light"])
+        resolved = theme_name or self.current_theme_name
+        return self.themes.get(resolved, self.themes["Light"])
 
     def set_current_theme(self, theme_name: str) -> bool:
         """Set the current theme. Args: Theme_Name: Name of the theme to be set Return: True in the event of success, false in the event of errors"""

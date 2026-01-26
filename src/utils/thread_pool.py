@@ -57,11 +57,11 @@ class Task:
 class AdaptiveThreadPool:
     """A thread pool with adaptive performance optimization, priority support and extended monitoring function."""
 
-    def __init__(self, min_workers: int = 2, max_workers: int = None,
+    def __init__(self, min_workers: int = 2, max_workers: Optional[int] = None,
                 name_prefix: str = "worker", daemon: bool = True):
         """Initialized the thread pool. Args: Min_Workers: Minimal number of worker threads MAX_WORKERS: Maximum number of worker threads (None for CPU number * 2) Name_Prefix: Prefix for thread names Daemon: Whether the threads should run as Daemon threads"""
         self.min_workers = min_workers
-        self.max_workers = max_workers or (os.cpu_count() or 4) * 2
+        self.max_workers = int(max_workers) if max_workers is not None else (os.cpu_count() or 4) * 2
         self.name_prefix = name_prefix
         self.daemon = daemon
 
@@ -351,7 +351,7 @@ class BatchProcessor:
     and provides enhanced functions for batch processing.
     """
 
-    def __init__(self, min_workers: int = 2, max_workers: int = None):
+    def __init__(self, min_workers: int = 2, max_workers: Optional[int] = None):
         """Initialized the batch processor. Args: Min_Workers: Minimal number of worker threads Max_Workers: Maximum number of worker threads"""
         self.thread_pool = AdaptiveThreadPool(
             min_workers=min_workers,
@@ -384,7 +384,7 @@ class BatchProcessor:
         """Drives down the thread pool. Args: Wait: Whether all tasks should be served"""
         self.thread_pool.shutdown(wait)
 
-    def create_batch(self, name: str = None) -> str:
+    def create_batch(self, name: Optional[str] = None) -> str:
         """Creates a new batch and returns its id. ARGS: Name: Optional name for the Batch Return: The Batch ID"""
         with self._lock:
             self.batch_counter += 1
@@ -468,7 +468,7 @@ class BatchProcessor:
 
         return task_ids
 
-    def _on_task_complete(self, task: Task):
+    def _on_task_complete(self, task: Task, result: Optional[Any] = None):
         """Is called when a task is complete. Args: Task: The Completed Task"""
         batch_id = task.kwargs.get('batch_id')
         if not batch_id:
@@ -496,7 +496,7 @@ class BatchProcessor:
                         except Exception as e:
                             logger.error(f"Fehler im on_batch_progress-Callback: {e}")
 
-    def _on_task_error(self, task: Task, error: Exception):
+    def _on_task_error(self, task: Task, error: Optional[Exception] = None):
         """Is called when a task fails. Args: Task: The Failed Task Error: The Error Occurred"""
         batch_id = task.kwargs.get('batch_id')
         if not batch_id:
@@ -510,7 +510,8 @@ class BatchProcessor:
             if task.task_id in batch['tasks']:
                 batch['tasks'][task.task_id]['status'] = 'failed'
                 batch['tasks'][task.task_id]['end_time'] = time.time()
-                batch['tasks'][task.task_id]['error'] = str(error)
+                if error is not None:
+                    batch['tasks'][task.task_id]['error'] = str(error)
                 batch['failed_tasks'] += 1
 
                 # Check whether the batch is complete
@@ -542,7 +543,7 @@ class BatchProcessor:
                 except Exception as e:
                     logger.error(f"Fehler im on_batch_complete-Callback: {e}")
 
-    def get_batch_status(self, batch_id: str) -> Optional[Dict]:
+    def get_batch_status(self, batch_id: str) -> Optional[Dict[str, Any]]:
         """Gives Back the Status of a Batch. Args: Batch_id: The Batch Id Return: A dictionary with status information or none if the batch does not exist"""
         with self._lock:
             if batch_id not in self.batches:
@@ -567,10 +568,15 @@ class BatchProcessor:
 
             return batch
 
-    def get_all_batches(self) -> Dict[str, Dict]:
+    def get_all_batches(self) -> Dict[str, Dict[str, Any]]:
         """Gives Back the Status of All Batches. Return: a dictionary with batch ids as a key and status dictionaries as value"""
         with self._lock:
-            return {batch_id: self.get_batch_status(batch_id) for batch_id in self.batches}
+            return {
+                batch_id: status
+                for batch_id in self.batches
+                for status in [self.get_batch_status(batch_id)]
+                if status is not None
+            }
 
     def wait_for_batch(self, batch_id: str, timeout: Optional[float] = None) -> bool:
         """Wait until a batch is complained. Args: Batch_id: The Batch ID Timeout: Optional Timeout in Seconds Return: True When The Batch Has Been Completed, False at Timeout"""

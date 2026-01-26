@@ -1,5 +1,6 @@
 import json
 import sys
+from typing import cast
 from pathlib import Path
 
 import pytest
@@ -45,4 +46,5 @@ def test_catalog_json_migrates_to_yaml(monkeypatch, tmp_path):
     result = platform_heuristics.evaluate_platform_candidates("game.nes")
 
     assert yaml_path.exists()
-    assert "nes" in result.get("candidate_systems", [])
+    candidates = cast(list[str], result.get("candidate_systems", []))
+    assert "nes" in candidates

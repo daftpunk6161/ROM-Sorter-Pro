@@ -94,6 +94,26 @@ def run() -> int:
     from ...core.dat_index_sqlite import DatIndexSqlite
     from ...database.db_paths import get_rom_db_path
     from ...ui.theme_manager import ThemeManager
+    try:
+        from ...ui.qt.assets import label
+    except Exception:
+        def label(text: str, icon_key: str) -> str:
+            return text
+    try:
+        from ...ui.qt.layouts import LAYOUTS
+    except Exception:
+        LAYOUTS = {}
+    try:
+        from ...ui.qt.themes import ThemeManager as QtPaletteThemeManager, THEMES as QT_PALETTE_THEMES
+    except Exception:
+        QtPaletteThemeManager = None
+        QT_PALETTE_THEMES = {}
+    try:
+        from ...ui.qt.shell import UIShellController
+        from ...ui.qt.themes import ThemeManager as ShellThemeManager
+    except Exception:
+        UIShellController = None
+        ShellThemeManager = None
     from ...utils.external_tools import probe_igir, probe_wud2app, probe_wudcompress, igir_plan, igir_execute
     from .export_utils import (
         audit_report_to_dict,
@@ -569,7 +589,7 @@ def run() -> int:
 
             self.btn_init = QtWidgets.QPushButton("Initialize DB")
             self.btn_backup = QtWidgets.QPushButton("Backup DB")
-            self.btn_scan = QtWidgets.QPushButton("Scan ROM Folder")
+            self.btn_scan = QtWidgets.QPushButton(label("Scan ROM Folder", "scan"))
             self.btn_import = QtWidgets.QPushButton("Import DAT")
             self.btn_migrate = QtWidgets.QPushButton("Migrate DB")
             self.btn_refresh = QtWidgets.QPushButton("Refresh")
@@ -843,6 +863,17 @@ def run() -> int:
             self._resume_path = str((Path(__file__).resolve().parents[3] / "cache" / "last_sort_resume.json").resolve())
 
             self._theme_manager = ThemeManager()
+            self._qt_theme_manager = None
+            self._qt_theme_display: dict[str, str] = {}
+            self._active_qt_theme_key: Optional[str] = None
+            app_instance = QtWidgets.QApplication.instance()
+            if QtPaletteThemeManager is not None and app_instance is not None and QT_PALETTE_THEMES:
+                self._qt_theme_manager = QtPaletteThemeManager(app_instance)
+                self._qt_theme_display = {
+                    f"Qt: {theme.name}": key for key, theme in QT_PALETTE_THEMES.items()
+                }
+            self._shell_controller: Optional[object] = None
+            self._shell_pages: dict[str, Any] = {}
             self._syncing_paths = False
             self._syncing_theme = False
             self._log_visible = True
@@ -912,16 +943,21 @@ def run() -> int:
             stepper_widget = QtWidgets.QWidget()
             stepper_widget.setLayout(stepper_layout)
 
-            self.header_btn_scan = QtWidgets.QPushButton("Scan")
-            self.header_btn_preview = QtWidgets.QPushButton("Preview")
-            self.header_btn_execute = QtWidgets.QPushButton("Execute")
-            self.header_btn_cancel = QtWidgets.QPushButton("Cancel")
+            self.header_btn_scan = QtWidgets.QPushButton(label("Scan", "scan"))
+            self.header_btn_preview = QtWidgets.QPushButton(label("Preview", "preview"))
+            self.header_btn_execute = QtWidgets.QPushButton(label("Execute", "execute"))
+            self.header_btn_cancel = QtWidgets.QPushButton(label("Cancel", "cancel"))
+            self.header_btn_preview.setObjectName("secondary")
+            self.header_btn_execute.setObjectName("primary")
+            self.header_btn_cancel.setObjectName("danger")
             self.header_btn_cancel.setEnabled(False)
 
             self.header_cmd_btn = QtWidgets.QPushButton("⌘ Palette")
             self.header_log_btn = QtWidgets.QPushButton("Log")
 
             theme_names_header = self._theme_manager.get_theme_names()
+            if self._qt_theme_display:
+                theme_names_header = theme_names_header + list(self._qt_theme_display.keys())
             if "Auto" not in theme_names_header:
                 theme_names_header = ["Auto"] + theme_names_header
             self.header_theme_combo = QtWidgets.QComboBox()
@@ -999,14 +1035,14 @@ def run() -> int:
             tabs = QtWidgets.QTabWidget()
             self.tabs = tabs
             try:
-                tabs.tabBar().hide()
+                tabs.tabBar().setVisible(True)
             except Exception:
                 pass
 
             content_layout.addWidget(sidebar)
             content_layout.addWidget(tabs, 1)
 
-            def _wrap_tab_scroll(widget: QtWidgets.QWidget) -> QtWidgets.QScrollArea:
+            def _wrap_tab_scroll(widget: Any) -> Any:
                 scroll = QtWidgets.QScrollArea()
                 scroll.setWidgetResizable(True)
                 scroll.setFrameShape(QtWidgets.QFrame.NoFrame)
@@ -1046,6 +1082,15 @@ def run() -> int:
                 tools_scroll = _wrap_tab_scroll(tools_tab)
                 tabs.addTab(tools_scroll, "External Tools")
             tabs.setCurrentIndex(0)
+
+            self._shell_pages = {
+                "Dashboard": dashboard_scroll,
+                "Sortierung": sort_scroll,
+                "Konvertierungen": conversions_scroll,
+                "IGIR": igir_scroll,
+                "Datenbank": db_scroll,
+                "Einstellungen": settings_scroll,
+            }
 
             dashboard_layout = QtWidgets.QVBoxLayout(dashboard_tab)
             main_layout = QtWidgets.QVBoxLayout(main_tab)
@@ -1140,6 +1185,21 @@ def run() -> int:
 
             left_layout = QtWidgets.QVBoxLayout(left_panel)
             right_layout = QtWidgets.QVBoxLayout(right_panel)
+            sort_subtabs = QtWidgets.QTabWidget()
+            workflow_tab = QtWidgets.QWidget()
+            workflow_layout = QtWidgets.QVBoxLayout(workflow_tab)
+            workflow_layout.setContentsMargins(0, 0, 0, 0)
+            workflow_layout.setSpacing(8)
+            filters_tab = QtWidgets.QWidget()
+            filters_layout_tab = QtWidgets.QVBoxLayout(filters_tab)
+            filters_layout_tab.setContentsMargins(0, 0, 0, 0)
+            presets_tab = QtWidgets.QWidget()
+            presets_layout_tab = QtWidgets.QVBoxLayout(presets_tab)
+            presets_layout_tab.setContentsMargins(0, 0, 0, 0)
+            sort_subtabs.addTab(workflow_tab, "Workflow")
+            sort_subtabs.addTab(filters_tab, "Filter")
+            sort_subtabs.addTab(presets_tab, "Presets")
+            left_layout.addWidget(sort_subtabs, 1)
             main_status_group = QtWidgets.QGroupBox("Status")
             main_status_layout = QtWidgets.QGridLayout(main_status_group)
             main_status_layout.setHorizontalSpacing(6)
@@ -1164,8 +1224,8 @@ def run() -> int:
             main_status_layout.addWidget(self.status_label, 3, 0, 1, 2)
             main_status_layout.addWidget(self.summary_label, 4, 0, 1, 2)
             main_status_layout.setColumnStretch(1, 1)
-            left_layout.addWidget(main_status_group)
-            left_layout.addLayout(sections_row)
+            workflow_layout.addWidget(main_status_group)
+            workflow_layout.addLayout(sections_row)
 
             presets_group = QtWidgets.QGroupBox("Presets & Auswahl")
             presets_layout = QtWidgets.QGridLayout(presets_group)
@@ -1188,10 +1248,16 @@ def run() -> int:
             presets_layout.addWidget(self.btn_execute_selected, 2, 0, 1, 2)
             presets_layout.setColumnStretch(1, 1)
 
-            left_layout.addWidget(filters_group)
-            left_layout.addWidget(presets_group)
+            filters_layout_tab.addWidget(filters_group)
+            filters_layout_tab.addStretch(1)
+            presets_layout_tab.addWidget(presets_group)
+            presets_layout_tab.addStretch(1)
 
-            dnd_enabled = self._is_drag_drop_enabled()
+            dnd_enabled = False
+            try:
+                dnd_enabled = self._is_drag_drop_enabled()
+            except Exception:
+                dnd_enabled = False
             self.source_edit = DropLineEdit(self._on_drop_source, enabled=dnd_enabled)
             self.dest_edit = DropLineEdit(self._on_drop_dest, enabled=dnd_enabled)
             self.source_edit.setPlaceholderText("ROM-Quelle auswählen")
@@ -1308,6 +1374,8 @@ def run() -> int:
 
             self.theme_combo = QtWidgets.QComboBox()
             theme_names = self._theme_manager.get_theme_names()
+            if self._qt_theme_display:
+                theme_names = theme_names + list(self._qt_theme_display.keys())
             if "Auto" not in theme_names:
                 theme_names = ["Auto"] + theme_names
             self.theme_combo.addItems(theme_names)
@@ -1403,6 +1471,20 @@ def run() -> int:
 
             settings_form.addWidget(QtWidgets.QLabel("Theme:"), 0, 0)
             settings_form.addWidget(self.theme_combo, 0, 1)
+            self.layout_combo = None
+            if LAYOUTS:
+                self.layout_combo = QtWidgets.QComboBox()
+                for key, spec in LAYOUTS.items():
+                    self.layout_combo.addItem(spec.name, key)
+                try:
+                    layout_setting = QtCore.QSettings("ROM-Sorter-Pro", "ROM-Sorter-Pro").value("ui/layout", "sidebar_cmd")
+                    layout_key = str(layout_setting).strip() if layout_setting is not None else "sidebar_cmd"
+                except Exception:
+                    layout_key = "sidebar_cmd"
+                idx_layout = self.layout_combo.findData(layout_key)
+                self.layout_combo.setCurrentIndex(idx_layout if idx_layout >= 0 else 0)
+                settings_form.addWidget(QtWidgets.QLabel("Layout:"), 1, 0)
+                settings_form.addWidget(self.layout_combo, 1, 1)
             settings_form.setColumnStretch(1, 1)
 
             theme_preview_group = QtWidgets.QGroupBox("Theme Preview")
@@ -1415,10 +1497,11 @@ def run() -> int:
             self.log_visible_checkbox = QtWidgets.QCheckBox("Log standardmäßig anzeigen")
             self.remember_window_checkbox = QtWidgets.QCheckBox("Fenstergröße merken")
             self.drag_drop_checkbox = QtWidgets.QCheckBox("Drag & Drop aktivieren")
-            settings_form.addWidget(self.log_visible_checkbox, 1, 1)
-            settings_form.addWidget(self.remember_window_checkbox, 2, 1)
-            settings_form.addWidget(self.drag_drop_checkbox, 3, 1)
-            settings_form.addWidget(self.dat_auto_load_checkbox, 4, 1)
+            log_row = 2 if self.layout_combo is not None else 1
+            settings_form.addWidget(self.log_visible_checkbox, log_row, 1)
+            settings_form.addWidget(self.remember_window_checkbox, log_row + 1, 1)
+            settings_form.addWidget(self.drag_drop_checkbox, log_row + 2, 1)
+            settings_form.addWidget(self.dat_auto_load_checkbox, log_row + 3, 1)
 
             sort_intro = QtWidgets.QLabel("Sortieroptionen für die Zielstruktur.")
             sort_intro.setWordWrap(True)
@@ -1511,12 +1594,12 @@ def run() -> int:
             button_row.setVerticalSpacing(6)
             sort_title = QtWidgets.QLabel("Sortierung")
             sort_title.setStyleSheet("font-weight: 600;")
-            left_layout.addWidget(sort_title)
-            left_layout.addLayout(button_row)
+            workflow_layout.addWidget(sort_title)
+            workflow_layout.addLayout(button_row)
 
-            self.btn_scan = QtWidgets.QPushButton("Scannen")
-            self.btn_preview = QtWidgets.QPushButton("Vorschau Sortierung (Dry-run)")
-            self.btn_execute = QtWidgets.QPushButton("Sortieren ausführen (ohne Konvertierung)")
+            self.btn_scan = QtWidgets.QPushButton(label("Scannen", "scan"))
+            self.btn_preview = QtWidgets.QPushButton(label("Vorschau Sortierung (Dry-run)", "preview"))
+            self.btn_execute = QtWidgets.QPushButton(label("Sortieren ausführen (ohne Konvertierung)", "execute"))
             self.btn_execute_convert = QtWidgets.QPushButton("Konvertierungen ausführen")
             self.btn_audit = QtWidgets.QPushButton("Konvertierungen prüfen")
             self.btn_export_audit_csv = QtWidgets.QPushButton("Audit CSV exportieren")
@@ -1529,7 +1612,7 @@ def run() -> int:
             self.btn_export_frontend_launchbox = QtWidgets.QPushButton("Frontend LaunchBox exportieren")
             self.btn_resume = QtWidgets.QPushButton("Fortsetzen")
             self.btn_retry_failed = QtWidgets.QPushButton("Fehlgeschlagene erneut")
-            self.btn_cancel = QtWidgets.QPushButton("Abbrechen")
+            self.btn_cancel = QtWidgets.QPushButton(label("Abbrechen", "cancel"))
 
             self.btn_scan.setToolTip("Scannt den Quellordner und erkennt Konsolen")
             self.btn_preview.setToolTip("Erstellt einen Sortierplan ohne Dateien zu ändern")
@@ -1537,6 +1620,9 @@ def run() -> int:
             self.btn_execute_convert.setToolTip("Führt Sortierung inkl. Konvertierung aus")
             self.btn_audit.setToolTip("Prüft Konvertierungen ohne Änderungen")
             self.btn_scan.setDefault(True)
+            self.btn_preview.setObjectName("secondary")
+            self.btn_execute.setObjectName("primary")
+            self.btn_cancel.setObjectName("danger")
 
             for btn in (
                 self.btn_scan,
@@ -1724,14 +1810,14 @@ def run() -> int:
             self.details_status_label = QtWidgets.QLabel("-")
             self.details_system_label = QtWidgets.QLabel("-")
             self.details_reason_label = QtWidgets.QLabel("-")
-            for label in (
+            for detail_label in (
                 self.details_input_label,
                 self.details_target_label,
                 self.details_status_label,
                 self.details_system_label,
                 self.details_reason_label,
             ):
-                label.setWordWrap(True)
+                detail_label.setWordWrap(True)
             details_layout.addRow("Eingabe:", self.details_input_label)
             details_layout.addRow("Ziel:", self.details_target_label)
             details_layout.addRow("Status:", self.details_status_label)
@@ -1929,9 +2015,13 @@ def run() -> int:
             except Exception:
                 pass
 
-            self.cmd_palette_shortcut = QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+K"), self)
+            shortcut_cls = getattr(QtGui, "QShortcut", None) or getattr(QtWidgets, "QShortcut", None)
+            if shortcut_cls is not None:
+                self.cmd_palette_shortcut = shortcut_cls(QtGui.QKeySequence("Ctrl+K"), self)
             self.cmd_palette_shortcut.activated.connect(self._open_command_palette)
-            self.execute_shortcut = QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+Return"), self)
+            shortcut_cls = getattr(QtGui, "QShortcut", None) or getattr(QtWidgets, "QShortcut", None)
+            if shortcut_cls is not None:
+                self.execute_shortcut = shortcut_cls(QtGui.QKeySequence("Ctrl+Return"), self)
             self.execute_shortcut.activated.connect(self._quick_execute_or_preview)
             self.hide_unknown_checkbox.stateChanged.connect(lambda _v: self._on_filters_changed())
             self.ext_filter_edit.textChanged.connect(self._on_filters_changed)
@@ -1946,6 +2036,8 @@ def run() -> int:
             self.btn_manage_dat.clicked.connect(self._open_dat_sources_dialog)
             self.btn_open_overrides.clicked.connect(self._open_identification_overrides)
             self.theme_combo.currentTextChanged.connect(self._on_theme_changed)
+            if self.layout_combo is not None:
+                self.layout_combo.currentIndexChanged.connect(self._on_layout_combo_changed)
             self.theme_preview_list.itemClicked.connect(lambda item: self.theme_combo.setCurrentText(item.text()))
             self.btn_db_manager.clicked.connect(self._open_db_manager)
             self.log_visible_checkbox.stateChanged.connect(self._on_log_visible_changed)
@@ -1994,6 +2086,7 @@ def run() -> int:
             self._refresh_dashboard()
             if show_external_tools:
                 self._probe_tools_async()
+            self._init_shell_layout()
 
         def _load_dat_config(self) -> dict:
             cfg = load_config()
@@ -2735,16 +2828,42 @@ def run() -> int:
             except Exception:
                 return
 
+        def _apply_qt_palette_theme(self, key: str) -> bool:
+            if self._qt_theme_manager is None:
+                return False
+            if key not in QT_PALETTE_THEMES:
+                return False
+            try:
+                self._qt_theme_manager.apply(key)
+                self._active_qt_theme_key = key
+                return True
+            except Exception:
+                return False
+
+        def _clear_qt_palette_theme(self) -> None:
+            if self._qt_theme_manager is None:
+                return
+            app = QtWidgets.QApplication.instance()
+            if app is not None:
+                app.setPalette(QtGui.QPalette())
+            self._active_qt_theme_key = None
+
         def _on_theme_changed(self, name: str) -> None:
             if not name:
                 return
             theme_value = name
-            if name == "Auto":
+            qt_key = self._qt_theme_display.get(name) if self._qt_theme_display else None
+            if qt_key:
+                if self._apply_qt_palette_theme(qt_key):
+                    theme_value = f"qt:{qt_key}"
+            elif name == "Auto":
+                self._clear_qt_palette_theme()
                 theme_value = "system"
                 resolved = self._resolve_theme_name("auto")
                 if resolved and self._theme_manager.set_current_theme(resolved):
                     self._apply_theme(self._theme_manager.get_theme(resolved))
             else:
+                self._clear_qt_palette_theme()
                 if self._theme_manager.set_current_theme(name):
                     self._apply_theme(self._theme_manager.get_theme(name))
             self._sync_theme_combos()
@@ -2762,6 +2881,30 @@ def run() -> int:
             except Exception:
                 pass
 
+        def _on_layout_combo_changed(self, idx: int) -> None:
+            if self.layout_combo is None:
+                return
+            key = str(self.layout_combo.itemData(idx) or "").strip()
+            if not key:
+                return
+            try:
+                QtCore.QSettings("ROM-Sorter-Pro", "ROM-Sorter-Pro").setValue("ui/layout", key)
+            except Exception:
+                pass
+            controller = self._shell_controller
+            if controller is not None:
+                try:
+                    combo = getattr(controller, "layout_combo", None)
+                    if combo is None:
+                        return
+                    for i in range(combo.count()):
+                        if combo.itemData(i) == key:
+                            combo.setCurrentIndex(i)
+                            return
+                except Exception:
+                    pass
+                self._mount_shell_root()
+
         def _save_config_async(self, cfg: dict) -> None:
             def task():
                 try:
@@ -2773,26 +2916,38 @@ def run() -> int:
 
         def _load_window_size(self) -> None:
             try:
-                cfg = load_config()
-                if not isinstance(cfg, dict):
-                    return
-                gui_cfg = cfg.get("gui_settings", {}) or {}
-                if not bool(gui_cfg.get("remember_window_size", True)):
-                    return
-                width = int(gui_cfg.get("window_width", 0) or 0)
-                height = int(gui_cfg.get("window_height", 0) or 0)
+                screen = self.screen() or QtWidgets.QApplication.primaryScreen()
+                available = screen.availableGeometry() if screen is not None else None
+                min_hint = self.minimumSizeHint()
+
+                try:
+                    self.adjustSize()
+                except Exception:
+                    pass
+
+                size_hint = self.sizeHint()
+                if size_hint.isValid():
+                    width, height = size_hint.width(), size_hint.height()
+                else:
+                    width, height = 1100, 700
+
+                if available is not None and available.isValid():
+                    max_w = int(available.width() * 0.9)
+                    max_h = int(available.height() * 0.9)
+                    width = min(width, max_w)
+                    height = min(height, max_h)
+
+                if min_hint.isValid():
+                    width = max(width, min_hint.width())
+                    height = max(height, min_hint.height())
+
                 if width > 0 and height > 0:
-                    screen = self.screen() or QtWidgets.QApplication.primaryScreen()
-                    if screen is not None:
-                        available = screen.availableGeometry()
-                        if available.isValid():
-                            width = min(width, available.width())
-                            height = min(height, available.height())
-                    min_hint = self.minimumSizeHint()
-                    if min_hint.isValid():
-                        width = max(width, min_hint.width())
-                        height = max(height, min_hint.height())
                     self.resize(width, height)
+                    if available is not None and available.isValid():
+                        center = available.center()
+                        frame = self.frameGeometry()
+                        frame.moveCenter(center)
+                        self.move(frame.topLeft())
             except Exception:
                 return
 
@@ -2840,18 +2995,8 @@ def run() -> int:
             except Exception:
                 return
 
-        def _apply_default_sort_settings(self, mode: str, conflict: str) -> None:
-            try:
-                if self.mode_combo.currentText() != mode:
-                    self.mode_combo.setCurrentText(mode)
-                if self.conflict_combo.currentText() != conflict:
-                    self.conflict_combo.setCurrentText(conflict)
-            except Exception:
-                return
-
         def _on_log_visible_changed(self, _value: int) -> None:
             self._set_log_visible(bool(self.log_visible_checkbox.isChecked()))
-
         def _on_remember_window_changed(self, _value: int) -> None:
             self._update_gui_setting("remember_window_size", bool(self.remember_window_checkbox.isChecked()))
 
@@ -3737,6 +3882,63 @@ def run() -> int:
         def _set_theme_by_name(self, name: str) -> None:
             if name in self._theme_manager.get_theme_names():
                 self.theme_combo.setCurrentText(name)
+                return
+            if self._qt_theme_display and name in self._qt_theme_display:
+                self.theme_combo.setCurrentText(name)
+
+        def _init_shell_layout(self) -> None:
+            if UIShellController is None or ShellThemeManager is None:
+                return
+            try:
+                cfg = load_config()
+                gui_cfg = cfg.get("gui_settings", {}) if isinstance(cfg, dict) else {}
+                use_shell = bool(gui_cfg.get("use_shell_layout", True))
+            except Exception:
+                use_shell = True
+            if not use_shell:
+                return
+            app_instance = QtWidgets.QApplication.instance()
+            if app_instance is None:
+                return
+            try:
+                self._shell_controller = UIShellController(
+                    theme_mgr=ShellThemeManager(app_instance),
+                    pages=self._shell_pages,
+                    on_action_scan=self._start_scan,
+                    on_action_preview=self._start_preview,
+                    on_action_execute=self._start_execute,
+                    on_action_cancel=self._cancel,
+                )
+                if self.layout_combo is not None:
+                    try:
+                        key = self._shell_controller.layout_key
+                        idx = self.layout_combo.findData(key)
+                        if idx >= 0:
+                            self.layout_combo.setCurrentIndex(idx)
+                    except Exception:
+                        pass
+                self._mount_shell_root()
+                try:
+                    combo = getattr(self._shell_controller, "layout_combo", None)
+                    if combo is not None:
+                        combo.currentIndexChanged.connect(lambda _idx: self._mount_shell_root())
+                except Exception:
+                    pass
+            except Exception:
+                self._shell_controller = None
+
+        def _mount_shell_root(self) -> None:
+            controller = self._shell_controller
+            if not controller:
+                return
+            try:
+                build_root = getattr(controller, "build_root", None)
+                if build_root is None:
+                    return
+                root = build_root()
+                self.setCentralWidget(root)
+            except Exception:
+                return
 
         def _on_header_theme_changed(self, name: str) -> None:
             if self._syncing_theme:
@@ -4206,9 +4408,15 @@ def run() -> int:
 
         def _sync_sidebar_status(self) -> None:
             if hasattr(self, "sidebar_status_label"):
-                self.sidebar_status_label.setText(self.status_label.text() if self.status_label else "-")
+                try:
+                    self.sidebar_status_label.setText(self.status_label.text() if self.status_label else "-")
+                except Exception:
+                    pass
             if hasattr(self, "sidebar_summary_label"):
-                self.sidebar_summary_label.setText(self.summary_label.text() if self.summary_label else "-")
+                try:
+                    self.sidebar_summary_label.setText(self.summary_label.text() if self.summary_label else "-")
+                except Exception:
+                    pass
             self._update_header_pills()
 
         def _update_header_pills(self) -> None:

@@ -151,10 +151,10 @@ class ConsoleDetector:
         Returns:
             DetectionResult with console name, confidence and metadata
         """
-# Faster in-memory cache check
-# (Dictionary is faster than LRU_Cache for frequently used
-# Entries)
-        cache_key = f"{filename}:{file_path if file_path else ''}"
+        # Faster in-memory cache check
+        # (Dictionary is faster than LRU_Cache for frequently used
+        # Entries)
+        cache_key = f"{filename}:{(file_path or '')}"
         if cache_key in self.__class__._in_memory_cache:
             return self.__class__._in_memory_cache[cache_key]
 
@@ -183,7 +183,7 @@ class ConsoleDetector:
                 confidence=confidence,
                 source="primary",
                 filename=filename,
-                file_path=file_path
+                    file_path=(file_path or "")
             )
 # Cache update for future fast lookups
             self.__class__._in_memory_cache[cache_key] = result
@@ -266,7 +266,7 @@ class ConsoleDetector:
                                 confidence=max(0.75, result.confidence * 0.9),
                                 source="batch_similarity_match",
                                 filename=filename,
-                                file_path=file_path
+                                    file_path=(file_path or "")
                             )
 # Cache Update
                             cache = self.__class__._in_memory_cache
@@ -350,7 +350,7 @@ class ConsoleDetector:
                 confidence=0.0,
                 source="fallback",
                 filename=filename,
-                file_path=file_path
+                    file_path=(file_path or "")
             )
 
 # Get Best Result
@@ -362,7 +362,7 @@ class ConsoleDetector:
             confidence=confidence,
             source=source,
             filename=filename,
-            file_path=file_path
+            file_path=(file_path or "")
         )
 
     def _analyze_directory_context(self, file_path: str) -> Tuple[str, float]:

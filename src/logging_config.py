@@ -94,7 +94,7 @@ class FastFormatter(logging.Formatter):
         formatter = logging.Formatter(fmt_string, style='{', datefmt='%H:%M:%S')
         return formatter.format(record)
 
-    def get_cache_stats(self) -> Dict[str, int]:
+    def get_cache_stats(self) -> Dict[str, int | str]:
         """Get formatter cache statistics."""
         total = self._cache_hits + self._cache_misses
         hit_rate = (self._cache_hits / total * 100) if total > 0 else 0

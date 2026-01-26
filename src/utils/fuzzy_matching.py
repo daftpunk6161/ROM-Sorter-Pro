@@ -2,9 +2,10 @@
 # -*- coding: utf-8 -*-
 """ROM SARTER PRO-Fuzzy matching functions This module provides functions for fuzzy-string matching that for the ROM detection and similarity comparisons are used."""
 
+import importlib
 import re
 import logging
-from typing import List, Tuple, TypeVar, Callable, Optional
+from typing import Any, List, Tuple, TypeVar, Callable, Optional
 
 # Type variable for generic functions
 T = TypeVar('T')
@@ -14,11 +15,17 @@ logger = logging.getLogger(__name__)
 
 # Attempts to import the external fuzzywuzzy module
 try:
-    from fuzzywuzzy import fuzz, process
-    _USE_EXTERNAL_FUZZ = True
-    logger.debug("Externe fuzzywuzzy-Bibliothek geladen")
-except ImportError:
-    # Fallback auf unsere eigene Implementierung
+    fuzzy_module = importlib.import_module("fuzzywuzzy")
+    fuzz = getattr(fuzzy_module, "fuzz", None)
+    process = getattr(fuzzy_module, "process", None)
+    _USE_EXTERNAL_FUZZ = fuzz is not None and process is not None
+    if _USE_EXTERNAL_FUZZ:
+        logger.debug("Externe fuzzywuzzy-Bibliothek geladen")
+    else:
+        logger.debug("Fallback auf interne Fuzzy-Matching-Implementierung")
+except Exception:
+    fuzz = None  # type: ignore[assignment]
+    process = None  # type: ignore[assignment]
     _USE_EXTERNAL_FUZZ = False
     logger.debug("Fallback auf interne Fuzzy-Matching-Implementierung")
 
@@ -42,7 +49,7 @@ def _process_strings(s1: str, s2: str) -> Tuple[str, str]:
 
 def fuzz_ratio(s1: str, s2: str) -> int:
     """Calculate the similarity between two strings (Levenshtein distance). Args: S1: First string S2: second string Return: Similarity value between 0 and 100"""
-    if _USE_EXTERNAL_FUZZ:
+    if _USE_EXTERNAL_FUZZ and fuzz is not None:
         return fuzz.ratio(s1, s2)
 
     # Simple implementation with a Lack of External Library
@@ -62,7 +69,7 @@ def fuzz_ratio(s1: str, s2: str) -> int:
 
 def fuzz_partial_ratio(s1: str, s2: str) -> int:
     """Calculate the best partial similarity between two strings. Args: S1: First string S2: second string Return: Similarity value between 0 and 100"""
-    if _USE_EXTERNAL_FUZZ:
+    if _USE_EXTERNAL_FUZZ and fuzz is not None:
         return fuzz.partial_ratio(s1, s2)
 
     # Simple implementation for partial comparison
@@ -87,7 +94,7 @@ def fuzz_partial_ratio(s1: str, s2: str) -> int:
 
 def fuzz_token_sort_ratio(s1: str, s2: str) -> int:
     """Sort the words in both strings and then compare the sorted strings. Args: S1: First string S2: second string Return: Similarity value between 0 and 100"""
-    if _USE_EXTERNAL_FUZZ:
+    if _USE_EXTERNAL_FUZZ and fuzz is not None:
         return fuzz.token_sort_ratio(s1, s2)
 
     # Eigene Implementierung
@@ -102,7 +109,7 @@ def fuzz_token_sort_ratio(s1: str, s2: str) -> int:
 
 def fuzz_token_set_ratio(s1: str, s2: str) -> int:
     """Consider the strings as quantities of tokens and compares them. Args: S1: First string S2: second string Return: Similarity value between 0 and 100"""
-    if _USE_EXTERNAL_FUZZ:
+    if _USE_EXTERNAL_FUZZ and fuzz is not None:
         return fuzz.token_set_ratio(s1, s2)
 
     # Eigene Implementierung
@@ -134,7 +141,7 @@ class ProcessMatch:
                scorer: Callable[[str, str], int] = fuzz_ratio,
                score_cutoff: int = 0) -> List[Tuple[T, int]]:
         """Extract the best matches from a list of options. ARGS: Query: The Search String Choices: List of Elements to Be Searched Limit: Maximum Number of Results Processor: Function to Convert the Elements Into Strings Scorer: Similarity Function Score_Cutoff: Minimal Similarity Value Return: List of (element, Similarity Value) Tuber"""
-        if _USE_EXTERNAL_FUZZ:
+        if _USE_EXTERNAL_FUZZ and process is not None:
             # Always use the compatible API version without score_cutoff
             results = process.extract(query, choices, limit=None,
                                      processor=processor, scorer=scorer)
@@ -166,7 +173,7 @@ class ProcessMatch:
                   scorer: Callable[[str, str], int] = fuzz_ratio,
                   score_cutoff: int = 0) -> Optional[Tuple[T, int]]:
         """Extract the best match from a list of options. Args: query: The Search String Choices: List of Elements to Be Searched Processor: Function to Convert the Elements Into Strings Scorer: Similarity Function Score_Cutoff: Minimal Similarity Value Return: (Element, Similarity Value) Tupel or None"""
-        if _USE_EXTERNAL_FUZZ:
+        if _USE_EXTERNAL_FUZZ and process is not None:
             return process.extractOne(query, choices,
                                      processor=processor, scorer=scorer,
                                      score_cutoff=score_cutoff)

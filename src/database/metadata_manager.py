@@ -314,10 +314,14 @@ class TheGamesDBAPI:
             logger.warning("TheGamesDB API ist nicht konfiguriert")
             return []
 
+        api_key = self.api_config.get("api_key") if self.api_config else None
+        if not api_key:
+            return []
+
         try:
 # Create the parameters for the API request
             params = {
-                "apikey": self.api_config["api_key"],
+                "apikey": api_key,
                 "name": name,
                 "fields": "game_title,release_date,developers,publishers,overview",
                 "include": "boxart,platform"
@@ -329,7 +333,7 @@ class TheGamesDBAPI:
 # Send the request
             req = _get_requests()
             if req is None:
-                return None
+                return []
             response = req.get(f"{self.base_url}/Games/ByGameName", params=params)
             if response.status_code == 200:
                 data = response.json()
@@ -354,10 +358,14 @@ class TheGamesDBAPI:
             logger.warning("TheGamesDB API ist nicht konfiguriert")
             return None
 
+        api_key = self.api_config.get("api_key") if self.api_config else None
+        if not api_key:
+            return None
+
         try:
 # Create the parameters for the API request
             params = {
-                "apikey": self.api_config["api_key"],
+                "apikey": api_key,
                 "id": game_id,
                 "fields": "game_title,overview,release_date,developers,publishers,genres,players",
                 "include": "boxart,platform"
@@ -449,10 +457,14 @@ class MobyGamesAPI:
             logger.warning("MobyGames API ist nicht konfiguriert")
             return []
 
+        api_key = self.api_config.get("api_key") if self.api_config else None
+        if not api_key:
+            return []
+
         try:
 # Create the parameters for the API request
             params = {
-                "api_key": self.api_config["api_key"],
+                "api_key": api_key,
                 "title": name,
                 "format": "normal"
             }
@@ -463,7 +475,7 @@ class MobyGamesAPI:
 # Send the request
             req = _get_requests()
             if req is None:
-                return None
+                return []
             response = req.get(f"{self.base_url}/games", params=params)
             if response.status_code == 200:
                 data = response.json()
@@ -488,10 +500,14 @@ class MobyGamesAPI:
             logger.warning("MobyGames API ist nicht konfiguriert")
             return None
 
+        api_key = self.api_config.get("api_key") if self.api_config else None
+        if not api_key:
+            return None
+
         try:
 # Create the parameters for the API request
             params = {
-                "api_key": self.api_config["api_key"],
+                "api_key": api_key,
                 "format": "normal"
             }
 

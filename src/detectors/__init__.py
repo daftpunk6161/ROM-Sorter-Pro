@@ -25,11 +25,16 @@ if os.environ.get("ROM_SORTER_ENABLE_ML", "").strip() == "1":
     except ImportError:
         pass
 
+detect_console = None
+detect_rom_type = None
+DetectionManager = None
+
 # Import and re-export of the new consolidated functions
 try:
-    from .detection_handler import detect_console, detect_rom_type, DetectionManager
-except ImportError:
-# Some modules could not yet be available during the consolidation phase
+    from .detection_handler import detect_console, detect_console_with_metadata, DetectionManager
+    detect_rom_type = detect_console_with_metadata
+except Exception:
+    # Some modules could not yet be available during the consolidation phase
     pass
 
 logging.getLogger(__name__).warning("Detector facade is consolidating. Prefer detection_handler.detect_console.")
