@@ -97,9 +97,9 @@ else:
 _ToolTip = cast(Any, _ToolTip)
 
 
-run_scan = _import_symbol(("src.app.controller", "app.controller"), "run_scan") or _missing_feature("run_scan")
-plan_sort = _import_symbol(("src.app.controller", "app.controller"), "plan_sort") or _missing_feature("plan_sort")
-execute_sort = _import_symbol(("src.app.controller", "app.controller"), "execute_sort") or _missing_feature("execute_sort")
+run_scan = _import_symbol(("src.app.api", "app.api"), "run_scan") or _missing_feature("run_scan")
+plan_sort = _import_symbol(("src.app.api", "app.api"), "plan_sort") or _missing_feature("plan_sort")
+execute_sort = _import_symbol(("src.app.api", "app.api"), "execute_sort") or _missing_feature("execute_sort")
 
 load_config = _import_symbol(("src.config", "src.core.config", "config"), "load_config") or _missing_feature("load_config")
 save_config = _import_symbol(("src.config", "src.core.config", "config"), "save_config") or _missing_feature("save_config")
