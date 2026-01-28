@@ -63,3 +63,38 @@ def test_plan_sort_skip_conflict(tmp_path: Path) -> None:
     action = plan.actions[0]
     assert action.planned_target_path is None
     assert action.status.startswith("skipped")
+
+
+def test_rename_overflow(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    source = tmp_path / "source"
+    dest = tmp_path / "dest"
+    source.mkdir()
+    dest.mkdir()
+
+    rom = source / "game.nes"
+    rom.write_text("data", encoding="utf-8")
+
+    existing_dir = dest / "NES"
+    existing_dir.mkdir()
+
+    scan = ScanResult(
+        source_path=str(source),
+        items=[ScanItem(input_path=str(rom), detected_system="NES")],
+        stats={},
+        cancelled=False,
+    )
+
+    real_exists = Path.exists
+
+    def always_exists(self):
+        if self.parent.name == "NES":
+            return True
+        return real_exists(self)
+
+    monkeypatch.setattr(Path, "exists", always_exists)
+
+    plan = plan_sort(scan, str(dest), mode="copy", on_conflict="rename")
+    assert len(plan.actions) == 1
+    action = plan.actions[0]
+    assert action.planned_target_path is None
+    assert action.status == "error"

@@ -13,31 +13,23 @@ import logging
 import argparse
 import platform
 import json
+
+from src.version import load_version
 import csv
 
 # Ensure logs directory exists
 os.makedirs('logs', exist_ok=True)
 
-# Configure logging only for the startup file
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    # Use handlers for file logging, don't specify filename directly
-    handlers=[logging.FileHandler('logs/rom_sorter_startup.log', mode='a')]
-)
+def _configure_startup_logging() -> logging.Logger:
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        handlers=[logging.FileHandler('logs/rom_sorter_startup.log', mode='a')],
+    )
+    return logging.getLogger(__name__)
+
+
 logger = logging.getLogger(__name__)
-
-def _load_version() -> str:
-    config_path = os.path.join(os.path.dirname(__file__), "src", "config.json")
-    try:
-        with open(config_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        meta = data.get("_metadata", {}) if isinstance(data, dict) else {}
-        version = str(meta.get("version") or "").strip()
-        return version or "1.0.0"
-    except Exception:
-        return "1.0.0"
-
 
 def gui_smoke(backend: str | None = None) -> str:
     """Validate GUI backend selection without launching the GUI."""
@@ -123,6 +115,8 @@ def parse_arguments():
 
 def main() -> int:
     """Main function to start the application."""
+    global logger
+    logger = _configure_startup_logging()
     logger.info("Starting ROM Sorter Pro...")
 
 # Check Environment
@@ -133,7 +127,7 @@ def main() -> int:
     args = parse_arguments()
 
     if args.version:
-        print(f"ROM Sorter Pro v{_load_version()}")
+        print(f"ROM Sorter Pro v{load_version()}")
         print("Copyright (c) 2025")
         return 0
 

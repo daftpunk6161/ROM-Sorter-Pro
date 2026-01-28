@@ -231,3 +231,32 @@ def test_run_wud2app_cancel_terminates_process(tmp_path):
     result = result_holder.get("result")
     assert result is not None
     assert result.cancelled is True
+
+
+def test_run_conversion_timeout(monkeypatch):
+    from src.app.execute_helpers import run_conversion_with_cancel
+
+    class FakeProcess:
+        def __init__(self):
+            self._terminated = False
+
+        def poll(self):
+            return None
+
+        def terminate(self):
+            self._terminated = True
+
+        def wait(self, timeout=None):
+            return None
+
+        def kill(self):
+            self._terminated = True
+
+    def fake_popen(*_args, **_kwargs):
+        return FakeProcess()
+
+    monkeypatch.setattr("subprocess.Popen", fake_popen)
+
+    ok, cancelled = run_conversion_with_cancel(["fake"], cancel_token=None, timeout_sec=0.1)
+    assert ok is False
+    assert cancelled is False

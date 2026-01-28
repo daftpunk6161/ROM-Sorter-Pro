@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from src.core import normalization
+from src.config.schema import JSONSCHEMA_AVAILABLE, validate_config_schema
 
 
 def _write_invalid_converters(path: Path) -> None:
@@ -197,3 +198,11 @@ def test_plan_normalization_prefers_platform_outputs(
     assert planned.converter_id == "iso_to_cso"
     assert planned.output_path is not None
     assert planned.output_path.lower().endswith(".cso")
+
+
+def test_config_schema_validation() -> None:
+    if not JSONSCHEMA_AVAILABLE:
+        pytest.skip("jsonschema not available")
+    ok, error = validate_config_schema({"features": "invalid"})
+    assert ok is False
+    assert error

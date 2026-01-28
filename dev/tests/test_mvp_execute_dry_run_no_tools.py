@@ -48,3 +48,28 @@ def test_execute_sort_dry_run_skips_external_tools(tmp_path: Path, monkeypatch: 
     assert report.processed == 1
     assert report.cancelled is False
     assert not (dest_root / "out.wud").exists()
+
+
+def test_dry_run_creates_no_dirs(tmp_path: Path) -> None:
+    from src.app.controller import ScanItem, ScanResult, execute_sort, plan_sort
+
+    source = tmp_path / "source"
+    dest = tmp_path / "dest"
+    source.mkdir()
+    dest.mkdir()
+
+    rom = source / "game.rom"
+    rom.write_text("x", encoding="utf-8")
+
+    scan = ScanResult(
+        source_path=str(source),
+        items=[ScanItem(input_path=str(rom), detected_system="NES")],
+        stats={},
+        cancelled=False,
+    )
+
+    plan = plan_sort(scan, str(dest), mode="copy", on_conflict="rename")
+    report = execute_sort(plan, dry_run=True)
+
+    assert report.processed == 1
+    assert not (dest / "NES").exists()

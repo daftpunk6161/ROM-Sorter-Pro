@@ -3,6 +3,7 @@
 import os
 import time
 import hashlib
+import threading
 from typing import Optional, Tuple
 from functools import lru_cache
 
@@ -29,6 +30,7 @@ def _read_float_env(name: str, default: float) -> float:
 
 _IO_THROTTLE_MIN_SIZE_BYTES = max(0, _read_int_env("ROM_SORTER_IO_THROTTLE_MIN_MB", 512)) * 1024 * 1024
 _IO_THROTTLE_SLEEP_SECONDS = max(0.0, _read_float_env("ROM_SORTER_IO_THROTTLE_SLEEP_MS", 1.0) / 1000.0)
+_CACHE_LOCK = threading.RLock()
 
 
 def _get_file_signature(file_path: str) -> Optional[Tuple[int, int]]:
@@ -70,7 +72,8 @@ def calculate_md5_fast(file_path: str, chunk_size: int = 1048576) -> Optional[st
     if signature is None:
         return None
     mtime_ns, size_bytes = signature
-    return _calculate_md5_fast_cached(file_path, mtime_ns, size_bytes, chunk_size)
+    with _CACHE_LOCK:
+        return _calculate_md5_fast_cached(file_path, mtime_ns, size_bytes, chunk_size)
 
 @lru_cache(maxsize=1000)
 def _calculate_sha1_cached(file_path: str, mtime_ns: int, size_bytes: int, chunk_size: int) -> Optional[str]:
@@ -98,7 +101,8 @@ def calculate_sha1(file_path: str, chunk_size: int = 1048576) -> Optional[str]:
     if signature is None:
         return None
     mtime_ns, size_bytes = signature
-    return _calculate_sha1_cached(file_path, mtime_ns, size_bytes, chunk_size)
+    with _CACHE_LOCK:
+        return _calculate_sha1_cached(file_path, mtime_ns, size_bytes, chunk_size)
 
 
 @lru_cache(maxsize=1000)
@@ -128,4 +132,5 @@ def calculate_crc32(file_path: str) -> Optional[str]:
     if signature is None:
         return None
     mtime_ns, size_bytes = signature
-    return _calculate_crc32_cached(file_path, mtime_ns, size_bytes, 8192)
+    with _CACHE_LOCK:
+        return _calculate_crc32_cached(file_path, mtime_ns, size_bytes, 8192)

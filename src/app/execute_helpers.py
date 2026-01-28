@@ -89,6 +89,7 @@ def atomic_copy_with_cancel(
 def run_conversion_with_cancel(
     cmd: List[str],
     cancel_token: Optional[CancelTokenProtocol],
+    timeout_sec: Optional[float] = None,
 ) -> Tuple[bool, bool]:
     if _is_cancelled(cancel_token):
         return False, True
@@ -102,6 +103,7 @@ def run_conversion_with_cancel(
     except Exception:
         return False, False
 
+    start_ts = time.monotonic()
     while True:
         if _is_cancelled(cancel_token):
             try:
@@ -116,6 +118,21 @@ def run_conversion_with_cancel(
                 except Exception:
                     pass
             return False, True
+
+        if timeout_sec is not None and timeout_sec > 0:
+            if (time.monotonic() - start_ts) > timeout_sec:
+                try:
+                    process.terminate()
+                except Exception:
+                    pass
+                try:
+                    process.wait(timeout=2)
+                except Exception:
+                    try:
+                        process.kill()
+                    except Exception:
+                        pass
+                return False, False
 
         code = process.poll()
         if code is not None:

@@ -89,3 +89,17 @@ def test_zip_all_entries_match_single_system(tmp_path):
     assert result is not None
     assert result.get("system") == "SNES"
     assert result.get("is_exact") is True
+
+
+def test_safe_extract_unicode_traversal(tmp_path):
+    from src.security.security_utils import safe_extract_zip
+
+    archive_path = tmp_path / "unicode_traversal.zip"
+    # Create an entry that normalizes into a traversal-like path.
+    sneaky = "..\u2215evil.txt"  # uses unicode division slash
+    with zipfile.ZipFile(archive_path, "w") as zf:
+        zf.writestr(sneaky, b"bad")
+
+    extract_dir = tmp_path / "out"
+    with pytest.raises(Exception):
+        safe_extract_zip(archive_path, extract_dir)

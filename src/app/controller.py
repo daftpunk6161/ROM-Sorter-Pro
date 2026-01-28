@@ -349,25 +349,43 @@ def plan_sort(
         raise ValueError("Destination directory is empty")
 
     raw_dest = Path(dest_sanitized)
+    dest_root = raw_dest.resolve()
+
+    def _error_plan(reason: str) -> SortPlan:
+        actions = [
+            SortAction(
+                input_path=str(item.input_path or ""),
+                detected_system=item.detected_system or "Unknown",
+                planned_target_path=None,
+                action=mode,
+                status="error",
+                error=reason,
+            )
+            for item in scan_result.items
+        ]
+        return SortPlan(
+            dest_path=str(dest_root),
+            mode=mode,
+            on_conflict=on_conflict,
+            actions=actions,
+        )
+
     if raw_dest.exists():
         try:
             if raw_dest.is_symlink():
-                raise InvalidPathError(f"Symlink destination not allowed: {raw_dest}")
+                return _error_plan(f"Symlink destination not allowed: {raw_dest}")
             try:
                 resolved = raw_dest.resolve(strict=False)
                 absolute = raw_dest.absolute()
                 if resolved != absolute:
-                    raise InvalidPathError(f"Symlink destination not allowed: {raw_dest}")
-            except InvalidPathError:
-                raise
+                    return _error_plan(f"Symlink destination not allowed: {raw_dest}")
             except Exception:
                 pass
-        except InvalidPathError:
-            raise
         except Exception:
             pass
 
-    dest_root = raw_dest.resolve()
+    if has_symlink_parent(dest_root):
+        return _error_plan(f"Symlink destination not allowed: {dest_root}")
 
     # Destination may not exist yet for planning; validate shape only.
     if dest_root.exists() and not dest_root.is_dir():
@@ -514,7 +532,19 @@ def plan_sort(
 
             target_file = target_dir / target_name
 
-            final_target = _resolve_target_path(target_file, on_conflict=on_conflict)
+            final_target, resolve_error = _resolve_target_path(target_file, on_conflict=on_conflict)
+            if resolve_error:
+                actions.append(
+                    SortAction(
+                        input_path=str(src),
+                        detected_system=item.detected_system,
+                        planned_target_path=None,
+                        action=mode,
+                        status="error",
+                        error=resolve_error,
+                    )
+                )
+                continue
             if final_target is None:
                 actions.append(
                     SortAction(
@@ -625,6 +655,14 @@ def execute_sort(
     cfg = _load_cfg(None)
     buffer_size = _resolve_copy_buffer_size(cfg)
     batch_progress = _progress_batch_enabled(cfg)
+    conversion_timeout_sec: Optional[float] = 300.0
+    try:
+        sorting_cfg = _get_dict(cfg, "features", "sorting")
+        timeout_value = sorting_cfg.get("conversion_timeout_sec")
+        if timeout_value is not None:
+            conversion_timeout_sec = float(timeout_value)
+    except Exception:
+        conversion_timeout_sec = 300.0
 
     errors: List[str] = []
     processed = 0
@@ -760,6 +798,7 @@ def execute_sort(
                             log_cb=log_cb,
                             cancel_token=cancel_token,
                             dry_run=False,
+                            timeout_sec=conversion_timeout_sec,
                         )
                         ok = result.success
                         conversion_cancelled = result.cancelled
@@ -774,12 +813,17 @@ def execute_sort(
                             log_cb=log_cb,
                             cancel_token=cancel_token,
                             dry_run=False,
+                            timeout_sec=conversion_timeout_sec,
                         )
                         ok = result.success
                         conversion_cancelled = result.cancelled
                     else:
                         cmd = [str(action.conversion_tool)] + list(action.conversion_args or [])
-                        ok, conversion_cancelled = run_conversion_with_cancel(cmd, cancel_token)
+                        ok, conversion_cancelled = run_conversion_with_cancel(
+                            cmd,
+                            cancel_token,
+                            timeout_sec=conversion_timeout_sec,
+                        )
                     if conversion_cancelled:
                         cancelled = True
                         cancel_start_row = row_index
@@ -872,7 +916,7 @@ def execute_sort(
                         except OSError as move_exc:
                             winerr = getattr(move_exc, "winerror", None)
                             if move_exc.errno in (errno.EXDEV,) or winerr in (17,):
-                                ok = _atomic_copy_with_cancel(
+                                ok = atomic_copy_with_cancel(
                                     src,
                                     dst,
                                     allow_replace=allow_replace,

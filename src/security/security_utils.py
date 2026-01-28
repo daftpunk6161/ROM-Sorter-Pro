@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Optional, List, Dict, Any, Union
 from pathlib import PurePosixPath
 import zipfile
+import unicodedata
 
 logger = logging.getLogger(__name__)
 
@@ -293,7 +294,8 @@ def is_safe_archive_member(member: Union[str, zipfile.ZipInfo]) -> bool:
     if member_name.startswith("\\\\"):
         return False
     try:
-        parts = PurePosixPath(member_name.replace("\\", "/")).parts
+        normalized = unicodedata.normalize("NFKC", member_name)
+        parts = PurePosixPath(normalized.replace("\\", "/")).parts
     except Exception:
         return False
     return ".." not in parts
@@ -316,7 +318,11 @@ def safe_extract_zip(zip_path: Union[str, Path], dest_dir: Union[str, Path]) -> 
 
     with zipfile.ZipFile(zip_path, 'r') as zip_ref:
         for member in zip_ref.infolist():
-            if not is_safe_archive_member(member):
+            normalized_name = unicodedata.normalize("NFKC", member.filename)
+            if normalized_name != member.filename:
+                if is_path_traversal_attack(normalized_name):
+                    raise InvalidPathError(f"Unsafe archive member blocked: {member.filename}")
+            if not is_safe_archive_member(member) or not is_safe_archive_member(normalized_name):
                 raise InvalidPathError(f"Unsafe archive member blocked: {member.filename}")
             member_path = dest_root / member.filename
             try:

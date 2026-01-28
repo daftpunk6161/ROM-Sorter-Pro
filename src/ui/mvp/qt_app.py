@@ -34,15 +34,7 @@ from typing import Any, Iterable, List, Optional, cast
 logger = logging.getLogger(__name__)
 
 
-def _load_version() -> str:
-    config_path = Path(__file__).resolve().parents[3] / "src" / "config.json"
-    try:
-        data = json.loads(config_path.read_text(encoding="utf-8"))
-        meta = data.get("_metadata", {}) if isinstance(data, dict) else {}
-        version = str(meta.get("version") or "").strip()
-        return version or "1.0.0"
-    except Exception:
-        return "1.0.0"
+from ...version import load_version
 
 
 def handle_worker_failure(
@@ -845,7 +837,7 @@ def run() -> int:
                     try:
                         index.close()
                     except Exception:
-                        pass
+                        logger.exception("Qt GUI: DatIndex close failed")
 
         def _refresh_stats(self) -> None:
             if self._analysis_thread is not None and self._analysis_thread.is_alive():
@@ -874,7 +866,7 @@ def run() -> int:
         def __init__(self):
             super().__init__()
 
-            self.setWindowTitle(f"ROM Sorter Pro v{_load_version()} - MVP GUI")
+            self.setWindowTitle(f"ROM Sorter Pro v{load_version()} - MVP GUI")
             self.resize(1100, 700)
 
             self._cancel_token = CancelToken()
@@ -965,7 +957,7 @@ def run() -> int:
 
             app_title = QtWidgets.QLabel("ROM Sorter Pro")
             app_title.setStyleSheet("font-size: 18px; font-weight: 700;")
-            self._app_version = _load_version()
+            self._app_version = load_version()
             app_version = QtWidgets.QLabel(f"v{self._app_version}")
             app_version.setStyleSheet("color: #777;")
 
@@ -1076,7 +1068,7 @@ def run() -> int:
             try:
                 tabs.tabBar().setVisible(True)
             except Exception:
-                pass
+                logger.exception("Qt GUI: tab bar visibility failed")
 
             content_layout.addWidget(sidebar)
             content_layout.addWidget(tabs, 1)
@@ -1918,7 +1910,7 @@ def run() -> int:
             try:
                 header.setMaximumSectionSize(600)
             except Exception:
-                pass
+                logger.exception("Qt GUI: header max section size failed")
             right_layout.addWidget(self.table, 2)
 
             self.log_view = QtWidgets.QPlainTextEdit()
@@ -1926,7 +1918,7 @@ def run() -> int:
             try:
                 self.log_view.document().setMaximumBlockCount(2000)
             except Exception:
-                pass
+                logger.exception("Qt GUI: log max block count failed")
             log_title = QtWidgets.QLabel("Log")
             log_title.setStyleSheet("font-weight: 600;")
             self.log_toggle_btn = QtWidgets.QPushButton("Log ausblenden")
@@ -2049,7 +2041,7 @@ def run() -> int:
             try:
                 self.table.selectionModel().selectionChanged.connect(self._on_table_selection_changed)
             except Exception:
-                pass
+                logger.exception("Qt GUI: selection model connect failed")
 
             shortcut_cls = getattr(QtGui, "QShortcut", None) or getattr(QtWidgets, "QShortcut", None)
             if shortcut_cls is not None:
@@ -2487,19 +2479,19 @@ def run() -> int:
                 self.btn_igir_cancel.setEnabled(False)
                 self._igir_cancel_token.cancel()
             except Exception:
-                pass
+                logger.exception("Qt GUI: IGIR cancel failed")
 
         def _cleanup_igir_thread(self) -> None:
             try:
                 if self._igir_worker is not None:
                     self._igir_worker.deleteLater()
             except Exception:
-                pass
+                logger.exception("Qt GUI: IGIR worker cleanup failed")
             try:
                 if self._igir_thread is not None:
                     self._igir_thread.deleteLater()
             except Exception:
-                pass
+                logger.exception("Qt GUI: IGIR thread cleanup failed")
             self._igir_thread = None
             self._igir_worker = None
             self._igir_cancel_token = None
@@ -2725,7 +2717,7 @@ def run() -> int:
             try:
                 self._dat_index_cancel_token.cancel()
             except Exception:
-                pass
+                logger.exception("Qt GUI: DAT index cancel failed")
 
         def _cleanup_dat_index_thread(self) -> None:
             if self._dat_index_worker is not None:
@@ -3172,6 +3164,14 @@ def run() -> int:
                 if self._log_flush_timer is not None:
                     self._log_flush_timer.stop()
                     self._flush_log()
+            except Exception:
+                pass
+            try:
+                if self._backend_worker is not None:
+                    self._backend_worker.cancel()
+                if self._thread is not None:
+                    self._thread.quit()
+                    self._thread.wait(2000)
             except Exception:
                 pass
             self._save_window_size()
@@ -3759,8 +3759,8 @@ def run() -> int:
             self._log_buffer.clear()
             if lines:
                 self._log_history.extend(lines)
-                if len(self._log_history) > 2000:
-                    self._log_history = self._log_history[-2000:]
+                if len(self._log_history) > 5000:
+                    self._log_history = self._log_history[-5000:]
             try:
                 bar = self.log_view.verticalScrollBar()
                 at_bottom = bar.value() >= bar.maximum()
@@ -5261,6 +5261,7 @@ def run() -> int:
         def _on_finished(self, op: str, payload: object) -> None:
             self._cleanup_thread()
             self._set_running(False)
+            self._ui_fsm.transition(UIState.IDLE)
 
             if op == "scan":
                 if not isinstance(payload, ScanResult):

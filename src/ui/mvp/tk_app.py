@@ -10,6 +10,7 @@ import sys
 import threading
 import time
 import traceback
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from queue import Empty, Queue
 from typing import Any, Callable, Literal, Optional, Tuple, cast
@@ -334,17 +335,18 @@ class TkMVPApp:
         self.preset_name_var = tk.StringVar()
         self.queue_mode_var = tk.BooleanVar(value=False)
         self.queue_priority_var = tk.StringVar(value="Normal")
+        self._executor = ThreadPoolExecutor(max_workers=4)
 
         self._build_ui()
         try:
             self.source_var.trace_add("write", lambda *_args: self._update_quick_actions())
             self.dest_var.trace_add("write", lambda *_args: self._update_quick_actions())
         except Exception:
-            pass
+            logger.exception("Tk GUI: trace_add failed")
         try:
             self.log_filter_var.trace_add("write", lambda *_args: self._apply_log_filter())
         except Exception:
-            pass
+            logger.exception("Tk GUI: log filter trace_add failed")
         try:
             self.btn_show_details.configure(text="ⓘ", width=3)
         except Exception:
@@ -418,7 +420,7 @@ class TkMVPApp:
         try:
             self.root.bind_all("<MouseWheel>", _on_mousewheel)
         except Exception:
-            pass
+            logger.exception("Tk GUI: mousewheel bind failed")
 
         notebook = ttk.Notebook(scroll_inner)
         self.notebook = notebook
@@ -747,7 +749,7 @@ class TkMVPApp:
         try:
             self.btn_scan.configure(default="active")
         except Exception:
-            pass
+            logger.exception("Tk GUI: set default scan button failed")
 
         _ToolTip(self.btn_scan, "Scannt den Quellordner")
         _ToolTip(self.btn_preview, "Erstellt einen Plan ohne Änderungen")
@@ -850,6 +852,7 @@ class TkMVPApp:
             try:
                 widget.pack(side=side, padx=padx)
             except Exception:
+                logger.exception("Tk GUI: safe pack failed")
                 return
 
         _safe_pack(self.btn_export_audit_csv)
@@ -1212,7 +1215,7 @@ class TkMVPApp:
             self.log_text.configure(bg=colors.background, fg=colors.text, insertbackground=colors.text)
             self.details_text.configure(bg=colors.background, fg=colors.text, insertbackground=colors.text)
         except Exception:
-            pass
+            logger.exception("Tk GUI: theme apply failed")
 
     def _is_drag_drop_enabled(self) -> bool:
         try:
@@ -1222,6 +1225,7 @@ class TkMVPApp:
             gui_cfg = cfg.get("gui_settings", {}) or {}
             return bool(gui_cfg.get("drag_drop_enabled", True))
         except Exception:
+            logger.exception("Tk GUI: drag-drop config failed")
             return True
 
     def _load_dat_config(self) -> dict:
@@ -1249,6 +1253,7 @@ class TkMVPApp:
             if auto_load and paths:
                 self._start_dat_auto_load()
         except Exception:
+            logger.exception("Tk GUI: load dat settings failed")
             return
 
     def _on_dat_auto_load_changed(self) -> None:
@@ -1260,6 +1265,7 @@ class TkMVPApp:
             cfg["dats"] = dat_cfg
             self._save_config_async(cfg)
         except Exception:
+            logger.exception("Tk GUI: dat auto load update failed")
             return
 
     def _start_dat_auto_load(self) -> None:
@@ -1334,7 +1340,7 @@ class TkMVPApp:
         try:
             self._dat_index_cancel_token.cancel()
         except Exception:
-            pass
+            logger.exception("Tk GUI: cancel dat index failed")
 
     def _clear_dat_cache(self) -> None:
         try:
@@ -1361,6 +1367,7 @@ class TkMVPApp:
         try:
             raw = self.igir_args_text.get("1.0", "end")
         except Exception:
+            logger.exception("Tk GUI: read igir args failed")
             raw = ""
         lines = [line.strip() for line in str(raw).splitlines()]
         return [line for line in lines if line]
@@ -1414,7 +1421,7 @@ class TkMVPApp:
                 if args:
                     self.igir_args_text.insert("1.0", "\n".join(args))
             except Exception:
-                pass
+                logger.exception("Tk GUI: load igir args failed")
             templates = data.get("templates") or {}
             self._igir_templates = templates if isinstance(templates, dict) else {}
             template_names = ["-"]
@@ -1424,7 +1431,7 @@ class TkMVPApp:
                 self.igir_template_combo.configure(values=tuple(template_names))
                 self.igir_template_combo.set("-")
             except Exception:
-                pass
+                logger.exception("Tk GUI: update igir template combo failed")
             profiles = data.get("profiles") or {}
             self._igir_profiles = profiles if isinstance(profiles, dict) else {}
             profile_names = ["-"]
@@ -1439,7 +1446,7 @@ class TkMVPApp:
                 else:
                     self.igir_profile_combo.set("-")
             except Exception:
-                pass
+                logger.exception("Tk GUI: update igir profile combo failed")
             templates_text = ""
             if isinstance(templates, dict):
                 blocks = []
@@ -1471,11 +1478,11 @@ class TkMVPApp:
                     self.igir_templates_text.insert("1.0", templates_text)
                 self.igir_templates_text.configure(state="disabled")
             except Exception:
-                pass
+                logger.exception("Tk GUI: update igir templates text failed")
             try:
                 self.igir_copy_first_var.set(bool(data.get("copy_first", False)))
             except Exception:
-                pass
+                logger.exception("Tk GUI: update igir copy_first failed")
         except Exception:
             return
 
@@ -1499,7 +1506,7 @@ class TkMVPApp:
                 if args_text:
                     self.igir_args_text.insert("1.0", args_text)
             except Exception:
-                pass
+                logger.exception("Tk GUI: apply igir template text failed")
             self._igir_selected_template = name
             self.igir_status_var.set(f"Status: Template '{name}' übernommen")
         except Exception as exc:
@@ -1525,7 +1532,7 @@ class TkMVPApp:
                 if args_text:
                     self.igir_args_text.insert("1.0", args_text)
             except Exception:
-                pass
+                logger.exception("Tk GUI: apply igir profile text failed")
             self._igir_selected_profile = name
             self.igir_status_var.set(f"Status: Profil '{name}' aktiviert")
         except Exception as exc:
@@ -1599,12 +1606,14 @@ class TkMVPApp:
                 self.btn_igir_probe.configure(state="normal")
                 self.btn_igir_save.configure(state="normal")
         except Exception:
+            logger.exception("Tk GUI: set igir running failed")
             return
 
     def _update_igir_buttons(self) -> None:
         try:
             self.btn_igir_execute.configure(state="normal" if self._igir_plan_ready else "disabled")
         except Exception:
+            logger.exception("Tk GUI: update igir buttons failed")
             return
 
     def _update_igir_diff_buttons(self) -> None:
@@ -1612,6 +1621,7 @@ class TkMVPApp:
             self.btn_igir_open_diff_csv.configure(state="normal" if self._igir_diff_csv else "disabled")
             self.btn_igir_open_diff_json.configure(state="normal" if self._igir_diff_json else "disabled")
         except Exception:
+            logger.exception("Tk GUI: update igir diff buttons failed")
             return
 
     def _start_igir_plan(self) -> None:
@@ -1759,6 +1769,11 @@ class TkMVPApp:
                 self.btn_igir_cancel.configure(state="disabled")
             except Exception:
                 pass
+            try:
+                if self._igir_thread is not None and self._igir_thread.is_alive():
+                    self._igir_thread.join(timeout=5)
+            except Exception:
+                pass
         except Exception:
             return
 
@@ -1869,7 +1884,7 @@ class TkMVPApp:
             cfg["gui_settings"] = gui_cfg
             self._save_config_async(cfg)
         except Exception:
-            pass
+            logger.exception("Tk GUI: theme changed failed")
 
     def _load_window_size(self) -> None:
         try:
@@ -1884,6 +1899,7 @@ class TkMVPApp:
             if width > 0 and height > 0:
                 self.root.geometry(f"{width}x{height}")
         except Exception:
+            logger.exception("Tk GUI: load window size failed")
             return
 
     def _save_window_size(self) -> None:
@@ -1899,6 +1915,7 @@ class TkMVPApp:
             cfg["gui_settings"] = gui_cfg
             self._save_config_async(cfg)
         except Exception:
+            logger.exception("Tk GUI: save window size failed")
             return
 
     def _on_close(self) -> None:
@@ -1906,7 +1923,22 @@ class TkMVPApp:
             if self._igir_thread is not None and self._igir_thread.is_alive():
                 self._igir_cancel_token.cancel()
         except Exception:
-            pass
+            logger.exception("Tk GUI: close igir thread cancel failed")
+        try:
+            if self._backend_worker is not None:
+                self._backend_worker.cancel()
+            if self._worker_thread is not None and self._worker_thread.is_alive():
+                self._worker_thread.join(timeout=2)
+        except Exception:
+            logger.exception("Tk GUI: close worker cancel failed")
+        try:
+            if self._executor is not None:
+                try:
+                    self._executor.shutdown(wait=False, cancel_futures=True)
+                except TypeError:
+                    self._executor.shutdown(wait=False)
+        except Exception:
+            logger.exception("Tk GUI: executor shutdown failed")
         self._save_window_size()
         self._remove_log_handler()
         self.root.destroy()
@@ -1930,13 +1962,13 @@ class TkMVPApp:
             try:
                 root_logger.removeHandler(handler)
             except Exception:
-                pass
+                logger.exception("Tk GUI: remove log handler failed")
         for handler in list(root_logger.handlers):
             if getattr(handler, "_tk_gui_handler", False):
                 try:
                     root_logger.removeHandler(handler)
                 except Exception:
-                    pass
+                    logger.exception("Tk GUI: remove log handler cleanup failed")
 
     def _open_db_manager(self) -> None:
         DatabaseManagerDialog(self.root)
@@ -2155,16 +2187,16 @@ class TkMVPApp:
         self._log_buffer.clear()
         if lines:
             self._log_history.extend(lines)
-            if len(self._log_history) > 2000:
-                self._log_history = self._log_history[-2000:]
+            if len(self._log_history) > 5000:
+                self._log_history = self._log_history[-5000:]
         if not self._log_filter_text:
             payload = "\n".join(lines) + ("\n" if lines else "")
             if payload:
                 self.log_text.insert(tk.END, payload)
             try:
                 lines_count = int(self.log_text.index("end-1c").split(".")[0])
-                if lines_count > 2000:
-                    self.log_text.delete("1.0", f"{lines_count - 2000}.0")
+                if lines_count > 5000:
+                    self.log_text.delete("1.0", f"{lines_count - 5000}.0")
             except Exception:
                 pass
             self.log_text.see(tk.END)
@@ -3738,8 +3770,11 @@ class TkMVPApp:
             except Exception as exc:
                 self._queue.put(("export_error", str(exc)))
 
-        thread = threading.Thread(target=_worker, daemon=True)
-        thread.start()
+        try:
+            self._executor.submit(_worker)
+        except Exception:
+            thread = threading.Thread(target=_worker, daemon=True)
+            thread.start()
 
     def _start_resume(self) -> None:
         if not self._can_resume():
@@ -3838,6 +3873,7 @@ class TkMVPApp:
                     self._refresh_filter_options()
                     self._populate_scan_table(self._get_filtered_scan_result())
                     self._set_running(False)
+                    self._ui_fsm.transition(UIState.IDLE)
                     if scan.cancelled:
                         self.status_var.set("Cancelled")
                         messagebox.showinfo("Abgebrochen", "Scan abgebrochen.")
@@ -3850,12 +3886,14 @@ class TkMVPApp:
                     self._sort_plan = plan
                     self._populate_plan_table(plan)
                     self._set_running(False)
+                    self._ui_fsm.transition(UIState.IDLE)
                     self.status_var.set("Plan ready")
                     messagebox.showinfo("Vorschau bereit", f"Geplante Aktionen: {len(plan.actions)}")
                     self._complete_job("plan")
                 elif event == "exec_done":
                     report: SortReportType = cast(Any, payload)
                     self._set_running(False)
+                    self._ui_fsm.transition(UIState.IDLE)
                     # Add summary row after execution, so row-index updates remain aligned.
                     self._append_summary_row(report)
                     self._update_resume_buttons()
@@ -3872,6 +3910,7 @@ class TkMVPApp:
                 elif event == "audit_done":
                     audit_report: ConversionAuditReportType = cast(Any, payload)
                     self._set_running(False)
+                    self._ui_fsm.transition(UIState.IDLE)
                     self._audit_report = audit_report
                     self._populate_audit_table(audit_report)
                     self._update_resume_buttons()

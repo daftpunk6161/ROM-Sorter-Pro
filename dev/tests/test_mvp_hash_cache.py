@@ -1,5 +1,6 @@
 import sys
 import time
+import threading
 from pathlib import Path
 
 # Ensure repo root on path
@@ -31,3 +32,27 @@ def test_hash_cache_invalidates_on_file_change(tmp_path):
     hash_after = calculate_file_hash(test_file, algorithm="md5")
     assert hash_after is not None
     assert hash_before != hash_after
+
+
+def test_hash_cache_concurrent_access(tmp_path):
+    from src.hash_utils import calculate_md5_fast
+
+    test_file = tmp_path / "rom.bin"
+    test_file.write_bytes(b"abc" * 1024)
+
+    results: list[str | None] = []
+    lock = threading.Lock()
+
+    def _worker():
+        value = calculate_md5_fast(str(test_file))
+        with lock:
+            results.append(value)
+
+    threads = [threading.Thread(target=_worker) for _ in range(5)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    assert all(results)
+    assert len(set(results)) == 1

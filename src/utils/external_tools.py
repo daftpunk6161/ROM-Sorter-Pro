@@ -10,12 +10,15 @@ import re
 import subprocess
 import threading
 import time
+import logging
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 from pathlib import Path
 
 from ..security.security_utils import validate_file_operation
 from ..config import Config, load_config
+
+logger = logging.getLogger(__name__)
 
 PROBE_INPUT_PATH = r"C:\__romsorter_probe__\does_not_exist.wud"
 
@@ -308,20 +311,20 @@ def _terminate_process_tree(process: subprocess.Popen) -> None:
             )
             return
         except Exception:
-            pass
+            logger.exception("External tools: taskkill failed")
     try:
         process.terminate()
     except Exception:
-        pass
+        logger.exception("External tools: terminate failed")
     try:
         process.wait(timeout=2)
         return
     except Exception:
-        pass
+        logger.exception("External tools: wait after terminate failed")
     try:
         process.kill()
     except Exception:
-        pass
+        logger.exception("External tools: kill failed")
 
 
 def _run_external_process(
@@ -362,7 +365,7 @@ def _run_external_process(
             try:
                 stream.close()
             except Exception:
-                pass
+                logger.exception("External tools: stream close failed")
 
     threads: List[threading.Thread] = []
     if process.stdout is not None:
@@ -386,7 +389,7 @@ def _run_external_process(
                     _terminate_process_tree(process)
                     break
             except Exception:
-                pass
+                logger.exception("External tools: cancel check failed")
 
         if timeout_sec is not None and timeout_sec > 0:
             if (time.monotonic() - start) >= timeout_sec:
@@ -430,7 +433,7 @@ def _capture_process_output(
             try:
                 stream.close()
             except Exception:
-                pass
+                logger.exception("External tools: stream close failed")
 
     threads: List[threading.Thread] = []
     if process.stdout is not None:

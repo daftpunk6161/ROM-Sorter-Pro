@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Tuple
 
 from .models import ConflictPolicy, ScanItem
 
@@ -44,24 +44,24 @@ def _apply_rename_template(template: str, item: ScanItem, src: Path, safe_system
     return rendered
 
 
-def _resolve_target_path(target_file: Path, on_conflict: ConflictPolicy) -> Optional[Path]:
+def _resolve_target_path(target_file: Path, on_conflict: ConflictPolicy) -> Tuple[Optional[Path], Optional[str]]:
     if not target_file.exists():
-        return target_file
+        return target_file, None
 
     if on_conflict == "skip":
-        return None
+        return None, None
 
     if on_conflict == "overwrite":
-        return target_file
+        return target_file, None
 
     stem = target_file.stem
     suffix = target_file.suffix
     for i in range(1, 10_000):
         candidate = target_file.with_name(f"{stem} ({i}){suffix}")
         if not candidate.exists():
-            return candidate
+            return candidate, None
 
-    raise RuntimeError(f"Could not find free filename for {target_file.name}")
+    return None, f"Could not find free filename for {target_file.name}"
 
 
 def _safe_system_name(system: str) -> str:

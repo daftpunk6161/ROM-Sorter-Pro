@@ -127,8 +127,9 @@ def test_plan_sort_rejects_symlink_parent(tmp_path):
         cancelled=False,
     )
 
-    with pytest.raises(Exception):
-        plan_sort(scan, str(dest_link))
+    plan = plan_sort(scan, str(dest_link))
+    assert len(plan.actions) == 1
+    assert plan.actions[0].status == "error"
 
 
 def test_safe_extract_zip_blocks_symlink(tmp_path):
