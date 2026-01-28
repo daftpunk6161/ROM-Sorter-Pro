@@ -112,7 +112,8 @@ class UpdateManager:
             "last_check": None,
             "update_channel": "stable",
             "proxy": None,
-            "custom_update_server": None
+            "custom_update_server": None,
+            "allow_update_scripts": False
         }
 
         try:
@@ -452,6 +453,9 @@ class UpdateManager:
 
     def _run_python_script(self, script_path: str) -> None:
         """Leads a python script. Args: script_path: path to the python script"""
+        if not bool(self.update_config.get("allow_update_scripts", False)):
+            logger.warning("Update scripts are disabled by configuration: %s", script_path)
+            return
         subprocess.run([sys.executable, script_path], check=True)
 
     def _create_backup(self, source_dir: str, backup_dir: str) -> None:

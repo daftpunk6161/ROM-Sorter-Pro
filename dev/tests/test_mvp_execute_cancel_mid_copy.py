@@ -1,4 +1,6 @@
+import os
 import sys
+
 import pytest
 from pathlib import Path
 
@@ -45,6 +47,7 @@ def test_execute_sort_cancel_mid_copy_cleans_part_file(tmp_path, monkeypatch):
 
     token = CancelToken()
 
+    assert plan.actions[0].planned_target_path
     dst = Path(plan.actions[0].planned_target_path)
     part = dst.with_name(dst.name + ".part")
 
@@ -73,9 +76,9 @@ def test_execute_sort_cancel_mid_copy_cleans_part_file(tmp_path, monkeypatch):
             return getattr(self._f, name)
 
     def fake_open(file, mode="r", *args, **kwargs):
-        try:
+        if isinstance(file, (str, os.PathLike)):
             path = Path(file)
-        except TypeError:
+        else:
             path = None
 
         if path is not None and path.resolve() == rom.resolve() and "r" in mode and "b" in mode:
@@ -117,6 +120,7 @@ def test_execute_sort_cancel_from_other_thread(tmp_path, monkeypatch):
     plan = plan_sort(scan, str(dest), mode="copy", on_conflict="rename")
     token = CancelToken()
 
+    assert plan.actions[0].planned_target_path
     dst = Path(plan.actions[0].planned_target_path)
     part = dst.with_name(dst.name + ".part")
 
@@ -146,9 +150,9 @@ def test_execute_sort_cancel_from_other_thread(tmp_path, monkeypatch):
             return getattr(self._f, name)
 
     def fake_open(file, mode="r", *args, **kwargs):
-        try:
+        if isinstance(file, (str, os.PathLike)):
             path = Path(file)
-        except TypeError:
+        else:
             path = None
 
         if path is not None and path.resolve() == rom.resolve() and "r" in mode and "b" in mode:

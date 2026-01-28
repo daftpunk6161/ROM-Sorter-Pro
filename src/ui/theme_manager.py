@@ -800,6 +800,42 @@ class ThemeManager:
             border_radius=0
         )
 
+        crt_green_theme = Theme(
+            name="CRT Green",
+            type=ThemeType.DARK,
+            colors=ColorScheme(
+                primary="#3bff76",
+                secondary="#57ff8b",
+                background="#06130a",
+                text="#9cff7a",
+                accent="#5bff93",
+                error="#ff6b6b",
+                warning="#f7c66a",
+                success="#6bff95",
+                border="#1d3b22"
+            ),
+            font_family="'Press Start 2P', monospace",
+            border_radius=0
+        )
+
+        gameboy_theme = Theme(
+            name="GameBoy DMG",
+            type=ThemeType.LIGHT,
+            colors=ColorScheme(
+                primary="#306230",
+                secondary="#4f8f4f",
+                background="#9bbc0f",
+                text="#0f380f",
+                accent="#306230",
+                error="#8b1d1d",
+                warning="#826f1f",
+                success="#2f6b2f",
+                border="#0f380f"
+            ),
+            font_family="'Press Start 2P', monospace",
+            border_radius=0
+        )
+
         neo_dark_theme = Theme(
             name="Neo Dark",
             type=ThemeType.DARK,
@@ -854,6 +890,8 @@ class ThemeManager:
         self.themes["Blue"] = blue_theme
         self.themes["Dark Blue"] = dark_blue_theme
         self.themes["Retro Gaming"] = retro_theme
+        self.themes["CRT Green"] = crt_green_theme
+        self.themes["GameBoy DMG"] = gameboy_theme
         self.themes["Neo Dark"] = neo_dark_theme
         self.themes["Nord Frost"] = nord_frost_theme
         self.themes["Solar Light"] = solar_light_theme
@@ -942,7 +980,18 @@ class ThemeManager:
     def remove_theme(self, theme_name: str) -> bool:
         """Removes a theme. Args: Theme_Name: Name of the Theme to Be Removed Return: True in the event of Success, False in the event of errors"""
         # Standarddthemes cannot be removed
-        if theme_name in ['Light', 'Dark', 'Blue', 'Dark Blue', 'Retro Gaming', 'Neo Dark', 'Nord Frost', 'Solar Light']:
+        if theme_name in [
+            'Light',
+            'Dark',
+            'Blue',
+            'Dark Blue',
+            'Retro Gaming',
+            'CRT Green',
+            'GameBoy DMG',
+            'Neo Dark',
+            'Nord Frost',
+            'Solar Light',
+        ]:
             logger.warning(f"Standardtheme '{theme_name}' kann nicht entfernt werden")
             return False
 

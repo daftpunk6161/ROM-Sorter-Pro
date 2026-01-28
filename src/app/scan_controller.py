@@ -4,15 +4,9 @@ from __future__ import annotations
 
 from typing import Optional
 
-from .controller import (
-    CancelToken,
-    ScanResult,
-    ProgressCallback,
-    LogCallback,
-    run_scan as _run_scan,
-    identify as _identify,
-)
-from .controller import IdentificationResult, ScanItem
+from .controller import identify as _identify
+from .controller import run_scan as _run_scan
+from .models import CancelToken, IdentificationResult, LogCallback, ProgressCallback, ScanItem, ScanResult
 from ..config import Config
 
 

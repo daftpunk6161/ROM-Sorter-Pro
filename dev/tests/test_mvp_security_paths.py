@@ -65,8 +65,9 @@ def test_execute_sort_rejects_symlink_source(tmp_path):
         ],
     )
 
-    with pytest.raises(Exception):
-        execute_sort(plan)
+    report = execute_sort(plan)
+    assert report.processed == 1
+    assert len(report.errors) == 1
 
 
 def test_execute_sort_rejects_traversal_target(tmp_path):
@@ -96,8 +97,10 @@ def test_execute_sort_rejects_traversal_target(tmp_path):
         ],
     )
 
-    with pytest.raises(Exception):
-        execute_sort(plan)
+    report = execute_sort(plan)
+    assert report.processed == 1
+    assert len(report.errors) == 1
+    assert not outside.exists()
 
 
 def test_plan_sort_rejects_symlink_parent(tmp_path):

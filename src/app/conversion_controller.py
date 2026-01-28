@@ -2,22 +2,15 @@
 
 from __future__ import annotations
 
-from typing import Optional, Iterable
+from typing import Iterable, Optional
 
-from .controller import (
-    CancelToken,
-    ConversionAuditReport,
-    ProgressCallback,
-    LogCallback,
-    audit_conversion_candidates as _audit,
-    normalize_input as _normalize_input,
-    plan_normalization as _plan_normalization,
-    execute_normalization as _execute_normalization,
-    NormalizationItem,
-    NormalizationPlan,
-    NormalizationReport,
-)
 from ..config import Config
+from ..core.normalization import NormalizationItem, NormalizationPlan, NormalizationReport
+from .controller import audit_conversion_candidates as _audit
+from .controller import execute_normalization as _execute_normalization
+from .controller import normalize_input as _normalize_input
+from .controller import plan_normalization as _plan_normalization
+from .models import CancelToken, ConversionAuditReport, LogCallback, ProgressCallback
 
 
 def audit_conversion_candidates(

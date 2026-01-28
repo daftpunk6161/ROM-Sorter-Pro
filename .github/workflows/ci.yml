@@ -27,6 +27,7 @@ jobs:
             dev/tests/test_mvp_security_paths.py \
             dev/tests/test_mvp_execute_cancel.py \
             dev/tests/test_mvp_execute_cancel_mid_copy.py \
+            dev/tests/test_mvp_execute_partial_error.py \
             dev/tests/test_mvp_lang_version_parsing.py \
             dev/tests/test_mvp_run_scan_policy.py \
             dev/tests/test_mvp_api_imports.py \
@@ -45,6 +46,7 @@ jobs:
             dev/tests/test_mvp_optional_deps_metadata.py \
             dev/tests/test_mvp_db_migration_backfill.py \
             dev/tests/test_mvp_db_controller.py \
+            dev/tests/test_mvp_dat_index_cancel_mid_parse.py \
             dev/tests/test_mvp_real_fixtures.py \
             dev/tests/test_mvp_execute_part_cleanup.py \
             dev/tests/test_mvp_scanner_threadpool.py \
@@ -83,6 +85,7 @@ jobs:
             dev/tests/test_mvp_security_paths.py \
             dev/tests/test_mvp_execute_cancel.py \
             dev/tests/test_mvp_execute_cancel_mid_copy.py \
+            dev/tests/test_mvp_execute_partial_error.py \
             dev/tests/test_mvp_lang_version_parsing.py \
             dev/tests/test_mvp_run_scan_policy.py \
             dev/tests/test_mvp_api_imports.py \
@@ -108,6 +111,7 @@ jobs:
             dev/tests/test_mvp_scan_and_conflict.py \
             dev/tests/test_mvp_archive_security.py \
             dev/tests/test_mvp_dat_index.py \
+            dev/tests/test_mvp_dat_index_cancel_mid_parse.py \
             dev/tests/test_mvp_worker_error_handling.py \
             dev/tests/test_mvp_queue_priority.py
 

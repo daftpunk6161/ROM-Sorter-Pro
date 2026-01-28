@@ -7,3 +7,5 @@ def test_premium_themes_present(tmp_path):
     assert "Neo Dark" in names
     assert "Nord Frost" in names
     assert "Solar Light" in names
+    assert "CRT Green" in names
+    assert "GameBoy DMG" in names

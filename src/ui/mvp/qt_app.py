@@ -171,15 +171,20 @@ def run() -> int:
         finished = Signal(str)
         failed = Signal(str)
 
-        def __init__(self, label: str, task):
+        def __init__(self, label: str, task, cancel_token: CancelToken):
             super().__init__()
             self._label = label
             self._task = task
+            self._cancel_token = cancel_token
 
         @Slot()
         def run(self) -> None:
             try:
-                self._task()
+                if self._cancel_token.is_cancelled():
+                    raise RuntimeError("Export cancelled")
+                self._task(self._cancel_token)
+                if self._cancel_token.is_cancelled():
+                    raise RuntimeError("Export cancelled")
                 self.finished.emit(self._label)
             except Exception as exc:
                 self.failed.emit(str(exc))
@@ -881,6 +886,7 @@ def run() -> int:
             self._audit_report: Optional[ConversionAuditReport] = None
             self._export_thread: Optional[Any] = None
             self._export_worker: Optional[ExportWorker] = None
+            self._export_cancel_token: Optional[CancelToken] = None
             self._igir_thread: Optional[Any] = None
             self._igir_worker: Optional[Any] = None
             self._igir_cancel_token: Optional[CancelToken] = None
@@ -903,6 +909,8 @@ def run() -> int:
                 }
             self._shell_controller: Optional[object] = None
             self._shell_pages: dict[str, Any] = {}
+            self._base_central: Optional[Any] = None
+            self._shell_stack: Optional[Any] = None
             self._syncing_paths = False
             self._syncing_theme = False
             self._log_visible = True
@@ -2929,15 +2937,21 @@ def run() -> int:
             except Exception:
                 pass
             controller = self._shell_controller
+            if controller is None:
+                self._init_shell_layout()
+                controller = self._shell_controller
             if controller is not None:
                 try:
-                    combo = getattr(controller, "layout_combo", None)
-                    if combo is None:
-                        return
-                    for i in range(combo.count()):
-                        if combo.itemData(i) == key:
-                            combo.setCurrentIndex(i)
-                            return
+                    setter = getattr(controller, "set_layout_key", None)
+                    if callable(setter):
+                        setter(key)
+                    else:
+                        combo = getattr(controller, "layout_combo", None)
+                        if combo is not None:
+                            for i in range(combo.count()):
+                                if combo.itemData(i) == key:
+                                    combo.setCurrentIndex(i)
+                                    break
                 except Exception:
                     pass
                 self._mount_shell_root()
@@ -3051,6 +3065,25 @@ def run() -> int:
             conflict = str(value or "").strip() or "rename"
             self._update_gui_setting("default_conflict_policy", conflict)
             self._apply_default_sort_settings(self.default_mode_combo.currentText(), conflict)
+
+        def _apply_default_sort_settings(self, mode: str, conflict: str) -> None:
+            try:
+                mode_value = str(mode or "").strip() or "copy"
+                conflict_value = str(conflict or "").strip() or "rename"
+                if hasattr(self, "mode_combo") and self.mode_combo is not None:
+                    try:
+                        if self.mode_combo.findText(mode_value) >= 0:
+                            self.mode_combo.setCurrentText(mode_value)
+                    except RuntimeError:
+                        pass
+                if hasattr(self, "conflict_combo") and self.conflict_combo is not None:
+                    try:
+                        if self.conflict_combo.findText(conflict_value) >= 0:
+                            self.conflict_combo.setCurrentText(conflict_value)
+                    except RuntimeError:
+                        pass
+            except Exception:
+                return
 
         def _set_drag_drop_enabled(self, enabled: bool) -> None:
             widgets = [
@@ -3973,17 +4006,52 @@ def run() -> int:
                 if build_root is None:
                     return
                 root = build_root()
-                self.setCentralWidget(root)
+                if root is None:
+                    return
+                if self._shell_stack is None:
+                    base = self._base_central or self.centralWidget()
+                    if base is None:
+                        self.setCentralWidget(root)
+                        return
+                    self._base_central = base
+                    stack = QtWidgets.QStackedWidget()
+                    stack.addWidget(base)
+                    stack.addWidget(root)
+                    stack.setCurrentWidget(root)
+                    self._shell_stack = stack
+                    self.setCentralWidget(stack)
+                    return
+                current = self._shell_stack.currentWidget()
+                if current is not None and current is not self._base_central:
+                    try:
+                        self._shell_stack.removeWidget(current)
+                        current.deleteLater()
+                    except Exception:
+                        pass
+                self._shell_stack.addWidget(root)
+                self._shell_stack.setCurrentWidget(root)
             except Exception:
                 return
+
+        def _is_qt_widget_alive(self, widget: object | None) -> bool:
+            if widget is None:
+                return False
+            try:
+                getattr(widget, "objectName", lambda: "")()
+                return True
+            except RuntimeError:
+                return False
+            except Exception:
+                return True
 
         def _on_header_theme_changed(self, name: str) -> None:
             if self._syncing_theme:
                 return
             self._syncing_theme = True
             try:
-                if self.theme_combo.currentText() != name:
-                    self.theme_combo.setCurrentText(name)
+                combo = self.theme_combo
+                if combo is not None and combo.currentText() != name:
+                    combo.setCurrentText(name)
             finally:
                 self._syncing_theme = False
 
@@ -3992,9 +4060,16 @@ def run() -> int:
                 return
             self._syncing_theme = True
             try:
-                current = self.theme_combo.currentText()
-                if self.header_theme_combo.currentText() != current:
-                    self.header_theme_combo.setCurrentText(current)
+                if not self._is_qt_widget_alive(self.theme_combo):
+                    return
+                combo = self.theme_combo
+                current = combo.currentText() if combo is not None else ""
+                header_combo = self.header_theme_combo
+                if not self._is_qt_widget_alive(header_combo):
+                    self.header_theme_combo = None
+                    return
+                if header_combo is not None and header_combo.currentText() != current:
+                    header_combo.setCurrentText(current)
             finally:
                 self._syncing_theme = False
 
@@ -4747,6 +4822,11 @@ def run() -> int:
             self._cancel_token.cancel()
             if self._backend_worker is not None:
                 self._backend_worker.cancel()
+            if self._export_cancel_token is not None:
+                try:
+                    self._export_cancel_token.cancel()
+                except Exception:
+                    pass
             self.btn_cancel.setEnabled(False)
 
         def _on_phase_changed(self, phase: str, total: int) -> None:
@@ -5130,8 +5210,17 @@ def run() -> int:
                 QtWidgets.QMessageBox.information(self, "Export läuft", "Ein Export ist bereits aktiv.")
                 return
 
+            self._export_cancel_token = CancelToken()
+
+            def task_with_cancel(cancel_token: CancelToken) -> None:
+                if cancel_token.is_cancelled():
+                    raise RuntimeError("Export cancelled")
+                task()
+                if cancel_token.is_cancelled():
+                    raise RuntimeError("Export cancelled")
+
             thread = QtCore.QThread()
-            worker = ExportWorker(label, task)
+            worker = ExportWorker(label, task_with_cancel, self._export_cancel_token)
             worker.moveToThread(thread)
 
             worker.finished.connect(lambda lbl: self._on_export_finished(lbl))
@@ -5161,6 +5250,7 @@ def run() -> int:
                 pass
             self._export_thread = None
             self._export_worker = None
+            self._export_cancel_token = None
 
         def _on_export_finished(self, label: str) -> None:
             QtWidgets.QMessageBox.information(self, "Export abgeschlossen", f"{label} gespeichert.")

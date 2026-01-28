@@ -8,7 +8,7 @@ import zipfile
 import threading
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Iterable, Iterator, List, Optional, Tuple
+from typing import Any, Dict, Iterable, Iterator, List, Optional, Tuple, Protocol
 import xml.etree.ElementTree as ET
 
 from .index_lock import acquire_index_lock, release_index_lock
@@ -33,6 +33,14 @@ class DatHashRow:
     crc32: Optional[str]
     sha1: Optional[str]
     size_bytes: Optional[int]
+
+
+class CancelEventProtocol(Protocol):
+    def is_set(self) -> bool: ...
+
+
+def _is_cancelled(cancel_event: Optional[CancelEventProtocol]) -> bool:
+    return bool(cancel_event and cancel_event.is_set())
 
 
 class DatIndexSqlite:
@@ -179,7 +187,7 @@ class DatIndexSqlite:
             cur.execute("DELETE FROM dat_files")
             self.conn.commit()
 
-    def ingest(self, paths: Iterable[str], *, cancel_event: Optional[object] = None) -> Dict[str, int]:
+    def ingest(self, paths: Iterable[str], *, cancel_event: Optional[CancelEventProtocol] = None) -> Dict[str, int]:
         processed = 0
         skipped = 0
         inserted = 0
@@ -191,7 +199,7 @@ class DatIndexSqlite:
             removed = self._deactivate_missing_paths(current_paths)
 
             for file_path in file_paths:
-                if cancel_event is not None and getattr(cancel_event, "is_set", lambda: False)():
+                if _is_cancelled(cancel_event):
                     break
                 dat_id, changed = self._ensure_dat_file(file_path)
                 if not dat_id:
@@ -202,11 +210,24 @@ class DatIndexSqlite:
                     continue
 
                 self._clear_dat_rows(dat_id)
-                rows = list(self._parse_dat_file(file_path, dat_id))
-                processed += 1
-                for i in range(0, len(rows), 10000):
-                    inserted += self._insert_rows(rows[i : i + 10000])
+                rows_iter = self._parse_dat_file(file_path, dat_id, cancel_event=cancel_event)
+                batch: List[DatHashRow] = []
+                cancelled = False
+                for row in rows_iter:
+                    if _is_cancelled(cancel_event):
+                        cancelled = True
+                        break
+                    batch.append(row)
+                    if len(batch) >= 10000:
+                        inserted += self._insert_rows(batch)
+                        batch.clear()
+                if cancelled:
+                    self.conn.rollback()
+                    break
+                if batch:
+                    inserted += self._insert_rows(batch)
                 self.conn.commit()
+                processed += 1
 
         return {"processed": processed, "skipped": skipped, "inserted": inserted, "removed": removed}
 
@@ -272,11 +293,21 @@ class DatIndexSqlite:
             self.conn.commit()
         return removed
 
-    def _parse_dat_file(self, path: Path, dat_id: int) -> Iterator[DatHashRow]:
+    def _parse_dat_file(
+        self,
+        path: Path,
+        dat_id: int,
+        *,
+        cancel_event: Optional[CancelEventProtocol] = None,
+    ) -> Iterator[DatHashRow]:
+        if _is_cancelled(cancel_event):
+            return
         suffix = path.suffix.lower()
         if suffix == ".zip":
             with zipfile.ZipFile(str(path), "r") as zf:
                 for info in zf.infolist():
+                    if _is_cancelled(cancel_event):
+                        return
                     if info.is_dir():
                         continue
                     name = info.filename.lower()
@@ -287,9 +318,9 @@ class DatIndexSqlite:
                     is_xml = name.endswith(".xml") or head.lstrip().startswith(b"<")
                     with zf.open(info, "r") as fh:
                         yield from (
-                            self._parse_logiqx_xml_stream(fh, dat_id)
+                            self._parse_logiqx_xml_stream(fh, dat_id, cancel_event=cancel_event)
                             if is_xml
-                            else self._parse_clrmamepro_text_stream(fh, dat_id)
+                            else self._parse_clrmamepro_text_stream(fh, dat_id, cancel_event=cancel_event)
                         )
             return
 
@@ -298,18 +329,28 @@ class DatIndexSqlite:
         is_xml = head.lstrip().startswith(b"<") or suffix == ".xml"
         with open(path, "rb") as f:
             yield from (
-                self._parse_logiqx_xml_stream(f, dat_id)
+                self._parse_logiqx_xml_stream(f, dat_id, cancel_event=cancel_event)
                 if is_xml
-                else self._parse_clrmamepro_text_stream(f, dat_id)
+                else self._parse_clrmamepro_text_stream(f, dat_id, cancel_event=cancel_event)
             )
 
-    def _parse_logiqx_xml_stream(self, stream, dat_id: int) -> Iterator[DatHashRow]:
+    def _parse_logiqx_xml_stream(
+        self,
+        stream,
+        dat_id: int,
+        *,
+        cancel_event: Optional[CancelEventProtocol] = None,
+    ) -> Iterator[DatHashRow]:
         context = ET.iterparse(stream, events=("start", "end"))
         _, root = next(context)
         current_game_name: Optional[str] = None
         dat_name: Optional[str] = None
         platform_id: Optional[str] = None
+        event_count = 0
         for event, elem in context:
+            if event_count % 500 == 0 and _is_cancelled(cancel_event):
+                return
+            event_count += 1
             tag = elem.tag.lower() if isinstance(elem.tag, str) else ""
             if event == "end" and tag.endswith("name") and elem.text and elem.text.strip():
                 if dat_name is None:
@@ -335,7 +376,13 @@ class DatIndexSqlite:
                 current_game_name = None
                 elem.clear()
 
-    def _parse_clrmamepro_text_stream(self, stream, dat_id: int) -> Iterator[DatHashRow]:
+    def _parse_clrmamepro_text_stream(
+        self,
+        stream,
+        dat_id: int,
+        *,
+        cancel_event: Optional[CancelEventProtocol] = None,
+    ) -> Iterator[DatHashRow]:
         import re
         re_rom = re.compile(r"^\s*rom\s*\(", re.I)
         re_name = re.compile(r"\bname\s+\"([^\"]+)\"", re.I)
@@ -346,7 +393,11 @@ class DatIndexSqlite:
         game_name: Optional[str] = None
         dat_name: Optional[str] = None
         platform_id: Optional[str] = None
+        line_count = 0
         for raw in stream:
+            if line_count % 500 == 0 and _is_cancelled(cancel_event):
+                return
+            line_count += 1
             line = raw.decode("utf-8", errors="ignore") if isinstance(raw, bytes) else str(raw)
             if re_header.search(line) and "name" in line.lower():
                 m = re_name.search(line)
@@ -434,7 +485,11 @@ class DatIndexSqlite:
         return (row["platform_id"] or "Unknown", int(row["dat_id"]))
 
 
-def build_index_from_config(config: Optional[object] = None, *, cancel_event: Optional[object] = None) -> Dict[str, int]:
+def build_index_from_config(
+    config: Optional[object] = None,
+    *,
+    cancel_event: Optional[CancelEventProtocol] = None,
+) -> Dict[str, int]:
     cfg = _normalize_config(config)
     dat_cfg = cfg.get("dats", {}) or {}
     paths = dat_cfg.get("import_paths") or []

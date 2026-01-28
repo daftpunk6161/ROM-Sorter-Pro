@@ -5,43 +5,35 @@ Centralizes stable imports to keep UI decoupled from controller internals.
 
 from __future__ import annotations
 
-from .controller import (
+from ..core.normalization import NormalizationItem, NormalizationPlan, NormalizationReport, NormalizationResultItem
+from .controller import analyze_dat_sources, build_dat_index, build_library_report
+from .controller import filter_scan_items
+from .controller import get_dat_sources, infer_languages_and_version_from_name, infer_region_from_name
+from .controller import load_sort_resume_state, save_dat_sources
+from .conversion_controller import (
+    audit_conversion_candidates,
+    execute_normalization,
+    normalize_input,
+    plan_normalization,
+)
+from .dat_sources_controller import DatSourceReport
+from .models import (
     ActionStatusCallback,
     CancelToken,
     ConflictPolicy,
     ConversionAuditReport,
     ConversionMode,
-    DatSourceReport,
+    IdentificationResult,
     LogCallback,
-    NormalizationItem,
-    NormalizationPlan,
-    NormalizationReport,
     ProgressCallback,
     ScanItem,
     ScanResult,
-    IdentificationResult,
+    SortMode,
     SortPlan,
     SortReport,
-    SortMode,
-    analyze_dat_sources,
-    build_dat_index,
-    build_library_report,
-    filter_scan_items,
-    infer_languages_and_version_from_name,
-    infer_region_from_name,
-    load_sort_resume_state,
-    get_dat_sources,
-    save_dat_sources,
 )
-from .scan_controller import run_scan, identify
-from .sort_controller import plan_sort, plan_rebuild, execute_sort
-from .conversion_controller import (
-    audit_conversion_candidates,
-    normalize_input,
-    plan_normalization,
-    execute_normalization,
-)
-from ..core.normalization import NormalizationResultItem
+from .scan_controller import identify, run_scan
+from .sort_controller import execute_sort, plan_rebuild, plan_sort
 
 __all__ = [
     "ActionStatusCallback",

@@ -2,10 +2,11 @@
   "gui_settings": {
     "window_width": 1680,
     "window_height": 980,
-    "theme": "Blue",
+    "theme": "Light",
     "drag_drop_enabled": true,
     "remember_window_size": true,
-    "log_visible": false
+    "log_visible": false,
+    "default_sort_mode": "copy"
   },
   "scanner": {
     "use_high_performance": true,
@@ -17,7 +18,7 @@
     "max_depth": -1
   },
   "ui": {
-    "theme": "Blue",
+    "theme": "Light",
     "language": "de_DE",
     "remember_window_state": true,
     "remember_last_directories": true,
