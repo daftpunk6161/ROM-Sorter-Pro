@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import os
 import shutil
-import subprocess
+import subprocess  # nosec B404
 import time
+import logging
 from pathlib import Path
 from typing import List, Optional, Protocol, Tuple
+
+logger = logging.getLogger(__name__)
 
 
 class CancelTokenProtocol(Protocol):
@@ -60,8 +63,8 @@ def atomic_copy_with_cancel(
                 try:
                     fdst.flush()
                     os.fsync(fdst.fileno())
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logger.debug("Flush/fsync failed: %s", exc)
 
         if cancelled_midway or _is_cancelled(cancel_token):
             return False
@@ -70,8 +73,8 @@ def atomic_copy_with_cancel(
 
         try:
             shutil.copystat(src, dst, follow_symlinks=True)
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("copystat failed: %s", exc)
 
         return True
 
@@ -82,8 +85,8 @@ def atomic_copy_with_cancel(
             except Exception:
                 try:
                     os.remove(str(tmp))
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logger.debug("Failed to remove temp file: %s", exc)
 
 
 def run_conversion_with_cancel(
@@ -95,12 +98,13 @@ def run_conversion_with_cancel(
         return False, True
 
     try:
-        process = subprocess.Popen(
+        process = subprocess.Popen(  # nosec B603
             cmd,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
-    except Exception:
+    except Exception as exc:
+        logger.debug("Failed to start conversion process: %s", exc)
         return False, False
 
     start_ts = time.monotonic()
@@ -108,30 +112,32 @@ def run_conversion_with_cancel(
         if _is_cancelled(cancel_token):
             try:
                 process.terminate()
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug("Terminate failed: %s", exc)
             try:
                 process.wait(timeout=2)
-            except Exception:
+            except Exception as exc:
+                logger.debug("Wait failed after terminate: %s", exc)
                 try:
                     process.kill()
-                except Exception:
-                    pass
+                except Exception as kill_exc:
+                    logger.debug("Kill failed: %s", kill_exc)
             return False, True
 
         if timeout_sec is not None and timeout_sec > 0:
             if (time.monotonic() - start_ts) > timeout_sec:
                 try:
                     process.terminate()
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logger.debug("Terminate failed: %s", exc)
                 try:
                     process.wait(timeout=2)
-                except Exception:
+                except Exception as exc:
+                    logger.debug("Wait failed after terminate: %s", exc)
                     try:
                         process.kill()
-                    except Exception:
-                        pass
+                    except Exception as kill_exc:
+                        logger.debug("Kill failed: %s", kill_exc)
                 return False, False
 
         code = process.poll()

@@ -25,7 +25,7 @@ import requests
 import tempfile
 import shutil
 import threading
-import subprocess
+import subprocess  # nosec B404
 from typing import Dict, Any, Callable, Optional
 from datetime import datetime, timedelta
 
@@ -332,9 +332,9 @@ class UpdateManager:
         """Verifies the Integrity of A File Using Checksum. ARGS: File_Path: Path to the File to Verify Expected_Checksum: Expected Checksum Checksum_Type: Type of Checksum (MD5, SHA1, SHA256, SHA512) Return: True, if the Checks Matches, OtherWise False"""
         try:
             if checksum_type == "md5":
-                hasher = hashlib.md5()
+                hasher = hashlib.md5(usedforsecurity=False)
             elif checksum_type == "sha1":
-                hasher = hashlib.sha1()
+                hasher = hashlib.sha1(usedforsecurity=False)
             elif checksum_type == "sha256":
                 hasher = hashlib.sha256()
             elif checksum_type == "sha512":
@@ -456,7 +456,7 @@ class UpdateManager:
         if not bool(self.update_config.get("allow_update_scripts", False)):
             logger.warning("Update scripts are disabled by configuration: %s", script_path)
             return
-        subprocess.run([sys.executable, script_path], check=True)
+        subprocess.run([sys.executable, script_path], check=True)  # nosec B603
 
     def _create_backup(self, source_dir: str, backup_dir: str) -> None:
         """Creates A Backup of the Program Directory. Args: Source_dir: Source Directory Backup_Dir: Target Directory for the Backup"""

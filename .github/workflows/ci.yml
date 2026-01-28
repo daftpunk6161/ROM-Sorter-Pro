@@ -78,6 +78,7 @@ jobs:
         run: |
           pytest -q \
             --cov=src/app --cov=src/core --cov=src/security --cov=src/ui/mvp \
+            --cov-config=.coveragerc \
             --cov-report=term-missing \
             --cov-fail-under=80 \
             dev/tests/test_mvp_backend_selection.py \

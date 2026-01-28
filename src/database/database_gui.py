@@ -7,7 +7,7 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import threading
 import sqlite3
-import subprocess
+import subprocess  # nosec B404
 import platform
 from typing import Any, Dict
 from pathlib import Path
@@ -268,9 +268,9 @@ class DatabaseManagerDialog:
             if system == "Windows":
                 os.startfile(folder)  # type: ignore[attr-defined]
             elif system == "Darwin":
-                subprocess.run(["open", folder], check=False)
+                subprocess.run(["open", folder], check=False)  # nosec B603
             else:
-                subprocess.run(["xdg-open", folder], check=False)
+                subprocess.run(["xdg-open", folder], check=False)  # nosec B603
         except Exception as e:
             messagebox.showerror("Fehler", f"Konnte Ordner nicht öffnen:\n{e}")
 

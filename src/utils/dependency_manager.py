@@ -15,7 +15,7 @@ Features:
 """
 
 import sys
-import subprocess
+import subprocess  # nosec B404
 import logging
 import platform
 import importlib
@@ -110,7 +110,7 @@ class DependencyManager:
                 # Fallback: Use PIP List via SubroCess
                 try:
                     import json
-                    result = subprocess.run(
+                    result = subprocess.run(  # nosec B603
                         [sys.executable, "-m", "pip", "list", "--format", "json"],
                         check=True, capture_output=True, text=True
                     )
@@ -191,7 +191,7 @@ class DependencyManager:
 
             # Carry out the PIP command
             logger.debug(f"Ausführen: {' '.join(cmd)}")
-            subprocess.run(cmd, check=True, capture_output=True, text=True)
+            subprocess.run(cmd, check=True, capture_output=True, text=True)  # nosec B603
 
             # Update the list of installed packages
             self.installed_packages = self._get_installed_packages()

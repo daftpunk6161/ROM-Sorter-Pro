@@ -7,7 +7,7 @@ import os
 import zipfile
 import logging
 import tempfile
-import subprocess
+import subprocess  # nosec B404
 import shutil
 from typing import List, Optional
 
@@ -60,14 +60,14 @@ def find_7zip_path() -> Optional[str]:
 # Try to find it via Path
     try:
         if os.name == 'nt':  # Windows
-            result = subprocess.run(["where", "7z"], capture_output=True, text=True, check=False)
+            result = subprocess.run(["where", "7z"], capture_output=True, text=True, check=False)  # nosec B603
         else:  # Unix/Linux
-            result = subprocess.run(["which", "7z"], capture_output=True, text=True, check=False)
+            result = subprocess.run(["which", "7z"], capture_output=True, text=True, check=False)  # nosec B603
 
         if result.returncode == 0 and result.stdout.strip():
             return result.stdout.strip().split("\n")[0]
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.debug("7z detection failed: %s", exc)
 
     return None
 

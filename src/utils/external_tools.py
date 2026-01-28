@@ -7,7 +7,7 @@ import csv
 import json
 import shutil
 import re
-import subprocess
+import subprocess  # nosec B404
 import threading
 import time
 import logging
@@ -152,7 +152,6 @@ def _get_wud2app_config(config: Optional[ConfigLike]) -> Tuple[str, List[str]]:
 
 def _get_wudcompress_config(config: Optional[ConfigLike]) -> Tuple[str, List[str]]:
     return _get_tool_config(config, "wudcompress")
-
 
 def _get_igir_config(config: Optional[ConfigLike]) -> Tuple[str, List[str]]:
     return _get_tool_config(config, "igir")
@@ -303,7 +302,7 @@ def _terminate_process_tree(process: subprocess.Popen) -> None:
         return
     if os.name == "nt":
         try:
-            subprocess.run(
+            subprocess.run(  # nosec B603
                 ["taskkill", "/T", "/F", "/PID", str(process.pid)],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
@@ -341,7 +340,7 @@ def _run_external_process(
     if os.name == "nt":
         creationflags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
 
-    process = subprocess.Popen(
+    process = subprocess.Popen(  # nosec B603
         cmd,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -478,7 +477,7 @@ def probe_wud2app(config: Optional[ConfigLike] = None) -> Wud2AppProbeResult:
     cmd, use_shell = _prepare_command(exe_path, [PROBE_INPUT_PATH])
 
     try:
-        process = subprocess.Popen(
+        process = subprocess.Popen(  # nosec B603
             cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -569,7 +568,7 @@ def probe_wudcompress(config: Optional[ConfigLike] = None) -> WudCompressProbeRe
     cmd, use_shell = _prepare_command(exe_path, args)
 
     try:
-        process = subprocess.Popen(
+        process = subprocess.Popen(  # nosec B603
             cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,

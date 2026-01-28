@@ -14,6 +14,7 @@ Public API (requested MVP surface):
 from __future__ import annotations
 
 import errno
+import logging
 import os
 import re
 import time
@@ -40,6 +41,8 @@ from ..security.security_utils import (
     validate_file_operation,
 )
 from ..utils.external_tools import build_external_command, run_wud2app, run_wudcompress
+
+logger = logging.getLogger(__name__)
 from .conversion_audit_controller import audit_conversion_candidates
 from .conversion_settings import (
     _build_conversion_args,
@@ -150,6 +153,10 @@ def run_scan(
         min_confidence = float(sorting_cfg.get("confidence_threshold", min_confidence))
     except Exception:
         min_confidence = 0.95
+    if min_confidence < 0:
+        min_confidence = 0.0
+    if min_confidence > 1:
+        min_confidence = 1.0
     overrides = _load_identification_overrides(cfg)
 
     for rom in list(result.get("roms") or []):
@@ -172,10 +179,15 @@ def run_scan(
             is_exact = True
             override_name = str(override.get("name") or "override")
 
-        if detection_source == "extension-unique" and detection_conf_value is not None:
-            if detection_conf_value < min_confidence:
-                system = "Unknown"
-                detection_source = "policy-low-confidence"
+        source_key = str(detection_source or "").strip().lower()
+        should_force_unknown = False
+        if detection_conf_value is not None and detection_conf_value < min_confidence:
+            should_force_unknown = True
+        elif detection_conf_value is None and source_key in {"extension", "extension-unique"}:
+            should_force_unknown = True
+        if should_force_unknown:
+            system = "Unknown"
+            detection_source = "policy-low-confidence"
 
         languages: Tuple[str, ...] = ()
         version: Optional[str] = None
@@ -379,10 +391,10 @@ def plan_sort(
                 absolute = raw_dest.absolute()
                 if resolved != absolute:
                     return _error_plan(f"Symlink destination not allowed: {raw_dest}")
-            except Exception:
-                pass
-        except Exception:
-            pass
+            except Exception as exc:
+                logger.debug("Symlink destination check failed: %s", exc)
+        except Exception as exc:
+            logger.debug("Symlink destination check failed: %s", exc)
 
     if has_symlink_parent(dest_root):
         return _error_plan(f"Symlink destination not allowed: {dest_root}")
@@ -498,8 +510,8 @@ def plan_sort(
                     rel = src.parent.relative_to(Path(scan_result.source_path).resolve())
                     if str(rel) not in (".", ""):
                         target_dir = target_dir / rel
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logger.debug("Preserve structure failed: %s", exc)
             target_name = src.name
             if isinstance(rename_template, str) and rename_template.strip():
                 target_name = _apply_rename_template(rename_template, item, src, safe_system)
@@ -835,8 +847,8 @@ def execute_sort(
                         try:
                             if dst.exists():
                                 dst.unlink()
-                        except Exception:
-                            pass
+                        except Exception as exc:
+                            logger.debug("Failed to remove conversion output: %s", exc)
                         break
                     if not ok:
                         raise RuntimeError(f"Conversion failed for {src.name}")

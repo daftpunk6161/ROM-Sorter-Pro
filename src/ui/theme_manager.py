@@ -690,8 +690,9 @@ class Theme:
 class ThemeManager:
     """Manages themes for the application."""
 
-    def __init__(self, config_dir: Optional[str] = None):
+    def __init__(self, config_dir: Optional[str] = None, config: Optional[Dict[str, Any]] = None):
         """Initialized the theme manager. Args: Config_Dir: List for theme configuration files"""
+        config_dir = self._resolve_theme_config_dir(config=config, config_dir=config_dir)
         if config_dir is None:
             # Bestimme Standard-Konfigurationsverzeichnis
             user_home = os.path.expanduser("~")
@@ -714,6 +715,29 @@ class ThemeManager:
 
         # Lade gespeicherte Themes
         self._load_saved_themes()
+
+    @staticmethod
+    def _resolve_theme_config_dir(
+        config: Optional[Dict[str, Any]] = None,
+        config_dir: Optional[str] = None,
+    ) -> Optional[str]:
+        if config_dir:
+            return config_dir
+        if not isinstance(config, dict):
+            return None
+        gui_cfg = config.get("gui_settings") or {}
+        if isinstance(gui_cfg, dict):
+            theme_cfg = gui_cfg.get("themes") or {}
+            if isinstance(theme_cfg, dict):
+                for key in ("config_dir", "themes_dir", "theme_dir"):
+                    value = theme_cfg.get(key)
+                    if isinstance(value, str) and value.strip():
+                        return value.strip()
+            for key in ("theme_config_dir", "themes_dir", "theme_dir"):
+                value = gui_cfg.get(key)
+                if isinstance(value, str) and value.strip():
+                    return value.strip()
+        return None
 
     def set_active_theme(self, theme_name: str) -> bool:
         """Set the active theme.
@@ -1054,31 +1078,31 @@ class ThemeManager:
                     # 0 = Dunkel, 1 = Hell
                     value, _ = winreg.QueryValueEx(key, "AppsUseLightTheme")
                     return ThemeType.LIGHT if value == 1 else ThemeType.DARK
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug("Windows theme detection failed: %s", exc)
 
         elif system == "Darwin":  # macOS
             try:
-                import subprocess
-                result = subprocess.run(
+                import subprocess  # nosec B404
+                result = subprocess.run(  # nosec B603
                     ["defaults", "read", "-g", "AppleInterfaceStyle"],
                     capture_output=True, text=True
                 )
                 return ThemeType.DARK if "Dark" in result.stdout else ThemeType.LIGHT
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug("macOS theme detection failed: %s", exc)
 
         elif system == "Linux":
             # Attempts to recognize the gnome theme
             try:
-                import subprocess
-                result = subprocess.run(
+                import subprocess  # nosec B404
+                result = subprocess.run(  # nosec B603
                     ["gsettings", "get", "org.gnome.desktop.interface", "gtk-theme"],
                     capture_output=True, text=True
                 )
                 return ThemeType.DARK if "dark" in result.stdout.lower() else ThemeType.LIGHT
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug("Linux theme detection failed: %s", exc)
 
         # Fallback: Helles Theme
         return ThemeType.LIGHT

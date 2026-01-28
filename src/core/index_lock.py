@@ -43,7 +43,7 @@ def _get_process_start_time_psutil(pid: int) -> Optional[str]:
 
 def _get_process_start_time_windows(pid: int) -> Optional[str]:
     if os.name != "nt":
-        return None
+        import subprocess  # nosec B404
     try:
         cmd = (
             "Get-Process -Id "

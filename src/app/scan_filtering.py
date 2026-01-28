@@ -5,11 +5,13 @@ from __future__ import annotations
 import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Set, Tuple, Union
+import logging
 
 from ..config import Config, load_config
 from .models import ScanItem
 from .naming_helpers import infer_languages_and_version_from_name, infer_region_from_name, normalize_title_for_dedupe
 
+logger = logging.getLogger(__name__)
 DEFAULT_REGION_PRIORITY: Tuple[str, ...] = (
     "Europe",
     "USA",
@@ -182,7 +184,10 @@ def filter_scan_items(
         if min_bytes is not None or max_bytes is not None:
             try:
                 size = Path(item.input_path).stat().st_size
-            except Exception:
+            except Exception as exc:
+                logger.debug("Failed to stat input for size filter: %s", exc)
+                size = None
+            if size is None:
                 continue
             if min_bytes is not None and size < min_bytes:
                 continue
@@ -235,15 +240,15 @@ def filter_scan_items(
             region_order = prio_cfg.get("region_order")
             if isinstance(region_order, list) and region_order:
                 region_priority = tuple(str(x) for x in region_order if str(x).strip()) or region_priority
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Region priority config invalid: %s", exc)
 
         try:
             language_order = prio_cfg.get("language_order")
             if isinstance(language_order, list) and language_order:
                 language_priority = tuple(str(x) for x in language_order if str(x).strip()) or language_priority
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Language priority config invalid: %s", exc)
 
         return select_preferred_variants(
             filtered,

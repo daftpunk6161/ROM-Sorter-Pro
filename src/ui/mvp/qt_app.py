@@ -29,7 +29,7 @@ import threading
 import json
 from pathlib import Path
 from dataclasses import dataclass
-from typing import Any, Iterable, List, Optional, cast
+from typing import Any, Dict, Iterable, List, Optional, Tuple, cast
 
 logger = logging.getLogger(__name__)
 
@@ -151,282 +151,26 @@ def run() -> int:
         rom_display_name,
     )
 
-    class WorkerSignals(QtCore.QObject):
-        phase_changed = Signal(str, int)
-        progress = Signal(int, int)
-        log = Signal(str)
-        action_status = Signal(int, str)
-        finished = Signal(object)
-        failed = Signal(str, str)
+    from .qt_workers import build_qt_workers
+    from .qt_log_utils import QtLogBuffer, QtLogHandler
+    from .qt_results_model import build_results_model
 
-    class ExportWorker(QtCore.QObject):
-        finished = Signal(str)
-        failed = Signal(str)
+    (
+        WorkerSignals,
+        ExportWorker,
+        DatIndexWorker,
+        IgirPlanWorker,
+        IgirExecuteWorker,
+    ) = build_qt_workers(
+        QtCore,
+        Signal,
+        Slot,
+        igir_plan,
+        igir_execute,
+        CancelToken,
+    )
 
-        def __init__(self, label: str, task, cancel_token: CancelToken):
-            super().__init__()
-            self._label = label
-            self._task = task
-            self._cancel_token = cancel_token
-
-        @Slot()
-        def run(self) -> None:
-            try:
-                if self._cancel_token.is_cancelled():
-                    raise RuntimeError("Export cancelled")
-                self._task(self._cancel_token)
-                if self._cancel_token.is_cancelled():
-                    raise RuntimeError("Export cancelled")
-                self.finished.emit(self._label)
-            except Exception as exc:
-                self.failed.emit(str(exc))
-
-    class DatIndexWorker(QtCore.QObject):
-        finished = Signal(object)
-        failed = Signal(str)
-
-        def __init__(self, task):
-            super().__init__()
-            self._task = task
-
-        @Slot()
-        def run(self) -> None:
-            try:
-                result = self._task()
-                self.finished.emit(result)
-            except Exception as exc:
-                self.failed.emit(str(exc))
-
-    class IgirPlanWorker(QtCore.QObject):
-        log = Signal(str)
-        finished = Signal(object)
-        failed = Signal(str)
-
-        def __init__(
-            self,
-            input_path: str,
-            output_dir: str,
-            report_dir: str,
-            temp_dir: str,
-            cancel_token: CancelToken,
-        ):
-            super().__init__()
-            self._input_path = input_path
-            self._output_dir = output_dir
-            self._report_dir = report_dir
-            self._temp_dir = temp_dir
-            self._cancel_token = cancel_token
-
-        @Slot()
-        def run(self) -> None:
-            try:
-                result = igir_plan(
-                    input_path=self._input_path,
-                    output_dir=self._output_dir,
-                    dest_root=self._output_dir,
-                    report_dir=self._report_dir,
-                    temp_dir=self._temp_dir,
-                    log_cb=lambda msg: self.log.emit(str(msg)),
-                    cancel_token=self._cancel_token,
-                )
-                self.finished.emit(result)
-            except Exception as exc:
-                self.failed.emit(str(exc))
-
-    class IgirExecuteWorker(QtCore.QObject):
-        log = Signal(str)
-        finished = Signal(object)
-        failed = Signal(str)
-
-        def __init__(
-            self,
-            input_path: str,
-            output_dir: str,
-            temp_dir: str,
-            cancel_token: CancelToken,
-            plan_confirmed: bool,
-            explicit_user_action: bool,
-            copy_first: bool,
-        ):
-            super().__init__()
-            self._input_path = input_path
-            self._output_dir = output_dir
-            self._temp_dir = temp_dir
-            self._cancel_token = cancel_token
-            self._plan_confirmed = plan_confirmed
-            self._explicit_user_action = explicit_user_action
-            self._copy_first = copy_first
-
-        @Slot()
-        def run(self) -> None:
-            try:
-                result = igir_execute(
-                    input_path=self._input_path,
-                    output_dir=self._output_dir,
-                    dest_root=self._output_dir,
-                    temp_dir=self._temp_dir,
-                    log_cb=lambda msg: self.log.emit(str(msg)),
-                    cancel_token=self._cancel_token,
-                    plan_confirmed=self._plan_confirmed,
-                    explicit_user_action=self._explicit_user_action,
-                    copy_first=self._copy_first,
-                )
-                self.finished.emit(result)
-            except Exception as exc:
-                self.failed.emit(str(exc))
-
-    @dataclass
-    class ResultRow:
-        status: str
-        action: str
-        input_path: str
-        name: str
-        detected_system: str
-        security: str
-        signals: str
-        candidates: str
-        planned_target: str
-        normalization: str
-        reason: str
-        meta_index: int
-        status_tooltip: str = ""
-        status_color: Optional[str] = None
-
-    class ResultsTableModel(QtCore.QAbstractTableModel):
-        headers = [
-            "Status/Fehler",
-            "Aktion",
-            "Eingabepfad",
-            "Name",
-            "Erkannte Konsole/Typ",
-            "Sicherheit",
-            "Signale",
-            "Kandidaten",
-            "Geplantes Ziel",
-            "Normalisierung",
-            "Grund",
-        ]
-
-        def __init__(self, parent=None) -> None:
-            super().__init__(parent)
-            self._rows: List[ResultRow] = []
-
-        def rowCount(self, parent=QtCore.QModelIndex()) -> int:
-            if parent.isValid():
-                return 0
-            return len(self._rows)
-
-        def columnCount(self, parent=QtCore.QModelIndex()) -> int:
-            if parent.isValid():
-                return 0
-            return len(self.headers)
-
-        def data(self, index, role=QtCore.Qt.ItemDataRole.DisplayRole):
-            if not index.isValid():
-                return None
-            row = self._rows[index.row()]
-            column = index.column()
-            values = [
-                row.status,
-                row.action,
-                row.input_path,
-                row.name,
-                row.detected_system,
-                row.security,
-                row.signals,
-                row.candidates,
-                row.planned_target,
-                row.normalization,
-                row.reason,
-            ]
-            if role in (QtCore.Qt.ItemDataRole.DisplayRole, QtCore.Qt.ItemDataRole.EditRole):
-                try:
-                    return values[column]
-                except Exception:
-                    return ""
-            if role == QtCore.Qt.ItemDataRole.ToolTipRole and column == 0:
-                return row.status_tooltip or None
-            if role == QtCore.Qt.ItemDataRole.ForegroundRole and column == 0 and row.status_color:
-                try:
-                    return QtGui.QBrush(QtGui.QColor(row.status_color))
-                except Exception:
-                    return None
-            if role == QtCore.Qt.ItemDataRole.UserRole:
-                return row.meta_index
-            return None
-
-        def headerData(self, section, orientation, role=QtCore.Qt.ItemDataRole.DisplayRole):
-            if orientation == QtCore.Qt.Orientation.Horizontal and role == QtCore.Qt.ItemDataRole.DisplayRole:
-                if 0 <= section < len(self.headers):
-                    return self.headers[section]
-            return None
-
-        def flags(self, index):
-            if not index.isValid():
-                return QtCore.Qt.ItemFlag.NoItemFlags
-            return QtCore.Qt.ItemFlag.ItemIsEnabled | QtCore.Qt.ItemFlag.ItemIsSelectable
-
-        def set_rows(self, rows: List[ResultRow]) -> None:
-            self.beginResetModel()
-            self._rows = list(rows)
-            self.endResetModel()
-
-        def clear(self) -> None:
-            self.set_rows([])
-
-        def append_row(self, row: ResultRow) -> None:
-            position = len(self._rows)
-            self.beginInsertRows(QtCore.QModelIndex(), position, position)
-            self._rows.append(row)
-            self.endInsertRows()
-
-        def update_status(self, row_index: int, status: str, tooltip: Optional[str] = None, color: Optional[str] = None) -> None:
-            if row_index < 0 or row_index >= len(self._rows):
-                return
-            row = self._rows[row_index]
-            row.status = str(status)
-            if tooltip is not None:
-                row.status_tooltip = tooltip
-            if color is not None:
-                row.status_color = color
-            top_left = self.index(row_index, 0)
-            self.dataChanged.emit(
-                top_left,
-                top_left,
-                [
-                    QtCore.Qt.ItemDataRole.DisplayRole,
-                    QtCore.Qt.ItemDataRole.ToolTipRole,
-                    QtCore.Qt.ItemDataRole.ForegroundRole,
-                ],
-            )
-
-        def get_row(self, row_index: int) -> Optional[ResultRow]:
-            if 0 <= row_index < len(self._rows):
-                return self._rows[row_index]
-            return None
-
-    class QtLogHandler(logging.Handler):
-        def __init__(self, emit_fn):
-            super().__init__()
-            self._emit_fn = emit_fn
-            self._last_message = ""
-            self._last_ts = 0.0
-            self._qt_gui_handler = False
-
-        def emit(self, record):
-            try:
-                msg = self.format(record)
-            except Exception:
-                msg = record.getMessage()
-            now = time.monotonic()
-            if msg == self._last_message and (now - self._last_ts) < 0.5:
-                return
-            self._last_message = msg
-            self._last_ts = now
-            try:
-                self._emit_fn(msg)
-            except Exception:
-                return
+    ResultRow, ResultsTableModel = build_results_model(QtCore, QtGui)
 
     class OperationWorker(QtCore.QObject):
         def __init__(
@@ -442,10 +186,10 @@ def run() -> int:
             scan_result: Optional[ScanResult],
             sort_plan: Optional[SortPlan],
             start_index: int,
-            only_indices: Optional[list[int]],
+            only_indices: Optional[List[int]],
             resume_path: Optional[str],
             cancel_token: CancelToken,
-            signals: WorkerSignals,
+            signals: Any,
         ):
             super().__init__()
             self.op = op
@@ -766,7 +510,7 @@ def run() -> int:
             else:
                 self._refresh_stats()
 
-        def _get_paths(self) -> list[str]:
+        def _get_paths(self) -> List[str]:
             return [self.list_widget.item(i).text() for i in range(self.list_widget.count())]
 
         def _add_source(self) -> None:
@@ -877,7 +621,7 @@ def run() -> int:
             self._sort_plan: Optional[SortPlan] = None
             self._audit_report: Optional[ConversionAuditReport] = None
             self._export_thread: Optional[Any] = None
-            self._export_worker: Optional[ExportWorker] = None
+            self._export_worker: Optional[Any] = None
             self._export_cancel_token: Optional[CancelToken] = None
             self._igir_thread: Optional[Any] = None
             self._igir_worker: Optional[Any] = None
@@ -889,9 +633,13 @@ def run() -> int:
             self._failed_action_indices: set[int] = set()
             self._resume_path = str((Path(__file__).resolve().parents[3] / "cache" / "last_sort_resume.json").resolve())
 
-            self._theme_manager = ThemeManager()
+            try:
+                theme_cfg = load_config()
+            except Exception:
+                theme_cfg = None
+            self._theme_manager = ThemeManager(config=theme_cfg)
             self._qt_theme_manager = None
-            self._qt_theme_display: dict[str, str] = {}
+            self._qt_theme_display: Dict[str, str] = {}
             self._active_qt_theme_key: Optional[str] = None
             app_instance = QtWidgets.QApplication.instance()
             if QtPaletteThemeManager is not None and app_instance is not None and QT_PALETTE_THEMES:
@@ -900,7 +648,7 @@ def run() -> int:
                     f"Qt: {theme.name}": key for key, theme in QT_PALETTE_THEMES.items()
                 }
             self._shell_controller: Optional[object] = None
-            self._shell_pages: dict[str, Any] = {}
+            self._shell_pages: Dict[str, Any] = {}
             self._base_central: Optional[Any] = None
             self._shell_stack: Optional[Any] = None
             self._syncing_paths = False
@@ -920,7 +668,7 @@ def run() -> int:
             self._dat_status_timer.setInterval(800)
             self._dat_status_timer.timeout.connect(self._poll_dat_status)
             self._dat_index_thread: Optional[Any] = None
-            self._dat_index_worker: Optional[DatIndexWorker] = None
+            self._dat_index_worker: Optional[Any] = None
             self._dat_index_cancel_token: Optional[CancelToken] = None
 
             central = QtWidgets.QWidget()
@@ -1953,16 +1701,14 @@ def run() -> int:
             self.addDockWidget(QtCore.Qt.DockWidgetArea.BottomDockWidgetArea, self.log_dock)
 
 
-            self._log_buffer = []
-            self._log_history: List[str] = []
-            self._log_filter_text = ""
+            self._log_helper = QtLogBuffer(self.log_view, max_lines=5000)
             self._log_flush_timer = QtCore.QTimer(self)
             self._log_flush_timer.setInterval(100)
             self._log_flush_timer.timeout.connect(self._flush_log)
             self._log_flush_timer.start()
 
-            self._job_queue: List[dict[str, object]] = []
-            self._job_active: Optional[dict[str, object]] = None
+            self._job_queue: List[Dict[str, object]] = []
+            self._job_active: Optional[Dict[str, object]] = None
             self._job_paused = False
             self._job_counter = 0
             self._current_op: Optional[str] = None
@@ -3169,9 +2915,14 @@ def run() -> int:
             try:
                 if self._backend_worker is not None:
                     self._backend_worker.cancel()
+                if self._export_cancel_token is not None:
+                    self._export_cancel_token.cancel()
                 if self._thread is not None:
                     self._thread.quit()
-                    self._thread.wait(2000)
+                    self._thread.wait(5000)
+                if self._export_thread is not None:
+                    self._export_thread.quit()
+                    self._export_thread.wait(5000)
             except Exception:
                 pass
             self._save_window_size()
@@ -3400,12 +3151,12 @@ def run() -> int:
                 self._save_presets_to_config()
                 self._refresh_presets_combo()
 
-        def _get_selected_plan_indices(self) -> list[int]:
+        def _get_selected_plan_indices(self) -> List[int]:
             try:
                 selection = self.table.selectionModel().selectedRows()
             except Exception:
                 selection = []
-            indices: list[int] = []
+            indices: List[int] = []
             for idx in selection:
                 try:
                     source_index = self.results_proxy.mapToSource(idx)
@@ -3436,7 +3187,7 @@ def run() -> int:
             return build_library_report(self._scan_result, self._sort_plan)
 
         def _format_library_report_text(self, report: dict) -> str:
-            lines: list[str] = []
+            lines: List[str] = []
             scan = report.get("scan") or {}
             plan = report.get("plan") or {}
             if scan:
@@ -3490,7 +3241,7 @@ def run() -> int:
             except Exception as exc:
                 QtWidgets.QMessageBox.warning(self, "Bibliothek-Report", f"Speichern fehlgeschlagen:\n{exc}")
 
-        def _get_selected_filter_values(self, widget: object) -> list[str]:
+        def _get_selected_filter_values(self, widget: object) -> List[str]:
             widget_list = cast(Any, widget)
             selected = [item.text() for item in widget_list.selectedItems()]
             return selected if selected else ["All"]
@@ -3676,7 +3427,7 @@ def run() -> int:
             self.region_filter.blockSignals(False)
             self._select_filter_values(self.region_filter, current_regions)
 
-        def _load_filter_defaults(self) -> tuple[list[str], list[str], list[str]]:
+        def _load_filter_defaults(self) -> Tuple[List[str], List[str], List[str]]:
             lang_values = ["All", "Unknown"]
             ver_values = ["All", "Unknown"]
             region_values = ["All", "Unknown"]
@@ -3748,55 +3499,19 @@ def run() -> int:
         def _append_log(self, text: str) -> None:
             if not text:
                 return
-            self._log_buffer.append(str(text))
+            self._log_helper.append(str(text))
 
         def _flush_log(self) -> None:
-            if not self._log_buffer:
-                return
-            lines: List[str] = []
-            for entry in self._log_buffer:
-                lines.extend(str(entry).splitlines())
-            self._log_buffer.clear()
-            if lines:
-                self._log_history.extend(lines)
-                if len(self._log_history) > 5000:
-                    self._log_history = self._log_history[-5000:]
-            try:
-                bar = self.log_view.verticalScrollBar()
-                at_bottom = bar.value() >= bar.maximum()
-            except Exception:
-                bar = None
-                at_bottom = True
-            if not self._log_filter_text:
-                if lines:
-                    self.log_view.appendPlainText("\n".join(lines))
-                if bar is not None and (self._log_autoscroll or at_bottom):
-                    bar.setValue(bar.maximum())
-                return
-            filtered = [line for line in lines if self._log_filter_text in line.lower()]
-            if filtered:
-                self.log_view.appendPlainText("\n".join(filtered))
-                if bar is not None and (self._log_autoscroll or at_bottom):
-                    bar.setValue(bar.maximum())
+            self._log_helper.flush()
 
         def _apply_log_filter(self) -> None:
             text = str(self.log_filter_edit.text() or "").strip().lower()
-            self._log_filter_text = text
-            try:
-                self.log_view.clear()
-            except Exception:
-                return
-            if not self._log_history:
-                return
-            if not text:
-                self.log_view.appendPlainText("\n".join(self._log_history))
-                return
-            filtered = [line for line in self._log_history if text in line.lower()]
-            if filtered:
-                self.log_view.appendPlainText("\n".join(filtered))
+            self._log_helper.apply_filter(text)
 
         def _on_log_autoscroll_changed(self, _value: int) -> None:
-            self._log_autoscroll = bool(self.log_autoscroll_checkbox.isChecked())
+            enabled = bool(self.log_autoscroll_checkbox.isChecked())
+            self._log_autoscroll = enabled
+            self._log_helper.set_autoscroll(enabled)
 
         def _apply_quick_filter(self) -> None:
             text = str(self.quick_filter_edit.text() or "").strip()
@@ -3818,8 +3533,8 @@ def run() -> int:
                 self.results_proxy.setFilterFixedString(text)
             self._update_results_empty_state()
 
-        def _get_selected_source_rows(self) -> list[int]:
-            rows: list[int] = []
+        def _get_selected_source_rows(self) -> List[int]:
+            rows: List[int] = []
             try:
                 selection = self.table.selectionModel().selectedRows()
             except Exception:
@@ -3929,7 +3644,7 @@ def run() -> int:
             filter_edit.setFocus()
             dialog.exec()
 
-        def _get_command_actions(self) -> list[tuple[str, object]]:
+        def _get_command_actions(self) -> List[Tuple[str, object]]:
             return [
                 ("Navigation: Dashboard", lambda: self.tabs.setCurrentIndex(int(self._tab_index_dashboard))),
                 ("Navigation: Sortierung", lambda: self.tabs.setCurrentIndex(int(self._tab_index_sort))),
@@ -4649,7 +4364,7 @@ def run() -> int:
             op: str,
             *,
             start_index: int = 0,
-            only_indices: Optional[list[int]] = None,
+            only_indices: Optional[List[int]] = None,
             resume_path: Optional[str] = None,
             conversion_mode: ConversionMode = "all",
         ) -> None:
@@ -4879,12 +4594,12 @@ def run() -> int:
         def _cleanup_thread(self) -> None:
             if self._thread is not None:
                 self._thread.quit()
-                self._thread.wait(2000)
+                self._thread.wait(5000)
             self._thread = None
             self._worker = None
 
         def _populate_scan_table(self, scan: ScanResult) -> None:
-            rows: List[ResultRow] = []
+            rows: List[Any] = []
             self._table_items = list(scan.items)
             min_conf = self._get_min_confidence()
             for row_index, item in enumerate(scan.items):
@@ -4946,7 +4661,7 @@ def run() -> int:
             self._update_results_empty_state()
 
         def _populate_plan_table(self, plan: SortPlan) -> None:
-            rows: List[ResultRow] = []
+            rows: List[Any] = []
             self._table_items = []
             warnings = 0
             for row_index, act in enumerate(plan.actions):
@@ -5003,7 +4718,7 @@ def run() -> int:
             self._update_results_empty_state()
 
         def _populate_audit_table(self, report: ConversionAuditReport) -> None:
-            rows: List[ResultRow] = []
+            rows: List[Any] = []
             self._table_items = []
             for row_index, item in enumerate(report.items):
                 suggestion = item.current_extension

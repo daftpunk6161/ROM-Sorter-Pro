@@ -294,7 +294,7 @@ def is_safe_archive_member(member: Union[str, zipfile.ZipInfo]) -> bool:
     if member_name.startswith("\\\\"):
         return False
     try:
-        normalized = unicodedata.normalize("NFKC", member_name)
+        normalized = _normalize_archive_member_name(member_name)
         parts = PurePosixPath(normalized.replace("\\", "/")).parts
     except Exception:
         return False
@@ -318,19 +318,39 @@ def safe_extract_zip(zip_path: Union[str, Path], dest_dir: Union[str, Path]) -> 
 
     with zipfile.ZipFile(zip_path, 'r') as zip_ref:
         for member in zip_ref.infolist():
-            normalized_name = unicodedata.normalize("NFKC", member.filename)
-            if normalized_name != member.filename:
-                if is_path_traversal_attack(normalized_name):
-                    raise InvalidPathError(f"Unsafe archive member blocked: {member.filename}")
-            if not is_safe_archive_member(member) or not is_safe_archive_member(normalized_name):
-                raise InvalidPathError(f"Unsafe archive member blocked: {member.filename}")
-            member_path = dest_root / member.filename
-            try:
-                resolved = member_path.resolve()
-            except Exception as e:
-                raise InvalidPathError(f"Invalid ZIP entry path: {member.filename}") from e
+            member_name = member.filename
+            normalized_name = _normalize_archive_member_name(member_name)
 
-            if not str(resolved).startswith(str(dest_root)):
-                raise InvalidPathError(f"Zip-slip detected: {member.filename}")
+            if is_path_traversal_attack(normalized_name):
+                raise InvalidPathError(f"Unsafe archive member blocked: {member_name}")
+
+            try:
+                normalized_parts = PurePosixPath(normalized_name.replace("\\", "/")).parts
+            except Exception:
+                raise InvalidPathError(f"Unsafe archive member blocked: {member_name}")
+            if ".." in normalized_parts:
+                raise InvalidPathError(f"Unsafe archive member blocked: {member_name}")
+
+            if not is_safe_archive_member(member) or not is_safe_archive_member(normalized_name):
+                raise InvalidPathError(f"Unsafe archive member blocked: {member_name}")
+
+            for candidate_name in (member_name, normalized_name):
+                candidate_path = dest_root / _normalize_archive_member_name(candidate_name)
+                try:
+                    resolved = candidate_path.resolve()
+                except Exception as e:
+                    raise InvalidPathError(f"Invalid ZIP entry path: {member_name}") from e
+
+                if not str(resolved).startswith(str(dest_root)):
+                    raise InvalidPathError(f"Zip-slip detected: {member_name}")
 
         zip_ref.extractall(dest_root)
+
+
+def _normalize_archive_member_name(name: str) -> str:
+    """Normalize archive member names to catch unicode traversal attempts."""
+    normalized = unicodedata.normalize("NFKC", name)
+    # Normalize common unicode slashes to a standard forward slash.
+    for slash in ("\u2215", "\u2044", "\uFF0F", "\u29F8"):
+        normalized = normalized.replace(slash, "/")
+    return normalized

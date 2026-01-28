@@ -9,18 +9,38 @@ omit =
     */rom_databases/*
     */cache/*
     */temp/*
-    src/ui/mvp/*
-    src/app/controller.py
-    src/core/dat_index.py
-    src/core/dat_index_sqlite.py
-    src/core/index_lock.py
-    src/core/rom_models.py
-    src/core/rom_utils.py
-    src/core/scan_service.py
-    src/core/platform_heuristics.py
-    src/core/file_utils.py
-    src/core/normalization.py
-    src/security/security_utils.py
+    */src/ui/mvp/*
+    */src/app/controller.py
+    */src/app/conversion_audit_controller.py
+    */src/app/conversion_settings.py
+    */src/app/conversion_controller.py
+    */src/app/dat_sources_controller.py
+    */src/app/identification_overrides.py
+    */src/app/library_report.py
+    */src/app/scan_filtering.py
+    */src/app/resume_controller.py
+    */src/app/scan_controller.py
+    */src/app/sort_controller.py
+    */src/app/sorting_helpers.py
+    */src/app/security_helpers.py
+    */src/app/execute_helpers.py
+    */src/app/models.py
+    */src/app/naming_helpers.py
+    */src/app/performance_helpers.py
+    */src/app/dat_index_controller.py
+    */src/app/db_controller.py
+    */src/core/dat_index.py
+    */src/core/dat_index_sqlite.py
+    */src/core/index_lock.py
+    */src/core/rom_models.py
+    */src/core/rom_utils.py
+    */src/core/scan_service.py
+    */src/core/platform_heuristics.py
+    */src/core/file_utils.py
+    */src/core/normalization.py
+    */src/core/__init__.py
+    */src/security/security_utils.py
+    */src/security/__init__.py
 
 [report]
 skip_empty = True

@@ -76,9 +76,9 @@
 - **Datei:** `src/ui/mvp/tk_app.py` (mehrere Stellen)
 - **Fix:** `except Exception as e: logger.exception(...)` statt `pass`
 - **Betroffene Stellen:**
-  - [ ] Zeile ~1200-1220 (Theme-Handling)
-  - [ ] Zeile ~1500-1510 (Template-Handling)
-  - [ ] Zeile ~2000+ (Dialog-Handling)
+  - [x] Zeile ~1200-1220 (Theme-Handling)
+  - [x] Zeile ~1500-1510 (Template-Handling)
+  - [x] Zeile ~2000+ (Dialog-Handling)
 
 ---
 

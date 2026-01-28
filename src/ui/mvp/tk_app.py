@@ -5,7 +5,7 @@ import json
 import logging
 import os
 import re
-import subprocess
+import subprocess  # nosec B404
 import sys
 import threading
 import time
@@ -21,6 +21,7 @@ from tkinter import filedialog, messagebox, ttk
 
 from ..state_machine import UIStateMachine, UIState
 from ..backend_worker import BackendWorkerHandle
+from .tk_log_utils import TkLogBuffer
 
 
 logger = logging.getLogger(__name__)
@@ -313,7 +314,11 @@ class TkMVPApp:
         self.preserve_structure_var = tk.BooleanVar(value=False)
         self.dat_auto_load_var = tk.BooleanVar(value=False)
 
-        self._theme_manager: Any = ThemeManager()
+        try:
+            theme_cfg = load_config()
+        except Exception:
+            theme_cfg = None
+        self._theme_manager: Any = ThemeManager(config=theme_cfg)
         self.theme_var = tk.StringVar(value=self._theme_manager.get_current_theme_name())
         self._load_theme_from_config()
         self._dat_index: Optional[DatIndexSqliteType] = None
@@ -352,9 +357,6 @@ class TkMVPApp:
         except Exception:
             self.btn_show_details.configure(text="i", width=3)
         self._details_tooltip = _ToolTip(self.btn_show_details, "Details öffnen")
-        self._log_buffer: list[str] = []
-        self._log_flush_scheduled = False
-        self._log_history: list[str] = []
         self._log_filter_text = ""
         self._job_queue: list[dict] = []
         self._job_active: Optional[dict] = None
@@ -1188,6 +1190,13 @@ class TkMVPApp:
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.log_text.configure(yscrollcommand=scrollbar.set)
 
+        self._log_helper = TkLogBuffer(
+            self.root,
+            self.log_text,
+            lambda: self._log_filter_text,
+            max_lines=5000,
+        )
+
 
     def _apply_theme(self, theme) -> None:
         try:
@@ -1200,7 +1209,7 @@ class TkMVPApp:
         try:
             style.theme_use("clam")
         except Exception:
-            pass
+            logger.exception("Tk GUI: theme_use failed")
 
         style.configure("TFrame", background=colors.background)
         style.configure("TLabel", background=colors.background, foreground=colors.text)
@@ -1385,6 +1394,7 @@ class TkMVPApp:
                 except Exception:
                     data = json.loads(raw)
         except Exception:
+            logger.exception("Tk GUI: load igir yaml failed")
             data = {}
         if not isinstance(data, dict):
             data = {}
@@ -1484,6 +1494,7 @@ class TkMVPApp:
             except Exception:
                 logger.exception("Tk GUI: update igir copy_first failed")
         except Exception:
+            logger.exception("Tk GUI: load igir settings failed")
             return
 
     def _apply_igir_template(self) -> None:
@@ -1510,6 +1521,7 @@ class TkMVPApp:
             self._igir_selected_template = name
             self.igir_status_var.set(f"Status: Template '{name}' übernommen")
         except Exception as exc:
+            logger.exception("Tk GUI: apply igir template failed")
             self.igir_status_var.set(f"Status: Template Fehler ({exc})")
 
     def _apply_igir_profile(self) -> None:
@@ -1536,6 +1548,7 @@ class TkMVPApp:
             self._igir_selected_profile = name
             self.igir_status_var.set(f"Status: Profil '{name}' aktiviert")
         except Exception as exc:
+            logger.exception("Tk GUI: apply igir profile failed")
             self.igir_status_var.set(f"Status: Profil Fehler ({exc})")
 
     def _save_igir_settings_to_config(self) -> None:
@@ -1788,9 +1801,9 @@ class TkMVPApp:
             if os.name == "nt":
                 os.startfile(str(path))  # type: ignore[attr-defined]
             elif sys.platform == "darwin":
-                subprocess.Popen(["open", str(path)])
+                subprocess.Popen(["open", str(path)])  # nosec B603
             else:
-                subprocess.Popen(["xdg-open", str(path)])
+                subprocess.Popen(["xdg-open", str(path)])  # nosec B603
         except Exception as exc:
             messagebox.showwarning("IGIR", f"Diff konnte nicht geöffnet werden: {exc}")
 
@@ -2034,6 +2047,7 @@ class TkMVPApp:
                         report = analyze_dat_sources(paths)
                         dialog.after(0, lambda: status_var.set(_format_report(report)))
                     except Exception as exc:
+                        logger.exception("Tk GUI: dat sources analysis failed")
                         dialog.after(0, lambda exc=exc: status_var.set(f"Fehler: {exc}"))
 
                 analysis_thread = threading.Thread(target=_worker, daemon=True)
@@ -2075,9 +2089,9 @@ class TkMVPApp:
                     if os.name == "nt":
                         os.startfile(path)  # type: ignore[attr-defined]
                     elif sys.platform == "darwin":
-                        subprocess.Popen(["open", path])
+                        subprocess.Popen(["open", path])  # nosec B603
                     else:
-                        subprocess.Popen(["xdg-open", path])
+                        subprocess.Popen(["xdg-open", path])  # nosec B603
                 except Exception:
                     messagebox.showwarning("Öffnen fehlgeschlagen", "Pfad konnte nicht geöffnet werden.")
 
@@ -2138,9 +2152,9 @@ class TkMVPApp:
             if os.name == "nt":
                 os.startfile(str(path))  # type: ignore[attr-defined]
             elif sys.platform == "darwin":
-                subprocess.Popen(["open", str(path)])
+                subprocess.Popen(["open", str(path)])  # nosec B603
             else:
-                subprocess.Popen(["xdg-open", str(path)])
+                subprocess.Popen(["xdg-open", str(path)])  # nosec B603
         except Exception as exc:
             messagebox.showwarning("Mapping Overrides", f"Öffnen fehlgeschlagen:\n{exc}")
 
@@ -2172,56 +2186,15 @@ class TkMVPApp:
     def _append_log(self, text: str) -> None:
         if not text:
             return
-        self._log_buffer.append(str(text))
-        if not self._log_flush_scheduled:
-            self._log_flush_scheduled = True
-            self.root.after(100, self._flush_log)
+        self._log_helper.append(str(text))
 
     def _flush_log(self) -> None:
-        self._log_flush_scheduled = False
-        if not self._log_buffer:
-            return
-        lines: list[str] = []
-        for entry in self._log_buffer:
-            lines.extend(str(entry).splitlines())
-        self._log_buffer.clear()
-        if lines:
-            self._log_history.extend(lines)
-            if len(self._log_history) > 5000:
-                self._log_history = self._log_history[-5000:]
-        if not self._log_filter_text:
-            payload = "\n".join(lines) + ("\n" if lines else "")
-            if payload:
-                self.log_text.insert(tk.END, payload)
-            try:
-                lines_count = int(self.log_text.index("end-1c").split(".")[0])
-                if lines_count > 5000:
-                    self.log_text.delete("1.0", f"{lines_count - 5000}.0")
-            except Exception:
-                pass
-            self.log_text.see(tk.END)
-            return
-        self._apply_log_filter()
+        self._log_helper.flush()
 
     def _apply_log_filter(self) -> None:
         text = str(self.log_filter_var.get() or "").strip().lower()
         self._log_filter_text = text
-        try:
-            self.log_text.delete("1.0", tk.END)
-        except Exception:
-            return
-        if not self._log_history:
-            return
-        if not text:
-            payload = "\n".join(self._log_history) + "\n"
-            self.log_text.insert(tk.END, payload)
-            self.log_text.see(tk.END)
-            return
-        filtered = [line for line in self._log_history if text in line.lower()]
-        if filtered:
-            payload = "\n".join(filtered) + "\n"
-            self.log_text.insert(tk.END, payload)
-            self.log_text.see(tk.END)
+        self._log_helper.apply_filter(text)
 
     def _priority_value(self, label: str) -> int:
         value = str(label or "").strip().lower()
@@ -3123,9 +3096,9 @@ class TkMVPApp:
             if os.name == "nt":
                 os.startfile(directory)  # type: ignore[attr-defined]
             elif sys.platform == "darwin":
-                subprocess.Popen(["open", directory])
+                subprocess.Popen(["open", directory])  # nosec B603
             else:
-                subprocess.Popen(["xdg-open", directory])
+                subprocess.Popen(["xdg-open", directory])  # nosec B603
         except Exception:
             messagebox.showwarning("Öffnen fehlgeschlagen", "Zielordner konnte nicht geöffnet werden.")
 

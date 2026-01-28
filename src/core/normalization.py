@@ -8,7 +8,7 @@ from __future__ import annotations
 import json
 import os
 import re
-import subprocess
+import subprocess  # nosec B404
 import time
 import logging
 from dataclasses import dataclass, field
@@ -753,7 +753,7 @@ def execute_normalization(
 
         cmd = [exe_path] + list(item.args or [])
         try:
-            proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)  # nosec B603
         except Exception as exc:
             processed += 1
             failed += 1

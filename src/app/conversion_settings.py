@@ -7,6 +7,10 @@ import shutil
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 from ..config import Config
 from .models import ScanItem
 
@@ -99,6 +103,7 @@ def _match_conversion_rule(
     item_system = _normalize_system_name(item.detected_system)
 
     for rule in conversion_settings.get("rules", []) or []:
+        rule_error = False
         try:
             if not rule or not isinstance(rule, dict):
                 continue
@@ -136,7 +141,10 @@ def _match_conversion_rule(
                 "rule": rule,
                 "to_extension": to_ext,
             }
-        except Exception:
+        except Exception as exc:
+            rule_error = True
+            logger.debug("Conversion rule match failed: %s", exc)
+        if rule_error:
             continue
 
     return None
@@ -158,6 +166,7 @@ def _match_conversion_rule_for_audit(
     dat_match = _is_dat_match(item)
 
     for rule in conversion_settings.get("rules", []) or []:
+        rule_error = False
         try:
             if not rule or not isinstance(rule, dict):
                 continue
@@ -200,7 +209,10 @@ def _match_conversion_rule_for_audit(
                 "require_dat": require_dat,
                 "dat_match": dat_match,
             }
-        except Exception:
+        except Exception as exc:
+            rule_error = True
+            logger.debug("Conversion audit rule match failed: %s", exc)
+        if rule_error:
             continue
 
     return None
