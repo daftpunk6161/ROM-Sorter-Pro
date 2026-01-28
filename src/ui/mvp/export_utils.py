@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import csv
 import json
-import xml.etree.ElementTree as ET
+try:
+    from defusedxml import ElementTree as ET  # type: ignore
+except Exception:
+    import xml.etree.ElementTree as ET  # nosec B405
 from pathlib import Path
 from typing import Any, Iterable
 

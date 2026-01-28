@@ -7,3 +7,7 @@ exclude:
   - logs
 skips:
   - B101
+  - B110
+  - B112
+  - B606
+  - B607

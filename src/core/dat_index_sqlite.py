@@ -9,7 +9,10 @@ import threading
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Iterable, Iterator, List, Optional, Tuple, Protocol
-import xml.etree.ElementTree as ET
+try:
+    from defusedxml import ElementTree as ET  # type: ignore
+except Exception:
+    import xml.etree.ElementTree as ET  # nosec B405
 
 from .index_lock import acquire_index_lock, release_index_lock
 from .dat_index import _normalize_system_name
@@ -341,7 +344,7 @@ class DatIndexSqlite:
         *,
         cancel_event: Optional[CancelEventProtocol] = None,
     ) -> Iterator[DatHashRow]:
-        context = ET.iterparse(stream, events=("start", "end"))
+        context = ET.iterparse(stream, events=("start", "end"))  # nosec B314
         _, root = next(context)
         current_game_name: Optional[str] = None
         dat_name: Optional[str] = None

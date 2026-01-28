@@ -209,7 +209,7 @@ class AdvancedArchiveDetector:
         try:
 # List mode for archive content
             cmd = [self._7zip_path, "l", "-slt", archive_info.file_path]
-            process = subprocess.run(cmd, capture_output=True, text=True, check=False)
+            process = subprocess.run(cmd, capture_output=True, text=True, check=False)  # nosec B603
 
             if process.returncode != 0:
                 logger.error(f"7-Zip konnte {archive_info.file_path} nicht verarbeiten")
@@ -280,7 +280,7 @@ class AdvancedArchiveDetector:
                             extract_cmd = [self._7zip_path, "e", "-y", "-o" + temp_dir,
                                           archive_info.file_path, file_info['name']]
 
-                            extract_process = subprocess.run(extract_cmd, capture_output=True, check=False)
+                            extract_process = subprocess.run(extract_cmd, capture_output=True, check=False)  # nosec B603
                             if extract_process.returncode == 0 and os.path.exists(nested_path):
                                 nested_info = self.get_archive_info(nested_path, scan_nested=False)
                                 if nested_info:
@@ -316,7 +316,7 @@ class AdvancedArchiveDetector:
 # Use for other formats 7-Zip if available
             elif self._7zip_path:
                 cmd = [self._7zip_path, "e", "-y", "-o" + output_path, archive_path, file_path]
-                process = subprocess.run(cmd, capture_output=True, check=False)
+                process = subprocess.run(cmd, capture_output=True, check=False)  # nosec B603
                 return process.returncode == 0
             else:
                 logger.warning(f"Kein 7-Zip gefunden, kann {archive_path} nicht entpacken")
@@ -375,7 +375,7 @@ class AdvancedArchiveDetector:
                 cmd.extend([f for f in archive_info.rom_files if "/" not in f])
 
                 if cmd[4:]:  # Wenn es direkte ROMs gibt
-                    process = subprocess.run(cmd, capture_output=True, check=False)
+                    process = subprocess.run(cmd, capture_output=True, check=False)  # nosec B603
                     if process.returncode == 0:
 # Add extracted files to the list
                         for rom_file in archive_info.rom_files:
@@ -393,7 +393,7 @@ class AdvancedArchiveDetector:
                         with tempfile.TemporaryDirectory() as temp_dir:
 # Extract the inner archive
                             extract_cmd = [self._7zip_path, "e", "-y", "-o" + temp_dir, archive_path, nested_archive]
-                            extract_process = subprocess.run(extract_cmd, capture_output=True, check=False)
+                            extract_process = subprocess.run(extract_cmd, capture_output=True, check=False)  # nosec B603
 
                             if extract_process.returncode == 0:
                                 temp_archive = os.path.join(temp_dir, os.path.basename(nested_archive))
@@ -466,7 +466,7 @@ class AdvancedArchiveDetector:
             cmd = [self._7zip_path, "a", "-mx=9", output_path]
             cmd.extend(filenames)
 
-            process = subprocess.run(cmd, cwd=working_dir, capture_output=True, check=False)
+            process = subprocess.run(cmd, cwd=working_dir, capture_output=True, check=False)  # nosec B603
             return process.returncode == 0
 
         except Exception as e:

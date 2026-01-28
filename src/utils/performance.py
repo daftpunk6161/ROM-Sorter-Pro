@@ -241,7 +241,7 @@ class PerformanceMonitor:
         memory_info['gc_objects'] = len(gc.get_objects())
 
         # Use psutil for extended system information if available
-        if PSUTIL_AVAILABLE:
+        if PSUTIL_AVAILABLE and psutil is not None:
             process = psutil.Process()
             mem_info = process.memory_info()
             memory_info['rss'] = mem_info.rss  # Resident Set Size

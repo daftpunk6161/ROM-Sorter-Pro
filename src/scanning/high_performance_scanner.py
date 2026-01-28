@@ -798,7 +798,7 @@ class HighPerformanceScanner:
                             total_safe_entries += 1
                             with zf.open(zi, 'r') as entry_f:
                                 crc32_val = 0
-                                sha1_hash = hashlib.sha1()
+                                sha1_hash = hashlib.sha1(usedforsecurity=False)
                                 while chunk := entry_f.read(self.chunk_size):
                                     if self.should_stop:
                                         raise InterruptedError("Scan wurde abgebrochen")
@@ -989,8 +989,8 @@ class HighPerformanceScanner:
     def _calculate_checksums(self, file_path: str) -> Tuple[str, str, str]:
         """Calculate CRC32, MD5 and SHA1 of a file in a single pass."""
         crc32_value = 0
-        md5_hash = hashlib.md5()
-        sha1_hash = hashlib.sha1()
+        md5_hash = hashlib.md5(usedforsecurity=False)
+        sha1_hash = hashlib.sha1(usedforsecurity=False)
 
         with open(file_path, 'rb') as f:
             while chunk := f.read(self.chunk_size):

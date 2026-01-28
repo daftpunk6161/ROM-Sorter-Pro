@@ -7,7 +7,7 @@ import os
 import socket
 import getpass
 import time
-import subprocess
+import subprocess  # nosec B404
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -50,7 +50,7 @@ def _get_process_start_time_windows(pid: int) -> Optional[str]:
             + str(int(pid))
             + " | Select-Object -ExpandProperty StartTime"
         )
-        out = subprocess.check_output([
+        out = subprocess.check_output([  # nosec B603
             "powershell",
             "-NoProfile",
             "-Command",

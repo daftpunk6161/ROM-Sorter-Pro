@@ -50,7 +50,7 @@ def _should_throttle(size_bytes: int) -> bool:
 def _calculate_md5_fast_cached(file_path: str, mtime_ns: int, size_bytes: int, chunk_size: int) -> Optional[str]:
     """Calculate the MD5 hash of a file with optimal performance. ARGS: File_Path: Path to the File Chunk_Size: Size of the Chunks When Reading the File Return: Md5-Hash as a Hex String Or None in the event of errors"""
     try:
-        md5 = hashlib.md5()
+        md5 = hashlib.md5(usedforsecurity=False)
         throttle = _should_throttle(size_bytes)
         with open(file_path, 'rb') as f:
             while True:
@@ -79,7 +79,7 @@ def calculate_md5_fast(file_path: str, chunk_size: int = 1048576) -> Optional[st
 def _calculate_sha1_cached(file_path: str, mtime_ns: int, size_bytes: int, chunk_size: int) -> Optional[str]:
     """Calculate the Sha1-Hash of a File. ARGS: File_Path: Path to the File Chunk_Size: Size of the Chunks When Reading the File Return: Sha1-Hash as a Hex-String Or None in the event of errors"""
     try:
-        sha1 = hashlib.sha1()
+        sha1 = hashlib.sha1(usedforsecurity=False)
         throttle = _should_throttle(size_bytes)
         with open(file_path, 'rb') as f:
             while True:

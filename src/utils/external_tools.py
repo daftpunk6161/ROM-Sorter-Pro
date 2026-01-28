@@ -211,14 +211,10 @@ def _quote_arg(value: str) -> str:
     return value
 
 
-def _prepare_command(exe_path: str, args: List[str]) -> Tuple[Union[str, List[str]], bool]:
-    use_shell = False
+def _prepare_command(exe_path: str, args: List[str]) -> List[str]:
     if os.name == "nt" and exe_path.lower().endswith((".cmd", ".bat")):
-        use_shell = True
-        cmd = " ".join([_quote_arg(exe_path)] + [_quote_arg(arg) for arg in args])
-
-        return cmd, use_shell
-    return [exe_path] + list(args), use_shell
+        return ["cmd.exe", "/c", exe_path] + list(args)
+    return [exe_path] + list(args)
 
 
 def _stringify_command(cmd: Union[str, List[str]]) -> str:
@@ -335,7 +331,7 @@ def _run_external_process(
     timeout_sec: Optional[float],
     tool_label: str,
 ) -> Tuple[int, str, str, bool, bool]:
-    cmd, use_shell = _prepare_command(exe_path, args)
+    cmd = _prepare_command(exe_path, args)
     creationflags = 0
     if os.name == "nt":
         creationflags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
@@ -345,7 +341,6 @@ def _run_external_process(
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
-        shell=use_shell,
         creationflags=creationflags,
     )
 
@@ -474,7 +469,7 @@ def probe_wud2app(config: Optional[ConfigLike] = None) -> Wud2AppProbeResult:
             exit_code=None,
         )
 
-    cmd, use_shell = _prepare_command(exe_path, [PROBE_INPUT_PATH])
+    cmd = _prepare_command(exe_path, [PROBE_INPUT_PATH])
 
     try:
         process = subprocess.Popen(  # nosec B603
@@ -482,7 +477,6 @@ def probe_wud2app(config: Optional[ConfigLike] = None) -> Wud2AppProbeResult:
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
-            shell=use_shell,
         )
         stdout, stderr = _capture_process_output(process, None)
         exit_code = process.returncode
@@ -565,7 +559,7 @@ def probe_wudcompress(config: Optional[ConfigLike] = None) -> WudCompressProbeRe
         args = [PROBE_INPUT_PATH]
     elif not any("{input}" in str(raw) for raw in args_template):
         args.append(PROBE_INPUT_PATH)
-    cmd, use_shell = _prepare_command(exe_path, args)
+    cmd = _prepare_command(exe_path, args)
 
     try:
         process = subprocess.Popen(  # nosec B603
@@ -573,7 +567,6 @@ def probe_wudcompress(config: Optional[ConfigLike] = None) -> WudCompressProbeRe
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
-            shell=use_shell,
         )
         stdout, stderr = _capture_process_output(process, None)
         exit_code = process.returncode
@@ -1025,5 +1018,5 @@ def build_external_command(
         output_dir=output_dir,
         temp_dir=temp_dir,
     )
-    cmd, _ = _prepare_command(exe_path, args)
+    cmd = _prepare_command(exe_path, args)
     return _stringify_command(cmd), None

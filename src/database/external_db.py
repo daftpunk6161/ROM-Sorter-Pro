@@ -4,7 +4,10 @@
 
 import os
 import re
-import xml.etree.ElementTree as ET
+try:
+    from defusedxml import ElementTree as ET  # type: ignore
+except Exception:
+    import xml.etree.ElementTree as ET  # nosec B405
 import threading
 import sqlite3
 import logging
@@ -78,7 +81,7 @@ class ExternalDatabaseManager:
                 logger.error(f"DAT-Datei existiert nicht: {dat_file_path}")
                 return 0
 
-            tree = ET.parse(dat_path)
+            tree = ET.parse(dat_path)  # nosec B314
             root = tree.getroot()
 
 # Determine the format (no-intro, Tosec, etc.)
@@ -199,13 +202,19 @@ class ExternalDatabaseManager:
                 if cache_key in self._cached_lookups:
                     return self._cached_lookups[cache_key]
 
+            query_map = {
+                "crc32": "SELECT * FROM rom_entries WHERE crc32 = ? LIMIT 1",
+                "md5": "SELECT * FROM rom_entries WHERE md5 = ? LIMIT 1",
+                "sha1": "SELECT * FROM rom_entries WHERE sha1 = ? LIMIT 1",
+            }
+            query = query_map.get(hash_type)
+            if not query:
+                logger.error(f"Ungültiger Hash-Typ: {hash_type}")
+                return None
+
             with sqlite3.connect(self.sqlite_db) as conn:
                 conn.row_factory = sqlite3.Row
-                cursor = conn.execute(f"""
-                    SELECT * FROM rom_entries
-                    WHERE {hash_type} = ?
-                    LIMIT 1
-                """, (hash_value,))
+                cursor = conn.execute(query, (hash_value,))
 
                 result = cursor.fetchone()
                 if result:

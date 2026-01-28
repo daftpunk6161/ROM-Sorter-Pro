@@ -97,7 +97,7 @@ class APIKeyManager:
                     },
                     "igdb": {
                         "client_id": "YOUR_CLIENT_ID",
-                        "client_secret": "YOUR_CLIENT_SECRET",
+                        "client_secret": "YOUR_CLIENT_SECRET",  # nosec B105
                         "enabled": False
                     }
                 }
@@ -235,7 +235,7 @@ class MetadataCache:
             if '?' in image_filename:
                 image_filename = image_filename.split('?')[0]
             if not image_filename or len(image_filename) < 5:
-                image_filename = f"{image_type}_{hashlib.md5(image_url.encode()).hexdigest()}.jpg"
+                image_filename = f"{image_type}_{hashlib.md5(image_url.encode(), usedforsecurity=False).hexdigest()}.jpg"
 
             image_path = os.path.join(rom_image_dir, image_filename)
 
@@ -653,9 +653,9 @@ class MetadataManager:
         """Calls Metadata for a rome, with local caching. ARGS: ROM_NAME: Name of the Rome File Console: Name of the Console Platform Rom_Content: Optional Rome Content for Hash Calculation Return: Metadata Dictionary Or None In The Event"""
 # Generates A Clear ID for Rome
         if rom_content:
-            rom_id = hashlib.md5(rom_content[:4096]).hexdigest()
+            rom_id = hashlib.md5(rom_content[:4096], usedforsecurity=False).hexdigest()
         else:
-            rom_id = hashlib.md5(f"{rom_name}_{console}".encode()).hexdigest()
+            rom_id = hashlib.md5(f"{rom_name}_{console}".encode(), usedforsecurity=False).hexdigest()
 
 # Attempts to load caught metadata
         cached_metadata = self.cache.get_metadata(rom_id)
@@ -750,8 +750,8 @@ def get_rom_image(rom_name: str, console: str, image_type: str = "front",
 
 # Generates A Clear ID for Rome
     if rom_content:
-        rom_id = hashlib.md5(rom_content[:4096]).hexdigest()
+        rom_id = hashlib.md5(rom_content[:4096], usedforsecurity=False).hexdigest()
     else:
-        rom_id = hashlib.md5(f"{rom_name}_{console}".encode()).hexdigest()
+        rom_id = hashlib.md5(f"{rom_name}_{console}".encode(), usedforsecurity=False).hexdigest()
 
     return cache.get_image_path(rom_id, image_type)

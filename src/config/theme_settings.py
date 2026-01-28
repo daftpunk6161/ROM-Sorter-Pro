@@ -56,8 +56,10 @@ def get_default_theme_settings(theme_name="system"):
                                    r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize") as key:
                     value, _ = winreg.QueryValueEx(key, "AppsUseLightTheme")
                     return THEME_SETTINGS["light"] if value == 1 else THEME_SETTINGS["dark"]
-            except Exception:
-                pass
+            except Exception as exc:
+                import logging
+
+                logging.getLogger(__name__).debug("Theme settings: Windows theme detection failed: %s", exc)
 
         # Fallback if the system setting cannot be determined
         return THEME_SETTINGS["light"]

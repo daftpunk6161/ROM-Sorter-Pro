@@ -153,7 +153,7 @@ def calculate_rom_signature(file_path: Union[str, Path], chunk_size: int = 16 * 
         raise FileNotFoundError(f"Datei nicht gefunden: {file_path}")
 
 # Initialisalize Hasher
-    hasher = hashlib.md5()
+    hasher = hashlib.md5(usedforsecurity=False)
 
     try:
         file_size = path_obj.stat().st_size

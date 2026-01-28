@@ -62,9 +62,9 @@ def _calculate_small_file_hash(file_path: Path, algorithm: str) -> str:
     """
     hash_obj = None
     if algorithm == 'md5':
-        hash_obj = hashlib.md5()
+        hash_obj = hashlib.md5(usedforsecurity=False)
     elif algorithm == 'sha1':
-        hash_obj = hashlib.sha1()
+        hash_obj = hashlib.sha1(usedforsecurity=False)
     elif algorithm == 'sha256':
         hash_obj = hashlib.sha256()
     else:
@@ -136,9 +136,9 @@ def _calculate_file_hash_cached(file_path: str, mtime_ns: int, size_bytes: int, 
 
 # Choose Hashalgorithm
         if algorithm == 'md5':
-            hash_obj = hashlib.md5()
+            hash_obj = hashlib.md5(usedforsecurity=False)
         elif algorithm == 'sha1':
-            hash_obj = hashlib.sha1()
+            hash_obj = hashlib.sha1(usedforsecurity=False)
         elif algorithm == 'sha256':
             hash_obj = hashlib.sha256()
         else:

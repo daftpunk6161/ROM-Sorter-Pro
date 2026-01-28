@@ -184,7 +184,7 @@ def get_chd_console(chd_path: str) -> Tuple[str, float]:
 def calculate_partial_md5(file_path: str, read_size: int = 4*1024*1024) -> Optional[str]:
     """Calculate to Md5-Hash only the first n bytes of a file. This is Faster for Large Files and for Most Recognition Purposes. ARGS: File_Path: Path to the File Read_Size: Number of bytes to be read Return: Md5-Hash as a Hex String or None in the event of errors"""
     try:
-        md5 = hashlib.md5()
+        md5 = hashlib.md5(usedforsecurity=False)
         with open(file_path, 'rb') as f:
             data = f.read(read_size)
             md5.update(data)

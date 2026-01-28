@@ -8,6 +8,7 @@ import os
 import platform
 import sqlite3
 import logging
+import subprocess  # nosec B404
 
 from .db_paths import get_rom_db_path
 
@@ -175,9 +176,9 @@ def _show_database_docs(self):
             if platform.system() == 'Windows':
                 os.startfile(doc_path)
             elif platform.system() == 'Darwin':  # macOS
-                os.system(f'open "{doc_path}"')
+                subprocess.run(["open", doc_path], check=False)  # nosec B603
             else:  # Linux and others
-                os.system(f'xdg-open "{doc_path}"')
+                subprocess.run(["xdg-open", doc_path], check=False)  # nosec B603
         else:
             try:
                 from tkinter import messagebox
@@ -213,9 +214,9 @@ def _open_log_file(self):
                 if platform.system() == 'Windows':
                     os.startfile(latest_log)
                 elif platform.system() == 'Darwin':  # macOS
-                    os.system(f'open "{latest_log}"')
+                    subprocess.run(["open", latest_log], check=False)  # nosec B603
                 else:  # Linux and others
-                    os.system(f'xdg-open "{latest_log}"')
+                    subprocess.run(["xdg-open", latest_log], check=False)  # nosec B603
                 return
 
         try:

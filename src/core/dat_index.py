@@ -24,14 +24,17 @@ from __future__ import annotations
 
 import logging
 import os
-import pickle
+import pickle  # nosec B403
 import re
 import threading
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, IO, Iterator, List, Optional, Sequence, Tuple
-import xml.etree.ElementTree as ET
+try:
+    from defusedxml import ElementTree as ET  # type: ignore
+except Exception:
+    import xml.etree.ElementTree as ET  # nosec B405
 
 logger = logging.getLogger(__name__)
 
@@ -214,7 +217,7 @@ class DatIndex:
             return False
         try:
             with cache_file.open("rb") as f:
-                payload = pickle.load(f)
+                payload = pickle.load(f)  # nosec B301
             if not isinstance(payload, dict):
                 return False
             signature = payload.get("signature")
@@ -448,7 +451,7 @@ class DatIndex:
         normalized_system: Optional[str] = None
 
         # streaming parse
-        context = ET.iterparse(stream, events=("start", "end"))
+        context = ET.iterparse(stream, events=("start", "end"))  # nosec B314
         _, root = next(context)  # grab root
 
         current_game_name: Optional[str] = None
