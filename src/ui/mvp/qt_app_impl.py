@@ -3735,6 +3735,11 @@ def run() -> int:
                 return
             if hasattr(self, "details_group"):
                 self.details_group.setVisible(True)
+            if hasattr(self, "results_tabs") and hasattr(self, "_results_tab_index_details"):
+                try:
+                    self.results_tabs.setCurrentIndex(self._results_tab_index_details)
+                except Exception:
+                    logger.exception("Qt GUI: switch to details tab failed")
             self.details_input_label.setText(row_data.input_path or "-")
             self.details_target_label.setText(row_data.planned_target or "-")
             self.details_status_label.setText(row_data.status or "-")
