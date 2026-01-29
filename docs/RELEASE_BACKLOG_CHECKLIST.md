@@ -63,13 +63,13 @@
 |--------|-----|---------|-----------|---------|-----------|
 | - [x] | REF-1 | Qt App Modularisierung (5063 Zeilen aufteilen) | `src/ui/mvp/qt_app.py` | Groß | Mittel |
 | - [x] | REF-2 | Tk App Modularisierung (4069 Zeilen aufteilen) | `src/ui/mvp/tk_app.py` | Groß | Mittel |
-| - [ ] | REF-3 | MVVM/MVP Pattern einführen | `src/ui/mvp/` | Groß | Niedrig |
-| - [ ] | REF-4 | Structured Logging mit structlog | Projekt-weit | Mittel | Niedrig |
-| - [ ] | REF-5 | Dependency Injection für bessere Tests | Projekt-weit | Groß | Niedrig |
-| - [ ] | REF-6 | AsyncIO Integration für native Cancel | `src/app/controller.py` | Groß | Niedrig |
-| - [ ] | REF-7 | Observable Progress Streams (RxPY) | `src/app/controller.py` | Mittel | Niedrig |
-| - [ ] | REF-8 | Pydantic Config Models | `src/config/` | Mittel | Mittel |
-| - [ ] | REF-9 | Result Types (Ok/Err) statt Exceptions | Projekt-weit | Mittel | Niedrig |
+| - [x] | REF-3 | MVVM/MVP Pattern einführen | `src/ui/mvp/` | Groß | Niedrig |
+| - [x] | REF-4 | Structured Logging mit structlog | Projekt-weit | Mittel | Niedrig |
+| - [x] | REF-5 | Dependency Injection für bessere Tests | Projekt-weit | Groß | Niedrig |
+| - [x] | REF-6 | AsyncIO Integration für native Cancel | `src/app/controller.py` | Groß | Niedrig |
+| - [x] | REF-7 | Observable Progress Streams (RxPY) | `src/app/controller.py` | Mittel | Niedrig |
+| - [x] | REF-8 | Pydantic Config Models | `src/config/` | Mittel | Mittel |
+| - [x] | REF-9 | Result Types (Ok/Err) statt Exceptions | Projekt-weit | Mittel | Niedrig |
 | - [x] | REF-10 | atomicwrites Library verwenden | `src/app/execute_helpers.py` | Klein | Niedrig |
 
 ---
@@ -132,18 +132,18 @@
 | P1 Kritisch | 3 | 3 | 0 |
 | P2 Wichtig | 10 | 10 | 0 |
 | P3 Nice-to-Have | 8 | 8 | 0 |
-| Refactoring | 10 | 3 | 7 |
+| Refactoring | 10 | 10 | 0 |
 | Tests | 6 | 6 | 0 |
 | Dokumentation | 6 | 4 | 2 |
 | Features | 15 | 5 | 10 |
-| **TOTAL** | **60** | **41** | **19** |
+| **TOTAL** | **60** | **48** | **12** |
 
 ### Fortschritt
 
 ```
 P0-P2 (Release Required): ████████████████████ 100% (15/15)
 P3 (Nice-to-Have):        ████████████████████ 100% (8/8)
-Refactoring:              ██████░░░░░░░░░░░░░░  30% (3/10)
+Refactoring:              ████████████████████ 100% (10/10)
 Tests:                    ████████████████████ 100% (6/6)
 Dokumentation:            ████████████░░░░░░░░  67% (4/6)
 Features:                 █████░░░░░░░░░░░░░░░  33% (5/15)
@@ -174,28 +174,28 @@ Features:                 █████░░░░░░░░░░░░░
 - [ ] FEAT-3: Batch-Queue Verbesserung
 - [ ] FEAT-6: Multi-Language UI
 - [x] FEAT-11: Favorites/Presets
-- [ ] FEAT-12: Console Filter
-- [ ] DOC-2: API Reference
-- [ ] DOC-3: Developer Guide
+- [x] FEAT-12: Console Filter
+- [x] DOC-2: API Reference
+- [x] DOC-3: Developer Guide
 
 ### Phase 4: v2.0.0 (Major)
-- [ ] REF-3: MVVM/MVP Pattern
-- [ ] REF-5: Dependency Injection
-- [ ] REF-6: AsyncIO Integration
+- [x] REF-3: MVVM/MVP Pattern
+- [x] REF-5: Dependency Injection
+- [x] REF-6: AsyncIO Integration
 - [ ] FEAT-2: Undo/Rollback
 - [ ] FEAT-4: Plugin-System
 - [ ] FEAT-14: Statistics Dashboard
 
 ### Backlog (Unpriorisiert)
-- [ ] REF-4: Structured Logging
-- [ ] REF-7: Observable Streams
-- [ ] REF-8: Pydantic Config
-- [ ] REF-9: Result Types
-- [ ] REF-10: atomicwrites
-- [ ] TEST-3: E2E Integration
-- [ ] TEST-4: Performance Benchmark
-- [ ] TEST-5: Memory Leak Detection
-- [ ] TEST-6: Security Fuzzing
+- [x] REF-4: Structured Logging
+- [x] REF-7: Observable Streams
+- [x] REF-8: Pydantic Config
+- [x] REF-9: Result Types
+- [x] REF-10: atomicwrites
+- [x] TEST-3: E2E Integration
+- [x] TEST-4: Performance Benchmark
+- [x] TEST-5: Memory Leak Detection
+- [x] TEST-6: Security Fuzzing
 - [ ] DOC-6: Video Tutorial
 - [ ] FEAT-5: Cloud Backup
 - [ ] FEAT-9: Drag & Drop
@@ -231,5 +231,6 @@ _Platz für Anmerkungen während der Abarbeitung:_
 | 2026-01-29 | FEAT-12 abgeschlossen, Statistik aktualisiert |
 | 2026-01-29 | FEAT-11 abgeschlossen, Statistik aktualisiert |
 | 2026-01-29 | FEAT-9 abgeschlossen, Statistik aktualisiert |
+| 2026-01-29 | REF-3/REF-4/REF-5/REF-6/REF-7/REF-8/REF-9 abgeschlossen, Statistik aktualisiert |
 
 ---

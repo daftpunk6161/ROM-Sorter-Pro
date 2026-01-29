@@ -1,6 +1,6 @@
 # 🎮 ROM Sorter Pro – GUI Refactoring Analyse
 
-> **Status:** Teilweise umgesetzt (UI-Layout & Themes)  
+> **Status:** Weitgehend umgesetzt (UI-Layout, Themes + Refactoring-Basis)  
 > **Erstellt:** 29. Januar 2026  
 > **Ziel:** Schlankes, übersichtliches, selbstsprechendes GUI
 

@@ -11,6 +11,9 @@ und dieses Projekt verwendet [Semantic Versioning](https://semver.org/lang/de/).
 - UI-Helfer: minimaler State-Machine-Helper und Backend-Worker-Handle für GUI-Jobs.
 - Controller-Facades (Scan/Sort/Conversion) als dünne API-Schicht.
 - Optionales Pydantic-Config-Model + Validation (Env-Flag gesteuert).
+- Async-API Wrapper für Scan/Plan/Execute inkl. `Result`-Typen (Ok/Err).
+- Dependency-Container (AppDependencies) für Testbarkeit der Controller.
+- Progress-Observable Helper (RxPY optional) für Streaming-Callbacks.
 - Sphinx API-Doku-Grundgerüst (docs/api).
 - Fixture-Export-Skript und echte DAT/ROM Fixtures für Regression-Tests.
 - Neue GUI-Themes: Clean Slate, Midnight Pro, Retro Console.
@@ -31,6 +34,7 @@ und dieses Projekt verwendet [Semantic Versioning](https://semver.org/lang/de/).
 - GUI: Tastenkürzel für Scan (Ctrl+S), Preview (Ctrl+P), Execute (Ctrl+E).
 - Theme: Auto/System-Theme nutzt OS-Erkennung (Light/Dark).
 - Execute: atomare Dateischreibvorgänge via atomicwrites (Copy-Helper).
+- Logging: optionales structlog-Setup über Env-Flag (wenn installiert).
 - GUI: Konsolen/System-Filter in der Filter-Sidebar.
 - GUI: Favoriten für Source/Ziel-Pfade im Home-Tab.
 - GUI: Multi-Drag&Drop nutzt gemeinsamen Stammordner.

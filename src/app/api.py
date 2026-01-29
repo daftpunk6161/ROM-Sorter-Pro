@@ -17,6 +17,7 @@ from .conversion_controller import (
     plan_normalization,
 )
 from .async_api import async_execute_sort, async_plan_sort, async_run_scan
+from .progress_streams import progress_observable
 from .dat_sources_controller import DatSourceReport
 from .models import (
     ActionStatusCallback,
@@ -33,6 +34,7 @@ from .models import (
     SortPlan,
     SortReport,
 )
+from ..utils.result import Err, Ok, Result, is_err, is_ok, unwrap, unwrap_or
 from .scan_controller import identify, run_scan
 from .sort_controller import execute_sort, plan_rebuild, plan_sort
 
@@ -76,4 +78,12 @@ __all__ = [
     "async_run_scan",
     "async_plan_sort",
     "async_execute_sort",
+    "progress_observable",
+    "Err",
+    "Ok",
+    "Result",
+    "is_ok",
+    "is_err",
+    "unwrap",
+    "unwrap_or",
 ]
