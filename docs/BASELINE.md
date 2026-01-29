@@ -1,16 +1,16 @@
 # Baseline Definition of Done (DoD)
 
 ## Baseline DoD
-- [ ] GUI startet mit `python start_rom_sorter.py --gui` (Windows/macOS/Linux).
-- [ ] GUI bleibt responsiv: Hashing/Index/IGIR laufen im Worker.
-- [ ] Scan → Preview (Dry-run) → Execute End-to-End funktioniert.
-- [ ] Cancel/Stop beendet Jobs sauber, keine Partial Files.
-- [ ] Dry-run: **keine Writes, keine External Tools**.
-- [ ] Identifikation: **DAT/Hash-first**, Unknown statt falsch.
-- [ ] Archive: ZIP Entries einzeln gehasht, Mixed-Content → Unknown.
-- [ ] Security: Path-Traversal + Dest-Root-Containment überall.
-- [ ] Optional Deps crashen GUI-Start nicht.
-- [ ] CI: ruff + pytest + coverage gate erfolgreich.
+- [x] GUI startet mit `python start_rom_sorter.py --gui` (Windows/macOS/Linux).
+- [x] GUI bleibt responsiv: Hashing/Index/IGIR laufen im Worker.
+- [x] Scan → Preview (Dry-run) → Execute End-to-End funktioniert.
+- [x] Cancel/Stop beendet Jobs sauber, keine Partial Files.
+- [x] Dry-run: **keine Writes, keine External Tools**.
+- [x] Identifikation: **DAT/Hash-first**, Unknown statt falsch.
+- [x] Archive: ZIP Entries einzeln gehasht, Mixed-Content → Unknown.
+- [x] Security: Path-Traversal + Dest-Root-Containment überall.
+- [x] Optional Deps crashen GUI-Start nicht.
+- [x] CI: ruff + pytest + coverage gate erfolgreich.
 
 ## Start-Kommandos
 - Windows: `python start_rom_sorter.py --gui`

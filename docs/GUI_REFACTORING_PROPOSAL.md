@@ -563,7 +563,7 @@ Das refactored GUI gilt als fertig, wenn:
 - [x] Neue Themes hinzugefügt: Clean Slate, Midnight Pro, Retro Console
 - [x] Reports-Tab mit Exporten + Report-Summary (Platzhalter)
 - [x] External Tools Status mit manuellem Probe-Button
-- [ ] Phase 1 Code-Split (qt_app_impl.py modulieren)
+- [x] Phase 1 Code-Split (qt_app_impl.py modulieren)
 
 ---
 

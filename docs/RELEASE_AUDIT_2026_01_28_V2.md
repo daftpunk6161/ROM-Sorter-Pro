@@ -685,7 +685,7 @@ python start_rom_sorter.py --gui-smoke
 _Platz für Anmerkungen während der Abarbeitung_
 
 - [x] P1 Fixes implementieren
-- [ ] Manuelle Tests durchführen
-- [ ] Go/No-Go Meeting einberufen
+- [x] Manuelle Tests durchführen
+- [x] Go/No-Go Meeting einberufen
 
 ---

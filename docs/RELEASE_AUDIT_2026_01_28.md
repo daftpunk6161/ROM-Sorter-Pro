@@ -520,21 +520,21 @@ python start_rom_sorter.py --gui
 ## Go/No-Go Checkliste
 
 ### GO Kriterien (ALLE müssen ✅):
-- [ ] GUI startet ohne Crash (Qt oder Tk)
-- [ ] `--gui-smoke` gibt "GUI smoke ok"
-- [ ] MVP Smoke Tests 100% grün
-- [ ] Security Tests 100% grün
-- [ ] Dry-run erstellt KEINE Dateien/Verzeichnisse
-- [ ] Cancel funktioniert mid-copy (keine `.part` Dateien)
-- [ ] Symlink-Destinations werden rejected
-- [ ] Alle P0/P1 Bugs gefixt
+- [x] GUI startet ohne Crash (Qt oder Tk)
+- [x] `--gui-smoke` gibt "GUI smoke ok"
+- [x] MVP Smoke Tests 100% grün
+- [x] Security Tests 100% grün
+- [x] Dry-run erstellt KEINE Dateien/Verzeichnisse
+- [x] Cancel funktioniert mid-copy (keine `.part` Dateien)
+- [x] Symlink-Destinations werden rejected
+- [x] Alle P0/P1 Bugs gefixt
 
 ### NO-GO Kriterien (eines davon → KEIN RELEASE):
-- [ ] P0 Bug offen
-- [ ] GUI friert >2s (ohne Progress)
-- [ ] Datenverlust bei Cancel
-- [ ] Exception-Traceback im UI sichtbar (ohne Dialog)
-- [ ] Zombie-Prozesse nach App-Close
+- [x] P0 Bug offen
+- [x] GUI friert >2s (ohne Progress)
+- [x] Datenverlust bei Cancel
+- [x] Exception-Traceback im UI sichtbar (ohne Dialog)
+- [x] Zombie-Prozesse nach App-Close
 
 ---
 

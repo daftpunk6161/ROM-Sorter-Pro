@@ -939,8 +939,10 @@ def run() -> int:
             dashboard_layout.addStretch(1)
 
             paths_group = QtWidgets.QGroupBox("Pfade")
-            actions_group = QtWidgets.QGroupBox("Aktionen")
-            filters_group = QtWidgets.QGroupBox("Filter")
+            actions_group = QtWidgets.QGroupBox("")
+            actions_group.setFlat(True)
+            filters_group = QtWidgets.QGroupBox("")
+            filters_group.setFlat(True)
 
             paths_layout = QtWidgets.QGridLayout(paths_group)
             actions_layout = QtWidgets.QGridLayout(actions_group)
@@ -1205,6 +1207,10 @@ def run() -> int:
             self.chk_console_folders = QtWidgets.QCheckBox("Konsolenordner erstellen")
             self.chk_region_subfolders = QtWidgets.QCheckBox("Regionsordner erstellen")
             self.chk_preserve_structure = QtWidgets.QCheckBox("Quell-Unterordner beibehalten")
+            self.default_mode_combo = QtWidgets.QComboBox()
+            self.default_mode_combo.addItems(["copy", "move"])
+            self.default_conflict_combo = QtWidgets.QComboBox()
+            self.default_conflict_combo.addItems(["rename", "skip", "overwrite"])
             self.dat_status = QtWidgets.QLabel("DAT: unbekannt")
             self.btn_add_dat = QtWidgets.QPushButton("DAT-Ordner hinzufügen…")
             self.btn_refresh_dat = QtWidgets.QPushButton("DAT Index bauen")
@@ -1274,25 +1280,43 @@ def run() -> int:
 
             actions_layout.addWidget(self.rebuild_checkbox, 2, 1)
 
+            actions_section = QtWidgets.QLabel("Zielstruktur (Default)")
+            actions_section.setStyleSheet("font-weight: 600;")
+            actions_layout.addWidget(actions_section, 3, 0, 1, 2)
+            actions_layout.addWidget(QtWidgets.QLabel("Standardmodus:"), 4, 0)
+            actions_layout.addWidget(self.default_mode_combo, 4, 1)
+            actions_layout.addWidget(QtWidgets.QLabel("Standard-Konflikte:"), 5, 0)
+            actions_layout.addWidget(self.default_conflict_combo, 5, 1)
+            actions_layout.addWidget(self.chk_console_folders, 6, 0, 1, 2)
+            actions_layout.addWidget(self.chk_region_subfolders, 7, 0, 1, 2)
+            actions_layout.addWidget(self.chk_preserve_structure, 8, 0, 1, 2)
+
             actions_layout.setColumnStretch(1, 1)
 
-            filters_layout.addWidget(QtWidgets.QLabel("Konsolenfilter:"), 0, 0)
-            filters_layout.addWidget(self.console_filter, 0, 1)
+            filters_title = QtWidgets.QLabel("Filter")
+            filters_title.setStyleSheet("font-weight: 600;")
+            filters_layout.addWidget(filters_title, 0, 0, 1, 2)
 
-            filters_layout.addWidget(QtWidgets.QLabel("Sprachfilter:"), 1, 0)
-            filters_layout.addWidget(self.lang_filter, 1, 1)
+            filter_form = QtWidgets.QFormLayout()
+            filter_form.setLabelAlignment(QtCore.Qt.AlignLeft)
+            filter_form.setFormAlignment(QtCore.Qt.AlignLeft)
+            filter_form.setHorizontalSpacing(10)
+            filter_form.setVerticalSpacing(6)
+            filter_form.addRow("Konsole:", self.console_filter)
+            filter_form.addRow("Sprache:", self.lang_filter)
+            filter_form.addRow("Version:", self.ver_filter)
+            filter_form.addRow("Region:", self.region_filter)
+            filters_layout.addLayout(filter_form, 1, 0, 1, 2)
 
-            filters_layout.addWidget(QtWidgets.QLabel("Versionsfilter:"), 2, 0)
-            filters_layout.addWidget(self.ver_filter, 2, 1)
+            options_box = QtWidgets.QHBoxLayout()
+            options_box.addWidget(self.dedupe_checkbox)
+            options_box.addSpacing(12)
+            options_box.addWidget(self.hide_unknown_checkbox)
+            options_box.addStretch(1)
+            filters_layout.addLayout(options_box, 2, 0, 1, 2)
 
-            filters_layout.addWidget(QtWidgets.QLabel("Regionsfilter:"), 3, 0)
-            filters_layout.addWidget(self.region_filter, 3, 1)
-
-            filters_layout.addWidget(self.dedupe_checkbox, 4, 1)
-            filters_layout.addWidget(self.hide_unknown_checkbox, 4, 2)
-
-            filters_layout.addWidget(QtWidgets.QLabel("Erweiterungsfilter:"), 5, 0)
-            filters_layout.addWidget(self.ext_filter_edit, 5, 1)
+            filters_layout.addWidget(QtWidgets.QLabel("Erweiterungen:"), 3, 0)
+            filters_layout.addWidget(self.ext_filter_edit, 3, 1)
 
             size_row = QtWidgets.QHBoxLayout()
             size_row.addWidget(QtWidgets.QLabel("Min (MB):"))
@@ -1301,12 +1325,11 @@ def run() -> int:
             size_row.addWidget(QtWidgets.QLabel("Max (MB):"))
             size_row.addWidget(self.max_size_edit)
             size_row.addStretch(1)
-            filters_layout.addLayout(size_row, 6, 0, 1, 4, QtCore.Qt.AlignLeft)
+            filters_layout.addLayout(size_row, 4, 0, 1, 2)
 
-            filters_layout.addWidget(self.btn_clear_filters, 7, 2, 1, 2, QtCore.Qt.AlignRight)
+            filters_layout.addWidget(self.btn_clear_filters, 5, 1, 1, 1, QtCore.Qt.AlignRight)
 
             filters_layout.setColumnStretch(1, 1)
-            filters_layout.setColumnStretch(3, 1)
 
             settings_intro = QtWidgets.QLabel(
                 "Allgemeine Einstellungen. Weitere Optionen können später ergänzt werden."
@@ -1353,28 +1376,6 @@ def run() -> int:
             self.theme_preview_list.setMinimumHeight(140)
             theme_preview_layout.addWidget(self.theme_preview_list)
             settings_layout.addWidget(theme_preview_group)
-
-            self.default_mode_combo = QtWidgets.QComboBox()
-            self.default_mode_combo.addItems(["copy", "move"])
-            self.default_conflict_combo = QtWidgets.QComboBox()
-            self.default_conflict_combo.addItems(["rename", "skip", "overwrite"])
-
-            structure_group = QtWidgets.QGroupBox("Zielstruktur")
-            structure_layout = QtWidgets.QGridLayout(structure_group)
-            structure_layout.setHorizontalSpacing(10)
-            structure_layout.setVerticalSpacing(6)
-            structure_intro = QtWidgets.QLabel("Sortieroptionen für die Zielstruktur.")
-            structure_intro.setWordWrap(True)
-            structure_layout.addWidget(structure_intro, 0, 0, 1, 2)
-            structure_layout.addWidget(QtWidgets.QLabel("Standardmodus:"), 1, 0)
-            structure_layout.addWidget(self.default_mode_combo, 1, 1)
-            structure_layout.addWidget(QtWidgets.QLabel("Standard-Konflikte:"), 2, 0)
-            structure_layout.addWidget(self.default_conflict_combo, 2, 1)
-            structure_layout.addWidget(self.chk_console_folders, 3, 0, 1, 2)
-            structure_layout.addWidget(self.chk_region_subfolders, 4, 0, 1, 2)
-            structure_layout.addWidget(self.chk_preserve_structure, 5, 0, 1, 2)
-            structure_layout.setColumnStretch(1, 1)
-            settings_layout.addWidget(structure_group)
 
             db_intro = QtWidgets.QLabel("Datenbank- und DAT-Index-Verwaltung.")
             db_intro.setWordWrap(True)

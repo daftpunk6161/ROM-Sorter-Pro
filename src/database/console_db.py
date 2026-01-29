@@ -305,6 +305,17 @@ ENHANCED_CONSOLE_DATABASE = {
         typical_rom_size_mb=1.5
     ),
 
+# Bandai
+    'WonderSwan': EnhancedConsoleMeta(
+        folder_name='WonderSwan',
+        manufacturer='Bandai',
+        release_year=1999,
+        extensions={'.ws', '.wsc'},
+        priority=5,
+        emulator_compatibility=['Mednafen', 'Cygne', 'ares'],
+        typical_rom_size_mb=2.0
+    ),
+
 # Nec
     'PC Engine': EnhancedConsoleMeta(
         folder_name='PC Engine',
@@ -357,6 +368,85 @@ ENHANCED_CONSOLE_DATABASE = {
         typical_rom_size_mb=0.0
     ),
 }
+
+
+# =============================================================================
+# Inverted Index: Extension → Console(s) for O(1) lookup
+# =============================================================================
+
+@lru_cache(maxsize=1)
+def _build_extension_index() -> Dict[str, List[str]]:
+    """Build inverted index mapping extensions to console names.
+    
+    Returns:
+        Dict mapping each extension to a list of console names that use it.
+        Extensions are stored with leading dot (e.g., '.nes').
+    """
+    index: Dict[str, List[str]] = {}
+    for console_name, meta in ENHANCED_CONSOLE_DATABASE.items():
+        for ext in meta.extensions:
+            normalized = ext.lower() if ext.startswith('.') else f'.{ext.lower()}'
+            if normalized not in index:
+                index[normalized] = []
+            index[normalized].append(console_name)
+    return index
+
+
+@lru_cache(maxsize=1)
+def _build_unique_extension_set() -> Set[str]:
+    """Build set of extensions that map to exactly one console.
+    
+    Returns:
+        Set of extensions (with leading dot) that are unique to one platform.
+    """
+    index = _build_extension_index()
+    return {ext for ext, consoles in index.items() if len(consoles) == 1}
+
+
+def get_consoles_for_extension_fast(extension: str) -> List[str]:
+    """O(1) lookup of console names for an extension.
+    
+    Args:
+        extension: File extension with or without leading dot.
+        
+    Returns:
+        List of console names that support this extension (may be empty).
+    """
+    if not extension.startswith('.'):
+        extension = f'.{extension}'
+    extension = extension.lower()
+    
+    index = _build_extension_index()
+    return index.get(extension, [])
+
+
+def is_unique_extension(extension: str) -> bool:
+    """Check if an extension maps to exactly one console (O(1)).
+    
+    Args:
+        extension: File extension with or without leading dot.
+        
+    Returns:
+        True if extension is unique to one platform.
+    """
+    if not extension.startswith('.'):
+        extension = f'.{extension}'
+    extension = extension.lower()
+    
+    unique_set = _build_unique_extension_set()
+    return extension in unique_set
+
+
+def get_extension_ambiguity_count(extension: str) -> int:
+    """Get number of consoles that use this extension.
+    
+    Args:
+        extension: File extension with or without leading dot.
+        
+    Returns:
+        Number of consoles (0 if unknown, 1 if unique, >1 if ambiguous).
+    """
+    return len(get_consoles_for_extension_fast(extension))
 
 
 @lru_cache(maxsize=1)

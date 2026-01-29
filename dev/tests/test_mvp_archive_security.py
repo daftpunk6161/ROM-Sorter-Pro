@@ -91,6 +91,61 @@ def test_zip_all_entries_match_single_system(tmp_path):
     assert result.get("is_exact") is True
 
 
+def test_7z_mixed_content_returns_unknown(tmp_path):
+    py7zr = pytest.importorskip("py7zr")
+    from src.scanning.high_performance_scanner import HighPerformanceScanner
+
+    index_path = tmp_path / "dat_index.sqlite"
+    good_payload = b"GOOD-ROM"
+    bad_payload = b"UNKNOWN-ROM"
+    _write_dat_index(index_path, [(good_payload, "NES")])
+
+    archive_path = tmp_path / "mixed.7z"
+    good_file = tmp_path / "good.nes"
+    bad_file = tmp_path / "bad.bin"
+    good_file.write_bytes(good_payload)
+    bad_file.write_bytes(bad_payload)
+
+    with py7zr.SevenZipFile(archive_path, "w") as zf:
+        zf.write(good_file, arcname="good.nes")
+        zf.write(bad_file, arcname="bad.bin")
+
+    scanner = HighPerformanceScanner(config={"dats": {"index_path": str(index_path)}})
+    result = scanner._process_7z_archive(str(archive_path))
+
+    assert result is not None
+    assert result.get("system") == "Unknown"
+    assert result.get("detection_source") == "7z-mixed"
+    assert result.get("is_exact") is False
+
+
+def test_7z_all_entries_match_single_system(tmp_path):
+    py7zr = pytest.importorskip("py7zr")
+    from src.scanning.high_performance_scanner import HighPerformanceScanner
+
+    index_path = tmp_path / "dat_index.sqlite"
+    payload_a = b"ROM-A"
+    payload_b = b"ROM-B"
+    _write_dat_index(index_path, [(payload_a, "SNES"), (payload_b, "SNES")])
+
+    archive_path = tmp_path / "single_system.7z"
+    file_a = tmp_path / "a.sfc"
+    file_b = tmp_path / "b.sfc"
+    file_a.write_bytes(payload_a)
+    file_b.write_bytes(payload_b)
+
+    with py7zr.SevenZipFile(archive_path, "w") as zf:
+        zf.write(file_a, arcname="a.sfc")
+        zf.write(file_b, arcname="b.sfc")
+
+    scanner = HighPerformanceScanner(config={"dats": {"index_path": str(index_path)}})
+    result = scanner._process_7z_archive(str(archive_path))
+
+    assert result is not None
+    assert result.get("system") == "SNES"
+    assert result.get("is_exact") is True
+
+
 def test_safe_extract_unicode_traversal(tmp_path):
     from src.security.security_utils import safe_extract_zip
 
