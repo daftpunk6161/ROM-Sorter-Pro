@@ -7,7 +7,24 @@ from __future__ import annotations
 
 from .tk_app_impl import run
 
-__all__ = ["run"]
+import importlib
+import logging
+from typing import Iterable, Optional
+
+logger = logging.getLogger(__name__)
+
+
+def _import_symbol(module_candidates: Iterable[str], symbol: str) -> Optional[object]:
+    """Best-effort optional import used by tests/logging."""
+    for module_name in module_candidates:
+        try:
+            module = importlib.import_module(module_name)
+            return getattr(module, symbol)
+        except Exception as exc:
+            logger.debug("Optional import failed: %s.%s (%s)", module_name, symbol, exc)
+    return None
+
+__all__ = ["run", "_import_symbol"]
 
 if False:
     r'''

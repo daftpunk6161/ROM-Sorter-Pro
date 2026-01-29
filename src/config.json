@@ -1,11 +1,15 @@
 {
+  "_metadata": {
+    "version": "1.0.0"
+  },
   "gui_settings": {
-    "default_sort_mode": "move",
-    "window_width": 1680,
-    "window_height": 980,
-    "theme": "Light",
     "drag_drop_enabled": true,
-    "default_conflict_policy": "overwrite"
+    "default_conflict_policy": "overwrite",
+    "log_visible": false,
+    "default_sort_mode": "move",
+    "theme": "CRT Green",
+    "window_width": 1680,
+    "window_height": 980
   },
   "scanner": {
     "use_high_performance": true,
@@ -17,7 +21,7 @@
     "max_depth": -1
   },
   "ui": {
-    "theme": "Light",
+    "theme": "CRT Green",
     "language": "de_DE",
     "remember_window_state": true,
     "remember_last_directories": true,
@@ -41,16 +45,5 @@
     "max_size_mb": 500,
     "clean_on_exit": false,
     "expiry_days": 30
-  },
-  "features": {
-    "sorting": {
-      "console_sorting_enabled": true,
-      "create_console_folders": true,
-      "region_based_sorting": false,
-      "preserve_folder_structure": false
-    }
-  },
-  "dats": {
-    "auto_build": true
   }
 }

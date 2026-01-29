@@ -31,6 +31,10 @@ def _configure_startup_logging() -> logging.Logger:
 
 logger = logging.getLogger(__name__)
 
+
+def _load_version() -> str:
+    return str(load_version())
+
 def gui_smoke(backend: str | None = None) -> str:
     """Validate GUI backend selection without launching the GUI."""
     from src.ui.compat import select_backend
