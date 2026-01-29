@@ -756,6 +756,8 @@ def run() -> int:
             progress_layout.addWidget(self.header_progress)
             progress_layout.addWidget(self.header_progress_label)
             root_layout.addWidget(progress_header)
+            self.progress_header = progress_header
+            self.progress_header.setVisible(False)
 
             self.status_bar = QtWidgets.QStatusBar(self)
             self.setStatusBar(self.status_bar)
@@ -4075,9 +4077,12 @@ def run() -> int:
                 "scan": "Scannen…",
                 "plan": "Plan wird erstellt…",
                 "execute": "Sortierung läuft…",
+                "audit": "Prüfe Konvertierungen…",
             }.get(phase, "Bereit")
             if hasattr(self, "header_progress_label"):
                 self.header_progress_label.setText(label)
+            if hasattr(self, "progress_header"):
+                self.progress_header.setVisible(phase in {"scan", "plan", "execute", "audit"})
 
         def _priority_value(self, label: str) -> int:
             value = str(label or "").strip().lower()
@@ -4962,11 +4967,16 @@ def run() -> int:
             if total and total > 0:
                 self.progress.setRange(0, int(total))
                 self.progress.setValue(int(current))
+                if hasattr(self, "header_progress"):
+                    self.header_progress.setRange(0, int(total))
+                    self.header_progress.setValue(int(current))
                 if hasattr(self, "dashboard_progress"):
                     self.dashboard_progress.setRange(0, int(total))
                     self.dashboard_progress.setValue(int(current))
             else:
                 self.progress.setRange(0, 0)
+                if hasattr(self, "header_progress"):
+                    self.header_progress.setRange(0, 0)
                 if hasattr(self, "dashboard_progress"):
                     self.dashboard_progress.setRange(0, 0)
 
