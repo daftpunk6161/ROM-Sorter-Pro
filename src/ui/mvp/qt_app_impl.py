@@ -970,6 +970,12 @@ def run() -> int:
             results_page_layout.addLayout(results_stack, 1)
             self._results_tab_index_results = results_tabs.addTab(results_page, "Ergebnisse")
 
+            details_page = QtWidgets.QWidget()
+            details_page_layout = QtWidgets.QVBoxLayout(details_page)
+            details_stack = QtWidgets.QVBoxLayout()
+            details_page_layout.addLayout(details_stack, 1)
+            self._results_tab_index_details = results_tabs.addTab(details_page, "Details")
+
             filters_group.setMinimumWidth(220)
             filters_group.setMaximumWidth(360)
             filters_page = QtWidgets.QWidget()
@@ -1670,13 +1676,13 @@ def run() -> int:
 
             self.btn_why_unknown = QtWidgets.QPushButton("Why Unknown?")
             self.btn_why_unknown.clicked.connect(self._show_why_unknown)
-            results_stack.addWidget(self.btn_why_unknown)
+            details_stack.addWidget(self.btn_why_unknown)
 
             results_intro = QtWidgets.QLabel(
                 "Die Ergebnistabelle zeigt geplante Ziele und Status. Nutze die Vorschau vor dem Ausführen."
             )
             results_intro.setWordWrap(True)
-            results_stack.addWidget(results_intro)
+            details_stack.addWidget(results_intro)
 
             self.results_empty_label = QtWidgets.QLabel(
                 "Noch keine Ergebnisse. Starte mit Scan oder Vorschau, um Einträge zu sehen."
@@ -1707,7 +1713,7 @@ def run() -> int:
             details_layout.addRow("System:", self.details_system_label)
             details_layout.addRow("Grund:", self.details_reason_label)
             details_group.setVisible(False)
-            results_stack.addWidget(details_group)
+            details_stack.addWidget(details_group)
 
             results_toolbar = QtWidgets.QHBoxLayout()
             self.quick_filter_edit = QtWidgets.QLineEdit()
