@@ -131,12 +131,21 @@ def run_scan(
         name = rom_info.get("name") or Path(rom_info.get("path", "")).name
         system = rom_info.get("system", "Unknown")
         source = rom_info.get("detection_source")
+        source_label_map = {
+            "conflict-group": "Konfliktgruppe",
+            "ambiguous-candidates": "Uneindeutige Kandidaten",
+            "contradiction-candidates": "Widersprüchliche Kandidaten",
+            "policy-low-confidence": "Niedrige Sicherheit",
+            "extension": "Erweiterung",
+            "extension-unique": "Erweiterung (eindeutig)",
+            "override": "Override",
+        }
         conf = rom_info.get("detection_confidence")
         details = []
         if isinstance(conf, (int, float)):
             details.append(f"{int(conf * 100)}%")
         if source:
-            details.append(str(source))
+            details.append(str(source_label_map.get(str(source), source)))
         suffix = f" [{' / '.join(details)}]" if details else ""
         _log(on_log, f"ROM: {name} ({system}){suffix}")
 
