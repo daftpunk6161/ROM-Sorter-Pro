@@ -21,3 +21,6 @@ pydantic>=2.7
 
 # Atomic file writes (used in core copy helpers)
 atomicwrites>=1.4
+
+# Optional structured logging
+structlog>=24.4
