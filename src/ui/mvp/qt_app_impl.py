@@ -825,7 +825,7 @@ def run() -> int:
             reports_tab = QtWidgets.QWidget()
             tools_tab = QtWidgets.QWidget()
             home_scroll = _wrap_tab_scroll(home_tab)
-            sort_scroll = _wrap_tab_scroll(sort_tab)
+            sort_scroll = sort_tab
             convert_scroll = _wrap_tab_scroll(convert_tab)
             settings_scroll = _wrap_tab_scroll(settings_tab)
             reports_scroll = _wrap_tab_scroll(reports_tab)
@@ -958,12 +958,26 @@ def run() -> int:
             main_splitter.setStretchFactor(1, 1)
 
             left_layout = QtWidgets.QVBoxLayout(left_panel)
-            right_layout = QtWidgets.QHBoxLayout(right_panel)
+            right_layout = QtWidgets.QVBoxLayout(right_panel)
+
+            results_tabs = QtWidgets.QTabWidget()
+            self.results_tabs = results_tabs
+            right_layout.addWidget(results_tabs, 1)
+
+            results_page = QtWidgets.QWidget()
+            results_page_layout = QtWidgets.QVBoxLayout(results_page)
             results_stack = QtWidgets.QVBoxLayout()
-            right_layout.addLayout(results_stack, 1)
+            results_page_layout.addLayout(results_stack, 1)
+            self._results_tab_index_results = results_tabs.addTab(results_page, "Ergebnisse")
+
             filters_group.setMinimumWidth(220)
             filters_group.setMaximumWidth(360)
-            right_layout.addWidget(filters_group)
+            filters_page = QtWidgets.QWidget()
+            filters_page_layout = QtWidgets.QVBoxLayout(filters_page)
+            filters_page_layout.addWidget(filters_group)
+            filters_page_layout.addStretch(1)
+            self._results_tab_index_filters = results_tabs.addTab(filters_page, "Filter")
+
             self.filter_sidebar = filters_group
             main_status_group = QtWidgets.QGroupBox("Status")
             main_status_layout = QtWidgets.QGridLayout(main_status_group)
@@ -989,10 +1003,6 @@ def run() -> int:
             main_status_layout.addWidget(self.status_label, 3, 0, 1, 2)
             main_status_layout.addWidget(self.summary_label, 4, 0, 1, 2)
             main_status_layout.setColumnStretch(1, 1)
-            left_layout.addWidget(main_status_group)
-            left_layout.addWidget(paths_group)
-            left_layout.addWidget(actions_group)
-
             presets_group = QtWidgets.QGroupBox("Presets & Auswahl")
             presets_layout = QtWidgets.QGridLayout(presets_group)
             presets_layout.setHorizontalSpacing(6)
@@ -1014,7 +1024,47 @@ def run() -> int:
             presets_layout.addWidget(self.btn_execute_selected, 2, 0, 1, 2)
             presets_layout.setColumnStretch(1, 1)
 
-            left_layout.addWidget(presets_group)
+            queue_group = QtWidgets.QGroupBox("Jobs")
+            queue_layout = QtWidgets.QGridLayout(queue_group)
+            queue_layout.setHorizontalSpacing(6)
+            queue_layout.setVerticalSpacing(6)
+            self.queue_mode_checkbox = QtWidgets.QCheckBox("Queue mode")
+            self.queue_priority_combo = QtWidgets.QComboBox()
+            self.queue_priority_combo.addItems(["Normal", "High", "Low"])
+            self.queue_pause_btn = QtWidgets.QPushButton("Pause")
+            self.queue_resume_btn = QtWidgets.QPushButton("Resume")
+            self.queue_clear_btn = QtWidgets.QPushButton("Clear")
+            self.queue_resume_btn.setEnabled(False)
+            self.queue_list = QtWidgets.QListWidget()
+            self.queue_list.setMaximumHeight(90)
+            queue_layout.addWidget(QtWidgets.QLabel("Priorität:"), 0, 0)
+            queue_layout.addWidget(self.queue_priority_combo, 0, 1)
+            queue_layout.addWidget(self.queue_mode_checkbox, 0, 2)
+            queue_layout.addWidget(self.queue_pause_btn, 1, 0)
+            queue_layout.addWidget(self.queue_resume_btn, 1, 1)
+            queue_layout.addWidget(self.queue_clear_btn, 1, 2)
+            queue_layout.addWidget(self.queue_list, 2, 0, 1, 3)
+
+            left_tabs = QtWidgets.QTabWidget()
+            left_main_tab = QtWidgets.QWidget()
+            left_main_layout = QtWidgets.QVBoxLayout(left_main_tab)
+            left_main_layout.addWidget(main_status_group)
+            left_main_layout.addWidget(paths_group)
+            left_main_layout.addWidget(actions_group)
+            left_main_layout.addStretch(1)
+
+            left_presets_tab = QtWidgets.QWidget()
+            left_presets_layout = QtWidgets.QVBoxLayout(left_presets_tab)
+            left_presets_layout.addWidget(presets_group)
+            left_presets_layout.addWidget(queue_group)
+            left_presets_layout.addStretch(1)
+
+            left_tabs.addTab(left_main_tab, "Workflow")
+            left_tabs.addTab(left_presets_tab, "Presets & Queue")
+            left_layout.addWidget(left_tabs, 1)
+
+            left_presets_layout.addWidget(queue_group)
+            left_presets_layout.addStretch(1)
 
             dnd_enabled = False
             try:
@@ -1665,36 +1715,14 @@ def run() -> int:
             self.quick_filter_clear_btn = QtWidgets.QPushButton("Filter löschen")
             self.btn_toggle_filters = QtWidgets.QPushButton("Filter")
             self.btn_toggle_filters.setCheckable(True)
-            self.btn_toggle_filters.setChecked(True)
-            self.btn_toggle_filters.setToolTip("Filter-Leiste anzeigen/ausblenden")
+            self.btn_toggle_filters.setChecked(False)
+            self.btn_toggle_filters.setToolTip("Filter-Tab anzeigen/ausblenden")
             self.btn_toggle_filters.clicked.connect(self._toggle_filter_sidebar)
             results_toolbar.addWidget(QtWidgets.QLabel("Schnellfilter:"))
             results_toolbar.addWidget(self.quick_filter_edit)
             results_toolbar.addWidget(self.quick_filter_clear_btn)
             results_toolbar.addWidget(self.btn_toggle_filters)
             results_stack.addLayout(results_toolbar)
-
-            queue_group = QtWidgets.QGroupBox("Jobs")
-            queue_layout = QtWidgets.QGridLayout(queue_group)
-            queue_layout.setHorizontalSpacing(6)
-            queue_layout.setVerticalSpacing(6)
-            self.queue_mode_checkbox = QtWidgets.QCheckBox("Queue mode")
-            self.queue_priority_combo = QtWidgets.QComboBox()
-            self.queue_priority_combo.addItems(["Normal", "High", "Low"])
-            self.queue_pause_btn = QtWidgets.QPushButton("Pause")
-            self.queue_resume_btn = QtWidgets.QPushButton("Resume")
-            self.queue_clear_btn = QtWidgets.QPushButton("Clear")
-            self.queue_resume_btn.setEnabled(False)
-            self.queue_list = QtWidgets.QListWidget()
-            self.queue_list.setMaximumHeight(90)
-            queue_layout.addWidget(QtWidgets.QLabel("Priorität:"), 0, 0)
-            queue_layout.addWidget(self.queue_priority_combo, 0, 1)
-            queue_layout.addWidget(self.queue_mode_checkbox, 0, 2)
-            queue_layout.addWidget(self.queue_pause_btn, 1, 0)
-            queue_layout.addWidget(self.queue_resume_btn, 1, 1)
-            queue_layout.addWidget(self.queue_clear_btn, 1, 2)
-            queue_layout.addWidget(self.queue_list, 2, 0, 1, 3)
-            left_layout.addWidget(queue_group)
 
             self.results_model = ResultsTableModel(self)
             self.results_proxy = QtCore.QSortFilterProxyModel(self)
@@ -1724,6 +1752,11 @@ def run() -> int:
             except Exception:
                 logger.exception("Qt GUI: header max section size failed")
             results_stack.addWidget(self.table, 2)
+
+            try:
+                self.results_tabs.currentChanged.connect(self._on_results_tab_changed)
+            except Exception:
+                logger.exception("Qt GUI: results tabs connect failed")
 
             self.log_view = QtWidgets.QPlainTextEdit()
             self.log_view.setReadOnly(True)
@@ -4140,11 +4173,25 @@ def run() -> int:
             self._set_log_visible(not self._log_visible)
 
         def _toggle_filter_sidebar(self) -> None:
+            if hasattr(self, "results_tabs") and hasattr(self, "_results_tab_index_filters"):
+                if hasattr(self, "btn_toggle_filters"):
+                    show_filters = bool(self.btn_toggle_filters.isChecked())
+                else:
+                    show_filters = False
+                target = self._results_tab_index_filters if show_filters else self._results_tab_index_results
+                self.results_tabs.setCurrentIndex(target)
+                return
             if hasattr(self, "filter_sidebar"):
                 is_visible = self.filter_sidebar.isVisible()
                 self.filter_sidebar.setVisible(not is_visible)
                 if hasattr(self, "btn_toggle_filters"):
                     self.btn_toggle_filters.setChecked(not is_visible)
+
+        def _on_results_tab_changed(self, index: int) -> None:
+            if not hasattr(self, "btn_toggle_filters"):
+                return
+            if hasattr(self, "_results_tab_index_filters"):
+                self.btn_toggle_filters.setChecked(index == self._results_tab_index_filters)
 
         def _on_igir_advanced_toggle(self, state: int) -> None:
             self._set_igir_advanced_visible(state == QtCore.Qt.CheckState.Checked)
