@@ -16,11 +16,13 @@ import logging
 import threading
 import queue
 import zipfile
+import tempfile
 import zlib
 import concurrent.futures
 import re
+from collections import OrderedDict
 from pathlib import Path
-from typing import Dict, List, Set, Tuple, Optional, Any
+from typing import Dict, List, Set, Tuple, Optional, Any, Protocol
 
 from ..config import Config
 
@@ -30,6 +32,7 @@ logger = logging.getLogger(__name__)
 # Constants
 MAX_WORKERS = os.cpu_count() or 4  # Fallback auf 4 Threads
 DEFAULT_CHUNK_SIZE = 4 * 1024 * 1024  # 4 MB for file chunking
+DEFAULT_CACHE_MAX_SIZE = 10000  # Max entries in LRU cache to prevent memory leak
 
 # Archive types are handled separately (ROM detection happens on extracted content in future work).
 ARCHIVE_EXTENSIONS = ['.zip', '.7z', '.rar']
@@ -101,9 +104,13 @@ class HighPerformanceScanner:
         # Ignore extensions configured from config
         self._ignore_exts = self._resolve_ignore_extensions()
 
-        # In-memory cache to skip repeated work within a session
-        self._cache: Dict[Tuple[str, int, int], Dict[str, Any]] = {}
+        # In-memory LRU cache to skip repeated work within a session
+        # Uses OrderedDict for efficient O(1) LRU eviction
+        self._cache: OrderedDict[Tuple[str, int, int], Dict[str, Any]] = OrderedDict()
         self._cache_lock = threading.Lock()
+        self._cache_max_size = self._resolve_cache_max_size()
+        self._cache_hits = 0
+        self._cache_misses = 0
 
     def _resolve_max_workers(self) -> int:
         try:
@@ -137,6 +144,17 @@ class HighPerformanceScanner:
         except Exception:
             size = DEFAULT_CHUNK_SIZE
         return max(64 * 1024, min(32 * 1024 * 1024, size))
+
+    def _resolve_cache_max_size(self) -> int:
+        """Resolve maximum cache size from config or use default."""
+        try:
+            scanner_cfg = self.config.get("scanner", {}) or {}
+            configured = scanner_cfg.get("cache_max_size")
+            if configured is not None:
+                return max(100, min(100000, int(configured)))
+        except Exception:
+            pass
+        return DEFAULT_CACHE_MAX_SIZE
 
     def _resolve_ignore_extensions(self) -> Set[str]:
         ignore_exts: Set[str] = set()
@@ -538,10 +556,16 @@ class HighPerformanceScanner:
             # Check whether it is an archive
             if any(file_path.lower().endswith(ext) for ext in ARCHIVE_EXTENSIONS):
                 self.archives_found += 1
-                if file_path.lower().endswith('.zip'):
+                lower_path = file_path.lower()
+                if lower_path.endswith('.zip'):
                     return self._process_zip_archive(file_path)
-                # .7z/.rar are not supported without external deps, but we can still do DAT
-                # game-name matching using the archive stem.
+                if lower_path.endswith('.7z'):
+                    result = self._process_7z_archive(file_path)
+                    return result or self._process_archive_name_only(file_path)
+                if lower_path.endswith('.rar'):
+                    result = self._process_rar_archive(file_path)
+                    return result or self._process_archive_name_only(file_path)
+                # Fallback for unknown archive extensions
                 return self._process_archive_name_only(file_path)
 
 # Collect basic file information
@@ -934,6 +958,359 @@ class HighPerformanceScanner:
         except Exception:
             return None
 
+    def _process_7z_archive(self, file_path: str) -> Optional[Dict]:
+        """Process a 7z archive as a single sortable unit (strict)."""
+        try:
+            import py7zr
+        except Exception:
+            return None
+
+        try:
+            path_obj = Path(file_path)
+            file_stat = os.stat(file_path)
+            file_size = file_stat.st_size
+
+            dat_index = self._get_dat_index()
+            if dat_index is not None:
+                try:
+                    game_match = dat_index.lookup_game(path_obj.stem)
+                    if game_match and game_match[0]:
+                        system_name = game_match[0]
+                        if not self._system_tokens_in_path(system_name, str(path_obj)):
+                            candidates_info: Dict[str, Any] = {}
+                            try:
+                                from ..core.platform_heuristics import evaluate_platform_candidates
+                                candidates_info = evaluate_platform_candidates(file_path, container="7z")
+                            except Exception:
+                                candidates_info = {}
+                            return {
+                                'name': path_obj.name,
+                                'path': str(path_obj),
+                                'system': 'Unknown',
+                                'detection_confidence': 0.0,
+                                'detection_source': 'dat-name-mismatch',
+                                'is_exact': False,
+                                'signals': candidates_info.get('signals') or [],
+                                'candidates': candidates_info.get('candidates') or [],
+                                'candidate_systems': candidates_info.get('candidate_systems') or [],
+                                'size': file_size,
+                                'crc32': None,
+                                'md5': None,
+                                'last_modified': file_stat.st_mtime,
+                                'valid': True,
+                                'is_archive': True,
+                                'archive_type': '7z',
+                                'archive_entry_count': None,
+                            }
+                        candidates_info: Dict[str, Any] = {}
+                        try:
+                            from ..core.platform_heuristics import evaluate_platform_candidates
+                            candidates_info = evaluate_platform_candidates(file_path, container="7z")
+                        except Exception:
+                            candidates_info = {}
+                        return {
+                            'name': path_obj.name,
+                            'path': str(path_obj),
+                            'system': system_name,
+                            'detection_confidence': 1000.0,
+                            'detection_source': "dat:name",
+                            'is_exact': True,
+                            'signals': candidates_info.get('signals') or [],
+                            'candidates': candidates_info.get('candidates') or [],
+                            'candidate_systems': candidates_info.get('candidate_systems') or [],
+                            'size': file_size,
+                            'crc32': None,
+                            'md5': None,
+                            'last_modified': file_stat.st_mtime,
+                            'valid': True,
+                            'is_archive': True,
+                            'archive_type': '7z',
+                            'archive_entry_count': None,
+                        }
+                except Exception:
+                    pass
+
+            from ..security.security_utils import is_safe_archive_member
+
+            system_scores: Dict[str, float] = {}
+            system_sources: Dict[str, str] = {}
+            total_safe_entries = 0
+            matched_entries = 0
+
+            with py7zr.SevenZipFile(str(path_obj), 'r') as zf:
+                entries: List[str] = []
+                try:
+                    names = zf.getnames()
+                    entries = [name for name in names if name and not str(name).endswith("/")]
+                except Exception:
+                    try:
+                        infos = zf.list()
+                    except Exception:
+                        infos = []
+
+                    for info in infos:
+                        name = None
+                        is_dir = False
+                        if isinstance(info, str):
+                            name = info
+                            is_dir = name.endswith("/")
+                        else:
+                            name = getattr(info, 'filename', None) or getattr(info, 'name', None)
+                            is_dir = bool(getattr(info, 'is_directory', False))
+                            if name and name.endswith("/"):
+                                is_dir = True
+                        if not name or is_dir:
+                            continue
+                        entries.append(name)
+
+                if not entries:
+                    return None
+
+                if dat_index is not None:
+                    safe_entries = [entry for entry in entries if is_safe_archive_member(entry)]
+                    if safe_entries:
+                        with tempfile.TemporaryDirectory() as temp_dir:
+                            temp_root = Path(temp_dir)
+                            try:
+                                zf.extract(path=temp_root, targets=safe_entries)
+                            except Exception:
+                                return None
+                            for entry_name in safe_entries:
+                                if self.should_stop:
+                                    raise InterruptedError("Scan wurde abgebrochen")
+                                extracted_path = temp_root / entry_name
+                                if not extracted_path.exists() or not extracted_path.is_file():
+                                    continue
+                                total_safe_entries += 1
+                                crc32_val = 0
+                                sha1_hash = hashlib.sha1(usedforsecurity=False)
+                                try:
+                                    with extracted_path.open('rb') as entry_f:
+                                        while chunk := entry_f.read(self.chunk_size):
+                                            if self.should_stop:
+                                                raise InterruptedError("Scan wurde abgebrochen")
+                                            crc32_val = zlib.crc32(chunk, crc32_val)
+                                            sha1_hash.update(chunk)
+                                except Exception:
+                                    continue
+                                entry_sha1 = sha1_hash.hexdigest()
+                                entry_crc = f"{crc32_val & 0xFFFFFFFF:08x}"
+                                match = dat_index.lookup_sha1(entry_sha1)
+                                if not match:
+                                    match = dat_index.lookup_crc_size_when_sha1_missing(entry_crc, int(extracted_path.stat().st_size))
+                                if match and match.platform_id:
+                                    matched_entries += 1
+                                    system_scores[match.platform_id] = system_scores.get(match.platform_id, 0.0) + 1.0
+                                    system_sources[match.platform_id] = "dat:entry"
+
+            if not system_scores:
+                system = 'Unknown'
+                confidence = 0.0
+                source = '7z-unknown'
+            else:
+                if len(system_scores) != 1:
+                    system = 'Unknown'
+                    confidence = 0.0
+                    source = '7z-conflict'
+                elif total_safe_entries and matched_entries < total_safe_entries:
+                    system = 'Unknown'
+                    confidence = 0.0
+                    source = '7z-mixed'
+                else:
+                    system = next(iter(system_scores.keys()))
+                    confidence = 1000.0
+                    source = str(system_sources.get(system, 'dat'))
+
+            candidates_info: Dict[str, Any] = {}
+            try:
+                from ..core.platform_heuristics import evaluate_platform_candidates
+                candidates_info = evaluate_platform_candidates(file_path, container="7z")
+            except Exception:
+                candidates_info = {}
+
+            return {
+                'name': path_obj.name,
+                'path': str(path_obj),
+                'system': system,
+                'detection_confidence': float(confidence),
+                'detection_source': str(source),
+                'is_exact': bool(system_scores) and len(system_scores) == 1 and matched_entries == total_safe_entries,
+                'signals': candidates_info.get('signals') or [],
+                'candidates': candidates_info.get('candidates') or [],
+                'candidate_systems': candidates_info.get('candidate_systems') or [],
+                'size': file_size,
+                'crc32': None,
+                'md5': None,
+                'last_modified': file_stat.st_mtime,
+                'valid': True,
+                'is_archive': True,
+                'archive_type': '7z',
+                'archive_entry_count': len(entries),
+            }
+
+        except Exception as e:
+            logger.error(f"Fehler bei der 7z-Verarbeitung von {file_path}: {str(e)}")
+            return None
+
+    def _process_rar_archive(self, file_path: str) -> Optional[Dict]:
+        """Process a RAR archive as a single sortable unit (strict)."""
+        try:
+            import rarfile
+        except Exception:
+            return None
+
+        try:
+            path_obj = Path(file_path)
+            file_stat = os.stat(file_path)
+            file_size = file_stat.st_size
+
+            dat_index = self._get_dat_index()
+            if dat_index is not None:
+                try:
+                    game_match = dat_index.lookup_game(path_obj.stem)
+                    if game_match and game_match[0]:
+                        system_name = game_match[0]
+                        if not self._system_tokens_in_path(system_name, str(path_obj)):
+                            candidates_info: Dict[str, Any] = {}
+                            try:
+                                from ..core.platform_heuristics import evaluate_platform_candidates
+                                candidates_info = evaluate_platform_candidates(file_path, container="rar")
+                            except Exception:
+                                candidates_info = {}
+                            return {
+                                'name': path_obj.name,
+                                'path': str(path_obj),
+                                'system': 'Unknown',
+                                'detection_confidence': 0.0,
+                                'detection_source': 'dat-name-mismatch',
+                                'is_exact': False,
+                                'signals': candidates_info.get('signals') or [],
+                                'candidates': candidates_info.get('candidates') or [],
+                                'candidate_systems': candidates_info.get('candidate_systems') or [],
+                                'size': file_size,
+                                'crc32': None,
+                                'md5': None,
+                                'last_modified': file_stat.st_mtime,
+                                'valid': True,
+                                'is_archive': True,
+                                'archive_type': 'rar',
+                                'archive_entry_count': None,
+                            }
+                        candidates_info: Dict[str, Any] = {}
+                        try:
+                            from ..core.platform_heuristics import evaluate_platform_candidates
+                            candidates_info = evaluate_platform_candidates(file_path, container="rar")
+                        except Exception:
+                            candidates_info = {}
+                        return {
+                            'name': path_obj.name,
+                            'path': str(path_obj),
+                            'system': system_name,
+                            'detection_confidence': 1000.0,
+                            'detection_source': "dat:name",
+                            'is_exact': True,
+                            'signals': candidates_info.get('signals') or [],
+                            'candidates': candidates_info.get('candidates') or [],
+                            'candidate_systems': candidates_info.get('candidate_systems') or [],
+                            'size': file_size,
+                            'crc32': None,
+                            'md5': None,
+                            'last_modified': file_stat.st_mtime,
+                            'valid': True,
+                            'is_archive': True,
+                            'archive_type': 'rar',
+                            'archive_entry_count': None,
+                        }
+                except Exception:
+                    pass
+
+            from ..security.security_utils import is_safe_archive_member
+
+            system_scores: Dict[str, float] = {}
+            system_sources: Dict[str, str] = {}
+            total_safe_entries = 0
+            matched_entries = 0
+
+            with rarfile.RarFile(str(path_obj)) as rf:
+                infos = [info for info in rf.infolist() if not info.isdir()]
+                if not infos:
+                    return None
+
+                if dat_index is not None:
+                    for info in infos:
+                        if self.should_stop:
+                            raise InterruptedError("Scan wurde abgebrochen")
+                        entry_name = getattr(info, 'filename', '')
+                        if not entry_name or not is_safe_archive_member(entry_name):
+                            continue
+                        total_safe_entries += 1
+                        crc32_val = 0
+                        sha1_hash = hashlib.sha1(usedforsecurity=False)
+                        with rf.open(info) as entry_f:
+                            while chunk := entry_f.read(self.chunk_size):
+                                if self.should_stop:
+                                    raise InterruptedError("Scan wurde abgebrochen")
+                                crc32_val = zlib.crc32(chunk, crc32_val)
+                                sha1_hash.update(chunk)
+                        entry_sha1 = sha1_hash.hexdigest()
+                        entry_crc = f"{crc32_val & 0xFFFFFFFF:08x}"
+                        match = dat_index.lookup_sha1(entry_sha1)
+                        if not match:
+                            match = dat_index.lookup_crc_size_when_sha1_missing(entry_crc, info.file_size)
+                        if match and match.platform_id:
+                            matched_entries += 1
+                            system_scores[match.platform_id] = system_scores.get(match.platform_id, 0.0) + 1.0
+                            system_sources[match.platform_id] = "dat:entry"
+
+            if not system_scores:
+                system = 'Unknown'
+                confidence = 0.0
+                source = 'rar-unknown'
+            else:
+                if len(system_scores) != 1:
+                    system = 'Unknown'
+                    confidence = 0.0
+                    source = 'rar-conflict'
+                elif total_safe_entries and matched_entries < total_safe_entries:
+                    system = 'Unknown'
+                    confidence = 0.0
+                    source = 'rar-mixed'
+                else:
+                    system = next(iter(system_scores.keys()))
+                    confidence = 1000.0
+                    source = str(system_sources.get(system, 'dat'))
+
+            candidates_info: Dict[str, Any] = {}
+            try:
+                from ..core.platform_heuristics import evaluate_platform_candidates
+                candidates_info = evaluate_platform_candidates(file_path, container="rar")
+            except Exception:
+                candidates_info = {}
+
+            return {
+                'name': path_obj.name,
+                'path': str(path_obj),
+                'system': system,
+                'detection_confidence': float(confidence),
+                'detection_source': str(source),
+                'is_exact': bool(system_scores) and len(system_scores) == 1 and matched_entries == total_safe_entries,
+                'signals': candidates_info.get('signals') or [],
+                'candidates': candidates_info.get('candidates') or [],
+                'candidate_systems': candidates_info.get('candidate_systems') or [],
+                'size': file_size,
+                'crc32': None,
+                'md5': None,
+                'last_modified': file_stat.st_mtime,
+                'valid': True,
+                'is_archive': True,
+                'archive_type': 'rar',
+                'archive_entry_count': len(infos),
+            }
+
+        except Exception as e:
+            logger.error(f"Fehler bei der RAR-Verarbeitung von {file_path}: {str(e)}")
+            return None
+
     @staticmethod
     def _system_tokens_in_path(system_name: str, path: str) -> bool:
         try:
@@ -1010,29 +1387,83 @@ class HighPerformanceScanner:
 
         return f"{crc32_value & 0xFFFFFFFF:08x}", md5_hash.hexdigest(), sha1_hash.hexdigest()
 
-    def _make_cache_key(self, file_path: str, file_stat: os.stat_result) -> Tuple[str, int, int]:
+    class _StatLike(Protocol):
+        st_mtime: float | int
+        st_size: int
+
+    def _make_cache_key(self, file_path: str, file_stat: _StatLike) -> Tuple[str, int, int]:
         return (file_path, int(file_stat.st_mtime), int(file_stat.st_size))
 
-    def _get_from_cache(self, file_path: str, file_stat: os.stat_result) -> Optional[Dict]:
-        """Try to load ROM information from the cache.
+    def _get_from_cache(self, file_path: str, file_stat: _StatLike) -> Optional[Dict]:
+        """Try to load ROM information from the LRU cache.
 
-        Args: File_Path: path to the file
-        Return: ROM information or none, if not in the cache or outdated
+        Args:
+            file_path: Path to the file.
+            file_stat: File stat result for mtime/size validation.
+            
+        Returns:
+            ROM information dict or None if not in cache or outdated.
         """
         key = self._make_cache_key(file_path, file_stat)
         with self._cache_lock:
-            return self._cache.get(key)
+            if key in self._cache:
+                # Move to end (most recently used)
+                self._cache.move_to_end(key)
+                self._cache_hits += 1
+                return self._cache[key]
+            self._cache_misses += 1
+            return None
 
-    def _save_to_cache(self, file_path: str, rom_info: Dict, file_stat: Optional[os.stat_result] = None) -> None:
-        """Store ROM information in the in-memory cache."""
+    def _save_to_cache(self, file_path: str, rom_info: Dict, file_stat: Optional[_StatLike] = None) -> None:
+        """Store ROM information in the LRU cache with size limit.
+        
+        When cache exceeds max size, the least recently used entries are evicted.
+        
+        Args:
+            file_path: Path to the file.
+            rom_info: ROM information dict to cache.
+            file_stat: Optional file stat (will be fetched if None).
+        """
         try:
             if file_stat is None:
                 file_stat = os.stat(file_path)
             key = self._make_cache_key(file_path, file_stat)
             with self._cache_lock:
-                self._cache[key] = dict(rom_info)
+                # If key exists, move to end and update
+                if key in self._cache:
+                    self._cache.move_to_end(key)
+                    self._cache[key] = dict(rom_info)
+                else:
+                    # Evict oldest entries if at capacity
+                    while len(self._cache) >= self._cache_max_size:
+                        self._cache.popitem(last=False)  # Remove oldest (first)
+                    self._cache[key] = dict(rom_info)
         except Exception:
             return
+
+    def get_cache_stats(self) -> Dict[str, Any]:
+        """Get cache statistics for monitoring.
+        
+        Returns:
+            Dict with cache size, max size, hits, misses, and hit ratio.
+        """
+        with self._cache_lock:
+            total = self._cache_hits + self._cache_misses
+            hit_ratio = self._cache_hits / total if total > 0 else 0.0
+            return {
+                "size": len(self._cache),
+                "max_size": self._cache_max_size,
+                "hits": self._cache_hits,
+                "misses": self._cache_misses,
+                "hit_ratio": hit_ratio,
+            }
+
+    def clear_cache(self) -> None:
+        """Clear the in-memory cache and reset statistics."""
+        with self._cache_lock:
+            self._cache.clear()
+            self._cache_hits = 0
+            self._cache_misses = 0
 
     def _finish_scan(self, message: str):
         """Complete the scan and call up the Completion Callback. Args: Message: final report for the log"""
