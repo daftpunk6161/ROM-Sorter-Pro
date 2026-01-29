@@ -1054,10 +1054,28 @@ def run() -> int:
             left_tabs = QtWidgets.QTabWidget()
             left_main_tab = QtWidgets.QWidget()
             left_main_layout = QtWidgets.QVBoxLayout(left_main_tab)
-            left_main_layout.addWidget(main_status_group)
-            left_main_layout.addWidget(paths_group)
-            left_main_layout.addWidget(actions_group)
-            left_main_layout.addStretch(1)
+            workflow_tabs = QtWidgets.QTabWidget()
+
+            status_tab = QtWidgets.QWidget()
+            status_layout = QtWidgets.QVBoxLayout(status_tab)
+            status_layout.addWidget(main_status_group)
+            status_layout.addStretch(1)
+
+            paths_tab = QtWidgets.QWidget()
+            paths_tab_layout = QtWidgets.QVBoxLayout(paths_tab)
+            paths_tab_layout.addWidget(paths_group)
+            paths_tab_layout.addStretch(1)
+
+            actions_tab = QtWidgets.QWidget()
+            actions_tab_layout = QtWidgets.QVBoxLayout(actions_tab)
+            actions_tab_layout.addWidget(actions_group)
+            actions_tab_layout.addStretch(1)
+
+            workflow_tabs.addTab(status_tab, "Status")
+            workflow_tabs.addTab(paths_tab, "Pfade")
+            workflow_tabs.addTab(actions_tab, "Aktionen")
+
+            left_main_layout.addWidget(workflow_tabs, 1)
 
             left_presets_tab = QtWidgets.QWidget()
             left_presets_layout = QtWidgets.QVBoxLayout(left_presets_tab)
