@@ -8,3 +8,6 @@ PySide6>=6.5
 
 # Schema validation
 jsonschema>=4.0
+
+# Atomic file writes
+atomicwrites>=1.4

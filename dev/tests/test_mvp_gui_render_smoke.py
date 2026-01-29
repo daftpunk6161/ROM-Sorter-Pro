@@ -29,3 +29,25 @@ def test_qt_main_window_render_smoke() -> None:
     window.show()
     app.processEvents()
     window.close()
+
+
+def test_tk_main_window_render_smoke() -> None:
+    if os.environ.get("ROM_SORTER_GUI_RENDER_SMOKE") != "1":
+        pytest.skip("Set ROM_SORTER_GUI_RENDER_SMOKE=1 to enable GUI render smoke test.")
+
+    try:
+        import tkinter as tk
+    except Exception:
+        pytest.skip("Tkinter not available.")
+
+    try:
+        root = tk.Tk()
+    except Exception:
+        pytest.skip("Tk backend not available (likely headless).")
+
+    try:
+        root.withdraw()
+        root.update_idletasks()
+        root.update()
+    finally:
+        root.destroy()

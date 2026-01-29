@@ -34,6 +34,13 @@ from collections import defaultdict
 import queue
 import atexit
 
+try:
+    import structlog
+    STRUCTLOG_AVAILABLE = True
+except Exception:  # pragma: no cover
+    structlog = None
+    STRUCTLOG_AVAILABLE = False
+
 # =====================================================================================================
 # Performance Constants
 # =====================================================================================================
@@ -164,7 +171,6 @@ class SimplePerformanceLogger:
                     self.perf_logger.log_timing(self.op_name, duration)
 
         return SimpleTimer(self, operation_name)
-
     def get_stats(self) -> Dict[str, Any]:
         """Get performance statistics."""
         with self._lock:
@@ -428,6 +434,19 @@ def setup_optimized_logging(
         return value.strip().lower() in ("1", "true", "yes", "on")
 
     use_json = structured_json if structured_json is not None else _env_bool("ROM_SORTER_LOG_JSON")
+    use_structlog = _env_bool("ROM_SORTER_USE_STRUCTLOG")
+
+    if use_structlog and STRUCTLOG_AVAILABLE:
+        structlog.configure(
+            processors=[
+                structlog.processors.add_log_level,
+                structlog.processors.TimeStamper(fmt="iso", utc=True),
+                structlog.processors.JSONRenderer() if use_json else structlog.dev.ConsoleRenderer(),
+            ],
+            wrapper_class=structlog.make_filtering_bound_logger(numeric_level),
+            logger_factory=structlog.stdlib.LoggerFactory(),
+            cache_logger_on_first_use=True,
+        )
 
     # Console Handler
     if enable_console_logging:

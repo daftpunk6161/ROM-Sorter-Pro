@@ -103,6 +103,7 @@ def _build_modern_glass_ops(ctx: LayoutContext) -> object:
 	cards_layout = QtWidgets.QHBoxLayout(cards)
 	cards_layout.setContentsMargins(0, 0, 0, 0)
 	cards_layout.setSpacing(10)
+	cards.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
 
 	def _glass_card(step: str, title: str, subtitle: str, icon_key: str) -> Any:
 		card = QtWidgets.QFrame()
@@ -241,6 +242,7 @@ def _build_beginner_wizard(ctx: LayoutContext) -> object:
 	def _step_card(step: str, title: str, subtitle: str, icon_key: str) -> tuple[Any, Any]:
 		card = QtWidgets.QFrame()
 		card.setObjectName("wizard_card")
+		card.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
 		layout = QtWidgets.QVBoxLayout(card)
 		layout.setContentsMargins(16, 16, 16, 16)
 		layout.setSpacing(8)
@@ -287,12 +289,20 @@ def _build_beginner_wizard(ctx: LayoutContext) -> object:
 	cards_layout.addWidget(card1, 1)
 	cards_layout.addWidget(card2, 1)
 	cards_layout.addWidget(card3, 1)
-	outer.addWidget(cards)
+	cards_scroll = QtWidgets.QScrollArea()
+	cards_scroll.setWidgetResizable(True)
+	cards_scroll.setFrameShape(QtWidgets.QFrame.NoFrame)
+	if QtCore is not None:
+		cards_scroll.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
+		cards_scroll.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+	cards_scroll.setWidget(cards)
+	outer.addWidget(cards_scroll)
 
 	content = QtWidgets.QSplitter()
 	if QtCore is not None:
 		content.setOrientation(QtCore.Qt.Horizontal)
 	nav = QtWidgets.QListWidget()
+	nav.setProperty("ui_base_min_width", 200)
 	nav.setMinimumWidth(200)
 	stack = QtWidgets.QStackedWidget()
 	for name, widget in ctx.pages.items():

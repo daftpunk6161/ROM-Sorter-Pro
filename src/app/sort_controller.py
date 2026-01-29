@@ -25,7 +25,7 @@ from .models import (
 def plan_sort(
     scan_result: ScanResult,
     dest_path: str,
-    config: Optional[Config] = None,
+    config: Optional[Config | dict] = None,
     mode: SortMode = "copy",
     on_conflict: ConflictPolicy = "rename",
     cancel_token: Optional[CancelToken] = None,
@@ -43,7 +43,7 @@ def plan_sort(
 def plan_rebuild(
     scan_result: ScanResult,
     dest_path: str,
-    config: Optional[Config] = None,
+    config: Optional[Config | dict] = None,
     cancel_token: Optional[CancelToken] = None,
 ) -> SortPlan:
     return _plan_rebuild(

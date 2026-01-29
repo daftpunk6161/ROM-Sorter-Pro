@@ -97,6 +97,7 @@ def select_preferred_variants(
 def filter_scan_items(
     items: List[ScanItem],
     *,
+    system_filter: Union[str, Sequence[str]] = "All",
     language_filter: Union[str, Sequence[str]] = "All",
     version_filter: str = "All",
     region_filter: Union[str, Sequence[str]] = "All",
@@ -124,6 +125,7 @@ def filter_scan_items(
         values = {str(v).strip() for v in value if str(v).strip()}
         return values or {"All"}
 
+    system_values = _normalize_filter_values(system_filter)
     lang_values = _normalize_filter_values(language_filter)
     ver = (version_filter or "All").strip() or "All"
     region_values = _normalize_filter_values(region_filter)
@@ -169,9 +171,22 @@ def filter_scan_items(
 
     filtered: List["ScanItem"] = []
     for item in items:
+        system_name = (getattr(item, "detected_system", None) or "Unknown").strip() or "Unknown"
         item_langs = norm_langs(item)
         item_ver = norm_ver(item)
         item_region = norm_region(item)
+
+        if "All" not in system_values:
+            wants_unknown_system = "Unknown" in system_values
+            system_targets = {val for val in system_values if val != "Unknown"}
+            if system_name == "Unknown":
+                if not wants_unknown_system:
+                    continue
+            else:
+                if system_targets and system_name not in system_targets:
+                    continue
+                if not system_targets and wants_unknown_system:
+                    continue
 
         if ext_filters:
             try:

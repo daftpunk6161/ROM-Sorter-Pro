@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib
 import os
 import shutil
 import subprocess  # nosec B404
@@ -11,6 +12,12 @@ from pathlib import Path
 from typing import List, Optional, Protocol, Tuple
 
 logger = logging.getLogger(__name__)
+
+try:
+    _atomic_module = importlib.import_module("atomicwrites")
+    atomic_write = getattr(_atomic_module, "atomic_write", None)
+except Exception:  # pragma: no cover - fallback when dependency missing
+    atomic_write = None
 
 
 class CancelTokenProtocol(Protocol):
@@ -31,45 +38,82 @@ def atomic_copy_with_cancel(
 ) -> bool:
     """Copy src -> dst atomically with cancellation support."""
 
+    class _CopyCancelled(Exception):
+        pass
+
     if _is_cancelled(cancel_token):
         return False
 
     if dst.exists() and not allow_replace:
         raise FileExistsError(str(dst))
 
-    tmp = dst.with_name(dst.name + ".part")
+    if atomic_write is None:
+        tmp = dst.with_name(dst.name + ".part")
+        try:
+            if tmp.exists():
+                try:
+                    tmp.unlink()
+                except Exception:
+                    os.remove(str(tmp))
 
-    try:
-        if tmp.exists():
+            cancelled_midway = False
+
+            with open(src, "rb") as fsrc, open(tmp, "wb") as fdst:
+                while True:
+                    if _is_cancelled(cancel_token):
+                        cancelled_midway = True
+                        break
+
+                    chunk = fsrc.read(buffer_size)
+                    if not chunk:
+                        break
+                    fdst.write(chunk)
+
+                if not cancelled_midway:
+                    try:
+                        fdst.flush()
+                        os.fsync(fdst.fileno())
+                    except Exception as exc:
+                        logger.debug("Flush/fsync failed: %s", exc)
+
+            if cancelled_midway or _is_cancelled(cancel_token):
+                return False
+
+            os.replace(str(tmp), str(dst))
+
             try:
-                tmp.unlink()
-            except Exception:
-                os.remove(str(tmp))
+                shutil.copystat(src, dst, follow_symlinks=True)
+            except Exception as exc:
+                logger.debug("copystat failed: %s", exc)
 
-        cancelled_midway = False
+            return True
+        finally:
+            if tmp.exists():
+                try:
+                    tmp.unlink()
+                except Exception:
+                    try:
+                        os.remove(str(tmp))
+                    except Exception as exc:
+                        logger.debug("Failed to remove temp file: %s", exc)
 
-        with open(src, "rb") as fsrc, open(tmp, "wb") as fdst:
-            while True:
-                if _is_cancelled(cancel_token):
-                    cancelled_midway = True
-                    break
-
-                chunk = fsrc.read(buffer_size)
-                if not chunk:
-                    break
-                fdst.write(chunk)
-
-            if not cancelled_midway:
+    with open(src, "rb") as fsrc:
+        try:
+            with atomic_write(str(dst), mode="wb", overwrite=allow_replace) as fdst:
+                while True:
+                    if _is_cancelled(cancel_token):
+                        raise _CopyCancelled()
+                    chunk = fsrc.read(buffer_size)
+                    if not chunk:
+                        break
+                    fdst.write(chunk)
                 try:
                     fdst.flush()
                     os.fsync(fdst.fileno())
                 except Exception as exc:
                     logger.debug("Flush/fsync failed: %s", exc)
-
-        if cancelled_midway or _is_cancelled(cancel_token):
+        except _CopyCancelled:
             return False
-
-        os.replace(str(tmp), str(dst))
 
         try:
             shutil.copystat(src, dst, follow_symlinks=True)
@@ -77,16 +121,6 @@ def atomic_copy_with_cancel(
             logger.debug("copystat failed: %s", exc)
 
         return True
-
-    finally:
-        if tmp.exists():
-            try:
-                tmp.unlink()
-            except Exception:
-                try:
-                    os.remove(str(tmp))
-                except Exception as exc:
-                    logger.debug("Failed to remove temp file: %s", exc)
 
 
 def run_conversion_with_cancel(

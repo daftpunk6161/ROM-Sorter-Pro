@@ -1,12 +1,11 @@
 {
   "gui_settings": {
+    "default_sort_mode": "move",
     "window_width": 1680,
     "window_height": 980,
     "theme": "Light",
     "drag_drop_enabled": true,
-    "remember_window_size": true,
-    "log_visible": false,
-    "default_sort_mode": "copy"
+    "default_conflict_policy": "overwrite"
   },
   "scanner": {
     "use_high_performance": true,
@@ -47,14 +46,11 @@
     "sorting": {
       "console_sorting_enabled": true,
       "create_console_folders": true,
-      "region_based_sorting": true,
-      "preserve_folder_structure": true
+      "region_based_sorting": false,
+      "preserve_folder_structure": false
     }
   },
   "dats": {
-    "auto_build": true,
-    "import_paths": [
-      "C:/DATs"
-    ]
+    "auto_build": true
   }
 }

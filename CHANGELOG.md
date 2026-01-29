@@ -13,6 +13,9 @@ und dieses Projekt verwendet [Semantic Versioning](https://semver.org/lang/de/).
 - Optionales Pydantic-Config-Model + Validation (Env-Flag gesteuert).
 - Sphinx API-Doku-Grundgerüst (docs/api).
 - Fixture-Export-Skript und echte DAT/ROM Fixtures für Regression-Tests.
+- Neue GUI-Themes: Clean Slate, Midnight Pro, Retro Console.
+- Doku: User Manual, API Reference, Developer Guide.
+- Tests: E2E Scan→Plan→Execute, Performance-Benchmark, Memory-Leak- und Security-Fuzz-Smoke.
 
 ### Changed
 - Docs aktualisiert: Feature Catalog, DAT Import & Index, Identification Strategy, Test Strategy.
@@ -22,6 +25,15 @@ und dieses Projekt verwendet [Semantic Versioning](https://semver.org/lang/de/).
 - Optional-Import-Logging (Qt/Tk) + Legacy-Qt-Module als stubs (ohne Qt-Import).
 - CI: Smoke-Liste erweitert, Docs/Security Jobs ergänzt, workflow_dispatch aktiviert.
 - requirements-full.txt ergänzt um optionales pydantic.
+- GUI: Tabs auf 5 reduziert (Home/Sortieren/Konvertieren/Einstellungen/Reports), Header/Statusbar verschlankt.
+- GUI: Filter-Sidebar rechts, Reports-Tab mit Exporten und Report-Summary.
+- IGIR in Konvertieren integriert inkl. Statuszeile/Probe-Button und Version-Anzeige.
+- GUI: Tastenkürzel für Scan (Ctrl+S), Preview (Ctrl+P), Execute (Ctrl+E).
+- Theme: Auto/System-Theme nutzt OS-Erkennung (Light/Dark).
+- Execute: atomare Dateischreibvorgänge via atomicwrites (Copy-Helper).
+- GUI: Konsolen/System-Filter in der Filter-Sidebar.
+- GUI: Favoriten für Source/Ziel-Pfade im Home-Tab.
+- GUI: Multi-Drag&Drop nutzt gemeinsamen Stammordner.
 
 ### Fixed
 - Symlink-Zielpfade werden im Plan frühzeitig abgewiesen.

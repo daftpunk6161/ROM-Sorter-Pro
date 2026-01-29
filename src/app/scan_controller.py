@@ -12,7 +12,7 @@ from ..config import Config
 
 def run_scan(
     source_path: str,
-    config: Optional[Config] = None,
+    config: Optional[Config | dict] = None,
     progress_cb: Optional[ProgressCallback] = None,
     log_cb: Optional[LogCallback] = None,
     cancel_token: Optional[CancelToken] = None,

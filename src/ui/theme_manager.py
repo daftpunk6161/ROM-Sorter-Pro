@@ -224,9 +224,20 @@ class Theme:
             'use_system_defaults': self.use_system_defaults
         }
 
-    def generate_qt_stylesheet(self) -> str:
+    def generate_qt_stylesheet(self, scale: float = 1.0) -> str:
         """Generates A Qt Stylesheet from the theme. Return: Qt Stylesheet as a String"""
         colors = self.colors
+        try:
+            scale_value = float(scale or 1.0)
+        except Exception:
+            scale_value = 1.0
+        if scale_value <= 0:
+            scale_value = 1.0
+        scale_value = max(0.8, min(scale_value, 1.2))
+        font_size = max(8, int(round(self.font_size * scale_value)))
+        border_radius = max(2, int(round(self.border_radius * scale_value)))
+        spacing = max(4, int(round(self.spacing * scale_value)))
+        min_btn_width = max(60, int(round(80 * scale_value)))
 
         return f"""
         /* Hauptfenster */
@@ -234,7 +245,7 @@ class Theme:
             background-color: {colors.background};
             color: {colors.text};
             font-family: {self.font_family};
-            font-size: {self.font_size}pt;
+            font-size: {font_size}pt;
         }}
 
         /* Menüs und Menüleisten */
@@ -254,9 +265,9 @@ class Theme:
             background-color: {colors.primary};
             color: {'white' if self.type == ThemeType.DARK else 'white'};
             border: none;
-            border-radius: {self.border_radius}px;
-            padding: {self.spacing}px;
-            min-width: 80px;
+            border-radius: {border_radius}px;
+            padding: {spacing}px;
+            min-width: {min_btn_width}px;
         }}
 
         QPushButton:hover {{
@@ -908,6 +919,55 @@ class ThemeManager:
             )
         )
 
+        clean_slate_theme = Theme(
+            name="Clean Slate",
+            type=ThemeType.LIGHT,
+            colors=ColorScheme(
+                primary="#4A6CF7",
+                secondary="#4A6CF7",
+                background="#FAFBFC",
+                text="#1A1A2E",
+                accent="#4A6CF7",
+                error="#DC3545",
+                warning="#FFC107",
+                success="#28A745",
+                border="#E1E4E8"
+            )
+        )
+
+        midnight_pro_theme = Theme(
+            name="Midnight Pro",
+            type=ThemeType.DARK,
+            colors=ColorScheme(
+                primary="#58A6FF",
+                secondary="#58A6FF",
+                background="#0D1117",
+                text="#C9D1D9",
+                accent="#58A6FF",
+                error="#F85149",
+                warning="#D29922",
+                success="#3FB950",
+                border="#30363D"
+            )
+        )
+
+        retro_console_theme = Theme(
+            name="Retro Console",
+            type=ThemeType.DARK,
+            colors=ColorScheme(
+                primary="#FF6B97",
+                secondary="#FF6B97",
+                background="#2C2137",
+                text="#F0E7D5",
+                accent="#FF6B97",
+                error="#EF476F",
+                warning="#FFD166",
+                success="#95D17E",
+                border="#5A4668"
+            ),
+            border_radius=12
+        )
+
         # Add the Standarddthemes
         self.themes["Light"] = light_theme
         self.themes["Dark"] = dark_theme
@@ -919,6 +979,9 @@ class ThemeManager:
         self.themes["Neo Dark"] = neo_dark_theme
         self.themes["Nord Frost"] = nord_frost_theme
         self.themes["Solar Light"] = solar_light_theme
+        self.themes["Clean Slate"] = clean_slate_theme
+        self.themes["Midnight Pro"] = midnight_pro_theme
+        self.themes["Retro Console"] = retro_console_theme
 
         # Set the standard.
         if self._detect_system_theme() == ThemeType.DARK:
@@ -1106,6 +1169,10 @@ class ThemeManager:
 
         # Fallback: Helles Theme
         return ThemeType.LIGHT
+
+    def get_system_theme_name(self) -> str:
+        """Return the theme name matching the current system appearance."""
+        return "Dark" if self._detect_system_theme() == ThemeType.DARK else "Light"
 
     def get_theme_names(self) -> List[str]:
         """Gives Back a List of All Available Theme Names. Return: List of Theme Names"""

@@ -27,6 +27,12 @@ pip install -r requirements-gui.txt
 
 Details: [docs/MVP_DOCS.md](docs/MVP_DOCS.md)
 
+## 🧩 Legacy/Optional UI-Assets
+
+- Der Ordner [src/ui/qt/](src/ui/qt/) enthält optionale Qt-Assets (Layouts/Themes/Shell).
+- Diese Imports sind **guarded** (optional) und dürfen den GUI-Start nicht crashen.
+- Entfernen nur, wenn die zugehörigen optionalen Imports in [src/ui/mvp/qt_app.py](src/ui/mvp/qt_app.py) ebenfalls entfernt werden.
+
 ## 🤝 Contributing / Help
 - [CONTRIBUTING.md](CONTRIBUTING.md)
 - [TROUBLESHOOTING.md](TROUBLESHOOTING.md)

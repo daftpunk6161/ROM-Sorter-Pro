@@ -121,7 +121,7 @@ from .sorting_helpers import (
 
 def run_scan(
     source_path: str,
-    config: Optional[Config] = None,
+    config: Optional[Config | Dict[str, Any]] = None,
     progress_cb: Optional[ProgressCallback] = None,
     log_cb: Optional[LogCallback] = None,
     cancel_token: Optional[CancelToken] = None,
@@ -344,7 +344,7 @@ def identify(
 def plan_sort(
     scan_result: ScanResult,
     dest_path: str,
-    config: Optional[Config] = None,
+    config: Optional[Config | Dict[str, Any]] = None,
     mode: SortMode = "copy",
     on_conflict: ConflictPolicy = "rename",
     cancel_token: Optional[CancelToken] = None,
@@ -634,7 +634,7 @@ def plan_sort(
 def plan_rebuild(
     scan_result: ScanResult,
     dest_path: str,
-    config: Optional[Config] = None,
+    config: Optional[Config | Dict[str, Any]] = None,
     cancel_token: Optional[CancelToken] = None,
 ) -> SortPlan:
     """Create a copy-only rebuild plan (skip conflicts, no destructive moves)."""

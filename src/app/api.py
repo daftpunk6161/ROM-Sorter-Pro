@@ -16,6 +16,7 @@ from .conversion_controller import (
     normalize_input,
     plan_normalization,
 )
+from .async_api import async_execute_sort, async_plan_sort, async_run_scan
 from .dat_sources_controller import DatSourceReport
 from .models import (
     ActionStatusCallback,
@@ -72,4 +73,7 @@ __all__ = [
     "run_scan",
     "save_dat_sources",
     "execute_normalization",
+    "async_run_scan",
+    "async_plan_sort",
+    "async_execute_sort",
 ]
