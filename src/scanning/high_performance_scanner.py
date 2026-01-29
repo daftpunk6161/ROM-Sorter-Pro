@@ -637,21 +637,22 @@ class HighPerformanceScanner:
                         runner_conflict_groups = set(runner_up.get("conflict_groups") or []) if runner_up else set()
                         shared_conflict = conflict_groups.intersection(runner_conflict_groups)
 
-                        if runner_up and shared_conflict and top_score >= min_top_score and runner_score >= min_top_score:
-                            rom_system = "Unknown"
-                            confidence = 0.0
-                            detection_source = "conflict-group"
-                        elif runner_up and top_score >= min_top_score and delta < min_score_delta:
-                            rom_system = "Unknown"
-                            confidence = 0.0
-                            detection_source = "ambiguous-candidates"
-                        else:
-                            norm_system = re.sub(r"[^a-z0-9]+", "", str(rom_system or "").lower())
-                            norm_top = re.sub(r"[^a-z0-9]+", "", str(top.get("platform_id") or "").lower())
-                            if top_score >= contradiction_min_score and norm_system and norm_top and norm_system != norm_top:
+                        if detection_source != "extension-unique":
+                            if runner_up and shared_conflict and top_score >= min_top_score and runner_score >= min_top_score:
                                 rom_system = "Unknown"
                                 confidence = 0.0
-                                detection_source = "contradiction-candidates"
+                                detection_source = "conflict-group"
+                            elif runner_up and top_score >= min_top_score and delta < min_score_delta:
+                                rom_system = "Unknown"
+                                confidence = 0.0
+                                detection_source = "ambiguous-candidates"
+                            else:
+                                norm_system = re.sub(r"[^a-z0-9]+", "", str(rom_system or "").lower())
+                                norm_top = re.sub(r"[^a-z0-9]+", "", str(top.get("platform_id") or "").lower())
+                                if top_score >= contradiction_min_score and norm_system and norm_top and norm_system != norm_top:
+                                    rom_system = "Unknown"
+                                    confidence = 0.0
+                                    detection_source = "contradiction-candidates"
 
 # Creates the ROM information object
             rom_info = {
@@ -968,7 +969,7 @@ class HighPerformanceScanner:
             if ext in getattr(meta, 'extensions', set())
         ]
         if len(candidates) == 1:
-            return candidates[0], 0.90, 'extension-unique'
+            return candidates[0], 1.0, 'extension-unique'
 
         # 2) Centralized detector (handler + console detector) with strict threshold
         try:
