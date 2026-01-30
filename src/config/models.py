@@ -9,7 +9,11 @@ try:
     _CONFIG_DICT_AVAILABLE = True
 except Exception:  # pragma: no cover
     BaseModel = object  # type: ignore
-    Field = lambda default=None, **kwargs: default  # type: ignore
+
+    def Field(default=None, **kwargs):  # type: ignore  # noqa: N802
+        """Fallback Field function when pydantic is not available."""
+        return default
+
     ConfigDict = None  # type: ignore
     _CONFIG_DICT_AVAILABLE = False
 

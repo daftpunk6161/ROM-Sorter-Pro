@@ -1,69 +1,137 @@
 {
-  "version": 1,
-  "repo": "daftpunk6161/Code",
+  "repo": "daftpunk6161/ROM-Sorter-Pro",
+  "project_title": "ROM-Sorter-Pro Roadmap",
+  "milestones": [
+    "Baseline-Quality",
+    "Detection-Accuracy",
+    "IGIR-Power-Flow",
+    "Normalization-v1",
+    "GUI-JobSystem",
+    "Performance-Scale",
+    "Integrations"
+  ],
+  "labels": [
+    "type:epic",
+    "priority:P0",
+    "priority:P1",
+    "priority:P2",
+    "area:detection",
+    "area:conversion",
+    "area:igir",
+    "area:gui",
+    "area:tests",
+    "area:ci",
+    "area:security",
+    "area:perf",
+    "area:integration",
+    "area:docs",
+    "area:db"
+  ],
+  "project_fields": {
+    "Priority": ["P0", "P1", "P2"],
+    "Area": [
+      "detection",
+      "conversion",
+      "igir",
+      "gui",
+      "tests",
+      "ci",
+      "security",
+      "perf",
+      "integration",
+      "docs",
+      "db"
+    ],
+    "Status": ["Todo", "In Progress", "Done"]
+  },
   "epics": [
     {
-      "key": "E1",
-      "title": "EPIC: Baseline Tooling + CI Gates (ruff/pytest/coverage)",
-      "labels": ["priority:P0", "area:ci", "area:tests", "type:chore"],
-      "milestone": "CI-Hardening",
-      "body": "## Context\n- Files: docs/BASELINE.md, docs/TEST_STRATEGY.md, ruff.toml, pytest.ini\n\n## Problem\nBaseline quality gates are not enforced consistently; CI coverage and ruff gates are missing.\n\n## Acceptance Criteria\n- [ ] Ruff gate configured and documented\n- [ ] Pytest smoke suite runs in CI\n- [ ] Coverage thresholds defined and enforced\n- [ ] Local run commands documented\n\n## Subtasks\n- [ ] Add CI workflow for ruff + pytest + coverage\n- [ ] Add coverage config and thresholds\n- [ ] Document local quality gates\n- [ ] Add mutation-proof notes to test strategy\n\n## Test Plan\n- [ ] Run ruff check\n- [ ] Run pytest smoke suite\n\n## Risks / Notes\n- CI changes can fail on missing dependencies; guard optional deps"
+      "id": "E1",
+      "status": "Done",
+      "title": "Baseline-Quality: crash-freier GUI-Start, Cancel-Sicherheit, Error UX",
+      "labels": ["type:epic", "priority:P0", "area:gui"],
+      "milestone": "Baseline-Quality",
+      "body": "## Context\nGUI muss deterministisch starten (Qt-first, Tk fallback) und im Fehlerfall stabil bleiben.\n\n## Problem\nFehler-Handling und Cancel sind verteilt und nicht überall konsistent.\n\n## Acceptance Criteria\n- [ ] GUI startet stabil in Qt und Tk\n- [ ] Cancel beendet Jobs ohne Hänger\n- [ ] Exceptions zeigen Dialog + Log\n\n## Subtasks\n- [ ] Worker-Error-Bridge vereinheitlichen\n- [ ] CancelToken überall durchreichen\n- [ ] GUI Smoke-Check für beide Backends\n\n## Test Plan\n- [ ] `dev/tests/test_mvp_backend_selection.py`\n- [ ] `dev/tests/test_mvp_execute_cancel.py`\n\n## Docs updates\n- [ ] [docs/TROUBLESHOOTING.md](../docs/TROUBLESHOOTING.md)\n\n## Changelog note\n- [ ] 1 Bullet unter Unreleased"
     },
     {
-      "key": "E2",
-      "title": "EPIC: Controller Boundary (UI ↔ Core) + stable APIs",
-      "labels": ["priority:P0", "area:gui", "area:scanner", "area:tests", "type:refactor"],
-      "milestone": "MVP-GUI",
-      "body": "## Context\n- Files: src/app/controller.py, src/ui/mvp/qt_app.py, src/ui/mvp/tk_app.py, src/core/scan_service.py\n\n## Problem\nUI still touches low-level modules and risks optional dependency crashes or inconsistent behavior.\n\n## Acceptance Criteria\n- [ ] UI uses only controller APIs\n- [ ] Controller surface documented and stable\n- [ ] No direct UI imports from detectors/scanners\n\n## Subtasks\n- [ ] Audit UI imports and remove low-level usage\n- [ ] Add controller interface tests\n- [ ] Stabilize DTOs between layers\n\n## Test Plan\n- [ ] UI smoke test (scan → preview → execute)\n- [ ] Controller unit tests\n\n## Risks / Notes\n- Refactor may break legacy workflows"
+      "id": "E2",
+      "status": "Done",
+      "title": "Security Gates: Pfadvalidierung, Dry-run Invariant, Safety Diff",
+      "labels": ["type:epic", "priority:P0", "area:security"],
+      "milestone": "Baseline-Quality",
+      "body": "## Context\nDry-run darf keine Writes oder externen Tools ausführen.\n\n## Problem\nSafety-Gates müssen überall eindeutig greifen (Sort, Convert, IGIR).\n\n## Acceptance Criteria\n- [ ] Dry-run invariant enforced\n- [ ] Pfad-Validation für alle Writes\n- [ ] Safety Diff verpflichtend vor Execute\n\n## Subtasks\n- [ ] Zentrale IO-Guard im Controller\n- [ ] Diff-Renderer (CSV/JSON)\n- [ ] Tests für Dry-run/IGIR Gate\n\n## Test Plan\n- [ ] `dev/tests/test_mvp_security_paths.py`\n\n## Docs updates\n- [ ] [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md)\n\n## Changelog note\n- [ ] 1 Bullet unter Unreleased"
     },
     {
-      "key": "E3",
-      "title": "EPIC: Platform Catalog + Format Matrix (YAML + schema + loader + validation)",
-      "labels": ["priority:P1", "area:detection", "area:config", "area:tests", "type:feature"],
+      "id": "E3",
+      "status": "Done",
+      "title": "DAT Source Manager + Integrity + Analytics",
+      "labels": ["type:epic", "priority:P0", "area:detection"],
       "milestone": "Detection-Accuracy",
-      "body": "## Context\n- Files: src/core/platform_heuristics.py, src/platforms/*, src/config/platform_catalog.json\n\n## Problem\nPlatform definitions are split and partially validated, leading to inconsistent detection and false positives.\n\n## Acceptance Criteria\n- [ ] Catalog schema validation enforced\n- [ ] YAML + JSON fallback supported\n- [ ] UNKNOWN > wrong policy enforced\n\n## Subtasks\n- [ ] Consolidate catalog sources\n- [ ] Add schema validation tests\n- [ ] Add negative detection tests (mixed content, weak signals)\n\n## Test Plan\n- [ ] Catalog validation tests\n- [ ] Unknown detection tests\n\n## Risks / Notes\n- Tightening rules may reduce detection coverage initially"
+      "body": "## Context\nDAT/Hash-first ist Kern des Produkts.\n\n## Problem\nDAT-Quellen sind schwer zu verwalten und zu validieren.\n\n## Acceptance Criteria\n- [ ] DAT-Profile/Quellen verwaltbar\n- [ ] Integritätscheck + inkrementeller Rebuild\n- [ ] Analytics: Coverage/Counts\n\n## Subtasks\n- [ ] Dat-Source Manager UI + Config\n- [ ] Incremental Index Rebuild\n- [ ] Coverage Report\n\n## Test Plan\n- [ ] `dev/tests/test_mvp_dat_index.py`\n\n## Docs updates\n- [ ] [docs/DAT_IMPORT_AND_INDEX.md](../docs/DAT_IMPORT_AND_INDEX.md)\n\n## Changelog note\n- [ ] 1 Bullet unter Unreleased"
     },
     {
-      "key": "E4",
-      "title": "EPIC: Detection Pipeline Hardening (Exact+Heuristic+UNKNOWN rules) + tests",
-      "labels": ["priority:P0", "area:detection", "area:tests", "type:feature"],
+      "id": "E4",
+      "status": "Done",
+      "title": "Unknown-Reduktion: Why Unknown + lokale Mapping-Regeln",
+      "labels": ["type:epic", "priority:P1", "area:detection"],
       "milestone": "Detection-Accuracy",
-      "body": "## Context\n- Files: src/detectors/*, src/core/platform_heuristics.py\n\n## Problem\nMultiple detection paths can return low-confidence non-Unknown results, violating UNKNOWN-first policy.\n\n## Acceptance Criteria\n- [ ] Deterministic candidate ranking\n- [ ] Low confidence results stay Unknown\n- [ ] Archive detection uses safe-path checks\n\n## Subtasks\n- [ ] Define unified confidence thresholds\n- [ ] Add archive safety tests\n- [ ] Remove legacy detector entrypoints from critical path\n\n## Test Plan\n- [ ] Known extension detection tests\n- [ ] Mixed content unknown tests\n\n## Risks / Notes\n- Changes may impact legacy expectations"
+      "body": "## Context\nUNKNOWN ist korrekt, aber Nutzer braucht Erklärung + Korrekturoptionen.\n\n## Problem\nFehlende Transparenz erschwert manuelle Korrektur.\n\n## Acceptance Criteria\n- [ ] UI zeigt \"Why Unknown\" Gründe\n- [ ] Vorschläge + Mapping Overrides\n- [ ] Overrides lokal, versionierbar\n\n## Subtasks\n- [ ] Signal/Reason Modell erweitern\n- [ ] Mapping-Overrides (YAML/JSON)\n- [ ] UI Panel für Details\n\n## Test Plan\n- [ ] `dev/tests/test_mvp_identify_rules.py`\n\n## Docs updates\n- [ ] [docs/IDENTIFICATION_STRATEGY.md](../docs/IDENTIFICATION_STRATEGY.md)\n\n## Changelog note\n- [ ] 1 Bullet unter Unreleased"
     },
     {
-      "key": "E5",
-      "title": "EPIC: Normalization/Conversion Engine (kinds, manifests, plans, runner) + tests",
-      "labels": ["priority:P1", "area:conversion", "area:tests", "type:feature"],
+      "id": "E5",
+      "status": "Done",
+      "title": "Normalization v1: Plattform-Registry + Track/Folder Validatoren",
+      "labels": ["type:epic", "priority:P1", "area:conversion"],
       "milestone": "Normalization-v1",
-      "body": "## Context\n- Files: src/core/normalization.py, src/conversion/*, src/utils/external_tools.py\n\n## Problem\nConversion rules are fragmented and not validated; dry-run safety needs enforcement.\n\n## Acceptance Criteria\n- [ ] Single source of truth for converter rules\n- [ ] args_template enforced (no guessed flags)\n- [ ] Dry-run never runs tools or writes files\n\n## Subtasks\n- [ ] Add converter schema validation\n- [ ] Add fake converter tool for tests\n- [ ] Ensure temp dirs are safe and cleaned\n\n## Test Plan\n- [ ] Normalization plan tests\n- [ ] Dry-run no subprocess tests\n\n## Risks / Notes\n- Tool behavior differences across OS"
+      "body": "## Context\nNormalisierung braucht klare Plattformregeln und Validierung.\n\n## Problem\nFehlende Validatoren führen zu inkonsistenten Outputs.\n\n## Acceptance Criteria\n- [ ] Plattform-Formate als Registry\n- [ ] Track-Set Checks (cue/gdi)\n- [ ] Folder-Set Checks (PS3 etc.)\n\n## Subtasks\n- [ ] `platform_formats.yaml` erweitern\n- [ ] Validatoren + Fehlermeldungen\n- [ ] UI Preview Hinweise\n\n## Test Plan\n- [ ] `dev/tests/test_mvp_format_validation.py`\n\n## Docs updates\n- [ ] [docs/FEATURE_CATALOG.md](../docs/FEATURE_CATALOG.md)\n\n## Changelog note\n- [ ] 1 Bullet unter Unreleased"
     },
     {
-      "key": "E6",
-      "title": "EPIC: Sorting Safety (plan/preview/execute, collision policy, security gates) + tests",
-      "labels": ["priority:P0", "area:security", "area:scanner", "area:tests", "type:feature"],
-      "milestone": "MVP-GUI",
-      "body": "## Context\n- Files: src/app/controller.py, src/security/security_utils.py\n\n## Problem\nSafety checks exist but are inconsistent across modules and need stronger negative testing.\n\n## Acceptance Criteria\n- [ ] Dest-root containment enforced for all writes\n- [ ] Symlink and traversal blocked\n- [ ] Collision handling deterministic\n\n## Subtasks\n- [ ] Extend security tests for traversal and symlinks\n- [ ] Verify collision handling tests\n- [ ] Validate safe temp file handling\n\n## Test Plan\n- [ ] Security path tests\n- [ ] Execute cancel tests\n\n## Risks / Notes\n- Some existing paths may be rejected unexpectedly"
+      "id": "E6",
+      "status": "Done",
+      "title": "Per-Plattform Output Targets & Conversion Runner",
+      "labels": ["type:epic", "priority:P1", "area:conversion"],
+      "milestone": "Normalization-v1",
+      "body": "## Context\nZiel-Formate (CHD/RVZ/NSZ) sind plattformabhängig.\n\n## Problem\nHeute existieren Regeln, aber kein konsistentes Zielprofil.\n\n## Acceptance Criteria\n- [ ] Zielprofile pro Plattform\n- [ ] Runner respektiert Dry-run & Cancel\n- [ ] Ergebnis-Report pro Datei\n\n## Subtasks\n- [ ] Output-Profile in Config\n- [ ] Runner-Report Modell\n- [ ] UI Summary View\n\n## Test Plan\n- [ ] `dev/tests/test_mvp_conversion_runner.py`\n\n## Docs updates\n- [ ] [docs/CONFIG_REFERENCE.md](../docs/CONFIG_REFERENCE.md)\n\n## Changelog note\n- [ ] 1 Bullet unter Unreleased"
     },
     {
-      "key": "E7",
-      "title": "EPIC: GUI Stability (threading, progress, cancel, error reporting) + smoke tests",
-      "labels": ["priority:P0", "area:gui", "area:tests", "type:feature"],
-      "milestone": "MVP-GUI",
-      "body": "## Context\n- Files: src/ui/mvp/qt_app.py, src/ui/mvp/tk_app.py, src/ui/compat.py\n\n## Problem\nSome UI actions still execute IO on the UI thread; cancel and error reporting are uneven across flows.\n\n## Acceptance Criteria\n- [ ] No UI blocking during scan/plan/execute\n- [ ] Cancel stops within 250ms\n- [ ] Worker exceptions show dialog + log\n\n## Subtasks\n- [ ] Move IO-heavy operations to workers\n- [ ] Add GUI smoke tests for cancel\n- [ ] Add progress throttling tests\n\n## Test Plan\n- [ ] UI worker tests (headless)\n\n## Risks / Notes\n- Threading refactor can introduce race conditions"
+      "id": "E7",
+      "status": "Done",
+      "title": "IGIR Power-Flow: Plan/Diff/Execute + Profile + Rollback",
+      "labels": ["type:epic", "priority:P1", "area:igir"],
+      "milestone": "IGIR-Power-Flow",
+      "body": "## Context\nIGIR darf nur explizit und mit Safety Diff ausgeführt werden.\n\n## Problem\nPlan/Execute Flows sind nicht vollständig gated.\n\n## Acceptance Criteria\n- [ ] Plan erzeugt diff + Export (CSV/JSON)\n- [ ] Execute nur nach bestätigt gezeigtem Diff\n- [ ] Profile je Plattform/Kategorie\n\n## Subtasks\n- [ ] IGIR args_template Profile\n- [ ] Diff/Export UI\n- [ ] Rollback-Strategie (copy-first)\n\n## Test Plan\n- [ ] `dev/tests/test_mvp_igir_gates.py`\n\n## Docs updates\n- [ ] [docs/FEATURE_CATALOG.md](../docs/FEATURE_CATALOG.md)\n\n## Changelog note\n- [ ] 1 Bullet unter Unreleased"
     },
     {
-      "key": "E8",
-      "title": "EPIC: Duplicate/Redundancy Removal (scanner/ui variants, backups cleanup) + migration plan",
-      "labels": ["priority:P2", "area:cleanup", "type:refactor"],
-      "milestone": "Cleanup-Refactor",
-      "body": "## Context\n- Files: src/scanning/*, _archive/*, src/ui/*\n\n## Problem\nDeprecated modules remain in repo and import graph, increasing risk and maintenance burden.\n\n## Acceptance Criteria\n- [ ] Deprecated scanners isolated or removed from active imports\n- [ ] Legacy UI separated from MVP UI\n- [ ] Migration plan documented\n\n## Subtasks\n- [ ] Inventory deprecated modules\n- [ ] Remove from active import graph\n- [ ] Write migration plan\n\n## Test Plan\n- [ ] Import graph smoke tests\n\n## Risks / Notes\n- Removing legacy code may break hidden dependencies"
+      "id": "E8",
+      "status": "Done",
+      "title": "GUI Job-System: Queue, Pause/Resume, Live-Log Filter",
+      "labels": ["type:epic", "priority:P1", "area:gui"],
+      "milestone": "GUI-JobSystem",
+      "body": "## Context\nMehrere Tasks müssen planbar und kontrollierbar laufen.\n\n## Problem\nAktuell keine zentrale Job-Queue und kein Pause/Resume.\n\n## Acceptance Criteria\n- [ ] Queue mit Priorität\n- [ ] Pause/Resume/Cancel\n- [ ] Log-Filter & Suche\n\n## Subtasks\n- [ ] Job-Queue Controller\n- [ ] GUI Panels (Qt/Tk minimal)\n- [ ] Live-Log Filter\n\n## Test Plan\n- [ ] `dev/tests/test_mvp_progress_batching.py`\n\n## Docs updates\n- [ ] [docs/ROADMAP.md](../docs/ROADMAP.md)\n\n## Changelog note\n- [ ] 1 Bullet unter Unreleased"
     },
     {
-      "key": "E9",
-      "title": "EPIC: Documentation polish + troubleshooting + contributor guide",
-      "labels": ["priority:P2", "area:docs", "type:chore"],
-      "milestone": "Cleanup-Refactor",
-      "body": "## Context\n- Files: docs/*, README.md\n\n## Problem\nDocs are fragmented and lack contributor and troubleshooting guidance.\n\n## Acceptance Criteria\n- [ ] Contributor guide added\n- [ ] Troubleshooting guide added\n- [ ] README updated with baseline run commands\n\n## Subtasks\n- [ ] Add CONTRIBUTING.md\n- [ ] Add TROUBLESHOOTING.md\n- [ ] Update README.md\n\n## Test Plan\n- [ ] Docs link check\n\n## Risks / Notes\n- None"
+      "id": "E9",
+      "status": "Done",
+      "title": "Performance-Scale: Hash-Cache, IO-Throttling, SQLite-Tuning",
+      "labels": ["type:epic", "priority:P2", "area:perf"],
+      "milestone": "Performance-Scale",
+      "body": "## Context\nGroße ROM-Bibliotheken benötigen Skalierung.\n\n## Problem\nHashing/Indexing kann IO-bound und langsam sein.\n\n## Acceptance Criteria\n- [ ] Hash-Cache (path+mtime+size)\n- [ ] IO-aware Throttling\n- [ ] SQLite PRAGMA defaults dokumentiert\n\n## Subtasks\n- [ ] Cache Layer\n- [ ] Throttled Worker Pool\n- [ ] Bench-Scripts\n\n## Test Plan\n- [ ] `dev/tests/test_mvp_progress_batching.py`\n\n## Docs updates\n- [ ] [docs/TEST_STRATEGY.md](../docs/TEST_STRATEGY.md)\n\n## Changelog note\n- [ ] 1 Bullet unter Unreleased"
+    },
+    {
+      "id": "E10",
+      "status": "Done",
+      "title": "Integrations: Rebuilder-Mode + Frontend-Exports",
+      "labels": ["type:epic", "priority:P2", "area:integration"],
+      "milestone": "Integrations",
+      "body": "## Context\nExporte/Integrationen erhöhen Nutzwert, sind aber optional.\n\n## Problem\nKeine standardisierten Exporte/Mapping.\n\n## Acceptance Criteria\n- [ ] Rebuilder-Mode (copy-only)\n- [ ] Exports (EmulationStation/LaunchBox)\n- [ ] Mapping-Templates dokumentiert\n\n## Subtasks\n- [ ] Exporter Pipeline\n- [ ] Mapping-Schema\n- [ ] GUI Export Dialog\n\n## Test Plan\n- [ ] Golden fixtures für Export\n\n## Docs updates\n- [ ] [docs/FEATURE_CATALOG.md](../docs/FEATURE_CATALOG.md)\n\n## Changelog note\n- [ ] 1 Bullet unter Unreleased"
+    },
+    {
+      "id": "E11",
+      "status": "Done",
+      "title": "Quality & Regression Suite: Golden Fixtures, CI Gates, Structured Logs",
+      "labels": ["type:epic", "priority:P1", "area:tests"],
+      "milestone": "Baseline-Quality",
+      "body": "## Context\nQualität muss mutation-resistent werden.\n\n## Problem\nTests decken nicht alle regressionskritischen Pfade.\n\n## Acceptance Criteria\n- [ ] Golden Fixtures (Scan/Identify/Plan)\n- [ ] Coverage Gate für Kernmodule\n- [ ] Strukturierte Logs optional (JSON)\n\n## Subtasks\n- [ ] Fixture Library\n- [ ] CI Pipeline Update\n- [ ] Log Formatter\n\n## Test Plan\n- [ ] `dev/tests/test_mvp_no_legacy_imports.py`\n\n## Docs updates\n- [ ] [docs/TEST_STRATEGY.md](../docs/TEST_STRATEGY.md)\n\n## Changelog note\n- [ ] 1 Bullet unter Unreleased"
     }
   ]
 }

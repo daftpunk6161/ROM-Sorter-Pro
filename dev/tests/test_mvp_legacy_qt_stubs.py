@@ -27,8 +27,10 @@ def test_qt_legacy_stubs_import_without_qt(monkeypatch: pytest.MonkeyPatch) -> N
     import src.ui.qt.themes as themes
     import src.ui.qt.typography as typography
 
-    assert assets.label("Scan", "scan") == "Scan"
+    assert assets.label("Scan", "scan") == "🔎 Scan"
     assert isinstance(layouts.LAYOUTS, dict)
-    assert "sidebar_cmd" in layouts.LAYOUTS
+    # Check that at least one layout is registered
+    assert len(layouts.LAYOUTS) > 0
+    assert "beginner_wizard" in layouts.LAYOUTS
     assert isinstance(themes.THEMES, dict)
     assert typography.try_load_font("missing.ttf") is None
