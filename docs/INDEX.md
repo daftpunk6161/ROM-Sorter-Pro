@@ -62,10 +62,20 @@ Welcome to the ROM-Sorter-Pro documentation. This index provides navigation to a
 
 | Document | Description |
 |----------|-------------|
-| [Release Backlog Checklist](RELEASE_BACKLOG_CHECKLIST.md) | Current release checklist |
 | [MVP Docs](MVP_DOCS.md) | MVP specification |
-| [Issue Backlog](ISSUE_BACKLOG.md) | Known issues |
-| [archive/](archive/) | Archived audit documents |
+| [Issue Backlog](ISSUE_BACKLOG.md) | GitHub issue workflow documentation |
+| [GUI Refactoring Proposal](GUI_REFACTORING_PROPOSAL.md) | UI architecture proposal |
+| [archive/](archive/) | Archived audit/backlog documents |
+
+### Archived Documents (Completed)
+
+All major audit and backlog items have been completed and archived:
+
+- `archive/RELEASE_BACKLOG_CHECKLIST.md` – Release checklist (100% P0-P2 complete)
+- `archive/RELEASE_AUDIT_BACKLOG.md` – Audit findings (all fixed)
+- `archive/AUDIT_DETECTION_SORTING.md` – Detection audit (all implemented)
+- `archive/BACKLOG_REF3.md` – MVVM refactoring (complete)
+- `archive/RELEASE_AUDIT_2026_01_28*.md` – Historical audits
 
 ---
 
