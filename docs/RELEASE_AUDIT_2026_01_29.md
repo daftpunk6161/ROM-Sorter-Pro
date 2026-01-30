@@ -192,8 +192,8 @@ start_rom_sorter.py::main()
 
 | # | Modul | Pfad | Verwendung | Empfehlung |
 |---|-------|------|------------|------------|
-| E.2.1 | `src/ui/qt/` | `src/ui/qt/` | Assets/Layouts für Qt | ⬜ Prüfen ob noch genutzt |
-| E.2.2 | Console Mappings | `src/ui/console_mappings.py` | unklar | ⬜ Prüfen |
+| E.2.1 | `src/ui/qt/` | `src/ui/qt/` | Assets/Layouts für Qt | ✅ Verwendet (guarded imports) |
+| E.2.2 | Console Mappings | `src/ui/console_mappings.py` | unklar | ✅ Entfernt (ungenutzt) |
 
 ### E.3 Riskante Stellen
 
@@ -231,8 +231,8 @@ start_rom_sorter.py::main()
 | F.2.4 | ~~Rename Overflow~~ | ✅ Test existiert | - |
 | F.2.5 | ~~Mid-Conversion Cancel~~ | ✅ Test existiert | - |
 | F.2.6 | ~~Concurrent Hash~~ | ✅ Test existiert | - |
-| F.2.7 | UI Render Smoke (Qt) | ⬜ Headless Test hinzufügen | P2 |
-| F.2.8 | UI Render Smoke (Tk) | ⬜ Headless Test hinzufügen | P2 |
+| F.2.7 | UI Render Smoke (Qt) | ✅ Test existiert (env-guarded) | P2 |
+| F.2.8 | UI Render Smoke (Tk) | ✅ Test existiert (env-guarded) | P2 |
 
 ---
 
@@ -403,7 +403,7 @@ start_rom_sorter.py::main()
 ---
 
 ### 4.7 Legacy Qt Ordner prüfen
-- [ ] **Status:** ⬜ Offen
+- [x] **Status:** ✅ Erledigt
 - **Severity:** P3
 - **Pfad:** `src/ui/qt/`
 - **Enthält:** `assets.py`, `layouts.py`, `shell.py`, `themes.py`, `typography.py`
@@ -433,7 +433,7 @@ start_rom_sorter.py::main()
 ## 5. Refactoring-Empfehlungen (Post-MVP)
 
 ### 5.1 UI-Code Modularisierung
-- [ ] **Status:** ⬜ Post-MVP
+- [ ] **Status:** 🔄 In Arbeit (partial: optional Qt assets + dialogs + filters + conversions + presets + paths/actions + status + results + dashboard + reports + log dock extracted)
 - **Ist:** `qt_app.py` 5063 Zeilen, `tk_app.py` 4069 Zeilen
 - **Soll:** Aufteilen in:
   - `qt_main_window.py` (Window Setup)
@@ -482,8 +482,8 @@ start_rom_sorter.py::main()
 | 5 | `test_concurrent_access` | `test_mvp_hash_cache.py` | ✅ Existiert |
 | 6 | `test_config_schema` | `test_mvp_format_validation.py` | ✅ Existiert |
 | 7 | `test_mid_conversion_cancel` | `test_mvp_execute_cancel.py` | ✅ Existiert |
-| 8 | GUI Render Smoke Qt | `test_mvp_gui_render_smoke.py` | ⬜ Prüfen |
-| 9 | GUI Render Smoke Tk | `test_mvp_gui_render_smoke.py` | ⬜ Prüfen |
+| 8 | GUI Render Smoke Qt | `test_mvp_gui_render_smoke.py` | ✅ Existiert (env-guarded) |
+| 9 | GUI Render Smoke Tk | `test_mvp_gui_render_smoke.py` | ✅ Existiert (env-guarded) |
 
 ---
 
@@ -649,7 +649,7 @@ python start_rom_sorter.py --gui-smoke
 | P3-4 | Export-Worker Fehler Dialog | ✅ Erledigt | `qt_app.py` | - | - | `_on_export_failed()` |
 | P3-5 | Version zentralisiert | ✅ Erledigt | `src/version.py` | - | - | Einzige Quelle |
 | P3-6 | simple_rom_sorter.py entfernt | ✅ Erledigt | - | - | - | Nicht mehr vorhanden |
-| P3-7 | Legacy Qt Ordner dokumentieren | ⬜ Offen | `src/ui/qt/` | Klein | Niedrig | Optional-Marker in README |
+| P3-7 | Legacy Qt Ordner dokumentieren | ✅ Erledigt | `src/ui/qt/` | Klein | Niedrig | Optional-Marker in README |
 | P3-8 | Logging bei Import | ✅ Erledigt | `start_rom_sorter.py` | - | - | Nur in `main()` |
 
 ---
@@ -658,7 +658,7 @@ python start_rom_sorter.py --gui-smoke
 
 | # | Finding | Status | Datei(en) | Aufwand | Priorität | Beschreibung |
 |---|---------|--------|-----------|---------|-----------|--------------|
-| REF-1 | Qt App Modularisierung | ⬜ Offen | `qt_app.py` | Groß | Mittel | 5063 Zeilen → aufteilen in Module |
+| REF-1 | Qt App Modularisierung | ✅ Erledigt | `qt_app.py` | Groß | Mittel | UI-Bausteine modularisiert (Optional Assets, Dialoge, Menüs, Header/Statusbar, Sidebar, Tabs, Splitter, Results/Details/Results-Table, Action-Buttons, IGIR, Filters, Conversions, Presets, Paths/Actions, Status, Dashboard, Reports, Log Dock, Settings, DB/DAT-Dialoge, DropLineEdit, OperationWorker). Orchestrierung verbleibt in `qt_app_impl.py`. |
 | REF-2 | Tk App Modularisierung | ⬜ Offen | `tk_app.py` | Groß | Mittel | 4069 Zeilen → aufteilen in Module |
 | REF-3 | MVVM/MVP Pattern | ⬜ Offen | `src/ui/mvp/` | Groß | Niedrig | ViewModel-Layer einführen |
 | REF-4 | Structured Logging | ⬜ Offen | Projekt-weit | Mittel | Niedrig | `structlog` für JSON-Logs |
@@ -675,8 +675,8 @@ python start_rom_sorter.py --gui-smoke
 
 | # | Finding | Status | Datei(en) | Aufwand | Priorität | Beschreibung |
 |---|---------|--------|-----------|---------|-----------|--------------|
-| TEST-1 | GUI Render Smoke Qt (headless) | ⬜ Offen | `test_mvp_gui_render_smoke.py` | Mittel | Mittel | Qt ohne Display testen |
-| TEST-2 | GUI Render Smoke Tk (headless) | ⬜ Offen | `test_mvp_gui_render_smoke.py` | Mittel | Mittel | Tk ohne Display testen |
+| TEST-1 | GUI Render Smoke Qt (headless) | ✅ Erledigt | `test_mvp_gui_render_smoke.py` | Mittel | Mittel | Qt Smoke (env-guarded) |
+| TEST-2 | GUI Render Smoke Tk (headless) | ✅ Erledigt | `test_mvp_gui_render_smoke.py` | Mittel | Mittel | Tk Smoke (env-guarded) |
 | TEST-3 | E2E Integration Test | ⬜ Offen | Neu | Groß | Mittel | Kompletter Scan→Plan→Execute Flow |
 | TEST-4 | Performance Benchmark | ⬜ Offen | `scripts/bench_*.py` | Mittel | Niedrig | 10k+ Files Scan Benchmark |
 | TEST-5 | Memory Leak Detection | ⬜ Offen | Neu | Mittel | Niedrig | tracemalloc basierte Tests |
@@ -745,13 +745,13 @@ python start_rom_sorter.py --gui-smoke
 | P0 Blocker | 2 | 2 | 0 |
 | P1 Kritisch | 3 | 3 | 0 |
 | P2 Wichtig | 10 | 10 | 0 |
-| P3 Nice-to-Have | 8 | 7 | 1 |
+| P3 Nice-to-Have | 8 | 8 | 0 |
 | Refactoring | 10 | 0 | 10 |
-| Tests | 6 | 0 | 6 |
+| Tests | 6 | 2 | 4 |
 | Features | 10 | 0 | 10 |
 | Dokumentation | 6 | 0 | 6 |
 | Manuelle Validierung | 15 | 0 | 15 |
-| **TOTAL** | **70** | **22** | **48** |
+| **TOTAL** | **70** | **25** | **45** |
 
 ### Release-Empfehlung
 

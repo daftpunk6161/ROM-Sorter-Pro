@@ -1,13 +1,14 @@
 {
-  "_metadata": {
-    "version": "1.0.0"
-  },
   "gui_settings": {
-    "drag_drop_enabled": true,
     "default_conflict_policy": "overwrite",
     "log_visible": false,
-    "default_sort_mode": "move",
-    "theme": "CRT Green",
+    "favorites": [
+      {
+        "source": "F:/AAAATransfer/test",
+        "dest": "F:/AAAATransfer/Clean_Roms_Sorted",
+        "label": "test \u2192 Clean_Roms_Sorted"
+      }
+    ],
     "window_width": 1680,
     "window_height": 980
   },
@@ -21,7 +22,7 @@
     "max_depth": -1
   },
   "ui": {
-    "theme": "CRT Green",
+    "theme": "system",
     "language": "de_DE",
     "remember_window_state": true,
     "remember_last_directories": true,
@@ -45,5 +46,10 @@
     "max_size_mb": 500,
     "clean_on_exit": false,
     "expiry_days": 30
+  },
+  "dats": {
+    "import_paths": [
+      "F:/AAAATransfer/DATs"
+    ]
   }
 }

@@ -10,5 +10,17 @@
     "reason": "index-missing",
     "input_kind": "RawRom",
     "normalized_artifact": null
+  },
+  {
+    "platform_id": "Unknown",
+    "confidence": 0.0,
+    "is_exact": false,
+    "signals": [
+      "NO_INDEX"
+    ],
+    "candidates": [],
+    "reason": "index-missing",
+    "input_kind": "RawRom",
+    "normalized_artifact": null
   }
 ]

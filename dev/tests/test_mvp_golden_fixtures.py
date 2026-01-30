@@ -71,21 +71,40 @@ def test_golden_plan_fixture(tmp_path: Path):
 
     src_dir = tmp_path / "src"
     src_dir.mkdir()
-    rom_path = src_dir / "game.nes"
-    rom_path.write_text("data", encoding="utf-8")
+    rom_paths = [
+        src_dir / "game.nes",
+        src_dir / "game.sfc",
+        src_dir / "game.gb",
+    ]
+    for rom_path in rom_paths:
+        rom_path.write_text("data", encoding="utf-8")
 
     scan = ScanResult(
         source_path=str(src_dir),
         items=[
             ScanItem(
-                input_path=str(rom_path),
+                input_path=str(rom_paths[0]),
                 detected_system="NES",
                 detection_source="manual",
                 detection_confidence=1.0,
                 is_exact=True,
-            )
+            ),
+            ScanItem(
+                input_path=str(rom_paths[1]),
+                detected_system="SNES",
+                detection_source="manual",
+                detection_confidence=1.0,
+                is_exact=True,
+            ),
+            ScanItem(
+                input_path=str(rom_paths[2]),
+                detected_system="GB",
+                detection_source="manual",
+                detection_confidence=1.0,
+                is_exact=True,
+            ),
         ],
-        stats={"total": 1},
+        stats={"total": 3},
         cancelled=False,
     )
 
@@ -126,22 +145,43 @@ def test_golden_scan_fixture(tmp_path: Path):
 
     src_dir = tmp_path / "src"
     src_dir.mkdir()
-    rom_path = src_dir / "game.nes"
-    rom_path.write_text("data", encoding="utf-8")
+    rom_paths = [
+        src_dir / "game.nes",
+        src_dir / "game.sfc",
+        src_dir / "game.gb",
+    ]
+    for rom_path in rom_paths:
+        rom_path.write_text("data", encoding="utf-8")
 
     scan = ScanResult(
         source_path=str(src_dir),
         items=[
             ScanItem(
-                input_path=str(rom_path),
+                input_path=str(rom_paths[0]),
                 detected_system="NES",
                 detection_source="manual",
                 detection_confidence=1.0,
                 is_exact=True,
                 raw={"signals": ["EXT"], "candidates": ["NES"]},
-            )
+            ),
+            ScanItem(
+                input_path=str(rom_paths[1]),
+                detected_system="SNES",
+                detection_source="manual",
+                detection_confidence=1.0,
+                is_exact=True,
+                raw={"signals": ["EXT"], "candidates": ["SNES"]},
+            ),
+            ScanItem(
+                input_path=str(rom_paths[2]),
+                detected_system="GB",
+                detection_source="manual",
+                detection_confidence=1.0,
+                is_exact=True,
+                raw={"signals": ["EXT"], "candidates": ["GB"]},
+            ),
         ],
-        stats={"total": 1},
+        stats={"total": 3},
         cancelled=False,
     )
 
@@ -155,10 +195,17 @@ def test_golden_scan_fixture(tmp_path: Path):
 def test_golden_identify_fixture(tmp_path: Path):
     from src.app.controller import ScanItem, identify
 
-    rom = tmp_path / "game.rom"
-    rom.write_text("data", encoding="utf-8")
+    roms = [
+        tmp_path / "game1.rom",
+        tmp_path / "game2.rom",
+    ]
+    for rom in roms:
+        rom.write_text("data", encoding="utf-8")
 
-    items = [ScanItem(input_path=str(rom), detected_system="Unknown")]
+    items = [
+        ScanItem(input_path=str(roms[0]), detected_system="Unknown"),
+        ScanItem(input_path=str(roms[1]), detected_system="Unknown"),
+    ]
     config = {"dats": {"index_path": str(tmp_path / "missing.sqlite")}}
 
     results = identify(items, config=config)

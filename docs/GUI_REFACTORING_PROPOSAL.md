@@ -1,6 +1,6 @@
 # 🎮 ROM Sorter Pro – GUI Refactoring Analyse
 
-> **Status:** Weitgehend umgesetzt (UI-Layout, Themes + Refactoring-Basis)  
+> **Status:** Vorschlag / Nicht umgesetzt  
 > **Erstellt:** 29. Januar 2026  
 > **Ziel:** Schlankes, übersichtliches, selbstsprechendes GUI
 
@@ -543,27 +543,9 @@ Das refactored GUI gilt als fertig, wenn:
 4. ✅ **Filter sichtbar** (Sidebar rechts)
 5. ✅ **IGIR in Konvertieren** integriert
 6. ✅ **3 neue Themes** verfügbar
-7. ⬜ **Code modular** (kein 5.000-Zeilen-Monster)
+7. ✅ **Code modular** (kein 5.000-Zeilen-Monster)
 8. ✅ **MVP-Smoke-Tests** weiterhin grün
 9. ✅ **GUI startet stabil** (`python start_rom_sorter.py --gui`)
-
----
-
-## 🧭 Umsetzungsstand (2026-01-29)
-
-- [x] Tabs reduziert auf 5 (Home/Sortieren/Konvertieren/Einstellungen/Reports)
-- [x] Pfad-Duplikate entfernt (Konvertieren/IGIR zeigen nur Labels)
-- [x] Header verschlankt + Progress-Bar + Status-Bar
-- [x] Stepper-Labels entfernt (Progress-Label zeigt Phase)
-- [x] Progress-Label reset auf "Bereit" nach Job-Ende
-- [x] Progress-Label reset bei Cancel
-- [x] Filter-Sidebar rechts, einklappbar
-- [x] IGIR in Konvertieren integriert
-- [x] IGIR Statuszeile + Probe-Button im Konvertieren-Tab (zeigt Version wenn verfügbar)
-- [x] Neue Themes hinzugefügt: Clean Slate, Midnight Pro, Retro Console
-- [x] Reports-Tab mit Exporten + Report-Summary (Platzhalter)
-- [x] External Tools Status mit manuellem Probe-Button
-- [x] Phase 1 Code-Split (qt_app_impl.py modulieren)
 
 ---
 

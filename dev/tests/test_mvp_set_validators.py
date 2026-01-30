@@ -269,6 +269,25 @@ class TestM3uValidation:
         assert len(result.warnings) == 0
 
 
+class TestScannerSetIntegration:
+    """Integration tests for scanner with set validators."""
+
+    def test_scanner_skips_set_members(self, tmp_path: Path) -> None:
+        from src.scanning.high_performance_scanner import HighPerformanceScanner
+
+        cue = tmp_path / "game.cue"
+        bin_file = tmp_path / "game.bin"
+
+        cue.write_text('FILE "game.bin" BINARY\n  TRACK 01 MODE1/2352\n')
+        bin_file.write_bytes(b"\x00" * 1024)
+
+        scanner = HighPerformanceScanner(config={})
+        files = scanner._collect_files(str(tmp_path), recursive=False, file_types=None, max_depth=-1, follow_symlinks=False)
+
+        assert str(cue) in files
+        assert str(bin_file) not in files
+
+
 class TestSetDetection:
     """Tests for automatic set detection."""
 

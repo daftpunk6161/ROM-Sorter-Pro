@@ -433,6 +433,8 @@ class HighPerformanceScanner:
             file_types = sorted(get_all_rom_extensions(include_dot=True))
             # Adds archive files
             file_types.extend(ARCHIVE_EXTENSIONS)
+            # Ensure primary set files are included
+            file_types.extend([".cue", ".gdi", ".m3u"])
 
         try:
             # Normalize the file extensions (ensure leading dot)
@@ -450,6 +452,13 @@ class HighPerformanceScanner:
 
             # Used Pathlib for better platform independence
             dir_path = Path(directory)
+
+            known_sets = {}
+            try:
+                from .set_validators import group_sets_in_directory, is_set_member_file
+                known_sets = group_sets_in_directory(dir_path)
+            except Exception:
+                known_sets = {}
 
             # PS3 extracted game folder: treat as single ROM and skip its contents
             if self._is_ps3_game_dir(dir_path):
@@ -490,7 +499,13 @@ class HighPerformanceScanner:
                     ext = entry.suffix.lower()
                     if ext in self._ignore_exts:
                         continue
-                    if ext in file_type_set:
+                    if known_sets:
+                        try:
+                            if is_set_member_file(entry, known_sets):
+                                continue
+                        except Exception:
+                            pass
+                    if ext in file_type_set or (known_sets and str(entry) in known_sets):
                         result.append(str(entry))
                         self.files_found += 1
 
