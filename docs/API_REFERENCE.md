@@ -31,6 +31,24 @@ from src.app.api import run_scan, plan_sort, execute_sort
 - **cancel_token**: `CancelToken`
 - **Return**: `SortReport`
 
+Zusätzliche Optionen:
+- **resume_path**: Pfad für Resume-Checkpoint
+- **rollback_path**: Pfad für Rollback-Manifest (nur Move)
+- **conversion_mode**: `all|skip|only`
+
+---
+
+### `apply_rollback(path) -> RollbackReport`
+- **path**: Rollback-Manifest
+- **Return**: `RollbackReport` mit `restored`, `skipped`, `errors`
+
+---
+
+### `export_scan_to_database(scan_result, db_path) -> int`
+- **scan_result**: Ergebnis aus `run_scan`
+- **db_path**: Ziel‑SQLite (optional)
+- **Return**: Anzahl importierter Einträge
+
 ---
 
 ## Datentypen (Kurz)
@@ -45,6 +63,10 @@ from src.app.api import run_scan, plan_sort, execute_sort
 
 ### `SortReport`
 - `copied`, `moved`, `errors`
+- `cancelled`: Abbruchstatus
+
+### `RollbackReport`
+- `restored`, `skipped`, `errors`
 - `cancelled`: Abbruchstatus
 
 ---

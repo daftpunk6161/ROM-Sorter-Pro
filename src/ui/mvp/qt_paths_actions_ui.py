@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Optional, Tuple
 
+from ..i18n import translate
+
 
 @dataclass(frozen=True)
 class PathsActionsUI:
@@ -36,7 +38,7 @@ def build_paths_actions_ui(
     on_drop_source,
     on_drop_dest,
 ) -> PathsActionsUI:
-    paths_group = QtWidgets.QGroupBox("Pfade")
+    paths_group = QtWidgets.QGroupBox(translate("paths"))
     actions_group = QtWidgets.QGroupBox("")
     actions_group.setFlat(True)
 
@@ -49,20 +51,20 @@ def build_paths_actions_ui(
 
     source_edit = DropLineEdit(on_drop_source, enabled=dnd_enabled)
     dest_edit = DropLineEdit(on_drop_dest, enabled=dnd_enabled)
-    source_edit.setPlaceholderText("ROM-Quelle auswählen")
-    dest_edit.setPlaceholderText("Zielordner auswählen")
+    source_edit.setPlaceholderText(translate("choose_source"))
+    dest_edit.setPlaceholderText(translate("choose_dest"))
 
-    btn_source = QtWidgets.QPushButton("Quelle wählen…")
-    btn_dest = QtWidgets.QPushButton("Ziel wählen…")
+    btn_source = QtWidgets.QPushButton(translate("choose_source"))
+    btn_dest = QtWidgets.QPushButton(translate("choose_dest"))
     btn_source.setMinimumWidth(150)
     btn_dest.setMinimumWidth(150)
-    btn_open_dest = QtWidgets.QPushButton("Ziel öffnen")
+    btn_open_dest = QtWidgets.QPushButton(translate("open_dest"))
 
-    paths_layout.addWidget(QtWidgets.QLabel("Quelle:"), 0, 0)
+    paths_layout.addWidget(QtWidgets.QLabel(f"{translate('source')}:") , 0, 0)
     paths_layout.addWidget(source_edit, 0, 1)
     paths_layout.addWidget(btn_source, 0, 2)
 
-    paths_layout.addWidget(QtWidgets.QLabel("Ziel:"), 1, 0)
+    paths_layout.addWidget(QtWidgets.QLabel(f"{translate('dest')}:") , 1, 0)
     paths_layout.addWidget(dest_edit, 1, 1)
     paths_layout.addWidget(btn_dest, 1, 2)
     paths_layout.addWidget(btn_open_dest, 1, 3)
@@ -85,10 +87,10 @@ def build_paths_actions_ui(
     default_conflict_combo = QtWidgets.QComboBox()
     default_conflict_combo.addItems(["rename", "skip", "overwrite"])
 
-    actions_layout.addWidget(QtWidgets.QLabel("Aktion:"), 0, 0)
+    actions_layout.addWidget(QtWidgets.QLabel(f"{translate('action')}:") , 0, 0)
     actions_layout.addWidget(mode_combo, 0, 1)
 
-    actions_layout.addWidget(QtWidgets.QLabel("Bei Konflikt:"), 1, 0)
+    actions_layout.addWidget(QtWidgets.QLabel(f"{translate('conflicts')}:") , 1, 0)
     actions_layout.addWidget(conflict_combo, 1, 1)
 
     actions_layout.addWidget(rebuild_checkbox, 2, 1)

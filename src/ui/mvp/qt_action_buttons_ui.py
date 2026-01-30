@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Callable
 
+from ..i18n import translate
+
 
 @dataclass(frozen=True)
 class ActionButtonsUI:
@@ -25,15 +27,15 @@ class ActionButtonsUI:
 
 
 def build_action_buttons_ui(QtWidgets, label_func: Callable[[str, str], str]) -> ActionButtonsUI:
-    btn_scan = QtWidgets.QPushButton(label_func("Scan", "scan"))
-    btn_preview = QtWidgets.QPushButton(label_func("Preview", "preview"))
-    btn_execute = QtWidgets.QPushButton(label_func("Execute", "execute"))
-    btn_resume = QtWidgets.QPushButton("Resume")
-    btn_retry_failed = QtWidgets.QPushButton("Retry Failed")
-    btn_cancel = QtWidgets.QPushButton(label_func("Cancel", "cancel"))
+    btn_scan = QtWidgets.QPushButton(label_func(translate("scan"), "scan"))
+    btn_preview = QtWidgets.QPushButton(label_func(translate("preview"), "preview"))
+    btn_execute = QtWidgets.QPushButton(label_func(translate("execute"), "execute"))
+    btn_resume = QtWidgets.QPushButton(translate("resume"))
+    btn_retry_failed = QtWidgets.QPushButton(translate("retry_failed"))
+    btn_cancel = QtWidgets.QPushButton(label_func(translate("cancel"), "cancel"))
 
-    btn_execute_convert = QtWidgets.QPushButton("Konvertierungen ausführen")
-    btn_audit = QtWidgets.QPushButton("Konvertierungen prüfen (Audit)")
+    btn_execute_convert = QtWidgets.QPushButton(translate("convert_execute"))
+    btn_audit = QtWidgets.QPushButton(translate("convert_audit"))
 
     btn_export_scan_csv = QtWidgets.QPushButton("Scan CSV")
     btn_export_scan_json = QtWidgets.QPushButton("Scan JSON")

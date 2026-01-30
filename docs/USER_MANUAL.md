@@ -83,6 +83,7 @@ Optional:
 
 ### 6.1 Allgemein
 - Theme, Fenstergröße merken, Drag & Drop
+- Sprache (Deutsch/Englisch) via `ui.language`
 
 ### 6.2 Sortierung
 - Standardmodus, Konfliktstrategie
@@ -105,6 +106,64 @@ Optional:
 - Bibliothek-Report (Übersicht, Top Systeme/Regionen)
 - Export (Scan/Plan/Audit als CSV/JSON)
 - Frontend-Export (EmulationStation/LaunchBox)
+
+---
+
+## 7.1 Backup (Lokal + OneDrive)
+- Nach erfolgreichem **Execute** wird ein Report-Backup gespeichert.
+- Standardpfad: `cache/backups`
+- OneDrive wird automatisch genutzt, wenn verfügbar (`OneDrive`-Ordner).
+
+Konfiguration in `config.json`:
+```json
+"features": {
+	"backup": {
+		"enabled": true,
+		"local_dir": "cache/backups",
+		"onedrive_enabled": true,
+		"onedrive_dir": null
+	}
+}
+```
+
+---
+
+## 7.2 Undo/Rollback (nur Move)
+- Für **Move**-Operationen wird ein Rollback-Manifest gespeichert.
+- Standardpfad: `cache/rollback/last_move_rollback.json`
+
+Rollback via CLI:
+```bash
+python start_rom_sorter.py --rollback cache/rollback/last_move_rollback.json
+```
+
+---
+
+## 7.3 Plugins (Detektoren/Converter)
+- Plugins liegen im Ordner `plugins/`.
+- Ein Plugin implementiert `register(registry)`.
+
+Beispiel:
+```python
+def register(registry):
+		registry.register_detector("demo", lambda name, path: ("Demo", 0.95))
+		registry.register_converter_rule({
+				"converter_id": "demo_converter",
+				"input_kinds": ["RawRom"],
+				"output_extension": ".bin",
+				"exe_path": "tool.exe",
+				"args_template": ["{input}", "{output}"]
+		})
+```
+
+---
+
+## 7.4 Export in Datenbank
+- CLI-Export direkt aus einem ROM-Ordner:
+```bash
+python start_rom_sorter.py --export-db C:\ROMs --export-db-path rom_databases/roms.sqlite
+```
+
 
 ---
 

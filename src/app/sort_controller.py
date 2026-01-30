@@ -65,6 +65,7 @@ def execute_sort(
     start_index: int = 0,
     only_indices: Optional[List[int]] = None,
     conversion_mode: ConversionMode = "all",
+    rollback_path: Optional[str] = None,
 ) -> SortReport:
     return _execute_sort(
         sort_plan=sort_plan,
@@ -77,4 +78,5 @@ def execute_sort(
         start_index=start_index,
         only_indices=only_indices,
         conversion_mode=conversion_mode,
+        rollback_path=rollback_path,
     )

@@ -17,6 +17,7 @@ from typing import Any, Dict, Iterable, List, Literal, Optional, Tuple
 
 from ..security.security_utils import InvalidPathError, validate_file_operation
 from ..config import load_config
+from ..plugins.registry import collect_plugin_converters
 from ..config.schema import JSONSCHEMA_AVAILABLE, validate_config_schema
 
 InputKind = Literal[
@@ -255,6 +256,10 @@ def _load_converters_from_config() -> List[Dict[str, Any]]:
                 "args_template": args_template,
             }
         )
+    try:
+        converters.extend(list(collect_plugin_converters(cfg)))
+    except Exception:
+        pass
 
     return converters
 

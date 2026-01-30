@@ -62,6 +62,7 @@ async def execute_sort_async(
     start_index: int = 0,
     only_indices: Optional[list[int]] = None,
     conversion_mode: str = "all",
+    rollback_path: Optional[str] = None,
 ) -> SortReport:
     return await run_blocking(
         execute_sort,
@@ -75,4 +76,5 @@ async def execute_sort_async(
         start_index,
         only_indices,
         conversion_mode,
+        rollback_path,
     )

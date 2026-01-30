@@ -100,7 +100,8 @@ class AppViewModel:
     ) -> Any:
         self._transition(UIState.SCANNING)
         try:
-            self.events.phase_changed and self.events.phase_changed("scan", 0)
+            if self.events.phase_changed:
+                self.events.phase_changed("scan", 0)
             scan = self._run_scan(
                 source,
                 config=None,
@@ -113,7 +114,8 @@ class AppViewModel:
             return scan
         except Exception as exc:
             self.state.last_error = str(exc)
-            self.events.error and self.events.error(str(exc))
+            if self.events.error:
+                self.events.error(str(exc))
             self._transition(UIState.ERROR)
             raise
 
@@ -127,7 +129,8 @@ class AppViewModel:
     ) -> Any:
         self._transition(UIState.PLANNING)
         try:
-            self.events.phase_changed and self.events.phase_changed("plan", len(scan_result.items))
+            if self.events.phase_changed:
+                self.events.phase_changed("plan", len(scan_result.items))
             plan = self._plan_sort(
                 scan_result,
                 dest,
@@ -141,7 +144,8 @@ class AppViewModel:
             return plan
         except Exception as exc:
             self.state.last_error = str(exc)
-            self.events.error and self.events.error(str(exc))
+            if self.events.error:
+                self.events.error(str(exc))
             self._transition(UIState.ERROR)
             raise
 
@@ -157,6 +161,7 @@ class AppViewModel:
         start_index: int,
         only_indices: Optional[List[int]],
         conversion_mode: ConversionMode,
+        rollback_path: Optional[str] = None,
     ) -> Any:
         self._transition(UIState.EXECUTING)
         try:
@@ -171,13 +176,15 @@ class AppViewModel:
                 start_index=start_index,
                 only_indices=only_indices,
                 conversion_mode=cast(ConversionMode, conversion_mode),
+                rollback_path=rollback_path,
             )
             self.state.last_report = report
             self._transition(UIState.IDLE)
             return report
         except Exception as exc:
             self.state.last_error = str(exc)
-            self.events.error and self.events.error(str(exc))
+            if self.events.error:
+                self.events.error(str(exc))
             self._transition(UIState.ERROR)
             raise
 
@@ -191,7 +198,8 @@ class AppViewModel:
     ) -> Any:
         self._transition(UIState.AUDITING)
         try:
-            self.events.phase_changed and self.events.phase_changed("audit", 0)
+            if self.events.phase_changed:
+                self.events.phase_changed("audit", 0)
             report = self._audit(
                 source,
                 config=None,
@@ -205,7 +213,8 @@ class AppViewModel:
             return report
         except Exception as exc:
             self.state.last_error = str(exc)
-            self.events.error and self.events.error(str(exc))
+            if self.events.error:
+                self.events.error(str(exc))
             self._transition(UIState.ERROR)
             raise
 

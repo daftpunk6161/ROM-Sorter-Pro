@@ -104,6 +104,8 @@ from .resume_controller import (
     save_scan_resume,
     save_sort_resume,
 )
+from .backup_controller import backup_sort_report
+from .rollback_controller import RollbackEntry, write_rollback_manifest
 from .scan_filtering import (
     DEFAULT_LANGUAGE_PRIORITY,
     DEFAULT_REGION_PRIORITY,
@@ -227,12 +229,25 @@ def run_scan(
             )
         )
 
-    return ScanResult(
+    scan_result = ScanResult(
         source_path=str(result.get("source") or source_sanitized),
         items=items,
         stats=dict(result.get("stats") or {}),
         cancelled=bool(result.get("cancelled")),
     )
+
+    try:
+        persistence_cfg = _get_dict(cfg, "features", "progress_persistence")
+        if persistence_cfg.get("enabled"):
+            scan_path = persistence_cfg.get("scan_resume_path") or os.path.join("cache", "last_scan_resume.json")
+            save_scan_resume(scan_result, str(scan_path))
+            if log_cb is not None:
+                log_cb(f"Scan resume saved: {scan_path}")
+    except Exception as exc:
+        if log_cb is not None:
+            log_cb(f"Failed to save scan resume: {exc}")
+
+    return scan_result
 
 
 def identify(
@@ -660,6 +675,7 @@ def execute_sort(
     start_index: int = 0,
     only_indices: Optional[List[int]] = None,
     conversion_mode: ConversionMode = "all",
+    rollback_path: Optional[str] = None,
 ) -> SortReport:
     """Execute a previously computed SortPlan (or simulate it with dry_run=True)."""
 
@@ -677,6 +693,7 @@ def execute_sort(
         conversion_timeout_sec = 300.0
 
     errors: List[str] = []
+    rollback_entries: List[RollbackEntry] = []
     processed = 0
     copied = 0
     moved = 0
@@ -719,6 +736,19 @@ def execute_sort(
 
     progress_every = max(1, total // 100) if batch_progress and total > 0 else 1
     last_progress_ts = 0.0
+    last_resume_ts = 0.0
+
+    persistence_cfg = _get_dict(cfg, "features", "progress_persistence")
+    persistence_enabled = bool(persistence_cfg.get("enabled"))
+    resume_interval = float(persistence_cfg.get("save_interval_sec", 10.0) or 10.0)
+    resume_clear_on_success = bool(persistence_cfg.get("clear_on_success", True))
+    resume_path_value = resume_path or persistence_cfg.get("sort_resume_path")
+
+    rollback_cfg = _get_dict(cfg, "features", "rollback")
+    rollback_enabled = bool(rollback_cfg.get("enabled"))
+    rollback_path_value = rollback_path or rollback_cfg.get("manifest_path")
+    if rollback_enabled and rollback_path_value is None:
+        rollback_path_value = os.path.join("cache", "rollback", "last_move_rollback.json")
 
     for step, (row_index, action) in enumerate(actions_to_run, start=1):
         if cancel_token is not None and cancel_token.is_cancelled():
@@ -960,6 +990,10 @@ def execute_sort(
                     moved += 1
                     if action_status_cb is not None:
                         action_status_cb(row_index, "moved")
+                    if rollback_enabled and not dry_run and action.action != "convert":
+                        rollback_entries.append(
+                            RollbackEntry(source_path=str(src), dest_path=str(dst))
+                        )
 
                 processed += 1
 
@@ -992,6 +1026,18 @@ def execute_sort(
                 if (now - last_progress_ts) >= 0.05 or step == total:
                     last_progress_ts = now
                     progress_cb(step, total)
+        if (
+            persistence_enabled
+            and resume_path_value
+            and not dry_run
+            and (time.time() - last_resume_ts) >= resume_interval
+        ):
+            try:
+                save_sort_resume(sort_plan, row_index + 1, str(resume_path_value))
+                last_resume_ts = time.time()
+            except Exception as exc:
+                if log_cb is not None:
+                    log_cb(f"Failed to checkpoint resume state: {exc}")
 
     if cancelled and resume_path and cancel_start_row is not None and only_indices is None:
         try:
@@ -1001,6 +1047,17 @@ def execute_sort(
         except Exception as exc:
             if log_cb is not None:
                 log_cb(f"Failed to save resume state: {exc}")
+    elif (
+        not cancelled
+        and persistence_enabled
+        and resume_clear_on_success
+        and resume_path_value
+        and not dry_run
+    ):
+        try:
+            Path(str(resume_path_value)).unlink(missing_ok=True)
+        except Exception:
+            pass
 
     if cancelled and action_status_cb is not None and cancel_start_row is not None:
         rows_to_mark = remaining_rows
@@ -1018,7 +1075,16 @@ def execute_sort(
             f"Sort finished. Copied: {copied}, Moved: {moved}, Skipped: {skipped}, Errors: {len(errors)}, Cancelled: {cancelled}"
         )
 
-    return SortReport(
+    if rollback_enabled and rollback_entries and rollback_path_value and not dry_run:
+        try:
+            write_rollback_manifest(rollback_entries, str(rollback_path_value))
+            if log_cb is not None:
+                log_cb(f"Rollback manifest saved: {rollback_path_value}")
+        except Exception as exc:
+            if log_cb is not None:
+                log_cb(f"Rollback manifest failed: {exc}")
+
+    report = SortReport(
         dest_path=str(dest_root),
         mode=sort_plan.mode,
         on_conflict=sort_plan.on_conflict,
@@ -1031,6 +1097,16 @@ def execute_sort(
         errors=errors,
         cancelled=cancelled,
     )
+
+    backup_cfg = _get_dict(cfg, "features", "backup")
+    if backup_cfg.get("enabled") and not dry_run:
+        try:
+            backup_sort_report(sort_plan, report, cfg=cfg, log_cb=log_cb)
+        except Exception as exc:
+            if log_cb is not None:
+                log_cb(f"Backup failed: {exc}")
+
+    return report
 
 
 def build_external_tools_commands(

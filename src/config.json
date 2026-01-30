@@ -33,6 +33,29 @@
     "show_status_bar": true,
     "show_toolbar": true
   },
+  "features": {
+    "progress_persistence": {
+      "enabled": true,
+      "save_interval_sec": 10,
+      "clear_on_success": true,
+      "scan_resume_path": "cache/last_scan_resume.json",
+      "sort_resume_path": "cache/last_sort_resume.json"
+    },
+    "rollback": {
+      "enabled": true,
+      "manifest_path": "cache/rollback/last_move_rollback.json"
+    },
+    "backup": {
+      "enabled": true,
+      "local_dir": "cache/backups",
+      "onedrive_enabled": true,
+      "onedrive_dir": null
+    },
+    "plugins": {
+      "enabled": true,
+      "paths": ["plugins"]
+    }
+  },
   "database": {
     "use_memory_cache": true,
     "cache_size_mb": 100,

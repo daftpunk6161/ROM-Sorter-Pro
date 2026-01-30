@@ -10,6 +10,8 @@ from .controller import analyze_dat_sources, build_dat_index, build_library_repo
 from .controller import filter_scan_items
 from .controller import get_dat_sources, infer_languages_and_version_from_name, infer_region_from_name
 from .controller import load_sort_resume_state, save_dat_sources
+from .database_export import export_scan_to_database
+from .rollback_controller import apply_rollback, load_rollback_manifest, RollbackReport
 from .conversion_controller import (
     audit_conversion_candidates,
     execute_normalization,
@@ -94,4 +96,8 @@ __all__ = [
     "is_err",
     "unwrap",
     "unwrap_or",
+    "export_scan_to_database",
+    "apply_rollback",
+    "load_rollback_manifest",
+    "RollbackReport",
 ]

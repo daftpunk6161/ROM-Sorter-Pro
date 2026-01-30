@@ -12,6 +12,14 @@ from pathlib import Path
 from typing import Any, Callable, Iterable, List, Optional, cast
 
 from ...version import load_version
+from .tk_ui_builders import (
+    build_actions_ui,
+    build_header_ui,
+    build_log_ui,
+    build_paths_ui,
+    build_results_table_ui,
+    build_status_ui,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -175,86 +183,39 @@ def run() -> int:
             main = ttk.Frame(self.root, padding=8)
             main.pack(fill=tk.BOTH, expand=True)
 
-            header = ttk.Frame(main)
-            header.pack(fill=tk.X, pady=(0, 8))
+            build_header_ui(ttk, main, load_version())
 
-            ttk.Label(header, text="ROM Sorter Pro", font=("Segoe UI", 16, "bold")).pack(side=tk.LEFT)
-            ttk.Label(header, text=f"v{load_version()}").pack(side=tk.LEFT, padx=(6, 0))
+            paths_ui = build_paths_ui(ttk, tk, main, self._choose_source, self._choose_dest)
+            self.source_var = paths_ui.source_var
+            self.source_entry = paths_ui.source_entry
+            self.dest_var = paths_ui.dest_var
+            self.dest_entry = paths_ui.dest_entry
 
-            paths_frame = ttk.LabelFrame(main, text="Pfade", padding=8)
-            paths_frame.pack(fill=tk.X, pady=(0, 8))
-
-            ttk.Label(paths_frame, text="Quelle:").grid(row=0, column=0, sticky=tk.W)
-            self.source_var = tk.StringVar()
-            self.source_entry = ttk.Entry(paths_frame, textvariable=self.source_var)
-            self.source_entry.grid(row=0, column=1, sticky=tk.EW, padx=6)
-            ttk.Button(paths_frame, text="Quelle wählen…", command=self._choose_source).grid(row=0, column=2)
-
-            ttk.Label(paths_frame, text="Ziel:").grid(row=1, column=0, sticky=tk.W)
-            self.dest_var = tk.StringVar()
-            self.dest_entry = ttk.Entry(paths_frame, textvariable=self.dest_var)
-            self.dest_entry.grid(row=1, column=1, sticky=tk.EW, padx=6)
-            ttk.Button(paths_frame, text="Ziel wählen…", command=self._choose_dest).grid(row=1, column=2)
-
-            paths_frame.columnconfigure(1, weight=1)
-
-            actions_frame = ttk.LabelFrame(main, text="Aktionen", padding=8)
-            actions_frame.pack(fill=tk.X, pady=(0, 8))
-
-            self.mode_var = tk.StringVar(value="copy")
-            ttk.Label(actions_frame, text="Modus:").grid(row=0, column=0, sticky=tk.W)
-            ttk.OptionMenu(actions_frame, self.mode_var, "copy", "copy", "move").grid(row=0, column=1, sticky=tk.W)
-
-            self.conflict_var = tk.StringVar(value="rename")
-            ttk.Label(actions_frame, text="Konflikte:").grid(row=0, column=2, sticky=tk.W, padx=(12, 0))
-            ttk.OptionMenu(actions_frame, self.conflict_var, "rename", "rename", "skip", "overwrite").grid(
-                row=0, column=3, sticky=tk.W
+            actions_ui = build_actions_ui(
+                ttk,
+                tk,
+                main,
+                self._start_scan,
+                self._start_preview,
+                self._start_execute,
+                self._cancel,
             )
+            self.mode_var = actions_ui.mode_var
+            self.conflict_var = actions_ui.conflict_var
+            self.btn_scan = actions_ui.btn_scan
+            self.btn_preview = actions_ui.btn_preview
+            self.btn_execute = actions_ui.btn_execute
+            self.btn_cancel = actions_ui.btn_cancel
 
-            btn_row = ttk.Frame(actions_frame)
-            btn_row.grid(row=1, column=0, columnspan=4, pady=(6, 0))
-            self.btn_scan = ttk.Button(btn_row, text="Scan", command=self._start_scan)
-            self.btn_preview = ttk.Button(btn_row, text="Preview Sort (Dry-run)", command=self._start_preview)
-            self.btn_execute = ttk.Button(btn_row, text="Execute Sort", command=self._start_execute)
-            self.btn_cancel = ttk.Button(btn_row, text="Cancel", command=self._cancel)
-            self.btn_scan.pack(side=tk.LEFT, padx=4)
-            self.btn_preview.pack(side=tk.LEFT, padx=4)
-            self.btn_execute.pack(side=tk.LEFT, padx=4)
-            self.btn_cancel.pack(side=tk.LEFT, padx=4)
-            self.btn_cancel.state(["disabled"])
+            status_ui = build_status_ui(ttk, tk, main)
+            self.status_var = status_ui.status_var
+            self.progress = status_ui.progress
 
-            status_frame = ttk.LabelFrame(main, text="Status", padding=8)
-            status_frame.pack(fill=tk.X, pady=(0, 8))
-            self.status_var = tk.StringVar(value="Bereit")
-            ttk.Label(status_frame, textvariable=self.status_var).pack(side=tk.LEFT)
+            table_ui = build_results_table_ui(ttk, tk, main)
+            self.tree = table_ui.tree
 
-            self.progress = ttk.Progressbar(status_frame, orient=tk.HORIZONTAL, mode="determinate")
-            self.progress.pack(side=tk.RIGHT, fill=tk.X, expand=True)
-
-            table_frame = ttk.LabelFrame(main, text="Ergebnisse", padding=8)
-            table_frame.pack(fill=tk.BOTH, expand=True)
-
-            self.tree = ttk.Treeview(
-                table_frame,
-                columns=("input", "system", "target", "action", "status"),
-                show="headings",
-            )
-            self.tree.heading("input", text="InputPath")
-            self.tree.heading("system", text="DetectedConsole/Type")
-            self.tree.heading("target", text="PlannedTargetPath")
-            self.tree.heading("action", text="Action")
-            self.tree.heading("status", text="Status/Error")
-            self.tree.column("input", width=280, anchor=tk.W)
-            self.tree.column("system", width=160, anchor=tk.W)
-            self.tree.column("target", width=280, anchor=tk.W)
-            self.tree.column("action", width=90, anchor=tk.W)
-            self.tree.column("status", width=200, anchor=tk.W)
-            self.tree.pack(fill=tk.BOTH, expand=True)
-
-            log_frame = ttk.LabelFrame(main, text="Log", padding=8)
-            log_frame.pack(fill=tk.BOTH, expand=False)
-            self.log_text = tk.Text(log_frame, height=8)
-            self.log_text.pack(fill=tk.BOTH, expand=True)
+            log_ui = build_log_ui(ttk, tk, main)
+            self.log_text = log_ui.log_text
 
         def _choose_source(self) -> None:
             directory = filedialog.askdirectory()

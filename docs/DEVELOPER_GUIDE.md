@@ -49,6 +49,42 @@ GUI-Smoke:
 
 ---
 
+## 5.1 Plugins
+- Plugins werden aus `plugins/` geladen (oder `ROM_SORTER_PLUGIN_PATHS`).
+- Ein Plugin implementiert `register(registry)` und kann Detektoren/Converter hinzufügen.
+
+```python
+def register(registry):
+	registry.register_detector("demo", lambda name, path: ("Demo", 0.95))
+	registry.register_converter_rule({
+		"converter_id": "demo_converter",
+		"input_kinds": ["RawRom"],
+		"output_extension": ".bin",
+		"exe_path": "tool.exe",
+		"args_template": ["{input}", "{output}"]
+	})
+```
+
+---
+
+## 5.2 Rollback (Move)
+- `execute_sort()` erzeugt bei Move ein Manifest.
+- Rollback via `apply_rollback()` oder CLI `--rollback`.
+
+---
+
+## 5.3 Backup (Lokal + OneDrive)
+- Sort-Report wird nach Execute gesichert.
+- OneDrive wird automatisch genutzt, wenn verfügbar.
+
+---
+
+## 5.4 Progress Persistence
+- Resume‑Checkpoints werden alle X Sekunden geschrieben.
+- Pfade in `features.progress_persistence`.
+
+---
+
 ## 6. Code-Qualität
 - Keine Dead Code
 - Pylance/Bandit ernst nehmen

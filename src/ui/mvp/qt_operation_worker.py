@@ -23,7 +23,7 @@ def build_operation_worker(
             temp_dir: str,
             mode: str,
             on_conflict: str,
-            conversion_mode: ConversionMode,
+            conversion_mode: str,
             scan_result: Optional[Any],
             sort_plan: Optional[Any],
             start_index: int,
@@ -126,7 +126,7 @@ def build_operation_worker(
                         resume_path=self.resume_path,
                         start_index=self.start_index,
                         only_indices=self.only_indices,
-                        conversion_mode=cast(ConversionMode, self.conversion_mode),
+                        conversion_mode=cast(str, self.conversion_mode),
                     )
                     self.signals.log.emit(
                         "Execute finished: processed={processed} copied={copied} moved={moved} errors={errors} cancelled={cancelled}".format(

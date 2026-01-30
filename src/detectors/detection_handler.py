@@ -19,6 +19,7 @@ from .console_detector import detect_console_enhanced
 from .archive_detector import detect_console_from_archive, is_archive_file
 from .chd_detector import detect_console_from_chd, is_chd_file
 from .detection_result import DetectionResult
+from ..plugins.registry import collect_plugin_detectors
 ML_ENABLED = os.environ.get("ROM_SORTER_ENABLE_ML", "").strip() == "1"
 
 
@@ -240,6 +241,20 @@ class DetectionManager:
             "chd_detections": 0.0,
             "standard_detections": 0.0,
         }
+        self._plugin_detectors = collect_plugin_detectors()
+
+    def _plugin_result(self, raw: Any, file_path: Optional[str] = None) -> Optional[DetectionResult]:
+        if raw is None:
+            return None
+        if isinstance(raw, DetectionResult):
+            return raw
+        if isinstance(raw, tuple) and len(raw) >= 2:
+            return DetectionResult(str(raw[0]), float(raw[1]), method="plugin", file_path=(file_path or ""))
+        if isinstance(raw, dict):
+            console = str(raw.get("console") or raw.get("system") or "Unknown")
+            confidence = float(raw.get("confidence") or 0.0)
+            return DetectionResult(console, confidence, method="plugin", file_path=(file_path or ""))
+        return None
 
     def detect_console(self, filename: str, file_path: Optional[str] = None) -> Tuple[str, float]:
         """Recognize the Console for A File by Automatically Selecting The Right Detector. ARGS: Filename: Name of the Rome File File_Path: Optional Full File Path for Context Analysis Return: Tuble from (Console Name, Confidence Value)"""
@@ -259,8 +274,17 @@ class DetectionManager:
                 return self._cache[cache_key]
             self.stats["cache_misses"] += 1.0
 
-# Recognize the file type
+            # Recognize the file type
             file_path_str = str(file_path) if file_path else None
+
+            # Plugin detectors (highest priority)
+            for plugin in self._plugin_detectors:
+                try:
+                    result = self._plugin_result(plugin.func(filename, file_path_str), file_path_str)
+                    if result is not None and result.confidence >= HIGH_CONFIDENCE_THRESHOLD:
+                        return result
+                except Exception:
+                    continue
 
 # Check on archive files
             if file_path_str and is_archive_file(file_path_str):

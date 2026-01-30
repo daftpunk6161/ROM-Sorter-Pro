@@ -10,6 +10,8 @@ MVP‑fokussiertes ROM‑Sortier‑Tool mit stabiler GUI (Qt bevorzugt, Tk als F
   - Env‑Override: `ROM_SORTER_GUI_BACKEND=qt|tk`
   - Smoke‑Check ohne UI‑Start: `python start_rom_sorter.py --gui-smoke`
 - **Installation**: `python install_dependencies.py`
+- **Rollback**: `python start_rom_sorter.py --rollback <manifest.json>`
+- **DB Export**: `python start_rom_sorter.py --export-db <rom_folder> --export-db-path <db.sqlite>`
 
 GUI‑Abhängigkeiten (Qt bevorzugt):
 
@@ -24,6 +26,10 @@ pip install -r requirements-gui.txt
 - **Filter** (im Arbeitsbereich): Sprache, Version, Region, Extension, Größe (MB), Dedupe, Hide Unknown
 - **DAT‑Matching** mit Cache und Auto‑Load‑Toggle
 - **External Tools**: wud2app / wudcompress (konfigurierbar)
+- **Backup**: lokale Reports + optional OneDrive
+- **Rollback**: Move‑Undo per Manifest/CLI
+- **Plugins**: externe Detektoren/Converter (Ordner `plugins/`)
+- **DB‑Export**: Scan → ROM‑Datenbank per CLI
 
 Details: [docs/MVP_DOCS.md](docs/MVP_DOCS.md)
 
@@ -36,6 +42,9 @@ Details: [docs/MVP_DOCS.md](docs/MVP_DOCS.md)
 ## 🤝 Contributing / Help
 - [CONTRIBUTING.md](CONTRIBUTING.md)
 - [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
+
+## 🖼️ Screenshots
+Siehe [docs/SCREENSHOTS.md](docs/SCREENSHOTS.md) für aktuelle Platzhalter und Hinweise.
 
 ## 📁 Projektstruktur (bereinigt)
 

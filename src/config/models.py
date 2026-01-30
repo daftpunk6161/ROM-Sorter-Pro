@@ -14,10 +14,11 @@ except Exception:  # pragma: no cover
     _CONFIG_DICT_AVAILABLE = False
 
 
-class _BaseConfigModel(BaseModel):
-    if _CONFIG_DICT_AVAILABLE:
+if _CONFIG_DICT_AVAILABLE:
+    class _BaseConfigModel(BaseModel):
         model_config = ConfigDict(extra="allow")
-    else:
+else:
+    class _BaseConfigModel:  # type: ignore
         class Config:  # type: ignore
             extra = "allow"
 
@@ -79,6 +80,38 @@ class DatsConfig(_BaseConfigModel):
     import_paths: List[str] = Field(default_factory=list)
 
 
+class ProgressPersistenceConfig(_BaseConfigModel):
+    enabled: Optional[bool] = None
+    save_interval_sec: Optional[float] = None
+    clear_on_success: Optional[bool] = None
+    scan_resume_path: Optional[str] = None
+    sort_resume_path: Optional[str] = None
+
+
+class RollbackConfig(_BaseConfigModel):
+    enabled: Optional[bool] = None
+    manifest_path: Optional[str] = None
+
+
+class BackupConfig(_BaseConfigModel):
+    enabled: Optional[bool] = None
+    local_dir: Optional[str] = None
+    onedrive_enabled: Optional[bool] = None
+    onedrive_dir: Optional[str] = None
+
+
+class PluginsConfig(_BaseConfigModel):
+    enabled: Optional[bool] = None
+    paths: List[str] = Field(default_factory=list)
+
+
+class FeaturesConfig(_BaseConfigModel):
+    progress_persistence: Optional[ProgressPersistenceConfig] = None
+    rollback: Optional[RollbackConfig] = None
+    backup: Optional[BackupConfig] = None
+    plugins: Optional[PluginsConfig] = None
+
+
 class ConfigModel(_BaseConfigModel):
     gui_settings: Optional[GuiSettings] = None
     scanner: Optional[ScannerConfig] = None
@@ -86,6 +119,7 @@ class ConfigModel(_BaseConfigModel):
     database: Optional[DatabaseConfig] = None
     cache: Optional[CacheConfig] = None
     dats: Optional[DatsConfig] = None
+    features: Optional[FeaturesConfig] = None
 
 
 def validate_config(payload: Dict[str, Any]) -> ConfigModel:

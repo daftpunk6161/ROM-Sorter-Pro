@@ -63,6 +63,7 @@ async def async_execute_sort(
     *,
     cancel_token: Optional[CancelToken] = None,
     conversion_mode: ConversionMode = "skip",
+    rollback_path: Optional[str] = None,
     deps: Optional[AppDependencies] = None,
 ):
     deps = deps or get_default_dependencies()
@@ -79,6 +80,7 @@ async def async_execute_sort(
             0,
             None,
             conversion_mode,
+            rollback_path,
         )
         return Ok(result)
     except Exception as exc:

@@ -19,6 +19,7 @@ Primäre Konfiguration: [src/config.json](../src/config.json)
 - `gui_settings.drag_drop_enabled` – Drag&Drop.
 - `gui_settings.remember_window_size` – Fenstergröße merken.
 - `gui_settings.window_width` / `window_height` – Startgröße.
+- `ui.language` – UI‑Sprache (`de_DE`/`en_US`).
 
 ## Sorting / Execution
 - `features.sorting.console_sorting_enabled`
@@ -27,6 +28,22 @@ Primäre Konfiguration: [src/config.json](../src/config.json)
 - `features.sorting.preserve_folder_structure`
 - `features.sorting.rename_template`
 - `features.sorting.confidence_threshold`
+
+## Backup / Rollback / Resume
+- `features.backup.enabled` – Report‑Backup aktivieren.
+- `features.backup.local_dir` – Lokaler Backup‑Ordner.
+- `features.backup.onedrive_enabled` – OneDrive‑Ziel aktivieren.
+- `features.backup.onedrive_dir` – Optionaler OneDrive‑Pfad (auto‑detect sonst).
+- `features.rollback.enabled` – Rollback‑Manifest erzeugen (nur Move).
+- `features.rollback.manifest_path` – Pfad zum Manifest.
+- `features.progress_persistence.enabled` – Resume‑Checkpointing aktivieren.
+- `features.progress_persistence.save_interval_sec` – Intervall in Sekunden.
+- `features.progress_persistence.scan_resume_path` – Scan‑Resume‑Pfad.
+- `features.progress_persistence.sort_resume_path` – Sort‑Resume‑Pfad.
+
+## Plugins
+- `features.plugins.enabled` – Plugin‑System aktivieren.
+- `features.plugins.paths` – Liste mit Plugin‑Ordnern.
 
 ### Conversion Tools
 - `features.sorting.conversion.enabled`
@@ -60,6 +77,7 @@ Primäre Konfiguration: [src/config.json](../src/config.json)
 - `ROM_SORTER_PROFILE_PATH=/path/scan.prof` – Zielpfad für das Profiling-Output.
 - `ROM_SORTER_PLATFORM_FORMATS=/path/platform_formats.yaml` – Override für Plattform-Formate.
 - `ROM_SORTER_CONVERTERS=/path/converters.yaml` – Override für Converter-Regeln.
+- `ROM_SORTER_PLUGIN_PATHS=/path/plugins1;/path/plugins2` – Plugin‑Suchpfade (Windows‑Separator `;`).
 
 ### IGIR (Copy-first)
 `igir.yaml` unterstützt `copy_first` für Copy-first-Staging vor dem finalen Output.

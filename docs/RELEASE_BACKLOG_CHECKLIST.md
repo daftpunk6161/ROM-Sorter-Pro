@@ -104,16 +104,16 @@
 
 | Status | ID | Feature | Aufwand | Priorität | Beschreibung |
 |--------|-----|---------|---------|-----------|--------------|
-| - [ ] | FEAT-1 | Progress Persistence | Mittel | Mittel | Resume nach App-Crash |
-| - [ ] | FEAT-2 | Undo/Rollback | Groß | Niedrig | Sortierung rückgängig machen |
-| - [ ] | FEAT-3 | Batch-Queue mit Prioritäten | Mittel | Mittel | Job-Queue UI verbessern |
-| - [ ] | FEAT-4 | Plugin-System | Groß | Niedrig | Externe Detektoren/Converter |
-| - [ ] | FEAT-5 | Cloud Backup Integration | Groß | Niedrig | Optional: Google Drive etc. |
-| - [ ] | FEAT-6 | Multi-Language UI (i18n) | Mittel | Mittel | Mehrsprachige Oberfläche |
+| - [x] | FEAT-1 | Progress Persistence | Mittel | Mittel | Resume nach App-Crash |
+| - [x] | FEAT-2 | Undo/Rollback | Groß | Niedrig | Sortierung rückgängig machen |
+| - [x] | FEAT-3 | Batch-Queue mit Prioritäten | Mittel | Mittel | Job-Queue UI verbessern |
+| - [x] | FEAT-4 | Plugin-System | Groß | Niedrig | Externe Detektoren/Converter |
+| - [x] | FEAT-5 | Cloud Backup Integration | Groß | Niedrig | Optional: Google Drive etc. |
+| - [x] | FEAT-6 | Multi-Language UI (i18n) | Mittel | Mittel | Mehrsprachige Oberfläche |
 | - [x] | FEAT-7 | Dark/Light Mode Auto | Klein | Mittel | System-Theme automatisch erkennen |
 | - [x] | FEAT-8 | Keyboard Shortcuts | Klein | Mittel | Ctrl+S für Scan etc. |
 | - [x] | FEAT-9 | Drag & Drop Verbesserung | Mittel | Mittel | Multi-Folder Drop Support |
-| - [ ] | FEAT-10 | Export to SQLite Database | Mittel | Niedrig | Scan-Ergebnisse als DB exportieren |
+| - [x] | FEAT-10 | Export to SQLite Database | Mittel | Niedrig | Scan-Ergebnisse als DB exportieren |
 | - [x] | FEAT-11 | Favorites/Presets für Ordner | Klein | Mittel | Häufig genutzte Pfade speichern |
 | - [x] | FEAT-12 | Console Filter in UI | Klein | Mittel | Nur bestimmte Konsolen anzeigen |
 | - [ ] | FEAT-13 | Bulk Rename Templates | Mittel | Niedrig | Erweiterte Rename-Optionen |
@@ -170,9 +170,9 @@ Features:                 █████░░░░░░░░░░░░░
 - [x] FEAT-8: Keyboard Shortcuts
 
 ### Phase 3: v1.2.0 (Features)
-- [ ] FEAT-1: Progress Persistence
-- [ ] FEAT-3: Batch-Queue Verbesserung
-- [ ] FEAT-6: Multi-Language UI
+- [x] FEAT-1: Progress Persistence
+- [x] FEAT-3: Batch-Queue Verbesserung
+- [x] FEAT-6: Multi-Language UI
 - [x] FEAT-11: Favorites/Presets
 - [x] FEAT-12: Console Filter
 - [x] DOC-2: API Reference
@@ -182,8 +182,8 @@ Features:                 █████░░░░░░░░░░░░░
 - [x] REF-3: MVVM/MVP Pattern
 - [x] REF-5: Dependency Injection
 - [x] REF-6: AsyncIO Integration
-- [ ] FEAT-2: Undo/Rollback
-- [ ] FEAT-4: Plugin-System
+- [x] FEAT-2: Undo/Rollback
+- [x] FEAT-4: Plugin-System
 - [ ] FEAT-14: Statistics Dashboard
 
 ### Backlog (Unpriorisiert)
@@ -197,9 +197,9 @@ Features:                 █████░░░░░░░░░░░░░
 - [x] TEST-5: Memory Leak Detection
 - [x] TEST-6: Security Fuzzing
 - [ ] DOC-6: Video Tutorial
-- [ ] FEAT-5: Cloud Backup
-- [ ] FEAT-9: Drag & Drop
-- [ ] FEAT-10: SQLite Export
+- [x] FEAT-5: Cloud Backup
+- [x] FEAT-9: Drag & Drop
+- [x] FEAT-10: SQLite Export
 - [ ] FEAT-13: Bulk Rename
 - [ ] FEAT-15: Auto-Update
 

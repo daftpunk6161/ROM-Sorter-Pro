@@ -114,6 +114,9 @@ def parse_arguments():
     parser.add_argument("--version", action="store_true", help="Show version information")
     parser.add_argument("--gui-smoke", action="store_true", help="Validate GUI backend without launching UI")
     parser.add_argument("--debug", action="store_true", help="Enable debug mode")
+    parser.add_argument("--rollback", metavar="PATH", help="Rollback a move operation using a manifest file")
+    parser.add_argument("--export-db", metavar="PATH", help="Scan a ROM folder and export into the database")
+    parser.add_argument("--export-db-path", metavar="DB", help="Target database path for export")
 
     return parser.parse_args()
 
@@ -234,6 +237,38 @@ def main() -> int:
         except Exception as e:
             logger.error(f"Audit failed: {e}")
             print(f"Audit failed: {e}")
+            return 1
+
+    if args.rollback:
+        try:
+            from src.app.rollback_controller import apply_rollback
+
+            report = apply_rollback(args.rollback)
+            print(
+                "Rollback complete. Restored: {restored}, Skipped: {skipped}, Errors: {errors}".format(
+                    restored=report.restored,
+                    skipped=report.skipped,
+                    errors=len(report.errors),
+                )
+            )
+            return 0
+        except Exception as e:
+            logger.error("Rollback failed: %s", e)
+            print(f"Rollback failed: {e}")
+            return 1
+
+    if args.export_db:
+        try:
+            from src.app.controller import run_scan
+            from src.app.database_export import export_scan_to_database
+
+            scan = run_scan(args.export_db)
+            count = export_scan_to_database(scan, db_path=args.export_db_path)
+            print(f"Exported {count} entries to database.")
+            return 0
+        except Exception as e:
+            logger.error("Database export failed: %s", e)
+            print(f"Database export failed: {e}")
             return 1
 
     # Start the Application in the Desired Mode

@@ -236,6 +236,46 @@
             }
           }
         },
+        "progress_persistence": {
+          "type": "object",
+          "properties": {
+            "enabled": {"type": "boolean"},
+            "save_interval_sec": {"type": "number", "minimum": 1},
+            "clear_on_success": {"type": "boolean"},
+            "scan_resume_path": {"type": "string"},
+            "sort_resume_path": {"type": "string"}
+          },
+          "additionalProperties": false
+        },
+        "rollback": {
+          "type": "object",
+          "properties": {
+            "enabled": {"type": "boolean"},
+            "manifest_path": {"type": "string"}
+          },
+          "additionalProperties": false
+        },
+        "backup": {
+          "type": "object",
+          "properties": {
+            "enabled": {"type": "boolean"},
+            "local_dir": {"type": "string"},
+            "onedrive_enabled": {"type": "boolean"},
+            "onedrive_dir": {"type": ["string", "null"]}
+          },
+          "additionalProperties": false
+        },
+        "plugins": {
+          "type": "object",
+          "properties": {
+            "enabled": {"type": "boolean"},
+            "paths": {
+              "type": "array",
+              "items": {"type": "string"}
+            }
+          },
+          "additionalProperties": false
+        },
         "duplicate_detection": {
           "type": "object",
           "properties": {

@@ -176,9 +176,18 @@ def run() -> int:
     ResultRow, ResultsTableModel = build_results_model(QtCore, QtGui)
 
     container = get_default_container()
+    def _save_config_adapter(data: Dict[str, Any]) -> None:
+        _save_config(data)
+
     if not container.has(ConfigService):
-        container.register_singleton(ConfigService, ConfigService(_load_config, _save_config))
+        container.register_singleton(
+            ConfigService,
+            ConfigService(_load_config, _save_config_adapter),
+        )
     config_service = container.get(ConfigService)
+    if config_service is None:
+        config_service = ConfigService(_load_config, _save_config_adapter)
+        container.register_singleton(ConfigService, config_service)
     load_config = config_service.load
     save_config = config_service.save
 
@@ -2577,8 +2586,10 @@ def run() -> int:
 
         def _get_min_confidence(self) -> float:
             try:
-                cfg = load_config()
+                cfg = load_config() or {}
             except Exception:
+                return 0.95
+            if not isinstance(cfg, dict):
                 return 0.95
             try:
                 sorting_cfg = cfg.get("features", {}).get("sorting", {}) or {}
@@ -2717,7 +2728,9 @@ def run() -> int:
             region_values = ["All", "Unknown"]
 
             try:
-                cfg = load_config()
+                cfg = load_config() or {}
+                if not isinstance(cfg, dict):
+                    return console_values, lang_values, ver_values, region_values
                 prioritization = cfg.get("prioritization", {}) or {}
                 langs = prioritization.get("language_order", []) or []
                 regions = prioritization.get("region_order", []) or []

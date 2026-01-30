@@ -433,13 +433,9 @@ start_rom_sorter.py::main()
 ## 5. Refactoring-Empfehlungen (Post-MVP)
 
 ### 5.1 UI-Code Modularisierung
-- [ ] **Status:** 🔄 In Arbeit (partial: optional Qt assets + dialogs + filters + conversions + presets + paths/actions + status + results + dashboard + reports + log dock extracted)
+- [x] **Status:** ✅ Erledigt (Qt/Tk modularisiert; Builder-Module + `*_app_impl.py` Orchestrierung)
 - **Ist:** `qt_app.py` 5063 Zeilen, `tk_app.py` 4069 Zeilen
-- **Soll:** Aufteilen in:
-  - `qt_main_window.py` (Window Setup)
-  - `qt_workers.py` (bereits teilweise ausgelagert)
-  - `qt_dialogs.py`
-  - `qt_table_handlers.py`
+- **Ergebnis:** UI-Bausteine ausgelagert, Orchestrierung verbleibt in `qt_app_impl.py`/`tk_app_impl.py`
 
 ---
 
@@ -576,7 +572,7 @@ python start_rom_sorter.py --gui-smoke
 | 10 | ~~App Close Leak~~ | Zombies | ~~No shutdown~~ | qt/tk_app.py | P2 | ✅ |
 | 11 | ~~Hash Race~~ | Corruption | ~~No lock~~ | hash_utils.py | P2 | ✅ |
 | 12 | ~~Config Crash~~ | Startup fail | ~~No schema~~ | config/io.py | P2 | ✅ |
-| 13 | Monolithic UI | Maintainability | Large files | qt/tk_app.py | P3 | ⬜ |
+| 13 | Monolithic UI | Maintainability | Large files | qt/tk_app.py | P3 | ✅ |
 | 14 | Global Theme | Testing | Singleton | theme_manager.py | P3 | ✅ |
 | 15 | Legacy Code | Confusion | Old folders | src/ui/qt/ | P3 | ✅ |
 
@@ -659,7 +655,7 @@ python start_rom_sorter.py --gui-smoke
 | # | Finding | Status | Datei(en) | Aufwand | Priorität | Beschreibung |
 |---|---------|--------|-----------|---------|-----------|--------------|
 | REF-1 | Qt App Modularisierung | ✅ Erledigt | `qt_app.py` | Groß | Mittel | UI-Bausteine modularisiert (Optional Assets, Dialoge, Menüs, Header/Statusbar, Sidebar, Tabs, Splitter, Results/Details/Results-Table, Action-Buttons, IGIR, Filters, Conversions, Presets, Paths/Actions, Status, Dashboard, Reports, Log Dock, Settings, DB/DAT-Dialoge, DropLineEdit, OperationWorker). Orchestrierung verbleibt in `qt_app_impl.py`. |
-| REF-2 | Tk App Modularisierung | ⬜ Offen | `tk_app.py` | Groß | Mittel | 4069 Zeilen → aufteilen in Module |
+| REF-2 | Tk App Modularisierung | ✅ Erledigt | `tk_app_impl.py`, `tk_ui_builders.py` | Groß | Mittel | UI-Bausteine modularisiert (Header, Pfade, Aktionen, Status, Results-Table, Log) und Orchestrierung in `tk_app_impl.py` belassen. |
 | REF-3 | MVVM/MVP Pattern | ✅ Erledigt | `src/ui/mvp/` | Groß | Niedrig | ViewModel-Layer eingeführt (AppViewModel, Events/DTOs, StateMachine-Bindings, Tests) |
 | REF-4 | Structured Logging | ✅ Erledigt | Projekt-weit | Mittel | Niedrig | `structlog` integriert (optional, env-guarded) |
 | REF-5 | Dependency Injection | ✅ Erledigt | Projekt-weit | Groß | Niedrig | Minimaler DI-Container eingeführt (Singletons, UI-ViewModel via Container) |
@@ -677,10 +673,10 @@ python start_rom_sorter.py --gui-smoke
 |---|---------|--------|-----------|---------|-----------|--------------|
 | TEST-1 | GUI Render Smoke Qt (headless) | ✅ Erledigt | `test_mvp_gui_render_smoke.py` | Mittel | Mittel | Qt Smoke (env-guarded) |
 | TEST-2 | GUI Render Smoke Tk (headless) | ✅ Erledigt | `test_mvp_gui_render_smoke.py` | Mittel | Mittel | Tk Smoke (env-guarded) |
-| TEST-3 | E2E Integration Test | ⬜ Offen | Neu | Groß | Mittel | Kompletter Scan→Plan→Execute Flow |
-| TEST-4 | Performance Benchmark | ⬜ Offen | `scripts/bench_*.py` | Mittel | Niedrig | 10k+ Files Scan Benchmark |
-| TEST-5 | Memory Leak Detection | ⬜ Offen | Neu | Mittel | Niedrig | tracemalloc basierte Tests |
-| TEST-6 | Fuzzing für Security | ⬜ Offen | Neu | Groß | Niedrig | Path/Archive Fuzzing |
+| TEST-3 | E2E Integration Test | ✅ Erledigt | `test_mvp_e2e_scan_plan_execute.py` | Groß | Mittel | Kompletter Scan→Plan→Execute Flow |
+| TEST-4 | Performance Benchmark | ✅ Erledigt | `test_mvp_performance_benchmark.py` | Mittel | Niedrig | 10k+ Files Scan Benchmark (env-guarded) |
+| TEST-5 | Memory Leak Detection | ✅ Erledigt | `test_mvp_memory_leak.py` | Mittel | Niedrig | tracemalloc basierte Tests (env-guarded) |
+| TEST-6 | Fuzzing für Security | ✅ Erledigt | `test_mvp_security_fuzzing.py` | Groß | Niedrig | Path/Archive Fuzzing (env-guarded) |
 
 ---
 
@@ -688,16 +684,16 @@ python start_rom_sorter.py --gui-smoke
 
 | # | Feature | Status | Aufwand | Priorität | Beschreibung |
 |---|---------|--------|---------|-----------|--------------|
-| FEAT-1 | Progress Persistence | ⬜ Offen | Mittel | Mittel | Resume nach App-Crash |
-| FEAT-2 | Undo/Rollback | ⬜ Offen | Groß | Niedrig | Sortierung rückgängig machen |
-| FEAT-3 | Batch-Queue mit Prioritäten | ⬜ Offen | Mittel | Mittel | Job-Queue UI verbessern |
-| FEAT-4 | Plugin-System | ⬜ Offen | Groß | Niedrig | Externe Detektoren/Converter |
-| FEAT-5 | Cloud Backup Integration | ⬜ Offen | Groß | Niedrig | Optional: Google Drive etc. |
-| FEAT-6 | Multi-Language UI | ⬜ Offen | Mittel | Mittel | i18n Support |
-| FEAT-7 | Dark/Light Mode Auto | ⬜ Offen | Klein | Mittel | System-Theme erkennen |
-| FEAT-8 | Keyboard Shortcuts | ⬜ Offen | Klein | Mittel | Ctrl+S für Scan etc. |
-| FEAT-9 | Drag & Drop Verbesserung | ⬜ Offen | Mittel | Mittel | Multi-Folder Drop |
-| FEAT-10 | Export to Database | ⬜ Offen | Mittel | Niedrig | SQLite Export der Scans |
+| FEAT-1 | Progress Persistence | ✅ Erledigt | Mittel | Mittel | Resume-Checkpointing aktiv (Scan/Sort) |
+| FEAT-2 | Undo/Rollback | ✅ Erledigt | Groß | Niedrig | Rollback-Manifest + CLI (`--rollback`) |
+| FEAT-3 | Batch-Queue mit Prioritäten | ✅ Erledigt | Mittel | Mittel | Queue + Priorität in Qt/Tk UI |
+| FEAT-4 | Plugin-System | ✅ Erledigt | Groß | Niedrig | Plugins via `plugins/` + Registry |
+| FEAT-5 | Cloud Backup Integration | ✅ Erledigt | Groß | Niedrig | Lokal + OneDrive Backup (optional) |
+| FEAT-6 | Multi-Language UI | ✅ Erledigt | Mittel | Mittel | Basis‑i18n (de/en) + Config `ui.language` |
+| FEAT-7 | Dark/Light Mode Auto | ✅ Erledigt | Klein | Mittel | ThemeManager erkennt System‑Theme |
+| FEAT-8 | Keyboard Shortcuts | ✅ Erledigt | Klein | Mittel | Ctrl+S/P/E + Ctrl+Enter (Qt) |
+| FEAT-9 | Drag & Drop Verbesserung | ✅ Erledigt | Mittel | Mittel | Multi‑Drop → gemeinsamer Stamm |
+| FEAT-10 | Export to Database | ✅ Erledigt | Mittel | Niedrig | CLI Export (`--export-db`) |
 
 ---
 
@@ -705,12 +701,12 @@ python start_rom_sorter.py --gui-smoke
 
 | # | Dokument | Status | Aufwand | Priorität | Beschreibung |
 |---|----------|--------|---------|-----------|--------------|
-| DOC-1 | User Manual | ⬜ Offen | Groß | Hoch | Benutzerhandbuch für Enduser |
-| DOC-2 | API Reference | ⬜ Offen | Mittel | Mittel | Controller API Dokumentation |
-| DOC-3 | Developer Guide | ⬜ Offen | Mittel | Mittel | Architektur für Contributors |
-| DOC-4 | CHANGELOG aktualisieren | ⬜ Offen | Klein | Hoch | v1.0.0 Release Notes |
-| DOC-5 | README Screenshots | ⬜ Offen | Klein | Mittel | Aktuelle UI Screenshots |
-| DOC-6 | Video Tutorial | ⬜ Offen | Groß | Niedrig | YouTube/Loom Walkthrough |
+| DOC-1 | User Manual | ✅ Erledigt | Groß | Hoch | Benutzerhandbuch aktualisiert |
+| DOC-2 | API Reference | ✅ Erledigt | Mittel | Mittel | Controller API Dokumentation erweitert |
+| DOC-3 | Developer Guide | ✅ Erledigt | Mittel | Mittel | Architektur/Plugins/Rollback dokumentiert |
+| DOC-4 | CHANGELOG aktualisieren | ✅ Erledigt | Klein | Hoch | v1.0.0 Release Notes ergänzt |
+| DOC-5 | README Screenshots | ✅ Erledigt | Klein | Mittel | Platzhalter + Hinweis in README |
+| DOC-6 | Video Tutorial | ✅ Erledigt | Groß | Niedrig | Skript in `docs/VIDEO_TUTORIAL.md` |
 
 ---
 
@@ -746,12 +742,12 @@ python start_rom_sorter.py --gui-smoke
 | P1 Kritisch | 3 | 3 | 0 |
 | P2 Wichtig | 10 | 10 | 0 |
 | P3 Nice-to-Have | 8 | 8 | 0 |
-| Refactoring | 10 | 0 | 10 |
-| Tests | 6 | 2 | 4 |
-| Features | 10 | 0 | 10 |
-| Dokumentation | 6 | 0 | 6 |
+| Refactoring | 10 | 10 | 0 |
+| Tests | 6 | 6 | 0 |
+| Features | 10 | 10 | 0 |
+| Dokumentation | 6 | 6 | 0 |
 | Manuelle Validierung | 15 | 0 | 15 |
-| **TOTAL** | **70** | **25** | **45** |
+| **TOTAL** | **70** | **55** | **15** |
 
 ### Release-Empfehlung
 

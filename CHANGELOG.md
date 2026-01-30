@@ -19,6 +19,10 @@ und dieses Projekt verwendet [Semantic Versioning](https://semver.org/lang/de/).
 - Neue GUI-Themes: Clean Slate, Midnight Pro, Retro Console.
 - Doku: User Manual, API Reference, Developer Guide.
 - Tests: E2E Scan→Plan→Execute, Performance-Benchmark, Memory-Leak- und Security-Fuzz-Smoke.
+- Backup: lokale Report-Backups + OneDrive-Ziel (optional).
+- Rollback-Manifest für Move-Operationen + CLI `--rollback`.
+- Plugin-Registry für externe Detektoren/Converter (Ordner `plugins/`).
+- CLI-Export: Scan → ROM-Datenbank (`--export-db`).
 
 ### Changed
 - Docs aktualisiert: Feature Catalog, DAT Import & Index, Identification Strategy, Test Strategy.
@@ -38,6 +42,8 @@ und dieses Projekt verwendet [Semantic Versioning](https://semver.org/lang/de/).
 - GUI: Konsolen/System-Filter in der Filter-Sidebar.
 - GUI: Favoriten für Source/Ziel-Pfade im Home-Tab.
 - GUI: Multi-Drag&Drop nutzt gemeinsamen Stammordner.
+- Progress Persistence: Resume‑Checkpointing bei Sortierung.
+- UI: Basis‑i18n für Kernlabels (de/en) im Tk‑Fallback.
 
 ### Fixed
 - Symlink-Zielpfade werden im Plan frühzeitig abgewiesen.

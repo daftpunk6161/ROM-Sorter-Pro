@@ -107,6 +107,7 @@ async def execute_sort_stream(
     start_index: int = 0,
     only_indices: Optional[list[int]] = None,
     conversion_mode: str = "all",
+    rollback_path: Optional[str] = None,
 ) -> AsyncIterator[ProgressEvent]:
     loop = asyncio.get_running_loop()
     queue: asyncio.Queue = asyncio.Queue()
@@ -133,6 +134,7 @@ async def execute_sort_stream(
             start_index,
             only_indices,
             conversion_mode,
+            rollback_path,
         )
     )
 
