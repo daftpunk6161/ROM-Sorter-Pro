@@ -14,3 +14,6 @@ atomicwrites>=1.4
 
 # Structured logging
 structlog>=24.4
+
+# Config models
+pydantic>=2.6

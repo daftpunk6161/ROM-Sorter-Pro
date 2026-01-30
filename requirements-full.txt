@@ -24,6 +24,7 @@ atomicwrites>=1.4
 
 # Optional structured logging
 structlog>=24.4
+pydantic>=2.6
 
 # Optional archive inspection (7z/RAR)
 py7zr>=0.21.0
