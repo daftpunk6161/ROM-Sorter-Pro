@@ -17,7 +17,12 @@ from .conversion_controller import (
     plan_normalization,
 )
 from .async_api import async_execute_sort, async_plan_sort, async_run_scan
-from .progress_streams import progress_observable
+from .progress_streams import (
+    ProgressEvent,
+    run_scan_stream,
+    plan_sort_stream,
+    execute_sort_stream,
+)
 from .dat_sources_controller import DatSourceReport
 from .models import (
     ActionStatusCallback,
@@ -78,7 +83,10 @@ __all__ = [
     "async_run_scan",
     "async_plan_sort",
     "async_execute_sort",
-    "progress_observable",
+    "ProgressEvent",
+    "run_scan_stream",
+    "plan_sort_stream",
+    "execute_sort_stream",
     "Err",
     "Ok",
     "Result",

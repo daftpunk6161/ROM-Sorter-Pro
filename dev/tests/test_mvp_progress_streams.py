@@ -1,27 +1,33 @@
 from __future__ import annotations
 
-import os
+import asyncio
 
-import pytest
-
-from src.app.progress_streams import RX_AVAILABLE, progress_observable
+from src.app.progress_streams import run_scan_stream, plan_sort_stream, execute_sort_stream
 
 
-pytestmark = pytest.mark.integration
+async def _consume(async_iter):
+    items = []
+    async for event in async_iter:
+        items.append(event)
+    return items
 
 
-def test_progress_observable_smoke() -> None:
-    if os.environ.get("ROM_SORTER_RX_TEST") != "1":
-        pytest.skip("Set ROM_SORTER_RX_TEST=1 to enable Rx progress test.")
-    if not RX_AVAILABLE:
-        pytest.skip("RxPY not available.")
+def test_progress_streams_end_to_end(tmp_path):
+    src_dir = tmp_path / "src"
+    dest_dir = tmp_path / "dest"
+    src_dir.mkdir()
+    dest_dir.mkdir()
 
-    subject, cb = progress_observable()
-    events: list[tuple[int, int]] = []
-    sub = subject.subscribe(lambda value: events.append(value))
-    cb(1, 10)
-    cb(2, 10)
-    subject.on_completed()
-    sub.dispose()
+    rom = src_dir / "game.nes"
+    rom.write_text("data", encoding="utf-8")
 
-    assert events == [(1, 10), (2, 10)]
+    scan_events = asyncio.run(_consume(run_scan_stream(str(src_dir))))
+    assert any(e.kind == "result" for e in scan_events)
+    scan = [e.result for e in scan_events if e.kind == "result"][0]
+
+    plan_events = asyncio.run(_consume(plan_sort_stream(scan, str(dest_dir), mode="copy", on_conflict="rename")))
+    assert any(e.kind == "result" for e in plan_events)
+    plan = [e.result for e in plan_events if e.kind == "result"][0]
+
+    exec_events = asyncio.run(_consume(execute_sort_stream(plan)))
+    assert any(e.kind == "result" for e in exec_events)

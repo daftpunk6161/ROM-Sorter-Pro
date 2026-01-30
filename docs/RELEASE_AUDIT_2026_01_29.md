@@ -664,7 +664,7 @@ python start_rom_sorter.py --gui-smoke
 | REF-4 | Structured Logging | ✅ Erledigt | Projekt-weit | Mittel | Niedrig | `structlog` integriert (optional, env-guarded) |
 | REF-5 | Dependency Injection | ✅ Erledigt | Projekt-weit | Groß | Niedrig | Minimaler DI-Container eingeführt (Singletons, UI-ViewModel via Container) |
 | REF-6 | AsyncIO Integration | ✅ Erledigt | `async_controller.py` | Groß | Niedrig | Async Wrappers für run_scan/plan_sort/execute_sort (awaitable, thread executor) |
-| REF-7 | Observable Progress Streams | ⬜ Offen | `controller.py` | Mittel | Niedrig | RxPY oder AsyncIO generators |
+| REF-7 | Observable Progress Streams | ✅ Erledigt | `progress_streams.py` | Mittel | Niedrig | AsyncIO Generatoren für Scan/Plan/Execute (ProgressEvent) |
 | REF-8 | Pydantic Config Models | ⬜ Offen | `src/config/` | Mittel | Mittel | Typsichere Config mit Validation |
 | REF-9 | Result Types (Ok/Err) | ⬜ Offen | Projekt-weit | Mittel | Niedrig | Statt Exceptions für erwartete Fehler |
 | REF-10 | atomicwrites Library | ⬜ Offen | `execute_helpers.py` | Klein | Niedrig | Externe Library für Atomizität |
