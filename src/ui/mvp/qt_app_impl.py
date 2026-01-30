@@ -155,6 +155,7 @@ def run() -> int:
     from .qt_drop_line_edit import build_drop_line_edit
     from .qt_operation_worker import build_operation_worker
     from .viewmodel import AppViewModel
+    from ...utils.di import get_default_container
 
     (
         WorkerSignals,
@@ -173,7 +174,10 @@ def run() -> int:
 
     ResultRow, ResultsTableModel = build_results_model(QtCore, QtGui)
 
-    viewmodel = AppViewModel(state_machine=UIStateMachine())
+    container = get_default_container()
+    if not container.has(AppViewModel):
+        container.register_singleton(AppViewModel, AppViewModel(state_machine=UIStateMachine()))
+    viewmodel = container.get(AppViewModel)
 
     OperationWorker = build_operation_worker(
         QtCore,

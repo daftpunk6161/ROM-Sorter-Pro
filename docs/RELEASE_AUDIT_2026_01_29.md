@@ -662,7 +662,7 @@ python start_rom_sorter.py --gui-smoke
 | REF-2 | Tk App Modularisierung | ⬜ Offen | `tk_app.py` | Groß | Mittel | 4069 Zeilen → aufteilen in Module |
 | REF-3 | MVVM/MVP Pattern | ✅ Erledigt | `src/ui/mvp/` | Groß | Niedrig | ViewModel-Layer eingeführt (AppViewModel, Events/DTOs, StateMachine-Bindings, Tests) |
 | REF-4 | Structured Logging | ✅ Erledigt | Projekt-weit | Mittel | Niedrig | `structlog` integriert (optional, env-guarded) |
-| REF-5 | Dependency Injection | ⬜ Offen | Projekt-weit | Groß | Niedrig | DI Container für Tests |
+| REF-5 | Dependency Injection | ✅ Erledigt | Projekt-weit | Groß | Niedrig | Minimaler DI-Container eingeführt (Singletons, UI-ViewModel via Container) |
 | REF-6 | AsyncIO Integration | ⬜ Offen | `controller.py`, Workers | Groß | Niedrig | Native async/await Cancel |
 | REF-7 | Observable Progress Streams | ⬜ Offen | `controller.py` | Mittel | Niedrig | RxPY oder AsyncIO generators |
 | REF-8 | Pydantic Config Models | ⬜ Offen | `src/config/` | Mittel | Mittel | Typsichere Config mit Validation |
