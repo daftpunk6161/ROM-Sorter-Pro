@@ -154,6 +154,7 @@ def run() -> int:
     from .qt_dat_sources_ui import build_dat_sources_ui
     from .qt_drop_line_edit import build_drop_line_edit
     from .qt_operation_worker import build_operation_worker
+    from .viewmodel import AppViewModel
 
     (
         WorkerSignals,
@@ -172,16 +173,13 @@ def run() -> int:
 
     ResultRow, ResultsTableModel = build_results_model(QtCore, QtGui)
 
+    viewmodel = AppViewModel(state_machine=UIStateMachine())
+
     OperationWorker = build_operation_worker(
         QtCore,
         Slot,
         binding,
-        run_scan,
-        plan_sort,
-        execute_sort,
-        audit_conversion_candidates,
-        ConflictPolicy,
-        SortMode,
+        viewmodel,
         ConversionMode,
     )
 

@@ -3,17 +3,14 @@ from __future__ import annotations
 import traceback
 from typing import Any, List, Optional, cast
 
+from .viewmodel_types import ViewModelEvents
+
 
 def build_operation_worker(
     QtCore,
     Slot,
     binding: str,
-    run_scan,
-    plan_sort,
-    execute_sort,
-    audit_conversion_candidates,
-    ConflictPolicy,
-    SortMode,
+    viewmodel,
     ConversionMode,
 ):
     class OperationWorker(QtCore.QObject):
@@ -56,13 +53,19 @@ def build_operation_worker(
         def run(self) -> None:
             try:
                 self.signals.log.emit(f"Qt binding: {binding}")
+                viewmodel.set_events(
+                    ViewModelEvents(
+                        log=lambda msg: self.signals.log.emit(str(msg)),
+                        progress=lambda c, t: self.signals.progress.emit(int(c), int(t)),
+                        phase_changed=lambda phase, total: self.signals.phase_changed.emit(str(phase), int(total)),
+                        action_status=lambda i, status: self.signals.action_status.emit(int(i), str(status)),
+                    )
+                )
 
                 if self.op == "scan":
-                    self.signals.phase_changed.emit("scan", 0)
                     self.signals.log.emit(f"Scan started: source={self.source}")
-                    scan = run_scan(
+                    scan = viewmodel.run_scan(
                         self.source,
-                        config=None,
                         progress_cb=lambda c, t: self.signals.progress.emit(int(c), int(t)),
                         log_cb=lambda msg: self.signals.log.emit(str(msg)),
                         cancel_token=self.cancel_token,
@@ -74,16 +77,14 @@ def build_operation_worker(
                 if self.op == "plan":
                     if self.scan_result is None:
                         raise RuntimeError("No scan result available")
-                    self.signals.phase_changed.emit("plan", len(self.scan_result.items))
                     self.signals.log.emit(
                         f"Plan started: items={len(self.scan_result.items)} mode={self.mode} conflict={self.on_conflict}"
                     )
-                    plan = plan_sort(
+                    plan = viewmodel.plan_sort(
                         self.scan_result,
                         self.dest,
-                        config=None,
-                        mode=cast(SortMode, self.mode),
-                        on_conflict=cast(ConflictPolicy, self.on_conflict),
+                        mode=self.mode,
+                        on_conflict=self.on_conflict,
                         cancel_token=self.cancel_token,
                     )
                     self.signals.log.emit(f"Plan finished: actions={len(plan.actions)}")
@@ -107,7 +108,6 @@ def build_operation_worker(
                             total = convert_count
                         elif self.conversion_mode == "skip":
                             total = max(0, total_actions - convert_count)
-                    self.signals.phase_changed.emit("execute", total)
                     self.signals.log.emit(
                         "Execute started: total={total} resume={resume} only_indices={only} conversion_mode={mode}".format(
                             total=total,
@@ -116,7 +116,7 @@ def build_operation_worker(
                             mode=self.conversion_mode,
                         )
                     )
-                    report = execute_sort(
+                    report = viewmodel.execute_sort(
                         self.sort_plan,
                         progress_cb=lambda c, t: self.signals.progress.emit(int(c), int(t)),
                         log_cb=lambda msg: self.signals.log.emit(str(msg)),
@@ -141,11 +141,9 @@ def build_operation_worker(
                     return
 
                 if self.op == "audit":
-                    self.signals.phase_changed.emit("audit", 0)
                     self.signals.log.emit(f"Audit started: source={self.source}")
-                    report = audit_conversion_candidates(
+                    report = viewmodel.audit_conversion_candidates(
                         self.source,
-                        config=None,
                         progress_cb=lambda c, t: self.signals.progress.emit(int(c), int(t)),
                         log_cb=lambda msg: self.signals.log.emit(str(msg)),
                         cancel_token=self.cancel_token,
