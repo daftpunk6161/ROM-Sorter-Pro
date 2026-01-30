@@ -83,7 +83,8 @@ def run() -> int:
         run_scan,
         save_dat_sources,
     )
-    from ...config.io import load_config, save_config
+    from ...config.io import load_config as _load_config, save_config as _save_config
+    from ...config.config_service import ConfigService
     from ...core.dat_index_sqlite import DatIndexSqlite
     from ...database.db_paths import get_rom_db_path
     from ...ui.theme_manager import ThemeManager
@@ -175,6 +176,12 @@ def run() -> int:
     ResultRow, ResultsTableModel = build_results_model(QtCore, QtGui)
 
     container = get_default_container()
+    if not container.has(ConfigService):
+        container.register_singleton(ConfigService, ConfigService(_load_config, _save_config))
+    config_service = container.get(ConfigService)
+    load_config = config_service.load
+    save_config = config_service.save
+
     if not container.has(AppViewModel):
         container.register_singleton(AppViewModel, AppViewModel(state_machine=UIStateMachine()))
     viewmodel = container.get(AppViewModel)
@@ -451,7 +458,10 @@ def run() -> int:
                 theme_cfg = load_config()
             except Exception:
                 theme_cfg = None
-            self._theme_manager = ThemeManager(config=theme_cfg)
+            container = get_default_container()
+            if not container.has(ThemeManager):
+                container.register_singleton(ThemeManager, ThemeManager(config=theme_cfg))
+            self._theme_manager = container.get(ThemeManager) or ThemeManager(config=theme_cfg)
             self._qt_theme_manager = None
             self._qt_theme_display: Dict[str, str] = {}
             self._active_qt_theme_key: Optional[str] = None
