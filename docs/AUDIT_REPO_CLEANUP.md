@@ -139,6 +139,33 @@ Die folgenden Dokumente wurden nach Abschluss aller Items ins Archiv verschoben:
 
 ---
 
+## Offene Items (Future Work)
+
+Die folgenden Items aus den verbleibenden Docs sind **nicht** Release-kritisch, aber für zukünftige Versionen relevant:
+
+### Aus FEATURE_CATALOG.md (🟡 In Planung)
+
+| Feature | Kategorie | Komplexität | Priorität |
+|---------|-----------|-------------|-----------|
+| IGIR Report-Viewer | IGIR | Mittel | Niedrig |
+| Index-Sharding | DB/Daten | Hoch | Niedrig |
+| Bench/Profiling Tools | Performance | Mittel | Niedrig |
+| Mutation-Tests | Qualität | Hoch | Niedrig |
+| Plugin-System | Integrationen | Hoch | Niedrig |
+
+### Aus GUI_REFACTORING_PROPOSAL.md (Vorschlag / Nicht umgesetzt)
+
+| Item | Beschreibung | Status |
+|------|--------------|--------|
+| Tab-Struktur Redesign | 6 Tabs → 5 Tabs (Home, Sortieren, Konvertieren, Einstellungen, Reports) | Konzept |
+| Header-Verschlankung | Status-Pills → Status-Bar unten | Konzept |
+| qt_app_impl.py Split | 5.000 Zeilen aufteilen in Module | Konzept (Phase 1) |
+| Neue Themes | Clean Slate, Midnight Pro, Retro Console | Konzept |
+
+**Entscheidung:** Diese Dokumente bleiben als aktive Roadmap-Dokumente im `docs/` Ordner (nicht archiviert).
+
+---
+
 ## Risiken
 
 1. ~~**Import-Pfad-Bruch:** Beim Verschieben von Dateien könnten Imports kaputt gehen~~ → Nicht eingetreten
@@ -175,4 +202,5 @@ python -m ruff check .
 | Datum | Schritt | Status | Notizen |
 |-------|---------|--------|---------|
 | 2026-01-30 | 0 - Audit | ✅ | Snapshot erstellt |
-| 2026-01-30 | 1 - Artefakte | ⏳ | In Bearbeitung |
+| 2026-01-30 | 1-6 | ✅ | Cleanup abgeschlossen |
+| 2026-01-30 | Backlog Review | ✅ | Alle Audits archiviert, Future Work dokumentiert |
