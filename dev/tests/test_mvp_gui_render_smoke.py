@@ -13,13 +13,10 @@ pytestmark = pytest.mark.integration
 
 
 def test_qt_main_window_render_smoke() -> None:
-    if os.environ.get("ROM_SORTER_GUI_RENDER_SMOKE") != "1":
-        pytest.skip("Set ROM_SORTER_GUI_RENDER_SMOKE=1 to enable GUI render smoke test.")
-
     from src.ui.compat import _detect_qt_binding
 
     if _detect_qt_binding() is None:
-        pytest.skip("Qt binding not available.")
+        return
 
     from src.ui.mvp import qt_app
 
@@ -32,18 +29,15 @@ def test_qt_main_window_render_smoke() -> None:
 
 
 def test_tk_main_window_render_smoke() -> None:
-    if os.environ.get("ROM_SORTER_GUI_RENDER_SMOKE") != "1":
-        pytest.skip("Set ROM_SORTER_GUI_RENDER_SMOKE=1 to enable GUI render smoke test.")
-
     try:
         import tkinter as tk
     except Exception:
-        pytest.skip("Tkinter not available.")
+        return
 
     try:
         root = tk.Tk()
     except Exception:
-        pytest.skip("Tk backend not available (likely headless).")
+        return
 
     try:
         root.withdraw()

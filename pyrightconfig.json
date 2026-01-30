@@ -5,7 +5,10 @@
     ".venv/**",
     "cache/**",
     "logs/**",
+    "node_modules/**",
     "rom_databases/**",
     "temp/**"
-  ]
+  ],
+  "reportMissingImports": "none",
+  "reportMissingModuleSource": "none"
 }

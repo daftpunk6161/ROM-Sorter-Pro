@@ -201,8 +201,10 @@ def test_plan_normalization_prefers_platform_outputs(
 
 
 def test_config_schema_validation() -> None:
-    if not JSONSCHEMA_AVAILABLE:
-        pytest.skip("jsonschema not available")
     ok, error = validate_config_schema({"features": "invalid"})
-    assert ok is False
-    assert error
+    if JSONSCHEMA_AVAILABLE:
+        assert ok is False
+        assert error
+    else:
+        assert ok is True
+        assert error is None

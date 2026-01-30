@@ -28,18 +28,22 @@ import threading
 import json
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, TYPE_CHECKING
 from functools import lru_cache
 from collections import defaultdict
 import queue
 import atexit
 
-try:
-    import structlog
+if TYPE_CHECKING:
+    import structlog as structlog  # type: ignore[reportMissingImports]
     STRUCTLOG_AVAILABLE = True
-except Exception:  # pragma: no cover
-    structlog = None
-    STRUCTLOG_AVAILABLE = False
+else:
+    try:
+        import structlog as structlog
+        STRUCTLOG_AVAILABLE = True
+    except Exception:  # pragma: no cover
+        structlog = None  # type: ignore
+        STRUCTLOG_AVAILABLE = False
 
 STRUCTLOG_ENABLED = False
 
@@ -438,7 +442,7 @@ def setup_optimized_logging(
     use_json = structured_json if structured_json is not None else _env_bool("ROM_SORTER_LOG_JSON")
     use_structlog = _env_bool("ROM_SORTER_USE_STRUCTLOG", STRUCTLOG_AVAILABLE)
 
-    if use_structlog and STRUCTLOG_AVAILABLE:
+    if use_structlog and STRUCTLOG_AVAILABLE and structlog is not None:
         structlog.configure(
             processors=[
                 structlog.processors.add_log_level,

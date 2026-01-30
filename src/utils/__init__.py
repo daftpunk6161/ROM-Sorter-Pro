@@ -18,8 +18,7 @@ except ImportError:
 
 try:
     from .performance import (
-        measure_time, measure_function, PerformanceMetric, PerformanceMonitor,
-        get_performance_report
+        measure_time, PerformanceMetric, PerformanceMonitor,
     )
 except ImportError:
     pass  # Module may not yet

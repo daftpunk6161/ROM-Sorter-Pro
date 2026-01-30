@@ -10,16 +10,6 @@ from src.scanning.high_performance_scanner import HighPerformanceScanner
 from src.core import platform_heuristics as heuristics
 
 
-# NOTE: These tests document desired policy-driven ambiguity handling.
-# Currently the scanner uses ENHANCED_CONSOLE_DATABASE for extension matching
-# BEFORE applying the custom catalog policy, so the policy checks are never
-# reached for extensions that are unique in ENHANCED_CONSOLE_DATABASE (like .nes).
-# These tests are marked xfail until the scanner is refactored to use the
-# catalog-driven policy as the primary detection source.
-_POLICY_NOT_IMPLEMENTED = pytest.mark.xfail(
-    reason="Scanner uses ENHANCED_CONSOLE_DATABASE before catalog policy",
-    strict=False,
-)
 
 
 def _write_catalog(path: Path, platforms: list[dict], policy: dict) -> None:
@@ -52,7 +42,6 @@ def _base_platform(
     }
 
 
-@_POLICY_NOT_IMPLEMENTED
 def test_detection_policy_marks_ambiguous_extension(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     catalog_path = tmp_path / "catalog.yaml"
     policy = {
@@ -80,7 +69,6 @@ def test_detection_policy_marks_ambiguous_extension(tmp_path: Path, monkeypatch:
     assert info["detection_source"] == "ambiguous-candidates"
 
 
-@_POLICY_NOT_IMPLEMENTED
 def test_detection_policy_marks_contradiction(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     catalog_path = tmp_path / "catalog.yaml"
     policy = {
@@ -108,7 +96,6 @@ def test_detection_policy_marks_contradiction(tmp_path: Path, monkeypatch: pytes
     assert info["detection_source"] == "contradiction-candidates"
 
 
-@_POLICY_NOT_IMPLEMENTED
 def test_detection_policy_marks_conflict_group(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     catalog_path = tmp_path / "catalog.yaml"
     policy = {

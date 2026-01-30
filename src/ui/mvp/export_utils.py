@@ -4,10 +4,17 @@ from __future__ import annotations
 
 import csv
 import json
-try:
-    from defusedxml import ElementTree as ET  # type: ignore
-except Exception:
-    import xml.etree.ElementTree as ET  # nosec B405
+from typing import TYPE_CHECKING, Any, cast
+
+if TYPE_CHECKING:
+    from defusedxml import ElementTree as ET  # type: ignore[reportMissingImports]
+else:
+    try:
+        from defusedxml import ElementTree as ET  # type: ignore
+    except Exception:
+        import xml.etree.ElementTree as ET  # nosec B405
+
+ET_ANY = cast(Any, ET)
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -205,18 +212,18 @@ def _format_plan_path(plan: SortPlan, target_path: str, *, prefer_relative: bool
 
 def write_emulationstation_gamelist(plan: SortPlan, filename: str) -> None:
     """Write a minimal EmulationStation gamelist.xml mapping from a SortPlan."""
-    root = ET.Element("gameList")
+    root = ET_ANY.Element("gameList")
     for action in _iter_planned_actions(plan):
         target_path = _format_plan_path(plan, str(action.planned_target_path), prefer_relative=True)
         if not target_path:
             continue
-        entry = ET.SubElement(root, "game")
-        ET.SubElement(entry, "path").text = target_path
+        entry = ET_ANY.SubElement(root, "game")
+        ET_ANY.SubElement(entry, "path").text = target_path
         name = Path(str(action.planned_target_path)).stem or Path(str(action.input_path)).stem
-        ET.SubElement(entry, "name").text = name
-        ET.SubElement(entry, "platform").text = str(action.detected_system or "Unknown")
+        ET_ANY.SubElement(entry, "name").text = name
+        ET_ANY.SubElement(entry, "platform").text = str(action.detected_system or "Unknown")
 
-    tree = ET.ElementTree(root)
+    tree = ET_ANY.ElementTree(root)
     Path(filename).parent.mkdir(parents=True, exist_ok=True)
     tree.write(filename, encoding="utf-8", xml_declaration=True)
 

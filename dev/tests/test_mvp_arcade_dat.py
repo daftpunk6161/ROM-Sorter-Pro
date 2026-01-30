@@ -16,6 +16,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Dict, List, cast
 
+from typing import cast, List
+
 import pytest
 
 from src.database.console_db import (
@@ -263,7 +265,7 @@ class TestArcadeEmulatorCompatibility:
         arcade = ENHANCED_CONSOLE_DATABASE.get("Arcade")
         assert arcade is not None
         
-        emulators = arcade.emulator_compatibility or []
+        emulators = list(cast(List[str], arcade.emulator_compatibility or []))
         # Should include MAME at minimum
         assert len(emulators) > 0, "Arcade should have emulator compatibility list"
         
@@ -283,7 +285,7 @@ class TestArcadeCatalog:
         """Check arcade has appropriate positive tokens in catalog."""
         # Load platform heuristics result
         result = evaluate_platform_candidates("/roms/mame/test.zip")
-        signals = result.get("signals", [])
+        signals = list(cast(List[str], result.get("signals", [])))
         
         # If mame token works, we should see TOKEN:mame in signals
         token_signals = [s for s in signals if s.startswith("TOKEN:")]
@@ -339,7 +341,7 @@ def test_arcade_token_mapping(token: str, expected_system: str):
     """Arcade-related tokens should map to arcade systems."""
     path = f"/roms/{token}/game.zip"
     result = evaluate_platform_candidates(path)
-    systems = result.get("candidate_systems", [])
+    systems = list(cast(List[str], result.get("candidate_systems", [])))
     
     # Check if expected system is in candidates
     expected_found = any(

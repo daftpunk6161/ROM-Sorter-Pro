@@ -13,9 +13,6 @@ pytestmark = pytest.mark.integration
 
 
 def test_performance_benchmark_smoke(tmp_path: Path) -> None:
-    if os.environ.get("ROM_SORTER_PERF_BENCH") != "1":
-        pytest.skip("Set ROM_SORTER_PERF_BENCH=1 to enable perf benchmark test.")
-
     source_dir = tmp_path / "source"
     dest_dir = tmp_path / "dest"
     source_dir.mkdir(parents=True, exist_ok=True)

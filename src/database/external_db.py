@@ -83,6 +83,9 @@ class ExternalDatabaseManager:
 
             tree = ET.parse(dat_path)  # nosec B314
             root = tree.getroot()
+            if root is None:
+                logger.error("DAT-Datei hat kein Root-Element: %s", dat_file_path)
+                return 0
 
 # Determine the format (no-intro, Tosec, etc.)
             if database_source == "unknown":

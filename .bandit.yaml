@@ -9,5 +9,7 @@ skips:
   - B101
   - B110
   - B112
+  # Placeholder API client secrets in sample config files.
+  - B105
   - B606
   - B607

@@ -8,18 +8,21 @@ try:
     from pydantic import BaseModel
     PYDANTIC_AVAILABLE = True
 except Exception:
-    BaseModel = object  # type: ignore
+    class _BaseModelFallback:  # type: ignore
+        """Fallback base model when pydantic is unavailable."""
+
+    BaseModel = _BaseModelFallback  # type: ignore
     PYDANTIC_AVAILABLE = False
 
 
-class SortingConfigModel(BaseModel if PYDANTIC_AVAILABLE else object):
+class SortingConfigModel(BaseModel):  # type: ignore[misc]
     console_sorting_enabled: Optional[bool] = True
     create_console_folders: Optional[bool] = True
     region_based_sorting: Optional[bool] = False
     preserve_folder_structure: Optional[bool] = False
 
 
-class AppConfigModel(BaseModel if PYDANTIC_AVAILABLE else object):
+class AppConfigModel(BaseModel):  # type: ignore[misc]
     features: Optional[Dict[str, Any]] = None
     dats: Optional[Dict[str, Any]] = None
 

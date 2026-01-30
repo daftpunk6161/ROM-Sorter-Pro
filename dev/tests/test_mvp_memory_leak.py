@@ -22,9 +22,6 @@ def _run_cycle(source_dir: Path, dest_dir: Path) -> None:
 
 
 def test_memory_leak_smoke(tmp_path: Path) -> None:
-    if os.environ.get("ROM_SORTER_MEM_LEAK") != "1":
-        pytest.skip("Set ROM_SORTER_MEM_LEAK=1 to enable memory leak smoke test.")
-
     source_dir = tmp_path / "source"
     dest_dir = tmp_path / "dest"
     source_dir.mkdir(parents=True, exist_ok=True)

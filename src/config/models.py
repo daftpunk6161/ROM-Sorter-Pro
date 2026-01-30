@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, TypeVar, overload, cast
+
+T = TypeVar("T")
 
 try:
     from pydantic import BaseModel, Field
@@ -8,21 +10,41 @@ try:
 
     _CONFIG_DICT_AVAILABLE = True
 except Exception:  # pragma: no cover
-    BaseModel = object  # type: ignore
-
-    def Field(default=None, **kwargs):  # type: ignore  # noqa: N802
-        """Fallback Field function when pydantic is not available."""
-        return default
-
-    ConfigDict = None  # type: ignore
     _CONFIG_DICT_AVAILABLE = False
 
+    class _BaseModelFallback:  # type: ignore
+        """Fallback base model when pydantic is unavailable."""
 
-if _CONFIG_DICT_AVAILABLE:
-    class _BaseConfigModel(BaseModel):
+    class _ConfigDictFallback(dict):  # type: ignore
+        """Fallback ConfigDict when pydantic is unavailable."""
+
+    @overload
+    def _FieldFallback(*, default_factory: Callable[[], T], **kwargs: Any) -> T:  # noqa: N802
+        ...
+
+    @overload
+    def _FieldFallback(default: T, **kwargs: Any) -> T:  # noqa: N802
+        ...
+
+    @overload
+    def _FieldFallback(**kwargs: Any) -> Any:  # noqa: N802
+        ...
+
+    def _FieldFallback(default: Any = None, **kwargs: Any):  # noqa: N802
+        """Fallback Field function when pydantic is not available."""
+        if "default_factory" in kwargs:
+            return kwargs["default_factory"]()
+        return default
+
+    BaseModel = _BaseModelFallback  # type: ignore
+    ConfigDict = _ConfigDictFallback  # type: ignore
+    Field = _FieldFallback  # type: ignore
+
+
+class _BaseConfigModel(BaseModel):  # type: ignore[misc]
+    if _CONFIG_DICT_AVAILABLE:
         model_config = ConfigDict(extra="allow")
-else:
-    class _BaseConfigModel:  # type: ignore
+    else:
         class Config:  # type: ignore
             extra = "allow"
 
@@ -129,4 +151,7 @@ class ConfigModel(_BaseConfigModel):
 def validate_config(payload: Dict[str, Any]) -> ConfigModel:
     if not _CONFIG_DICT_AVAILABLE:
         raise RuntimeError("pydantic is not available")
-    return ConfigModel.model_validate(payload) if hasattr(ConfigModel, "model_validate") else ConfigModel(**payload)
+    model_validate = getattr(ConfigModel, "model_validate", None)
+    if callable(model_validate):
+        return cast(ConfigModel, model_validate(payload))
+    return ConfigModel(**payload)

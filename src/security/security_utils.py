@@ -87,7 +87,29 @@ def resolve_path_safe(path: Union[str, Path]) -> Path:
     sanitized = sanitize_path(raw)
     if is_path_traversal_attack(sanitized):
         raise InvalidPathError(f"Path traversal detected: {sanitized}")
-    return Path(sanitized).resolve()
+    resolved = Path(sanitized).resolve()
+
+    sensitive_dirs = [
+        "/etc", "/var/log", "/root", "/boot", "/bin", "/sbin",
+        "C:\\Windows", "C:\\Program Files", "C:\\Users\\Administrator",
+    ]
+
+    def _is_subpath(target: Path, parent: Path) -> bool:
+        try:
+            target.relative_to(parent)
+            return True
+        except Exception:
+            return False
+
+    for sensitive in sensitive_dirs:
+        try:
+            sensitive_path = Path(sensitive).resolve()
+        except Exception:
+            continue
+        if _is_subpath(resolved, sensitive_path):
+            raise InvalidPathError(f"Access to protected directory not allowed: {resolved}")
+
+    return resolved
 
 
 def validate_path(path: Union[str, Path]) -> Path:

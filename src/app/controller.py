@@ -1101,7 +1101,8 @@ def execute_sort(
     backup_cfg = _get_dict(cfg, "features", "backup")
     if backup_cfg.get("enabled") and not dry_run:
         try:
-            backup_sort_report(sort_plan, report, cfg=cfg, log_cb=log_cb)
+            cfg_payload = cfg.config_data if isinstance(cfg, Config) else cfg
+            backup_sort_report(sort_plan, report, cfg=cfg_payload, log_cb=log_cb)
         except Exception as exc:
             if log_cb is not None:
                 log_cb(f"Backup failed: {exc}")

@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import asyncio
-from concurrent.futures import Executor
+from concurrent.futures import Executor, Future
 from typing import Any, Callable, Optional
 
 
-def run_in_loop(loop: asyncio.AbstractEventLoop, func: Callable[..., Any], *args, **kwargs) -> asyncio.Future:
+def run_in_loop(loop: asyncio.AbstractEventLoop, func: Callable[..., Any], *args, **kwargs) -> Future[Any]:
     return asyncio.run_coroutine_threadsafe(asyncio.to_thread(func, *args, **kwargs), loop)
 
 

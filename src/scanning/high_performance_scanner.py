@@ -22,7 +22,7 @@ import concurrent.futures
 import re
 from collections import OrderedDict
 from pathlib import Path
-from typing import Dict, List, Set, Tuple, Optional, Any, Protocol
+from typing import Dict, List, Set, Tuple, Optional, Any
 
 from ..config import Config
 
@@ -454,6 +454,7 @@ class HighPerformanceScanner:
             dir_path = Path(directory)
 
             known_sets = {}
+            is_set_member_file = None
             try:
                 from .set_validators import group_sets_in_directory, is_set_member_file
                 known_sets = group_sets_in_directory(dir_path)
@@ -499,7 +500,7 @@ class HighPerformanceScanner:
                     ext = entry.suffix.lower()
                     if ext in self._ignore_exts:
                         continue
-                    if known_sets:
+                    if known_sets and is_set_member_file is not None:
                         try:
                             if is_set_member_file(entry, known_sets):
                                 continue
@@ -676,22 +677,21 @@ class HighPerformanceScanner:
                         runner_conflict_groups = set(runner_up.get("conflict_groups") or []) if runner_up else set()
                         shared_conflict = conflict_groups.intersection(runner_conflict_groups)
 
-                        if detection_source != "extension-unique":
-                            if runner_up and shared_conflict and top_score >= min_top_score and runner_score >= min_top_score:
+                        if runner_up and shared_conflict and top_score >= min_top_score and runner_score >= min_top_score:
+                            rom_system = "Unknown"
+                            confidence = 0.0
+                            detection_source = "conflict-group"
+                        elif runner_up and top_score >= min_top_score and delta < min_score_delta:
+                            rom_system = "Unknown"
+                            confidence = 0.0
+                            detection_source = "ambiguous-candidates"
+                        elif runner_up:
+                            norm_system = re.sub(r"[^a-z0-9]+", "", str(rom_system or "").lower())
+                            norm_top = re.sub(r"[^a-z0-9]+", "", str(top.get("platform_id") or "").lower())
+                            if top_score >= contradiction_min_score and norm_system and norm_top and norm_system != norm_top:
                                 rom_system = "Unknown"
                                 confidence = 0.0
-                                detection_source = "conflict-group"
-                            elif runner_up and top_score >= min_top_score and delta < min_score_delta:
-                                rom_system = "Unknown"
-                                confidence = 0.0
-                                detection_source = "ambiguous-candidates"
-                            else:
-                                norm_system = re.sub(r"[^a-z0-9]+", "", str(rom_system or "").lower())
-                                norm_top = re.sub(r"[^a-z0-9]+", "", str(top.get("platform_id") or "").lower())
-                                if top_score >= contradiction_min_score and norm_system and norm_top and norm_system != norm_top:
-                                    rom_system = "Unknown"
-                                    confidence = 0.0
-                                    detection_source = "contradiction-candidates"
+                                detection_source = "contradiction-candidates"
 
 # Creates the ROM information object
             rom_info = {
@@ -1170,7 +1170,7 @@ class HighPerformanceScanner:
     def _process_rar_archive(self, file_path: str) -> Optional[Dict]:
         """Process a RAR archive as a single sortable unit (strict)."""
         try:
-            import rarfile
+            import rarfile  # type: ignore[reportMissingImports]
         except Exception:
             return None
 
@@ -1402,9 +1402,7 @@ class HighPerformanceScanner:
 
         return f"{crc32_value & 0xFFFFFFFF:08x}", md5_hash.hexdigest(), sha1_hash.hexdigest()
 
-    class _StatLike(Protocol):
-        st_mtime: float | int
-        st_size: int
+    _StatLike = Any
 
     def _make_cache_key(self, file_path: str, file_stat: _StatLike) -> Tuple[str, int, int]:
         return (file_path, int(file_stat.st_mtime), int(file_stat.st_size))
@@ -1442,6 +1440,8 @@ class HighPerformanceScanner:
         try:
             if file_stat is None:
                 file_stat = os.stat(file_path)
+            if file_stat is None:
+                return
             key = self._make_cache_key(file_path, file_stat)
             with self._cache_lock:
                 # If key exists, move to end and update

@@ -22,9 +22,6 @@ MALICIOUS_PATHS = [
 
 
 def test_security_fuzzing_paths(tmp_path: Path) -> None:
-    if os.environ.get("ROM_SORTER_SECURITY_FUZZ") != "1":
-        pytest.skip("Set ROM_SORTER_SECURITY_FUZZ=1 to enable security fuzz test.")
-
     base_dir = tmp_path / "base"
     base_dir.mkdir(parents=True, exist_ok=True)
     safe_file = base_dir / "safe.txt"
