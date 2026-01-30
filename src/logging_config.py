@@ -41,6 +41,8 @@ except Exception:  # pragma: no cover
     structlog = None
     STRUCTLOG_AVAILABLE = False
 
+STRUCTLOG_ENABLED = False
+
 # =====================================================================================================
 # Performance Constants
 # =====================================================================================================
@@ -434,7 +436,7 @@ def setup_optimized_logging(
         return value.strip().lower() in ("1", "true", "yes", "on")
 
     use_json = structured_json if structured_json is not None else _env_bool("ROM_SORTER_LOG_JSON")
-    use_structlog = _env_bool("ROM_SORTER_USE_STRUCTLOG")
+    use_structlog = _env_bool("ROM_SORTER_USE_STRUCTLOG", STRUCTLOG_AVAILABLE)
 
     if use_structlog and STRUCTLOG_AVAILABLE:
         structlog.configure(
@@ -447,6 +449,8 @@ def setup_optimized_logging(
             logger_factory=structlog.stdlib.LoggerFactory(),
             cache_logger_on_first_use=True,
         )
+        global STRUCTLOG_ENABLED
+        STRUCTLOG_ENABLED = True
 
     # Console Handler
     if enable_console_logging:
@@ -557,9 +561,15 @@ def _parse_size_string(size_str: str) -> int:
     return 10 * 1024 * 1024  # Default 10MB
 
 @lru_cache(maxsize=32)
-def get_logger(name: str) -> logging.Logger:
-    """Get cached logger instance."""
+def get_logger(name: str) -> Any:
+    """Get cached logger instance (structlog if enabled)."""
+    if STRUCTLOG_ENABLED and structlog is not None:
+        return structlog.get_logger(f"rom_sorter.{name}")
     return logging.getLogger(f"rom_sorter.{name}")
+
+
+def is_structlog_enabled() -> bool:
+    return bool(STRUCTLOG_ENABLED)
 
 def get_performance_logger() -> SimplePerformanceLogger:
     """Get global performance logger."""

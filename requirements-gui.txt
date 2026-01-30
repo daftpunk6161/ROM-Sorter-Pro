@@ -11,3 +11,6 @@ jsonschema>=4.0
 
 # Atomic file writes
 atomicwrites>=1.4
+
+# Structured logging
+structlog>=24.4

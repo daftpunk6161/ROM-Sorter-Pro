@@ -162,8 +162,8 @@ def initialize_logging(log_dir: Optional[str] = None,
         return False
 
 
-def get_logger(name: str) -> logging.Logger:
-    """Returns A Configured Logger for the Specified Subsystem. ARGS: Name: Name of the Subsystem/Logger Return: Configured Logger"""
+def get_logger(name: str) -> Any:
+    """Returns A Configured Logger for the Specified Subsystem."""
     # Check if the logger has already been created
     if name in _loggers:
         return _loggers[name]
@@ -177,7 +177,8 @@ def get_logger(name: str) -> logging.Logger:
 
     # Logger erstellen
     logger = _get_config_logger(name)
-    logger.setLevel(level)
+    if hasattr(logger, "setLevel"):
+        logger.setLevel(level)
 
     # Logger im Cache speichern
     _loggers[name] = logger
