@@ -20,7 +20,15 @@ def format_confidence(value: Optional[float]) -> str:
         conf = 0.0
     if conf > 1.0:
         conf = 1.0
-    return f"{int(conf * 100)}%"
+    if conf < 0.0:
+        conf = 0.0
+    if conf >= 0.85:
+        icon = "🟢"
+    elif conf >= 0.70:
+        icon = "🟡"
+    else:
+        icon = "🔴"
+    return f"{icon} {int(conf * 100)}%"
 
 
 def format_signals(item: object, default: str = "-") -> str:

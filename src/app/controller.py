@@ -18,6 +18,7 @@ import logging
 import os
 import re
 import time
+import shutil
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
@@ -65,6 +66,7 @@ from .execute_helpers import atomic_copy_with_cancel, run_conversion_with_cancel
 from .identification_overrides import (
     _apply_identification_override,
     _load_identification_overrides,
+    add_identification_override as _add_identification_override,
 )
 from .library_report import build_library_report
 from .models import (
@@ -248,6 +250,25 @@ def run_scan(
             log_cb(f"Failed to save scan resume: {exc}")
 
     return scan_result
+
+
+def add_identification_override(
+    input_path: str,
+    platform_id: str,
+    *,
+    config: Optional[Config | Dict[str, Any]] = None,
+    name: str = "manual-override",
+    confidence: float = 1.0,
+) -> Tuple[bool, str, str]:
+    cfg = _load_cfg(config)
+    ok, message, path = _add_identification_override(
+        cfg,
+        input_path=input_path,
+        platform_id=platform_id,
+        name=name,
+        confidence=confidence,
+    )
+    return ok, message, str(path)
 
 
 def identify(
@@ -723,6 +744,46 @@ def execute_sort(
                 continue
             filtered_actions.append((idx, action))
         actions_to_run = filtered_actions
+
+    if not dry_run:
+        required_bytes = 0
+        for _idx, action in actions_to_run:
+            if action.status.startswith("skipped") or action.planned_target_path is None:
+                continue
+            needs_space = False
+            if action.action == "convert" or sort_plan.mode == "copy":
+                needs_space = True
+            elif sort_plan.mode == "move":
+                try:
+                    src_drive = Path(action.input_path).resolve().drive
+                    dst_drive = Path(action.planned_target_path).resolve().drive
+                    if src_drive and dst_drive and src_drive.lower() != dst_drive.lower():
+                        needs_space = True
+                except Exception:
+                    needs_space = False
+            if not needs_space:
+                continue
+            try:
+                required_bytes += int(Path(action.input_path).stat().st_size)
+            except Exception:
+                continue
+        if required_bytes > 0:
+            disk_target = dest_root if dest_root.exists() else dest_root.parent
+            try:
+                usage = shutil.disk_usage(str(disk_target))
+                free_bytes = int(usage.free)
+                if required_bytes > free_bytes:
+                    raise FileOperationError(
+                        f"Not enough free space: need {required_bytes} bytes, have {free_bytes} bytes",
+                        file_path=str(disk_target),
+                        operation="disk-space-check",
+                        details={"required_bytes": required_bytes, "free_bytes": free_bytes},
+                    )
+            except FileOperationError:
+                raise
+            except Exception as exc:
+                if log_cb is not None:
+                    log_cb(f"Disk space check skipped: {exc}")
 
     total = len(actions_to_run)
 

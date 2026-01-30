@@ -686,7 +686,7 @@ from .tk_app_impl import run
 
         self.results_empty_label = ttk.Label(
             results_frame,
-            text="Noch keine Ergebnisse. Starte mit Scan oder Vorschau.",
+            text="Noch keine Ergebnisse. Wähle Quelle/Ziel und starte Scan oder Vorschau.",
         )
         self.results_empty_label.pack(fill=tk.X, pady=(0, 6))
 
@@ -2834,6 +2834,14 @@ from .tk_app_impl import run
             if has_rows:
                 self.results_empty_label.pack_forget()
             else:
+                if self._scan_result is None and self._sort_plan is None:
+                    self.results_empty_label.configure(
+                        text="Noch keine Ergebnisse. Wähle Quelle/Ziel und starte Scan oder Vorschau."
+                    )
+                else:
+                    self.results_empty_label.configure(
+                        text="Keine Ergebnisse. Prüfe Filter oder starte einen neuen Scan."
+                    )
                 self.results_empty_label.pack(fill=tk.X, pady=(0, 6))
         except Exception:
             return

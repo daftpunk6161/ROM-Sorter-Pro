@@ -6,13 +6,130 @@ import fnmatch
 import json
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from ..config import Config
 
 
 def _resolve_repo_root() -> Path:
     return Path(__file__).resolve().parents[3]
+
+
+def resolve_identification_overrides_path(cfg: Config) -> Path:
+    override_cfg = cfg.get("identification_overrides", {})
+    if isinstance(override_cfg, str):
+        override_cfg = {"path": override_cfg}
+    if not isinstance(override_cfg, dict):
+        override_cfg = {}
+
+    raw_path = str(override_cfg.get("path") or "config/identify_overrides.yaml").strip()
+    if not raw_path:
+        raw_path = "config/identify_overrides.yaml"
+    path = Path(raw_path)
+    if not path.is_absolute():
+        path = (_resolve_repo_root() / path).resolve()
+    return path
+
+
+def _parse_override_file(path: Path, raw: str) -> Optional[Dict[str, Any] | List[Dict[str, Any]]]:
+    if path.suffix.lower() == ".json":
+        try:
+            data = json.loads(raw)
+            if isinstance(data, (list, dict)):
+                return data
+        except Exception:
+            return None
+    try:
+        import yaml  # type: ignore
+
+        data = yaml.safe_load(raw)
+        if isinstance(data, (list, dict)):
+            return data
+    except Exception:
+        try:
+            data = json.loads(raw)
+            if isinstance(data, (list, dict)):
+                return data
+        except Exception:
+            return None
+    return None
+
+
+def add_identification_override(
+    cfg: Config,
+    *,
+    input_path: str,
+    platform_id: str,
+    name: str = "manual-override",
+    confidence: float = 1.0,
+) -> Tuple[bool, str, Path]:
+    input_path_val = str(input_path or "").strip()
+    platform_val = str(platform_id or "").strip()
+    if not input_path_val:
+        return False, "input_path fehlt", Path()
+    if not platform_val:
+        return False, "platform_id fehlt", Path()
+
+    path = resolve_identification_overrides_path(cfg)
+    data: Dict[str, Any] | List[Dict[str, Any]] | None = None
+    if path.exists():
+        try:
+            raw = path.read_text(encoding="utf-8")
+            data = _parse_override_file(path, raw)
+        except Exception:
+            data = None
+
+    rules: List[Dict[str, Any]] = []
+    container: Dict[str, Any] | None = None
+    if isinstance(data, list):
+        rules = [rule for rule in data if isinstance(rule, dict)]
+    elif isinstance(data, dict):
+        container = dict(data)
+        existing_rules = container.get("rules") or []
+        if isinstance(existing_rules, list):
+            rules = [rule for rule in existing_rules if isinstance(rule, dict)]
+
+    new_rule = {
+        "paths": [input_path_val],
+        "platform_id": platform_val,
+        "name": str(name or "manual-override"),
+        "confidence": float(confidence),
+    }
+    rules.append(new_rule)
+
+    if container is not None:
+        container["rules"] = rules
+        payload: Dict[str, Any] | List[Dict[str, Any]] = container
+    else:
+        payload = rules
+
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+    except Exception as exc:
+        return False, f"Override-Ordner nicht verfügbar: {exc}", path
+
+    suffix = path.suffix.lower()
+    if suffix == ".json":
+        try:
+            path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+        except Exception as exc:
+            return False, f"Override-Datei konnte nicht geschrieben werden: {exc}", path
+        return True, "ok", path
+
+    try:
+        import yaml  # type: ignore
+
+        path.write_text(
+            yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
+            encoding="utf-8",
+        )
+        return True, "ok", path
+    except Exception:
+        try:
+            path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+            return True, "ok", path
+        except Exception as exc:
+            return False, f"Override-Datei konnte nicht geschrieben werden: {exc}", path
 
 
 def _load_identification_overrides(cfg: Config) -> List[Dict[str, Any]]:

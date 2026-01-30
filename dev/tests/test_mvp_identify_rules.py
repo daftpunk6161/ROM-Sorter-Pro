@@ -1,3 +1,4 @@
+import json
 import os
 import sqlite3
 import sys
@@ -10,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from src.app.controller import ScanItem, identify  # noqa: E402
+from src.app.controller import ScanItem, add_identification_override, identify  # noqa: E402
 from src.core.dat_index_sqlite import DatIndexSqlite  # noqa: E402
 from src.hash_utils import calculate_crc32  # noqa: E402
 from src.core.file_utils import calculate_file_hash  # noqa: E402
@@ -119,36 +120,56 @@ def test_identify_crc_size_fallback(tmp_path):
 
 
 def test_identify_override_rule(tmp_path):
-        rom = tmp_path / "override-game.rom"
-        rom.write_text("data", encoding="utf-8")
+    rom = tmp_path / "override-game.rom"
+    rom.write_text("data", encoding="utf-8")
 
-        override_path = tmp_path / "identify_overrides.json"
-        override_path.write_text(
-                """
+    override_path = tmp_path / "identify_overrides.json"
+    override_path.write_text(
+        """
+        {
+            "rules": [
                 {
-                    "rules": [
-                        {
-                            "name": "local_override",
-                            "platform_id": "Genesis",
-                            "name_regex": "override-game",
-                            "extension": ".rom"
-                        }
-                    ]
+                    "name": "local_override",
+                    "platform_id": "Genesis",
+                    "name_regex": "override-game",
+                    "extension": ".rom"
                 }
-                """,
-                encoding="utf-8",
-        )
-
-        items = [ScanItem(input_path=str(rom), detected_system="Unknown")]
-        config = {
-                "dats": {"index_path": str(tmp_path / "missing.sqlite")},
-                "identification_overrides": {"path": str(override_path), "enabled": True},
+            ]
         }
+        """,
+        encoding="utf-8",
+    )
 
-        results = identify(items, config=config)
+    items = [ScanItem(input_path=str(rom), detected_system="Unknown")]
+    config = {
+        "dats": {"index_path": str(tmp_path / "missing.sqlite")},
+        "identification_overrides": {"path": str(override_path), "enabled": True},
+    }
 
-        assert results
-        assert results[0].platform_id == "Genesis"
-        assert results[0].is_exact is True
-        assert "OVERRIDE_RULE" in results[0].signals
-        assert results[0].reason == "override:local_override"
+    results = identify(items, config=config)
+
+    assert results
+    assert results[0].platform_id == "Genesis"
+    assert results[0].is_exact is True
+    assert "OVERRIDE_RULE" in results[0].signals
+    assert results[0].reason == "override:local_override"
+
+
+def test_add_identification_override_writes_file(tmp_path: Path) -> None:
+    override_path = tmp_path / "identify_overrides.json"
+    config = {"identification_overrides": {"path": str(override_path), "enabled": True}}
+
+    ok, message, path = add_identification_override(
+        input_path="C:/ROMs/Test/game.rom",
+        platform_id="SNES",
+        config=config,
+    )
+
+    assert ok is True
+    assert message == "ok"
+    assert Path(path).exists()
+
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    assert isinstance(data, list)
+    assert data[0]["platform_id"] == "SNES"
+    assert data[0]["paths"] == ["C:/ROMs/Test/game.rom"]

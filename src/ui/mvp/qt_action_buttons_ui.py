@@ -14,6 +14,7 @@ class ActionButtonsUI:
     btn_resume: Any
     btn_retry_failed: Any
     btn_cancel: Any
+    btn_rollback: Any
     btn_execute_convert: Any
     btn_audit: Any
     btn_export_scan_csv: Any
@@ -33,6 +34,7 @@ def build_action_buttons_ui(QtWidgets, label_func: Callable[[str, str], str]) ->
     btn_resume = QtWidgets.QPushButton(translate("resume"))
     btn_retry_failed = QtWidgets.QPushButton(translate("retry_failed"))
     btn_cancel = QtWidgets.QPushButton(label_func(translate("cancel"), "cancel"))
+    btn_rollback = QtWidgets.QPushButton(translate("rollback"))
 
     btn_execute_convert = QtWidgets.QPushButton(translate("convert_execute"))
     btn_audit = QtWidgets.QPushButton(translate("convert_audit"))
@@ -53,6 +55,7 @@ def build_action_buttons_ui(QtWidgets, label_func: Callable[[str, str], str]) ->
         btn_resume=btn_resume,
         btn_retry_failed=btn_retry_failed,
         btn_cancel=btn_cancel,
+        btn_rollback=btn_rollback,
         btn_execute_convert=btn_execute_convert,
         btn_audit=btn_audit,
         btn_export_scan_csv=btn_export_scan_csv,
@@ -69,6 +72,7 @@ def build_action_buttons_ui(QtWidgets, label_func: Callable[[str, str], str]) ->
 def configure_action_buttons_ui(action_buttons: ActionButtonsUI, button_row: Any) -> None:
     action_buttons.btn_execute_convert.setToolTip("Führt Sortierung inkl. Konvertierung aus")
     action_buttons.btn_audit.setToolTip("Prüft Konvertierungen ohne Änderungen")
+    action_buttons.btn_rollback.setToolTip("Letzte Move-Sortierung rückgängig machen")
     action_buttons.btn_scan.setDefault(True)
     action_buttons.btn_preview.setObjectName("secondary")
     action_buttons.btn_execute.setObjectName("primary")
@@ -91,6 +95,7 @@ def configure_action_buttons_ui(action_buttons: ActionButtonsUI, button_row: Any
         action_buttons.btn_resume,
         action_buttons.btn_retry_failed,
         action_buttons.btn_cancel,
+        action_buttons.btn_rollback,
     ):
         btn.setMinimumHeight(28)
         if btn in (action_buttons.btn_scan, action_buttons.btn_preview, action_buttons.btn_execute):
@@ -99,6 +104,7 @@ def configure_action_buttons_ui(action_buttons: ActionButtonsUI, button_row: Any
     action_buttons.btn_cancel.setEnabled(False)
     action_buttons.btn_resume.setEnabled(False)
     action_buttons.btn_retry_failed.setEnabled(False)
+    action_buttons.btn_rollback.setEnabled(True)
 
     button_row.addWidget(action_buttons.btn_scan, 0, 0)
     button_row.addWidget(action_buttons.btn_preview, 0, 1)
@@ -106,4 +112,5 @@ def configure_action_buttons_ui(action_buttons: ActionButtonsUI, button_row: Any
     button_row.addWidget(action_buttons.btn_resume, 1, 0)
     button_row.addWidget(action_buttons.btn_retry_failed, 1, 1)
     button_row.addWidget(action_buttons.btn_cancel, 1, 2)
-    button_row.setColumnStretch(3, 1)
+    button_row.addWidget(action_buttons.btn_rollback, 1, 3)
+    button_row.setColumnStretch(4, 1)

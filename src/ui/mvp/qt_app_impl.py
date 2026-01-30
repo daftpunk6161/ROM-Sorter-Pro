@@ -68,10 +68,13 @@ def run() -> int:
         SortPlan,
         SortReport,
         SortMode,
+        add_identification_override,
         audit_conversion_candidates,
         analyze_dat_sources,
         build_dat_index,
         build_library_report,
+        load_rollback_manifest,
+        apply_rollback,
         execute_sort,
         filter_scan_items,
         get_dat_sources,
@@ -630,6 +633,7 @@ def run() -> int:
             self.btn_resume = action_buttons.btn_resume
             self.btn_retry_failed = action_buttons.btn_retry_failed
             self.btn_cancel = action_buttons.btn_cancel
+            self.btn_rollback = action_buttons.btn_rollback
             self.btn_execute_convert = action_buttons.btn_execute_convert
             self.btn_audit = action_buttons.btn_audit
             self.btn_export_scan_csv = action_buttons.btn_export_scan_csv
@@ -988,6 +992,7 @@ def run() -> int:
             self.btn_resume.clicked.connect(self._start_resume)
             self.btn_retry_failed.clicked.connect(self._start_retry_failed)
             self.btn_cancel.clicked.connect(self._cancel)
+            self.btn_rollback.clicked.connect(self._start_rollback)
             self.lang_filter.itemSelectionChanged.connect(self._on_filters_changed)
             self.console_filter.itemSelectionChanged.connect(self._on_filters_changed)
             self.ver_filter.currentTextChanged.connect(self._on_filters_changed)
@@ -2784,9 +2789,13 @@ def run() -> int:
                 if not has_rows:
                     if filter_text:
                         self.results_empty_label.setText("Keine Treffer für den aktuellen Filter.")
+                    elif not self._scan_result and not self._sort_plan:
+                        self.results_empty_label.setText(
+                            "Noch keine Ergebnisse. Wähle Quelle/Ziel und starte Scan oder Vorschau."
+                        )
                     else:
                         self.results_empty_label.setText(
-                            "Noch keine Ergebnisse. Starte mit Scan oder Vorschau, um Einträge zu sehen."
+                            "Keine Ergebnisse. Prüfe Filter oder starte einen neuen Scan."
                         )
                 self.results_empty_label.setVisible(not has_rows)
                 self.table.setVisible(has_rows)
@@ -2888,6 +2897,8 @@ def run() -> int:
             action_open_input = menu.addAction("Eingabe in Explorer öffnen")
             action_open_target = menu.addAction("Ziel öffnen")
             action_reveal_target = menu.addAction("Zielordner zeigen")
+            menu.addSeparator()
+            action_override = menu.addAction("System überschreiben…")
             chosen = menu.exec(self.table.viewport().mapToGlobal(pos))
             if chosen == action_copy_path:
                 QtWidgets.QApplication.clipboard().setText(row_data.input_path or "")
@@ -2899,6 +2910,72 @@ def run() -> int:
                 target = row_data.planned_target or ""
                 if target:
                     self._open_path_in_explorer(str(Path(target).parent))
+            elif chosen == action_override:
+                self._prompt_override_for_row(row)
+
+        def _prompt_override_for_row(self, row: int) -> None:
+            if row < 0 or row >= len(self._table_items):
+                show_warning(QtWidgets, self, "Override", "Keine gültige Zeile ausgewählt.")
+                return
+            item = self._table_items[row]
+            input_path = str(getattr(item, "input_path", "") or "")
+            if not input_path:
+                show_warning(QtWidgets, self, "Override", "Kein Eingabepfad vorhanden.")
+                return
+            raw = getattr(item, "raw", None) or {}
+            candidates = raw.get("candidates") or []
+            if not isinstance(candidates, list):
+                candidates = []
+            current = str(getattr(item, "detected_system", "") or "")
+            options = []
+            if current and current != "Unknown":
+                options.append(current)
+            for entry in candidates:
+                entry_val = str(entry or "").strip()
+                if entry_val and entry_val not in options:
+                    options.append(entry_val)
+            if not options:
+                options = ["SNES", "NES", "PSX", "N64", "Genesis"]
+            default_idx = 0
+            if current and current in options:
+                default_idx = options.index(current)
+            value, ok = QtWidgets.QInputDialog.getItem(
+                self,
+                "System überschreiben",
+                "Plattform-ID (z.B. SNES, PSX, Genesis):",
+                options,
+                default_idx,
+                True,
+            )
+            if not ok:
+                return
+            platform_id = str(value or "").strip()
+            if not platform_id:
+                show_warning(QtWidgets, self, "Override", "Plattform-ID darf nicht leer sein.")
+                return
+            cfg = load_config()
+            ok, message, path = add_identification_override(
+                input_path,
+                platform_id,
+                config=cfg,
+                name="manual-ui",
+                confidence=1.0,
+            )
+            if not ok:
+                show_warning(
+                    QtWidgets,
+                    self,
+                    "Override",
+                    f"Override konnte nicht gespeichert werden:\n{message}",
+                )
+                return
+            self._append_log(f"Override gespeichert: {platform_id} → {input_path}")
+            show_info(
+                QtWidgets,
+                self,
+                "Override gespeichert",
+                f"Override gespeichert in:\n{path}\n\nBitte Scan erneut starten, damit er greift.",
+            )
 
         def _open_path_in_explorer(self, path: Optional[str]) -> None:
             if not path:
@@ -3631,6 +3708,7 @@ def run() -> int:
             self.btn_cancel.setEnabled(running)
             self.btn_resume.setEnabled(not running and self._can_resume())
             self.btn_retry_failed.setEnabled(not running and self._can_retry_failed())
+            self.btn_rollback.setEnabled(not running)
             self.header_btn_cancel.setEnabled(running)
 
             self.btn_source.setEnabled(not running)
@@ -3999,6 +4077,99 @@ def run() -> int:
             self._failed_action_indices.clear()
             self._update_resume_buttons()
             self._start_operation("execute", only_indices=indices)
+
+        def _resolve_default_rollback_path(self) -> Path:
+            try:
+                cfg = load_config()
+            except Exception:
+                cfg = {}
+            rollback_cfg = cfg.get("features", {}).get("rollback", {}) if isinstance(cfg, dict) else {}
+            raw_path = rollback_cfg.get("manifest_path")
+            if raw_path:
+                path = Path(str(raw_path))
+                if not path.is_absolute():
+                    path = (Path(__file__).resolve().parents[3] / path).resolve()
+                return path
+            return (Path(__file__).resolve().parents[3] / "cache" / "rollback" / "last_move_rollback.json").resolve()
+
+        def _start_rollback(self) -> None:
+            if self._is_running:
+                show_info(QtWidgets, self, "Rollback", "Es läuft bereits eine Aktion.")
+                return
+            default_path = self._resolve_default_rollback_path()
+            rollback_path = default_path if default_path.exists() else None
+            if rollback_path is None:
+                selected, _filter = get_open_file(
+                    QtWidgets,
+                    self,
+                    "Rollback-Manifest auswählen",
+                    str(default_path.parent),
+                    "Rollback Manifest (*.json);;All files (*.*)",
+                )
+                rollback_path = Path(selected) if selected else None
+            if rollback_path is None or not rollback_path.exists():
+                show_warning(QtWidgets, self, "Rollback", "Kein Rollback-Manifest gefunden.")
+                return
+            try:
+                manifest = load_rollback_manifest(str(rollback_path))
+                entries = len(manifest.entries)
+            except Exception as exc:
+                show_warning(QtWidgets, self, "Rollback", f"Manifest konnte nicht gelesen werden:\n{exc}")
+                return
+
+            if not ask_question(
+                QtWidgets,
+                self,
+                "Rollback bestätigen",
+                f"Rollback der letzten Move-Operation ausführen?\nEinträge: {entries}",
+                default_no=True,
+            ):
+                return
+
+            self._cancel_token = CancelToken()
+            self._set_running(True)
+            self.status_label.setText("Rollback läuft…")
+
+            def _task() -> None:
+                try:
+                    report = apply_rollback(
+                        str(rollback_path),
+                        cancel_token=self._cancel_token,
+                        log_cb=self._append_log,
+                    )
+                    QtCore.QTimer.singleShot(0, lambda: self._on_rollback_done(report))
+                except Exception as exc:
+                    QtCore.QTimer.singleShot(0, lambda: self._on_rollback_failed(exc))
+
+            threading.Thread(target=_task, daemon=True).start()
+
+        def _on_rollback_done(self, report) -> None:
+            self._set_running(False)
+            if report.cancelled:
+                self.status_label.setText("Rollback abgebrochen")
+                show_warning(QtWidgets, self, "Rollback", "Rollback wurde abgebrochen.")
+                return
+            if report.errors:
+                self.status_label.setText("Rollback mit Fehlern")
+                show_warning(
+                    QtWidgets,
+                    self,
+                    "Rollback",
+                    f"Rollback abgeschlossen mit Fehlern:\n{len(report.errors)} Fehler",
+                )
+                return
+            self.status_label.setText("Rollback abgeschlossen")
+            show_info(
+                QtWidgets,
+                self,
+                "Rollback",
+                f"Rollback abgeschlossen. Wiederhergestellt: {report.restored} | Übersprungen: {report.skipped}",
+            )
+
+        def _on_rollback_failed(self, exc: Exception) -> None:
+            self._set_running(False)
+            self.status_label.setText("Rollback fehlgeschlagen")
+            show_warning(QtWidgets, self, "Rollback", f"Rollback fehlgeschlagen:\n{exc}")
 
         def _cancel(self) -> None:
             self._append_log("Cancel requested by user")
