@@ -24,7 +24,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from ..config import Config
-from ..core.dat_index_sqlite import DatIndexSqlite
+from ..core.dat_index_sqlite import open_dat_index_from_config
 from ..core.normalization import (
     NormalizationItem,
     NormalizationPlan,
@@ -352,12 +352,9 @@ def identify(
     overrides = _load_identification_overrides(cfg)
 
     dat_cfg = cfg.get("dats", {}) or {}
-    index_path = dat_cfg.get("index_path") or os.path.join("data", "index", "romsorter_dat_index.sqlite")
-
-    dat_index: Optional[DatIndexSqlite] = None
+    dat_index = None
     try:
-        if index_path and Path(str(index_path)).exists():
-            dat_index = DatIndexSqlite(Path(str(index_path)))
+        dat_index = open_dat_index_from_config(cfg)
     except Exception:
         dat_index = None
 

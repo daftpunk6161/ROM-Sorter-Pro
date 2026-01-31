@@ -13,7 +13,8 @@ import logging
 import shutil
 import hashlib
 import mmap
-from typing import Union, Optional
+import concurrent.futures
+from typing import Union, Optional, Dict, Iterable
 from pathlib import Path
 from functools import lru_cache
 
@@ -188,6 +189,32 @@ def calculate_file_hash(file_path: Union[str, Path], algorithm='md5', block_size
     return _calculate_file_hash_cached(str(file_path_obj), mtime_ns, int(stat.st_size), algorithm, block_size)
 
 
+def calculate_file_hashes_parallel(
+    file_paths: Iterable[Union[str, Path]],
+    *,
+    algorithm: str = "md5",
+    block_size: int = 65536,
+    max_workers: Optional[int] = None,
+) -> Dict[str, Optional[str]]:
+    """Calculate hashes for multiple files in parallel.
+
+    Returns a mapping of absolute file path to hash (or None on error).
+    """
+    paths = [Path(p) for p in file_paths]
+    if not paths:
+        return {}
+    worker_count = max_workers or min(32, (os.cpu_count() or 4))
+
+    def _hash_one(path_obj: Path) -> tuple[str, Optional[str]]:
+        return (str(path_obj), calculate_file_hash(path_obj, algorithm=algorithm, block_size=block_size))
+
+    results: Dict[str, Optional[str]] = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=worker_count) as executor:
+        for file_path, digest in executor.map(_hash_one, paths):
+            results[file_path] = digest
+    return results
+
+
 def get_file_extension(file_path: Union[str, Path]) -> str:
     """Gives Back the File Extension with a leading point. So Treat Special Cases Search as Double Extensions. ARGS: File_Path: Path to the File Return: File Extension with a leading point or Empty String"""
     path_obj = Path(file_path)
@@ -268,3 +295,24 @@ def safe_move_file(source: Union[str, Path], destination: Union[str, Path],
     except Exception as e:
         logger.error(f"Fehler beim sicheren Verschieben von {source} nach {destination}: {e}")
         return False
+
+
+def get_hash_cache_stats() -> Dict[str, int]:
+    """Return stats for the in-memory hash cache."""
+    info = getattr(_calculate_file_hash_cached, "cache_info", None)
+    if not callable(info):
+        return {"hits": 0, "misses": 0, "maxsize": 0, "currsize": 0}
+    stats = info()
+    return {
+        "hits": int(getattr(stats, "hits", 0)),
+        "misses": int(getattr(stats, "misses", 0)),
+        "maxsize": int(getattr(stats, "maxsize", 0) or 0),
+        "currsize": int(getattr(stats, "currsize", 0)),
+    }
+
+
+def clear_hash_cache() -> None:
+    """Clear the in-memory hash cache."""
+    clear = getattr(_calculate_file_hash_cached, "cache_clear", None)
+    if callable(clear):
+        clear()

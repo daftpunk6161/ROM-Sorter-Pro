@@ -6,6 +6,7 @@ import os
 import sqlite3
 import zipfile
 import threading
+import hashlib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Iterable, Iterator, List, Optional, Tuple, Protocol
@@ -46,6 +47,68 @@ class CancelEventProtocol(Protocol):
 
 def _is_cancelled(cancel_event: Optional[CancelEventProtocol]) -> bool:
     return bool(cancel_event and cancel_event.is_set())
+
+
+def _iter_dat_files(paths: Iterable[str]) -> Iterator[Path]:
+    for raw in paths:
+        if not raw:
+            continue
+        p = Path(raw)
+        if p.is_dir():
+            yield from p.rglob("*.dat")
+            yield from p.rglob("*.xml")
+            yield from p.rglob("*.zip")
+        else:
+            yield p
+
+
+def _resolve_shard_paths(cfg: Config) -> List[Path]:
+    dat_cfg = cfg.get("dats", {}) or {}
+    sharding = dat_cfg.get("sharding", {}) or {}
+    enabled = bool(sharding.get("enabled", False))
+    index_path = dat_cfg.get("index_path") or os.path.join("data", "index", "romsorter_dat_index.sqlite")
+    if not enabled:
+        return [Path(index_path)]
+
+    raw_paths = sharding.get("shard_paths") or []
+    if isinstance(raw_paths, str):
+        raw_paths = [p.strip() for p in raw_paths.split(";") if p.strip()]
+    shard_paths = [Path(p) for p in raw_paths if p]
+    if shard_paths:
+        return shard_paths
+
+    try:
+        shard_count = int(sharding.get("shard_count", 0) or 0)
+    except Exception:
+        shard_count = 0
+    if shard_count <= 1:
+        return [Path(index_path)]
+
+    base = Path(index_path)
+    suffix = base.suffix or ".sqlite"
+    stem = base.stem
+    return [base.with_name(f"{stem}_shard{idx + 1:02d}{suffix}") for idx in range(shard_count)]
+
+
+def _resolve_shard_lock_path(
+    lock_path: Optional[str],
+    shard_path: Path,
+    shard_index: int,
+) -> Path:
+    if lock_path:
+        base = Path(lock_path)
+    else:
+        base = shard_path.with_suffix(".lock")
+
+    suffix = base.suffix or ".lock"
+    stem = base.stem
+    return base.with_name(f"{stem}_shard{shard_index + 1:02d}{suffix}")
+
+
+def _stable_shard_index(value: str, shard_count: int) -> int:
+    digest = hashlib.md5(value.encode("utf-8"), usedforsecurity=False).digest()
+    shard_key = int.from_bytes(digest[:4], byteorder="big", signed=False)
+    return shard_key % max(1, shard_count)
 
 
 class DatIndexSqlite:
@@ -598,6 +661,79 @@ class DatIndexSqlite:
         return (row["platform_id"] or "Unknown", int(row["dat_id"]))
 
 
+class MultiDatIndexSqlite:
+    def __init__(self, shard_paths: Iterable[Path]) -> None:
+        self._indexes = [DatIndexSqlite(path) for path in shard_paths]
+
+    def close(self) -> None:
+        for index in self._indexes:
+            try:
+                index.close()
+            except Exception:
+                continue
+
+    def lookup_sha1(self, sha1: str) -> Optional[DatHashRow]:
+        for index in self._indexes:
+            result = index.lookup_sha1(sha1)
+            if result:
+                return result
+        return None
+
+    def lookup_sha1_all(self, sha1: str) -> List[DatHashRow]:
+        results: List[DatHashRow] = []
+        for index in self._indexes:
+            results.extend(index.lookup_sha1_all(sha1))
+        return results
+
+    def lookup_crc_size_when_sha1_missing(self, crc32: str, size_bytes: int) -> Optional[DatHashRow]:
+        for index in self._indexes:
+            result = index.lookup_crc_size_when_sha1_missing(crc32, size_bytes)
+            if result:
+                return result
+        return None
+
+    def lookup_game(self, game_name: str) -> Optional[Tuple[str, int]]:
+        for index in self._indexes:
+            result = index.lookup_game(game_name)
+            if result:
+                return result
+        return None
+
+    def fuzzy_game_matches(
+        self,
+        name: str,
+        *,
+        limit: int = 5,
+        min_score: float = 0.72,
+        search_limit: int = 500,
+    ) -> List[Dict[str, object]]:
+        combined: List[Dict[str, object]] = []
+        for index in self._indexes:
+            combined.extend(
+                index.fuzzy_game_matches(
+                    name,
+                    limit=limit,
+                    min_score=min_score,
+                    search_limit=search_limit,
+                )
+            )
+        combined.sort(key=lambda entry: float(entry.get("score", 0.0)), reverse=True)
+        return combined[: max(1, int(limit))]
+
+
+def open_dat_index_from_config(
+    config: Optional[object] = None,
+) -> Optional[DatIndexSqlite | MultiDatIndexSqlite]:
+    cfg = _normalize_config(config)
+    shard_paths = _resolve_shard_paths(cfg)
+    existing = [path for path in shard_paths if path.exists()]
+    if not existing:
+        return None
+    if len(existing) == 1:
+        return DatIndexSqlite(existing[0])
+    return MultiDatIndexSqlite(existing)
+
+
 def build_index_from_config(
     config: Optional[object] = None,
     *,
@@ -609,12 +745,41 @@ def build_index_from_config(
     if isinstance(paths, str):
         paths = [p.strip() for p in paths.split(";") if p.strip()]
 
-    index = DatIndexSqlite.from_config(cfg)
-    lock_path = Path(dat_cfg.get("lock_path") or os.path.join("data", "index", "romsorter_dat_index.lock"))
-    acquire_index_lock(lock_path, index.db_path)
-    try:
-        result = index.ingest(paths, cancel_event=cancel_event)
-        return result
-    finally:
-        release_index_lock(lock_path)
-        index.close()
+    shard_paths = _resolve_shard_paths(cfg)
+    if len(shard_paths) <= 1:
+        index = DatIndexSqlite.from_config(cfg)
+        lock_path = Path(dat_cfg.get("lock_path") or os.path.join("data", "index", "romsorter_dat_index.lock"))
+        acquire_index_lock(lock_path, index.db_path)
+        try:
+            result = index.ingest(paths, cancel_event=cancel_event)
+            return result
+        finally:
+            release_index_lock(lock_path)
+            index.close()
+
+    dat_files = [path for path in _iter_dat_files(paths) if path.exists() and path.is_file()]
+    shard_inputs: List[List[str]] = [[] for _ in shard_paths]
+    for path in dat_files:
+        idx = _stable_shard_index(str(path), len(shard_paths))
+        shard_inputs[idx].append(str(path))
+
+    aggregated: Dict[str, int] = {"processed": 0, "skipped": 0, "inserted": 0, "removed": 0}
+    lock_base = dat_cfg.get("lock_path") or os.path.join("data", "index", "romsorter_dat_index.lock")
+    for idx, shard_path in enumerate(shard_paths):
+        shard_files = shard_inputs[idx]
+        if not shard_files:
+            continue
+        index = DatIndexSqlite(Path(shard_path))
+        lock_path = _resolve_shard_lock_path(lock_base, shard_path, idx)
+        acquire_index_lock(lock_path, index.db_path)
+        try:
+            result = index.ingest(shard_files, cancel_event=cancel_event)
+            aggregated["processed"] += int(result.get("processed", 0))
+            aggregated["skipped"] += int(result.get("skipped", 0))
+            aggregated["inserted"] += int(result.get("inserted", 0))
+            aggregated["removed"] += int(result.get("removed", 0))
+        finally:
+            release_index_lock(lock_path)
+            index.close()
+    aggregated["shards"] = len(shard_paths)
+    return aggregated

@@ -578,7 +578,7 @@
 - **Komplexität:** M
 - **Risiko:** Niedrig
 - **Abhängigkeiten:** Frontend-Exporter (existiert)
-- **MVP-Fit:** Ja
+- **MVP-Fit:** Ja (umgesetzt)
 - **Test-Idee:** Export, XML valide, Pfade korrekt
 
 #### F54: LaunchBox-Import-Export
@@ -588,7 +588,7 @@
 - **Komplexität:** L
 - **Risiko:** Mittel
 - **Abhängigkeiten:** LaunchBox-XML-Schema
-- **MVP-Fit:** Nein
+- **MVP-Fit:** Ja (umgesetzt)
 - **Test-Idee:** Export, Import in LaunchBox, ROMs erscheinen
 
 #### F55: RetroArch-Playlist-Generator
@@ -598,7 +598,7 @@
 - **Komplexität:** S
 - **Risiko:** Niedrig
 - **Abhängigkeiten:** Plan-Model
-- **MVP-Fit:** Ja
+- **MVP-Fit:** Ja (umgesetzt)
 - **Test-Idee:** Export, .lpl valide JSON, Pfade korrekt
 
 #### F56: CLI-Batch-Mode
@@ -608,7 +608,7 @@
 - **Komplexität:** M
 - **Risiko:** Niedrig
 - **Abhängigkeiten:** Controller-API
-- **MVP-Fit:** Ja
+- **MVP-Fit:** Ja (umgesetzt)
 - **Test-Idee:** CLI-Aufruf, JSON-Output, Exit-Code korrekt
 
 ---
@@ -622,7 +622,7 @@
 - **Komplexität:** M
 - **Risiko:** Mittel (Netzwerk-Abhängigkeit)
 - **Abhängigkeiten:** DAT-Sources (existiert)
-- **MVP-Fit:** Ja
+- **MVP-Fit:** Ja (umgesetzt)
 - **Test-Idee:** Mock-Server mit neuer DAT, Update wird erkannt
 
 #### F58: Custom-DAT-Builder
@@ -632,7 +632,7 @@
 - **Komplexität:** M
 - **Risiko:** Niedrig
 - **Abhängigkeiten:** DAT-Writer
-- **MVP-Fit:** Nein
+- **MVP-Fit:** Ja (umgesetzt)
 - **Test-Idee:** Scan, DAT exportieren, DAT valide
 
 #### F59: Hash-Cache-Inspector
@@ -642,7 +642,7 @@
 - **Komplexität:** S
 - **Risiko:** Niedrig
 - **Abhängigkeiten:** Hash-Cache
-- **MVP-Fit:** Ja
+- **MVP-Fit:** Ja (umgesetzt)
 - **Test-Idee:** Cache mit 100 Einträgen, UI zeigt alle, Löschen funktioniert
 
 #### F60: Database-Integrity-Check
@@ -652,7 +652,7 @@
 - **Komplexität:** S
 - **Risiko:** Niedrig
 - **Abhängigkeiten:** DB-Manager
-- **MVP-Fit:** Ja
+- **MVP-Fit:** Ja (umgesetzt)
 - **Test-Idee:** Korrupte DB erkennen, Warnung anzeigen
 
 ---
@@ -973,10 +973,10 @@ Alle Metriken werden **nur lokal** gespeichert (`cache/metrics.json`):
 - [x] **F31** Backup-Before-Overwrite
 
 #### Performance
-- [ ] **F33** Parallel-Hashing
-- [ ] **F34** Index-Sharding
-- [ ] **F35** Lazy-Archive-Extraction
-- [ ] **F36** Background-Index-Update
+- [x] **F33** Parallel-Hashing
+- [x] **F34** Index-Sharding
+- [x] **F35** Lazy-Archive-Extraction
+- [x] **F36** Background-Index-Update
 
 #### UX
 - [x] **F38** Contextual-Help-Tooltips
@@ -995,16 +995,16 @@ Alle Metriken werden **nur lokal** gespeichert (`cache/metrics.json`):
 - [x] **F52** High-Contrast-Mode
 
 #### Integrations
-- [ ] **F53** EmulationStation-Gamelist-Export Enhanced
-- [ ] **F54** LaunchBox-Import-Export
-- [ ] **F55** RetroArch-Playlist-Generator
-- [ ] **F56** CLI-Batch-Mode
+- [x] **F53** EmulationStation-Gamelist-Export Enhanced
+- [x] **F54** LaunchBox-Import-Export
+- [x] **F55** RetroArch-Playlist-Generator
+- [x] **F56** CLI-Batch-Mode
 
 #### Data / DB
-- [ ] **F57** DAT-Auto-Updater
-- [ ] **F58** Custom-DAT-Builder
-- [ ] **F59** Hash-Cache-Inspector
-- [ ] **F60** Database-Integrity-Check
+- [x] **F57** DAT-Auto-Updater
+- [x] **F58** Custom-DAT-Builder
+- [x] **F59** Hash-Cache-Inspector
+- [x] **F60** Database-Integrity-Check
 
 ---
 

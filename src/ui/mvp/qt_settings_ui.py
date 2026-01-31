@@ -25,6 +25,9 @@ class SettingsInputs:
     btn_clear_dat_cache: Any
     db_status: Any
     btn_db_manager: Any
+    hash_cache_status: Any
+    btn_hash_cache_info: Any
+    btn_hash_cache_clear: Any
 
 
 @dataclass(frozen=True)
@@ -123,6 +126,14 @@ def build_settings_ui(QtWidgets, QtCore, settings_layout, layouts: Dict[str, Any
     db_form.addWidget(inputs.db_status, 2, 0)
     db_form.addWidget(inputs.btn_db_manager, 2, 1)
     db_form.setColumnStretch(1, 1)
+
+    cache_group = QtWidgets.QGroupBox("Hash-Cache")
+    cache_layout = QtWidgets.QHBoxLayout(cache_group)
+    cache_layout.addWidget(inputs.hash_cache_status)
+    cache_layout.addWidget(inputs.btn_hash_cache_info)
+    cache_layout.addWidget(inputs.btn_hash_cache_clear)
+    cache_layout.addStretch(1)
+    settings_layout.addWidget(cache_group)
 
     advanced_group = QtWidgets.QGroupBox("Erweitert")
     advanced_layout = QtWidgets.QVBoxLayout(advanced_group)

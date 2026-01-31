@@ -18,6 +18,7 @@ class ReportsInputs:
     btn_export_audit_json: Any
     btn_export_frontend_es: Any
     btn_export_frontend_launchbox: Any
+    btn_export_frontend_retroarch: Any
 
 
 @dataclass(frozen=True)
@@ -79,6 +80,7 @@ def build_reports_ui(QtWidgets, reports_layout, inputs: ReportsInputs) -> Report
     frontend_layout = QtWidgets.QHBoxLayout(frontend_group)
     frontend_layout.addWidget(inputs.btn_export_frontend_es)
     frontend_layout.addWidget(inputs.btn_export_frontend_launchbox)
+    frontend_layout.addWidget(inputs.btn_export_frontend_retroarch)
     frontend_layout.addStretch(1)
     reports_layout.addWidget(frontend_group)
     reports_layout.addStretch(1)

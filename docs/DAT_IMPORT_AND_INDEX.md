@@ -69,6 +69,26 @@ Coverage wird aus dem SQLite Index berechnet und kann im GUI als Statistik angez
 - Stale detection via PID + process start time
 - Immer release in finally
 
+## Background-Index-Update (Auto-Build)
+- Config: `config.dats.auto_build = true`
+- UI startet den Index-Build im Hintergrund, wenn Import-Pfade gesetzt sind.
+- Ziel: UI bleibt sofort bedienbar, Index aktualisiert sich parallel.
+
+## Index-Sharding (Optional)
+Große DAT-Mengen können auf mehrere SQLite-Dateien verteilt werden.
+
+Konfiguration:
+- `config.dats.sharding.enabled = true`
+- `config.dats.sharding.shard_count = <int>` oder `config.dats.sharding.shard_paths = [..]`
+
+Default-Pfade (bei `shard_count`):
+- `data/index/romsorter_dat_index_shard01.sqlite`
+- `data/index/romsorter_dat_index_shard02.sqlite`
+- ...
+
+Hinweis:
+- Shard-Anzahl ändern ⇒ Index neu aufbauen.
+
 ## Ist-Zustand (MVP)
 - SQLite Index aktiv (data/index/romsorter_dat_index.sqlite)
 - Inkrementeller Import inkl. Remove/Deactivate

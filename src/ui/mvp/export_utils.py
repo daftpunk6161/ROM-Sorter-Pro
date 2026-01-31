@@ -222,6 +222,17 @@ def write_emulationstation_gamelist(plan: SortPlan, filename: str) -> None:
         name = Path(str(action.planned_target_path)).stem or Path(str(action.input_path)).stem
         ET_ANY.SubElement(entry, "name").text = name
         ET_ANY.SubElement(entry, "platform").text = str(action.detected_system or "Unknown")
+        try:
+            from ...app.api import infer_region_from_name, infer_languages_and_version_from_name
+
+            region = infer_region_from_name(str(action.input_path))
+            languages, _version = infer_languages_and_version_from_name(str(action.input_path))
+            if region:
+                ET_ANY.SubElement(entry, "region").text = str(region)
+            if languages:
+                ET_ANY.SubElement(entry, "lang").text = ",".join(languages)
+        except Exception:
+            pass
 
     tree = ET_ANY.ElementTree(root)
     Path(filename).parent.mkdir(parents=True, exist_ok=True)
@@ -232,10 +243,60 @@ def write_launchbox_csv(plan: SortPlan, filename: str) -> None:
     """Write a minimal LaunchBox CSV mapping from a SortPlan."""
     with open(filename, "w", encoding="utf-8", newline="") as f:
         writer = csv.writer(f)
-        writer.writerow(["Title", "ApplicationPath", "Platform"])
+        writer.writerow(["Title", "ApplicationPath", "Platform", "Region", "Language"])
         for action in _iter_planned_actions(plan):
             target_path = _format_plan_path(plan, str(action.planned_target_path), prefer_relative=False)
             if not target_path:
                 continue
             title = Path(str(action.planned_target_path)).stem or Path(str(action.input_path)).stem
-            writer.writerow([title, target_path, str(action.detected_system or "Unknown")])
+            region = ""
+            language = ""
+            try:
+                from ...app.api import infer_region_from_name, infer_languages_and_version_from_name
+
+                region = infer_region_from_name(str(action.input_path)) or ""
+                languages, _version = infer_languages_and_version_from_name(str(action.input_path))
+                if languages:
+                    language = ",".join(languages)
+            except Exception:
+                region = ""
+                language = ""
+            writer.writerow([title, target_path, str(action.detected_system or "Unknown"), region, language])
+
+
+def write_retroarch_playlist(
+    plan: SortPlan,
+    filename: str,
+    *,
+    core_path: str = "DETECT",
+    core_name: str = "DETECT",
+    db_name: str = "",
+) -> None:
+    """Write a RetroArch .lpl playlist from a SortPlan."""
+    items: list[dict[str, Any]] = []
+    for action in _iter_planned_actions(plan):
+        target_path = _format_plan_path(plan, str(action.planned_target_path), prefer_relative=False)
+        if not target_path:
+            continue
+        label = Path(str(action.planned_target_path)).stem or Path(str(action.input_path)).stem
+        items.append(
+            {
+                "path": target_path,
+                "label": label,
+                "core_path": core_path,
+                "core_name": core_name,
+                "crc32": "00000000",
+                "db_name": db_name,
+            }
+        )
+
+    payload = {
+        "version": "1.5",
+        "default_core_path": core_path,
+        "default_core_name": core_name,
+        "label": Path(plan.dest_path or "ROMs").name,
+        "items": items,
+    }
+
+    Path(filename).parent.mkdir(parents=True, exist_ok=True)
+    write_json(payload, filename)

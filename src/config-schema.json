@@ -61,7 +61,55 @@
           "items": {"type": "string"}
         },
         "index_path": {"type": "string"},
-        "lock_path": {"type": "string"}
+        "lock_path": {"type": "string"},
+        "auto_build": {"type": "boolean"},
+        "sharding": {
+          "type": "object",
+          "properties": {
+            "enabled": {"type": "boolean"},
+            "shard_count": {"type": "integer", "minimum": 1, "maximum": 64},
+            "shard_paths": {
+              "type": "array",
+              "items": {"type": "string"}
+            }
+          },
+          "additionalProperties": true
+        },
+        "auto_update": {
+          "type": "object",
+          "properties": {
+            "sources": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {"type": "string"},
+                  "url": {"type": "string"},
+                  "dest": {"type": "string"},
+                  "sha256": {"type": "string"}
+                },
+                "required": ["url", "dest"],
+                "additionalProperties": true
+              }
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "integrations": {
+      "type": "object",
+      "properties": {
+        "retroarch": {
+          "type": "object",
+          "properties": {
+            "core_path": {"type": "string"},
+            "core_name": {"type": "string"},
+            "db_name": {"type": "string"}
+          },
+          "additionalProperties": true
+        }
       },
       "additionalProperties": true
     },
@@ -188,6 +236,7 @@
             "use_fast_hash": {"type": "boolean"},
             "enable_progress_batching": {"type": "boolean"},
             "lazy_loading": {"type": "boolean"},
+            "lazy_archive_extraction": {"type": "boolean"},
             "memory_pool_size": {"type": "string", "pattern": "^\\d+(MB|GB)$"}
           }
         }

@@ -22,6 +22,8 @@ Die Exporte basieren auf dem aktuellen **Sortier-Plan**. Nur geplante Aktionen (
   - `path`: relativ zur Zielstruktur (wenn möglich), sonst absolut
   - `name`: Dateiname ohne Extension
   - `platform`: erkannte Konsole (Fallback: `Unknown`)
+  - `region` (optional)
+  - `lang` (optional, kommagetrennt)
 
 Beispiel:
 ```xml
@@ -42,11 +44,45 @@ Beispiel:
   - `Title`
   - `ApplicationPath`
   - `Platform`
+  - `Region` (optional)
+  - `Language` (optional)
 
 Beispiel:
 ```csv
-Title,ApplicationPath,Platform
-Super Mario Bros,C:\ROMs\NES\Super Mario Bros.nes,NES
+Title,ApplicationPath,Platform,Region,Language
+Super Mario Bros,C:\ROMs\NES\Super Mario Bros.nes,NES,USA,EN
+
+### RetroArch (Playlist .lpl)
+
+- Datei: `roms.lpl`
+- JSON-Format mit `items` (Pfad, Label, Core-Infos)
+
+Beispiel (gekürzt):
+```json
+{
+  "version": "1.5",
+  "default_core_path": "DETECT",
+  "default_core_name": "DETECT",
+  "label": "ROMs",
+  "items": [
+    {
+      "path": "C:/ROMs/NES/Super Mario Bros.nes",
+      "label": "Super Mario Bros",
+      "core_path": "DETECT",
+      "core_name": "DETECT",
+      "crc32": "00000000",
+      "db_name": ""
+    }
+  ]
+}
+```
+
+## Import
+
+### LaunchBox (CSV → Overrides)
+
+- CLI: `python start_rom_sorter.py --import-launchbox <datei.csv>`
+- Liest `ApplicationPath` + `Platform` und schreibt Overrides.
 ```
 
 ## Hinweise

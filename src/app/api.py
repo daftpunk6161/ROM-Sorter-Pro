@@ -12,6 +12,11 @@ from .controller import filter_scan_items
 from .controller import get_dat_sources, infer_languages_and_version_from_name, infer_region_from_name
 from .controller import load_sort_resume_state, save_dat_sources
 from .database_export import export_scan_to_database
+from .frontend_imports import LaunchBoxImportReport, import_launchbox_csv_to_overrides
+from ..core.file_utils import clear_hash_cache, get_hash_cache_stats
+from ..dats.auto_update import DatUpdateReport, update_dat_sources
+from ..dats.custom_dat_builder import DatBuildReport, build_custom_dat
+from .db_controller import check_db_integrity, vacuum_db
 from .rollback_controller import apply_rollback, load_rollback_manifest, RollbackReport
 from .conversion_controller import (
     audit_conversion_candidates,
@@ -104,6 +109,16 @@ __all__ = [
     "unwrap",
     "unwrap_or",
     "export_scan_to_database",
+    "LaunchBoxImportReport",
+    "import_launchbox_csv_to_overrides",
+    "get_hash_cache_stats",
+    "clear_hash_cache",
+    "DatUpdateReport",
+    "update_dat_sources",
+    "DatBuildReport",
+    "build_custom_dat",
+    "check_db_integrity",
+    "vacuum_db",
     "apply_rollback",
     "load_rollback_manifest",
     "RollbackReport",

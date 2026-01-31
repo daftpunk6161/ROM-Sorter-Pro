@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import shutil
+import sqlite3
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -10,6 +11,7 @@ from typing import Optional
 
 from ..database.db_paths import get_rom_db_path
 from ..exceptions import ProcessingError
+from ..security.security_utils import validate_file_operation
 
 
 def _resolve_db_path(db_path: Optional[str] = None) -> Path:
@@ -89,3 +91,31 @@ def import_dat(dat_file: str, *, db_path: Optional[str] = None) -> int:
         return int(count)
     except Exception as exc:
         raise ProcessingError(f"DAT import failed: {exc}") from exc
+
+
+def check_db_integrity(db_path: Optional[str] = None) -> str:
+    """Run SQLite integrity_check and return the result string."""
+    path = _resolve_db_path(db_path)
+    try:
+        validate_file_operation(path, allow_read=True, allow_write=True)
+        conn = sqlite3.connect(str(path))
+        cur = conn.cursor()
+        cur.execute("PRAGMA integrity_check")
+        row = cur.fetchone()
+        conn.close()
+        return str(row[0] if row else "unknown")
+    except Exception as exc:
+        raise ProcessingError(f"DB integrity check failed: {exc}") from exc
+
+
+def vacuum_db(db_path: Optional[str] = None) -> None:
+    """Run SQLite VACUUM on the database."""
+    path = _resolve_db_path(db_path)
+    try:
+        validate_file_operation(path, allow_read=True, allow_write=True)
+        conn = sqlite3.connect(str(path))
+        cur = conn.cursor()
+        cur.execute("VACUUM")
+        conn.close()
+    except Exception as exc:
+        raise ProcessingError(f"DB vacuum failed: {exc}") from exc

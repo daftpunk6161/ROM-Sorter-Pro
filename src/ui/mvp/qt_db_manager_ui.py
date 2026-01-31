@@ -13,6 +13,8 @@ class DBManagerUI:
     btn_scan: Any
     btn_import: Any
     btn_migrate: Any
+    btn_integrity: Any
+    btn_vacuum: Any
     btn_refresh: Any
     btn_open_folder: Any
     btn_close: Any
@@ -37,6 +39,8 @@ def build_db_manager_ui(QtWidgets, label_func: Callable[[str, str], str], parent
     btn_scan = QtWidgets.QPushButton(label_func("Scan ROM Folder", "scan"))
     btn_import = QtWidgets.QPushButton("Import DAT")
     btn_migrate = QtWidgets.QPushButton("Migrate DB")
+    btn_integrity = QtWidgets.QPushButton("Integrity Check")
+    btn_vacuum = QtWidgets.QPushButton("VACUUM")
     btn_refresh = QtWidgets.QPushButton("Refresh")
     btn_open_folder = QtWidgets.QPushButton("Open Folder")
     btn_close = QtWidgets.QPushButton("Close")
@@ -46,6 +50,8 @@ def build_db_manager_ui(QtWidgets, label_func: Callable[[str, str], str], parent
     button_row.addWidget(btn_scan)
     button_row.addWidget(btn_import)
     button_row.addWidget(btn_migrate)
+    button_row.addWidget(btn_integrity)
+    button_row.addWidget(btn_vacuum)
     button_row.addWidget(btn_refresh)
     button_row.addWidget(btn_open_folder)
     button_row.addStretch(1)
@@ -59,6 +65,8 @@ def build_db_manager_ui(QtWidgets, label_func: Callable[[str, str], str], parent
         btn_scan=btn_scan,
         btn_import=btn_import,
         btn_migrate=btn_migrate,
+        btn_integrity=btn_integrity,
+        btn_vacuum=btn_vacuum,
         btn_refresh=btn_refresh,
         btn_open_folder=btn_open_folder,
         btn_close=btn_close,

@@ -575,11 +575,18 @@ from .tk_app_impl import run
         try:
             cfg = load_config()
             dat_cfg = cfg.get("dats", {}) if isinstance(cfg, dict) else {}
+            auto_build = bool(dat_cfg.get("auto_build", False))
+            paths = dat_cfg.get("import_paths") or []
+            if isinstance(paths, str):
+                paths = [paths]
+            paths = [p for p in paths if p]
             index_path = dat_cfg.get("index_path") or os.path.join("data", "index", "romsorter_dat_index.sqlite")
             if Path(index_path).exists():
                 self.dat_status_var.set("DAT: index vorhanden")
             else:
                 self.dat_status_var.set("DAT: index fehlt")
+            if auto_build and paths and self._dat_index_thread is None:
+                self._refresh_dat_sources()
         except Exception as exc:
             self.dat_status_var.set(f"DAT: Fehler ({exc})")
 

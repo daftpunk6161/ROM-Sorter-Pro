@@ -25,6 +25,7 @@ class ActionButtonsUI:
     btn_export_audit_json: Any
     btn_export_frontend_es: Any
     btn_export_frontend_launchbox: Any
+    btn_export_frontend_retroarch: Any
 
 
 def build_action_buttons_ui(QtWidgets, label_func: Callable[[str, str], str]) -> ActionButtonsUI:
@@ -47,6 +48,7 @@ def build_action_buttons_ui(QtWidgets, label_func: Callable[[str, str], str]) ->
     btn_export_audit_json = QtWidgets.QPushButton("Audit JSON")
     btn_export_frontend_es = QtWidgets.QPushButton("Frontend EmulationStation")
     btn_export_frontend_launchbox = QtWidgets.QPushButton("Frontend LaunchBox")
+    btn_export_frontend_retroarch = QtWidgets.QPushButton("Frontend RetroArch")
 
     return ActionButtonsUI(
         btn_scan=btn_scan,
@@ -66,6 +68,7 @@ def build_action_buttons_ui(QtWidgets, label_func: Callable[[str, str], str]) ->
         btn_export_audit_json=btn_export_audit_json,
         btn_export_frontend_es=btn_export_frontend_es,
         btn_export_frontend_launchbox=btn_export_frontend_launchbox,
+        btn_export_frontend_retroarch=btn_export_frontend_retroarch,
     )
 
 
@@ -92,6 +95,7 @@ def configure_action_buttons_ui(action_buttons: ActionButtonsUI, button_row: Any
         action_buttons.btn_export_plan_json,
         action_buttons.btn_export_frontend_es,
         action_buttons.btn_export_frontend_launchbox,
+        action_buttons.btn_export_frontend_retroarch,
         action_buttons.btn_resume,
         action_buttons.btn_retry_failed,
         action_buttons.btn_cancel,

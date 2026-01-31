@@ -103,6 +103,7 @@ class HighPerformanceScanner:
 
         # Ignore extensions configured from config
         self._ignore_exts = self._resolve_ignore_extensions()
+        self._lazy_archive_extraction = self._resolve_lazy_archive_extraction()
 
         # In-memory LRU cache to skip repeated work within a session
         # Uses OrderedDict for efficient O(1) LRU eviction
@@ -184,6 +185,16 @@ class HighPerformanceScanner:
 
         return ignore_exts
 
+    def _resolve_lazy_archive_extraction(self) -> bool:
+        try:
+            perf_root = self.config.get("performance", {}) or {}
+            perf_cfg = perf_root.get("optimization", {}) if isinstance(perf_root, dict) else {}
+            if isinstance(perf_cfg, dict) and "lazy_archive_extraction" in perf_cfg:
+                return bool(perf_cfg.get("lazy_archive_extraction"))
+        except Exception:
+            pass
+        return False
+
     def _get_dat_index(self):
         if self._dat_index is not None:
             return self._dat_index
@@ -191,14 +202,9 @@ class HighPerformanceScanner:
             if self._dat_index is not None:
                 return self._dat_index
             try:
-                from ..core.dat_index_sqlite import DatIndexSqlite
+                from ..core.dat_index_sqlite import open_dat_index_from_config
                 cfg = self.config or {}
-                dat_cfg = cfg.get("dats", {}) or {}
-                index_path = dat_cfg.get("index_path") or os.path.join("data", "index", "romsorter_dat_index.sqlite")
-                if not os.path.exists(index_path):
-                    self._dat_index = None
-                else:
-                    self._dat_index = DatIndexSqlite(Path(index_path))
+                self._dat_index = open_dat_index_from_config(cfg)
             except Exception as exc:
                 logger.debug("Optional DAT index load failed: %s", exc)
                 self._dat_index = None
@@ -572,6 +578,8 @@ class HighPerformanceScanner:
             # Check whether it is an archive
             if any(file_path.lower().endswith(ext) for ext in ARCHIVE_EXTENSIONS):
                 self.archives_found += 1
+                if self._lazy_archive_extraction:
+                    return self._process_archive_lazy(file_path)
                 lower_path = file_path.lower()
                 if lower_path.endswith('.zip'):
                     return self._process_zip_archive(file_path)
@@ -911,6 +919,47 @@ class HighPerformanceScanner:
 
         except Exception as e:
             logger.error(f"Fehler bei der ZIP-Verarbeitung von {file_path}: {str(e)}")
+            return None
+
+    def _process_archive_lazy(self, file_path: str) -> Optional[Dict]:
+        """Minimal archive handling without extraction (lazy mode)."""
+        try:
+            name_only = self._process_archive_name_only(file_path)
+            if name_only:
+                return name_only
+
+            path_obj = Path(file_path)
+            file_stat = os.stat(file_path)
+            file_size = file_stat.st_size
+            archive_type = path_obj.suffix.lower().lstrip(".")
+            candidates_info: Dict[str, Any] = {}
+            try:
+                from ..core.platform_heuristics import evaluate_platform_candidates
+                candidates_info = evaluate_platform_candidates(file_path, container=archive_type or None)
+            except Exception:
+                candidates_info = {}
+
+            return {
+                'name': path_obj.name,
+                'path': str(path_obj),
+                'system': 'Unknown',
+                'detection_confidence': 0.0,
+                'detection_source': 'archive-lazy',
+                'is_exact': False,
+                'signals': candidates_info.get('signals') or [],
+                'candidates': candidates_info.get('candidates') or [],
+                'candidate_systems': candidates_info.get('candidate_systems') or [],
+                'size': file_size,
+                'crc32': None,
+                'md5': None,
+                'sha1': None,
+                'last_modified': file_stat.st_mtime,
+                'valid': True,
+                'is_archive': True,
+                'archive_type': archive_type,
+                'archive_entry_count': None,
+            }
+        except Exception:
             return None
 
     def _process_archive_name_only(self, file_path: str) -> Optional[Dict]:

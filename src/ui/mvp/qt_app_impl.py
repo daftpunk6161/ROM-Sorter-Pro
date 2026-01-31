@@ -126,6 +126,7 @@ def run() -> int:
         write_emulationstation_gamelist,
         write_json,
         write_launchbox_csv,
+        write_retroarch_playlist,
         write_plan_csv,
         write_scan_csv,
     )
@@ -231,6 +232,8 @@ def run() -> int:
             self.btn_scan = ui.btn_scan
             self.btn_import = ui.btn_import
             self.btn_migrate = ui.btn_migrate
+            self.btn_integrity = ui.btn_integrity
+            self.btn_vacuum = ui.btn_vacuum
             self.btn_refresh = ui.btn_refresh
             self.btn_open_folder = ui.btn_open_folder
             self.btn_close = ui.btn_close
@@ -240,6 +243,8 @@ def run() -> int:
             self.btn_scan.clicked.connect(self._scan_roms)
             self.btn_import.clicked.connect(self._import_dat)
             self.btn_migrate.clicked.connect(self._migrate_db)
+            self.btn_integrity.clicked.connect(self._integrity_check)
+            self.btn_vacuum.clicked.connect(self._vacuum_db)
             self.btn_refresh.clicked.connect(self._refresh)
             self.btn_open_folder.clicked.connect(self._open_folder)
             self.btn_close.clicked.connect(self.accept)
@@ -311,6 +316,24 @@ def run() -> int:
 
         def _migrate_db(self) -> None:
             show_info(QtWidgets, self, "DB", "Not implemented in MVP")
+
+        def _integrity_check(self) -> None:
+            from ...app.db_controller import check_db_integrity
+
+            try:
+                result = check_db_integrity(self._db_path)
+                show_info(QtWidgets, self, "DB Integrity", f"Integrity: {result}")
+            except Exception as exc:
+                show_warning(QtWidgets, self, "DB Integrity", f"Integrity check failed: {exc}")
+
+        def _vacuum_db(self) -> None:
+            from ...app.db_controller import vacuum_db
+
+            try:
+                vacuum_db(self._db_path)
+                show_info(QtWidgets, self, "DB", "VACUUM complete")
+            except Exception as exc:
+                show_warning(QtWidgets, self, "DB", f"VACUUM failed: {exc}")
 
         def _open_folder(self) -> None:
             QtGui.QDesktopServices.openUrl(QtCore.QUrl.fromLocalFile(str(Path(self._db_path).parent)))
@@ -529,6 +552,7 @@ def run() -> int:
             self.menu_export_plan_json = menu_actions.export_plan_json
             self.menu_export_frontend_es = menu_actions.export_frontend_es
             self.menu_export_frontend_launchbox = menu_actions.export_frontend_launchbox
+            self.menu_export_frontend_retroarch = menu_actions.export_frontend_retroarch
             self.menu_export_audit_csv = menu_actions.export_audit_csv
             self.menu_export_audit_json = menu_actions.export_audit_json
 
@@ -662,6 +686,7 @@ def run() -> int:
             self.btn_export_audit_json = action_buttons.btn_export_audit_json
             self.btn_export_frontend_es = action_buttons.btn_export_frontend_es
             self.btn_export_frontend_launchbox = action_buttons.btn_export_frontend_launchbox
+            self.btn_export_frontend_retroarch = action_buttons.btn_export_frontend_retroarch
             configure_action_buttons_ui(action_buttons, button_row)
 
             splitter_ui = build_splitter_ui(QtWidgets, QtCore, sort_tab_layout)
@@ -774,6 +799,9 @@ def run() -> int:
 
             self.db_status = QtWidgets.QLabel("DB: ")
             self.btn_db_manager = QtWidgets.QPushButton("DB-Manager öffnen")
+            self.hash_cache_status = QtWidgets.QLabel("Hash-Cache: -")
+            self.btn_hash_cache_info = QtWidgets.QPushButton("Cache-Info")
+            self.btn_hash_cache_clear = QtWidgets.QPushButton("Cache leeren")
 
             external_tools_ui = build_external_tools_ui(
                 QtWidgets,
@@ -842,6 +870,9 @@ def run() -> int:
                     btn_clear_dat_cache=self.btn_clear_dat_cache,
                     db_status=self.db_status,
                     btn_db_manager=self.btn_db_manager,
+                    hash_cache_status=self.hash_cache_status,
+                    btn_hash_cache_info=self.btn_hash_cache_info,
+                    btn_hash_cache_clear=self.btn_hash_cache_clear,
                 ),
             )
             self.layout_combo = settings_ui.layout_combo
@@ -851,6 +882,7 @@ def run() -> int:
             self.compact_mode_checkbox = settings_ui.compact_mode_checkbox
             self.pro_mode_checkbox = settings_ui.pro_mode_checkbox
             self.btn_show_shortcuts = settings_ui.btn_show_shortcuts
+            self._refresh_hash_cache_status()
 
             if show_external_tools:
                 self.output_edit = external_tools_ui.output_edit
@@ -923,6 +955,7 @@ def run() -> int:
                     btn_export_audit_json=self.btn_export_audit_json,
                     btn_export_frontend_es=self.btn_export_frontend_es,
                     btn_export_frontend_launchbox=self.btn_export_frontend_launchbox,
+                    btn_export_frontend_retroarch=self.btn_export_frontend_retroarch,
                 ),
             )
             self.library_report_summary = reports_ui.library_report_summary
@@ -1032,12 +1065,14 @@ def run() -> int:
             self.btn_export_plan_json.clicked.connect(self._export_plan_json)
             self.btn_export_frontend_es.clicked.connect(self._export_frontend_es)
             self.btn_export_frontend_launchbox.clicked.connect(self._export_frontend_launchbox)
+            self.btn_export_frontend_retroarch.clicked.connect(self._export_frontend_retroarch)
             self.menu_export_scan_csv.triggered.connect(self._export_scan_csv)
             self.menu_export_scan_json.triggered.connect(self._export_scan_json)
             self.menu_export_plan_csv.triggered.connect(self._export_plan_csv)
             self.menu_export_plan_json.triggered.connect(self._export_plan_json)
             self.menu_export_frontend_es.triggered.connect(self._export_frontend_es)
             self.menu_export_frontend_launchbox.triggered.connect(self._export_frontend_launchbox)
+            self.menu_export_frontend_retroarch.triggered.connect(self._export_frontend_retroarch)
             self.menu_export_audit_csv.triggered.connect(self._export_audit_csv)
             self.menu_export_audit_json.triggered.connect(self._export_audit_json)
             self.btn_resume.clicked.connect(self._start_resume)
@@ -1104,6 +1139,8 @@ def run() -> int:
             if self.layout_combo is not None:
                 self.layout_combo.currentIndexChanged.connect(self._on_layout_combo_changed)
             self.btn_db_manager.clicked.connect(self._open_db_manager)
+            self.btn_hash_cache_info.clicked.connect(self._show_hash_cache_info)
+            self.btn_hash_cache_clear.clicked.connect(self._clear_hash_cache)
             self.log_visible_checkbox.stateChanged.connect(self._on_log_visible_changed)
             self.remember_window_checkbox.stateChanged.connect(self._on_remember_window_changed)
             self.drag_drop_checkbox.stateChanged.connect(self._on_drag_drop_changed)
@@ -1623,11 +1660,18 @@ def run() -> int:
             try:
                 cfg = load_config()
                 dat_cfg = cfg.get("dats", {}) if isinstance(cfg, dict) else {}
+                auto_build = bool(dat_cfg.get("auto_build", False))
+                paths = dat_cfg.get("import_paths") or []
+                if isinstance(paths, str):
+                    paths = [paths]
+                paths = [p for p in paths if p]
                 index_path = dat_cfg.get("index_path") or os.path.join("data", "index", "romsorter_dat_index.sqlite")
                 if Path(index_path).exists():
                     self.dat_status.setText("DAT: index vorhanden")
                 else:
                     self.dat_status.setText("DAT: index fehlt")
+                if auto_build and paths and self._dat_index_thread is None:
+                    self._refresh_dat_sources()
             except Exception as exc:
                 self.dat_status.setText(f"DAT: Fehler ({exc})")
 
@@ -1773,6 +1817,45 @@ def run() -> int:
                     self.dat_status.setText("DAT: Index nicht gefunden")
             except Exception as exc:
                 self.dat_status.setText(f"DAT: Cache löschen fehlgeschlagen ({exc})")
+
+        def _refresh_hash_cache_status(self) -> None:
+            try:
+                from ...app.api import get_hash_cache_stats
+
+                stats = get_hash_cache_stats()
+                self.hash_cache_status.setText(
+                    "Hash-Cache: {currsize}/{maxsize}".format(
+                        currsize=stats.get("currsize", 0),
+                        maxsize=stats.get("maxsize", 0),
+                    )
+                )
+            except Exception:
+                self.hash_cache_status.setText("Hash-Cache: -")
+
+        def _show_hash_cache_info(self) -> None:
+            try:
+                from ...app.api import get_hash_cache_stats
+
+                stats = get_hash_cache_stats()
+                show_info(
+                    QtWidgets,
+                    self,
+                    "Hash-Cache",
+                    "Hits: {hits}\nMisses: {misses}\nMaxsize: {maxsize}\nCurrsize: {currsize}".format(**stats),
+                )
+                self._refresh_hash_cache_status()
+            except Exception as exc:
+                show_warning(QtWidgets, self, "Hash-Cache", f"Info fehlgeschlagen: {exc}")
+
+        def _clear_hash_cache(self) -> None:
+            try:
+                from ...app.api import clear_hash_cache
+
+                clear_hash_cache()
+                self._refresh_hash_cache_status()
+                show_info(QtWidgets, self, "Hash-Cache", "Cache geleert")
+            except Exception as exc:
+                show_warning(QtWidgets, self, "Hash-Cache", f"Leeren fehlgeschlagen: {exc}")
 
         def _has_external_tools_templates(self) -> bool:
             try:
@@ -5388,6 +5471,21 @@ def run() -> int:
             if not filename:
                 return
             self._run_export_task("Frontend LaunchBox", lambda: write_launchbox_csv(plan, filename))
+
+        def _export_frontend_retroarch(self) -> None:
+            plan = self._sort_plan
+            if plan is None:
+                QtWidgets.QMessageBox.information(self, "Kein Plan", "Bitte zuerst Vorschau ausführen.")
+                return
+            filename, _ = QtWidgets.QFileDialog.getSaveFileName(
+                self,
+                "Save RetroArch Playlist",
+                "roms.lpl",
+                "Playlist Files (*.lpl)",
+            )
+            if not filename:
+                return
+            self._run_export_task("Frontend RetroArch", lambda: write_retroarch_playlist(plan, filename))
 
         def _export_audit_json(self) -> None:
             report = self._audit_report

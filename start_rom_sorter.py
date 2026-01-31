@@ -117,6 +117,27 @@ def parse_arguments():
     parser.add_argument("--rollback", metavar="PATH", help="Rollback a move operation using a manifest file")
     parser.add_argument("--export-db", metavar="PATH", help="Scan a ROM folder and export into the database")
     parser.add_argument("--export-db-path", metavar="DB", help="Target database path for export")
+    parser.add_argument("--batch-source", metavar="PATH", help="Batch mode: source folder for scan")
+    parser.add_argument("--batch-dest", metavar="PATH", help="Batch mode: destination folder for plan/execute")
+    parser.add_argument("--batch-mode", choices=["copy", "move"], default="copy")
+    parser.add_argument("--batch-conflict", choices=["skip", "overwrite", "rename"], default="rename")
+    parser.add_argument("--batch-dry-run", action="store_true", help="Batch mode: dry run execute")
+    parser.add_argument("--batch-plan-only", action="store_true", help="Batch mode: scan + plan only")
+    parser.add_argument("--batch-export-plan-json", metavar="PATH", help="Export plan as JSON during batch")
+    parser.add_argument("--batch-export-plan-csv", metavar="PATH", help="Export plan as CSV during batch")
+    parser.add_argument("--batch-export-es", metavar="PATH", help="Export EmulationStation gamelist.xml during batch")
+    parser.add_argument("--batch-export-launchbox", metavar="PATH", help="Export LaunchBox CSV during batch")
+    parser.add_argument("--batch-export-retroarch", metavar="PATH", help="Export RetroArch playlist during batch")
+    parser.add_argument("--import-launchbox", metavar="PATH", help="Import LaunchBox CSV into overrides")
+    parser.add_argument("--dat-auto-update", action="store_true", help="Update configured DAT sources")
+    parser.add_argument("--build-dat-source", metavar="PATH", help="Build custom DAT from scan (source folder)")
+    parser.add_argument("--build-dat-output", metavar="PATH", help="Output path for custom DAT")
+    parser.add_argument("--build-dat-name", metavar="NAME", help="Optional custom DAT name")
+    parser.add_argument("--hash-cache-info", action="store_true", help="Show hash cache stats")
+    parser.add_argument("--hash-cache-clear", action="store_true", help="Clear hash cache")
+    parser.add_argument("--db-integrity-check", action="store_true", help="Run SQLite integrity_check")
+    parser.add_argument("--db-vacuum", action="store_true", help="Run SQLite VACUUM on database")
+    parser.add_argument("--db-path", metavar="PATH", help="Optional database path for DB commands")
 
     return parser.parse_args()
 
@@ -269,6 +290,148 @@ def main() -> int:
         except Exception as e:
             logger.error("Database export failed: %s", e)
             print(f"Database export failed: {e}")
+            return 1
+
+    if args.import_launchbox:
+        try:
+            from src.app.api import import_launchbox_csv_to_overrides
+
+            report = import_launchbox_csv_to_overrides(args.import_launchbox)
+            print(
+                f"LaunchBox import: total={report.total_rows}, imported={report.imported_rows}, skipped={report.skipped_rows}"
+            )
+            if report.override_file:
+                print(f"Overrides written to: {report.override_file}")
+            return 0
+        except Exception as e:
+            logger.error("LaunchBox import failed: %s", e)
+            print(f"LaunchBox import failed: {e}")
+            return 1
+
+    if args.dat_auto_update:
+        try:
+            from src.app.api import update_dat_sources
+
+            report = update_dat_sources()
+            print(f"DAT update: {report.updated}/{report.total} updated, {report.skipped} skipped")
+            for item in report.results:
+                print(f"- {item.name}: {item.message}")
+            return 0
+        except Exception as e:
+            logger.error("DAT update failed: %s", e)
+            print(f"DAT update failed: {e}")
+            return 1
+
+    if args.build_dat_source and args.build_dat_output:
+        try:
+            from src.app.controller import run_scan
+            from src.app.api import build_custom_dat
+
+            scan = run_scan(args.build_dat_source)
+            report = build_custom_dat(scan, args.build_dat_output, dat_name=args.build_dat_name)
+            print(
+                f"Custom DAT built: {report.output_path} (items={report.total_items}, hashed={report.hashed_items})"
+            )
+            return 0
+        except Exception as e:
+            logger.error("Custom DAT build failed: %s", e)
+            print(f"Custom DAT build failed: {e}")
+            return 1
+
+    if args.hash_cache_info:
+        try:
+            from src.app.api import get_hash_cache_stats
+
+            stats = get_hash_cache_stats()
+            print(
+                "Hash cache: hits={hits}, misses={misses}, maxsize={maxsize}, currsize={currsize}".format(**stats)
+            )
+            return 0
+        except Exception as e:
+            logger.error("Hash cache info failed: %s", e)
+            print(f"Hash cache info failed: {e}")
+            return 1
+
+    if args.hash_cache_clear:
+        try:
+            from src.app.api import clear_hash_cache
+
+            clear_hash_cache()
+            print("Hash cache cleared.")
+            return 0
+        except Exception as e:
+            logger.error("Hash cache clear failed: %s", e)
+            print(f"Hash cache clear failed: {e}")
+            return 1
+
+    if args.db_integrity_check:
+        try:
+            from src.app.api import check_db_integrity
+
+            result = check_db_integrity(args.db_path)
+            print(f"DB integrity: {result}")
+            return 0
+        except Exception as e:
+            logger.error("DB integrity check failed: %s", e)
+            print(f"DB integrity check failed: {e}")
+            return 1
+
+    if args.db_vacuum:
+        try:
+            from src.app.api import vacuum_db
+
+            vacuum_db(args.db_path)
+            print("DB vacuum complete.")
+            return 0
+        except Exception as e:
+            logger.error("DB vacuum failed: %s", e)
+            print(f"DB vacuum failed: {e}")
+            return 1
+
+    if args.batch_source and args.batch_dest:
+        try:
+            from src.app.controller import run_scan, plan_sort, execute_sort
+            from src.ui.mvp.export_utils import (
+                plan_report_to_dict,
+                write_plan_csv,
+                write_emulationstation_gamelist,
+                write_launchbox_csv,
+                write_retroarch_playlist,
+                write_json,
+            )
+
+            scan = run_scan(args.batch_source)
+            plan = plan_sort(scan, args.batch_dest, mode=args.batch_mode, on_conflict=args.batch_conflict)
+
+            if args.batch_export_plan_json:
+                write_json(plan_report_to_dict(plan), args.batch_export_plan_json)
+            if args.batch_export_plan_csv:
+                write_plan_csv(plan, args.batch_export_plan_csv)
+            if args.batch_export_es:
+                write_emulationstation_gamelist(plan, args.batch_export_es)
+            if args.batch_export_launchbox:
+                write_launchbox_csv(plan, args.batch_export_launchbox)
+            if args.batch_export_retroarch:
+                write_retroarch_playlist(plan, args.batch_export_retroarch)
+
+            if args.batch_plan_only:
+                print(f"Batch plan complete: actions={len(plan.actions)}")
+                return 0
+
+            report = execute_sort(plan, dry_run=bool(args.batch_dry_run))
+            print(
+                "Batch execute complete: processed={processed}, copied={copied}, moved={moved}, errors={errors}, cancelled={cancelled}".format(
+                    processed=report.processed,
+                    copied=report.copied,
+                    moved=report.moved,
+                    errors=len(report.errors),
+                    cancelled=report.cancelled,
+                )
+            )
+            return 0
+        except Exception as e:
+            logger.error("Batch mode failed: %s", e)
+            print(f"Batch mode failed: {e}")
             return 1
 
     # Start the Application in the Desired Mode
