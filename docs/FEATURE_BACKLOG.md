@@ -661,7 +661,7 @@
 
 ### B.9 Zusätzliche Feature-Ideen (F61-F70) – Neu 2026-01-31
 
-#### F61: Smart-Queue-Priority-Reordering
+#### F61: Smart-Queue-Priority-Reordering ✅
 - **Kategorie:** Sorting / Planning / Preview
 - **Kurzbeschreibung:** Drag-and-Drop Neuordnung der Sortier-Queue mit Auto-Priorität (kleine Dateien zuerst, Fehler ans Ende)
 - **User Value:** Bessere Kontrolle über Sortierreihenfolge, schnelles Feedback bei kleinen Jobs
@@ -669,9 +669,10 @@
 - **Risiko:** Niedrig
 - **Abhängigkeiten:** Job-Queue-System
 - **MVP-Fit:** Nein
+- **Status:** ✅ Implementiert in `src/core/queue_manager.py`
 - **Test-Idee:** Queue mit 10 Items, Drag Item 5 nach oben, Reihenfolge ändert sich
 
-#### F62: Detection-Confidence-Tuner (Slider)
+#### F62: Detection-Confidence-Tuner (Slider) ✅
 - **Kategorie:** Reliability / Detection Accuracy
 - **Kurzbeschreibung:** Globaler Slider für Mindest-Confidence (50%-99%), unter Schwelle → automatisch Unknown
 - **User Value:** Balance zwischen Recall und Precision einstellen
@@ -679,6 +680,7 @@
 - **Risiko:** Niedrig
 - **Abhängigkeiten:** Controller-Config
 - **MVP-Fit:** Ja
+- **Status:** ✅ Implementiert in `src/config/confidence_tuner.py`
 - **Test-Idee:** Slider auf 90%, ROM mit 85% Confidence → Unknown
 
 #### F63: Multi-Library-Workspace ✅
@@ -747,7 +749,7 @@
 - **MVP-Fit:** Nein
 - **Test-Idee:** 1000 ROMs sortieren, Badge erscheint mit Animation
 
-#### F69: Export-to-MiSTer-SD
+#### F69: Export-to-MiSTer-SD ✅
 - **Kategorie:** Integrations / Frontends
 - **Kurzbeschreibung:** Direkte Ausgabe im MiSTer-FPGA-Ordnerformat (mit Core-Mapping)
 - **User Value:** MiSTer-Nutzer können sofort loslegen
@@ -755,9 +757,10 @@
 - **Risiko:** Niedrig
 - **Abhängigkeiten:** MiSTer-Folder-Spec
 - **MVP-Fit:** Ja
+- **Status:** ✅ Implementiert in `src/exports/mister_exporter.py`
 - **Test-Idee:** Export für SNES, Ordnerstruktur entspricht MiSTer-Konvention
 
-#### F70: Portable-Mode (USB-Stick)
+#### F70: Portable-Mode (USB-Stick) ✅
 - **Kategorie:** Safety / Security
 - **Kurzbeschreibung:** Alle Config/Cache/Logs relativ zum Programm, kein Schreiben in AppData
 - **User Value:** Tool auf USB-Stick mitnehmen, auf fremden Rechnern nutzen
@@ -765,6 +768,7 @@
 - **Risiko:** Niedrig
 - **Abhängigkeiten:** Config-Pfad-Refactoring
 - **MVP-Fit:** Ja
+- **Status:** ✅ Implementiert in `src/config/portable_mode.py`
 - **Test-Idee:** Portable-Flag setzen, Config liegt neben .exe
 
 ---
@@ -867,7 +871,7 @@
 
 ### B.12 Patch-Management (F79-F82)
 
-#### F79: IPS/BPS/UPS-Patcher
+#### F79: IPS/BPS/UPS-Patcher ✅
 - **Kategorie:** Integrations / Frontends
 - **Kurzbeschreibung:** Patches (Übersetzungen, Hacks) direkt auf ROMs anwenden
 - **User Value:** Fan-Translations nutzen, keine externen Tools nötig
@@ -875,9 +879,10 @@
 - **Risiko:** Mittel (ROM-Modifikation)
 - **Abhängigkeiten:** Patch-Library (python-ips oder eigene Impl.)
 - **MVP-Fit:** Ja
+- **Status:** ✅ Implementiert in `src/patching/patcher.py`
 - **Test-Idee:** IPS-Patch auf ROM anwenden, Hash ändert sich korrekt
 
-#### F80: Patch-Bibliothek-Manager
+#### F80: Patch-Bibliothek-Manager ✅
 - **Kategorie:** Data / DB / DAT Management
 - **Kurzbeschreibung:** Verwaltet Patches pro ROM/System, zeigt kompatible Patches
 - **User Value:** Übersicht über verfügbare Patches
@@ -885,9 +890,10 @@
 - **Risiko:** Niedrig
 - **Abhängigkeiten:** Patch-Ordner-Struktur
 - **MVP-Fit:** Nein
+- **Status:** ✅ Implementiert in `src/patching/patch_library.py`
 - **Test-Idee:** Patch-Ordner scannen, Patches korrekt ROMs zugeordnet
 
-#### F81: Auto-Patch-Matching
+#### F81: Auto-Patch-Matching ✅
 - **Kategorie:** Reliability / Detection Accuracy
 - **Kurzbeschreibung:** Findet automatisch passende Patches für ROMs (anhand Hash/Name)
 - **User Value:** Kein manuelles Suchen nach dem richtigen Patch
@@ -895,9 +901,10 @@
 - **Risiko:** Mittel (False Matches)
 - **Abhängigkeiten:** F80, Patch-DB
 - **MVP-Fit:** Nein
+- **Status:** ✅ Implementiert in `src/patching/auto_matcher.py`
 - **Test-Idee:** ROM scannen, passender Patch aus Library wird vorgeschlagen
 
-#### F82: Soft-Patching-Support
+#### F82: Soft-Patching-Support ✅
 - **Kategorie:** Integrations / Frontends
 - **Kurzbeschreibung:** Patch zur Laufzeit anwenden (ohne Original-ROM zu ändern)
 - **User Value:** Original bleibt unverändert, Sicherheit
@@ -905,13 +912,14 @@
 - **Risiko:** Hoch (Emulator-spezifisch)
 - **Abhängigkeiten:** Emulator-Integration
 - **MVP-Fit:** Nein
+- **Status:** ✅ Implementiert in `src/patching/soft_patcher.py`
 - **Test-Idee:** ROM + Patch → Emulator startet mit gepatchter Version
 
 ---
 
 ### B.13 Emulator-Integration (F83-F86)
 
-#### F83: ROM-Direkt-Start
+#### F83: ROM-Direkt-Start ✅
 - **Kategorie:** Integrations / Frontends
 - **Kurzbeschreibung:** ROM mit passendem Emulator öffnen (Doppelklick oder Button)
 - **User Value:** Quick-Test ohne Frontend-Wechsel
@@ -919,9 +927,10 @@
 - **Risiko:** Niedrig
 - **Abhängigkeiten:** Emulator-Pfad-Config
 - **MVP-Fit:** Ja
+- **Status:** ✅ Implementiert in `src/emulator/emulator_launcher.py`
 - **Test-Idee:** SNES-ROM doppelklicken, konfigurierter Emulator startet
 
-#### F84: Core-Zuordnung (RetroArch)
+#### F84: Core-Zuordnung (RetroArch) ✅
 - **Kategorie:** Integrations / Frontends
 - **Kurzbeschreibung:** RetroArch-Core pro System definieren
 - **User Value:** Power-User können bevorzugten Core festlegen
@@ -929,9 +938,10 @@
 - **Risiko:** Niedrig
 - **Abhängigkeiten:** RetroArch-Config-Parser
 - **MVP-Fit:** Ja
+- **Status:** ✅ Implementiert in `src/emulator/core_mapping.py`
 - **Test-Idee:** SNES → bsnes-Core setzen, Start nutzt diesen Core
 
-#### F85: Save-State-Manager
+#### F85: Save-State-Manager ✅
 - **Kategorie:** Data / DB / DAT Management
 - **Kurzbeschreibung:** Speicherstände organisieren, sichern, zwischen Emulatoren migrieren
 - **User Value:** Spielstände nicht verlieren beim Wechsel
@@ -939,9 +949,10 @@
 - **Risiko:** Hoch (Format-Unterschiede)
 - **Abhängigkeiten:** Emulator-spezifische Pfade
 - **MVP-Fit:** Nein
+- **Status:** ✅ Implementiert in `src/emulator/save_state_manager.py`
 - **Test-Idee:** Save-State von Emulator A nach B kopieren, funktioniert
 
-#### F86: Per-Game-Settings
+#### F86: Per-Game-Settings ✅
 - **Kategorie:** Integrations / Frontends
 - **Kurzbeschreibung:** Individuelle Emulator-Einstellungen pro ROM speichern
 - **User Value:** Problematische ROMs mit speziellen Settings starten
@@ -949,13 +960,14 @@
 - **Risiko:** Niedrig
 - **Abhängigkeiten:** Config-per-ROM-System
 - **MVP-Fit:** Nein
+- **Status:** ✅ Implementiert in `src/emulator/game_settings.py`
 - **Test-Idee:** ROM mit Custom-Settings speichern, beim Start werden sie geladen
 
 ---
 
 ### B.14 Hardware-Exporte (F87-F90)
 
-#### F87: Flash-Cart-Export (EverDrive/SD2SNES)
+#### F87: Flash-Cart-Export (EverDrive/SD2SNES) ✅
 - **Kategorie:** Integrations / Frontends
 - **Kurzbeschreibung:** Export im EverDrive/SD2SNES-Ordnerformat
 - **User Value:** Hardware-Nutzer können direkt auf SD-Karte kopieren
@@ -963,9 +975,10 @@
 - **Risiko:** Niedrig
 - **Abhängigkeiten:** Flash-Cart-Folder-Specs
 - **MVP-Fit:** Ja
+- **Status:** ✅ Implementiert in `src/exports/flash_cart_exporter.py`
 - **Test-Idee:** Export für SD2SNES, Ordnerstruktur entspricht Konvention
 
-#### F88: Analogue-Pocket-Export
+#### F88: Analogue-Pocket-Export ✅
 - **Kategorie:** Integrations / Frontends
 - **Kurzbeschreibung:** Export im OpenFPGA-Ordnerformat für Analogue Pocket
 - **User Value:** Analogue-Pocket-User können direkt loslegen
@@ -973,9 +986,10 @@
 - **Risiko:** Niedrig
 - **Abhängigkeiten:** OpenFPGA-Folder-Spec
 - **MVP-Fit:** Ja
+- **Status:** ✅ Implementiert in `src/exports/analogue_pocket_exporter.py`
 - **Test-Idee:** Export für Pocket, Assets/common/ korrekt strukturiert
 
-#### F89: Batocera/RetroPie-Export
+#### F89: Batocera/RetroPie-Export ✅
 - **Kategorie:** Integrations / Frontends
 - **Kurzbeschreibung:** Direkt bootfähige SD-Card-Struktur für Batocera/RetroPie
 - **User Value:** Raspberry Pi / PC-Setup in Minuten
@@ -983,9 +997,10 @@
 - **Risiko:** Niedrig
 - **Abhängigkeiten:** ES-Folder-Specs (existiert teilweise)
 - **MVP-Fit:** Ja
+- **Status:** ✅ Implementiert in `src/exports/batocera_exporter.py`
 - **Test-Idee:** Export, SD-Karte in Pi, System bootet mit ROMs
 
-#### F90: Steam-ROM-Manager-Integration
+#### F90: Steam-ROM-Manager-Integration ✅
 - **Kategorie:** Integrations / Frontends
 - **Kurzbeschreibung:** ROMs zu Steam hinzufügen (für Steam Deck)
 - **User Value:** Steam-Deck-User haben ROMs in Steam-Library
@@ -993,13 +1008,14 @@
 - **Risiko:** Niedrig
 - **Abhängigkeiten:** Steam-Shortcuts-Format
 - **MVP-Fit:** Ja
+- **Status:** ✅ Implementiert in `src/exports/steam_rom_manager.py`
 - **Test-Idee:** Export, Steam zeigt ROMs als Non-Steam-Games
 
 ---
 
 ### B.15 Collection-Analytics & Backup (F91-F95)
 
-#### F91: Sammlungs-Statistiken-Dashboard
+#### F91: Sammlungs-Statistiken-Dashboard ✅
 - **Kategorie:** Data / DB / DAT Management
 - **Kurzbeschreibung:** Größe, Anzahl, Verteilung pro System als Diagramme
 - **User Value:** Übersicht über die gesamte Sammlung
@@ -1007,9 +1023,10 @@
 - **Risiko:** Niedrig
 - **Abhängigkeiten:** Scan-Results, Chart-Library
 - **MVP-Fit:** Ja
+- **Status:** ✅ Implementiert in `src/analytics/collection_dashboard.py`
 - **Test-Idee:** Dashboard zeigt Pie-Chart mit System-Verteilung
 
-#### F92: Wunschlisten-Manager
+#### F92: Wunschlisten-Manager ✅
 - **Kategorie:** Data / DB / DAT Management
 - **Kurzbeschreibung:** Fehlende ROMs tracken, Wunschliste exportieren
 - **User Value:** Sammler-Ziele dokumentieren und teilen
@@ -1017,9 +1034,10 @@
 - **Risiko:** Niedrig
 - **Abhängigkeiten:** F66 (Collection-Completeness)
 - **MVP-Fit:** Ja
+- **Status:** ✅ Implementiert in `src/analytics/wishlist_manager.py`
 - **Test-Idee:** Fehlende ROMs zur Wunschliste hinzufügen, Export als TXT
 
-#### F93: Timeline-View
+#### F93: Timeline-View ✅
 - **Kategorie:** Visual / Themes
 - **Kurzbeschreibung:** ROMs nach Release-Jahr visualisieren (Timeline)
 - **User Value:** Historischer Kontext, Sammlung chronologisch erkunden
@@ -1027,9 +1045,10 @@
 - **Risiko:** Niedrig
 - **Abhängigkeiten:** Release-Year aus DAT/Metadaten
 - **MVP-Fit:** Nein
+- **Status:** ✅ Implementiert in `src/analytics/timeline_view.py`
 - **Test-Idee:** Timeline zeigt ROMs von 1985-2000 korrekt verteilt
 
-#### F94: Inkrementelles Backup
+#### F94: Inkrementelles Backup ✅
 - **Kategorie:** Safety / Security
 - **Kurzbeschreibung:** Nur geänderte Dateien seit letztem Backup sichern
 - **User Value:** Schnelle Backups, weniger Speicherverbrauch
@@ -1037,9 +1056,10 @@
 - **Risiko:** Niedrig
 - **Abhängigkeiten:** Hash-Cache, Backup-Manifest
 - **MVP-Fit:** Ja
+- **Status:** ✅ Implementiert in `src/backup/incremental_backup.py`
 - **Test-Idee:** Erstes Backup 10GB, 1 ROM hinzufügen, zweites Backup nur 50MB
 
-#### F95: Cloud-Sync-Support
+#### F95: Cloud-Sync-Support ✅
 - **Kategorie:** Integrations / Frontends
 - **Kurzbeschreibung:** Sync zu OneDrive/Dropbox/NAS (nur Metadaten oder auch ROMs)
 - **User Value:** Redundanz, Zugriff von mehreren Geräten
@@ -1047,6 +1067,7 @@
 - **Risiko:** Hoch (Netzwerk, Datenschutz)
 - **Abhängigkeiten:** Cloud-Provider-APIs
 - **MVP-Fit:** Nein
+- **Status:** ✅ Implementiert in `src/backup/cloud_sync.py`
 - **Test-Idee:** Sync zu OneDrive, Änderungen werden hochgeladen
 
 ---
