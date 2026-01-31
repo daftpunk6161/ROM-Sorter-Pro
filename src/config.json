@@ -1,16 +1,11 @@
 {
   "gui_settings": {
+    "compact_mode": true,
     "default_conflict_policy": "overwrite",
-    "log_visible": false,
-    "favorites": [
-      {
-        "source": "F:/AAAATransfer/test",
-        "dest": "F:/AAAATransfer/Clean_Roms_Sorted",
-        "label": "test \u2192 Clean_Roms_Sorted"
-      }
-    ],
-    "window_width": 1680,
-    "window_height": 980
+    "first_run_complete": true,
+    "log_visible": true,
+    "theme": "qt:retro_neon",
+    "pro_mode": false
   },
   "scanner": {
     "use_high_performance": true,
@@ -22,7 +17,7 @@
     "max_depth": -1
   },
   "ui": {
-    "theme": "system",
+    "theme": "qt:retro_neon",
     "language": "de_DE",
     "remember_window_state": true,
     "remember_last_directories": true,
@@ -32,32 +27,6 @@
     "enable_drag_drop": true,
     "show_status_bar": true,
     "show_toolbar": true
-  },
-  "features": {
-    "progress_persistence": {
-      "enabled": true,
-      "save_interval_sec": 10,
-      "clear_on_success": true,
-      "scan_resume_path": "cache/last_scan_resume.json",
-      "sort_resume_path": "cache/last_sort_resume.json"
-    },
-    "rollback": {
-      "enabled": true,
-      "manifest_path": "cache/rollback/last_move_rollback.json"
-    },
-    "scan": {
-      "incremental": true
-    },
-    "backup": {
-      "enabled": true,
-      "local_dir": "cache/backups",
-      "onedrive_enabled": true,
-      "onedrive_dir": null
-    },
-    "plugins": {
-      "enabled": true,
-      "paths": ["plugins"]
-    }
   },
   "database": {
     "use_memory_cache": true,
@@ -72,10 +41,5 @@
     "max_size_mb": 500,
     "clean_on_exit": false,
     "expiry_days": 30
-  },
-  "dats": {
-    "import_paths": [
-      "F:/AAAATransfer/DATs"
-    ]
   }
 }

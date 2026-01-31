@@ -26,7 +26,7 @@ def build_dat_sources_ui(QtWidgets, parent) -> DatSourcesUI:
     status_label.setWordWrap(True)
     layout.addWidget(status_label)
 
-    controls = QtWidgets.QHBoxLayout()
+    controls = QtWidgets.QGridLayout()
     layout.addLayout(controls)
 
     btn_add = QtWidgets.QPushButton("Hinzufügen…")
@@ -36,13 +36,13 @@ def build_dat_sources_ui(QtWidgets, parent) -> DatSourcesUI:
     btn_coverage = QtWidgets.QPushButton("Coverage anzeigen")
     btn_close = QtWidgets.QPushButton("Schließen")
 
-    controls.addWidget(btn_add)
-    controls.addWidget(btn_remove)
-    controls.addWidget(btn_open)
-    controls.addWidget(btn_refresh)
-    controls.addWidget(btn_coverage)
-    controls.addStretch(1)
-    controls.addWidget(btn_close)
+    controls.addWidget(btn_add, 0, 0)
+    controls.addWidget(btn_remove, 0, 1)
+    controls.addWidget(btn_open, 0, 2)
+    controls.addWidget(btn_refresh, 0, 3)
+    controls.addWidget(btn_coverage, 1, 0)
+    controls.addWidget(btn_close, 1, 3)
+    controls.setColumnStretch(4, 1)
 
     return DatSourcesUI(
         list_widget=list_widget,

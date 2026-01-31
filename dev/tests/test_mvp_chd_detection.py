@@ -109,6 +109,22 @@ def create_minimal_chd_v4(logical_bytes: int = 700 * 1024 * 1024) -> bytes:
     return bytes(header)
 
 
+def _write_sqlite_dat(path: Path, system_name: str, game_name: str, rom_name: str, crc: str, sha1: str) -> None:
+        path.write_text(
+                f"""<?xml version=\"1.0\"?>
+<datfile>
+    <header>
+        <name>{system_name}</name>
+    </header>
+    <game name=\"{game_name}\">
+        <rom name=\"{rom_name}\" crc=\"{crc}\" sha1=\"{sha1}\" />
+    </game>
+</datfile>
+""",
+                encoding="utf-8",
+        )
+
+
 # =============================================================================
 # Test: Magic Validation
 # =============================================================================
@@ -198,12 +214,50 @@ class TestVersionParsing:
         struct.pack_into(">I", header, 8, 32)
         struct.pack_into(">I", header, 12, 99)  # Version 99 (future)
         chd_file.write_bytes(bytes(header))
-        
+
         result = detect_chd_media_type(chd_file)
-        
+
         assert result is not None
         assert result.version == 99
         assert result.media_type == CHDMediaType.UNKNOWN
+
+
+def test_chd_detection_via_chdman(tmp_path: Path, monkeypatch):
+    from src.core.dat_index_sqlite import build_index_from_config
+    from src.scanning.high_performance_scanner import HighPerformanceScanner
+
+    dat_dir = tmp_path / "dats"
+    dat_dir.mkdir()
+    dat_path = dat_dir / "test.dat"
+    sha1 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    _write_sqlite_dat(
+        dat_path,
+        "Nintendo - Nintendo Entertainment System",
+        "Test Game",
+        "test.nes",
+        "aaaaaaaa",
+        sha1,
+    )
+
+    index_path = tmp_path / "index.sqlite"
+    lock_path = tmp_path / "index.lock"
+    cfg = {"dats": {"import_paths": [str(dat_dir)], "index_path": str(index_path), "lock_path": str(lock_path)}}
+    build_index_from_config(config=cfg)
+
+    chd_path = tmp_path / "game.chd"
+    chd_path.write_bytes(b"CHD")
+
+    monkeypatch.setattr(
+        "src.utils.external_tools.get_chd_data_sha1",
+        lambda _path, config=None: sha1,
+    )
+
+    scanner = HighPerformanceScanner(config=cfg)
+    result = scanner._process_file(str(chd_path))
+    assert result is not None
+    assert result.get("is_exact") is True
+    assert result.get("detection_source") == "dat:chd-sha1"
+    assert result.get("system") == "NES"
 
 
 # =============================================================================

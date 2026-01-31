@@ -598,6 +598,63 @@ class HighPerformanceScanner:
             file_name = os.path.basename(file_path)
             ext = Path(file_name).suffix.lower().lstrip(".")
 
+            dat_index = self._get_dat_index()
+            if ext == "chd" and dat_index is not None:
+                try:
+                    from ..utils.external_tools import get_chd_data_sha1
+
+                    chd_sha1 = get_chd_data_sha1(file_path, config=self.config)
+                except Exception:
+                    chd_sha1 = None
+
+                if chd_sha1:
+                    try:
+                        match = dat_index.lookup_sha1(chd_sha1)
+                    except Exception:
+                        match = None
+
+                    if match:
+                        rom_system = match.platform_id or "Unknown"
+                        confidence = 1000.0
+                        detection_source = "dat:chd-sha1"
+                        is_exact = True
+                        canonical_name = match.rom_name or match.set_name
+
+                        candidates_info: Dict[str, Any] = {}
+                        try:
+                            from ..core.platform_heuristics import evaluate_platform_candidates
+                            candidates_info = evaluate_platform_candidates(file_path, container=ext or None)
+                        except Exception:
+                            candidates_info = {}
+
+                        signals = list(candidates_info.get("signals") or [])
+                        signals.append("DAT_CHD_SHA1")
+
+                        rom_info = {
+                            'name': file_name,
+                            'path': file_path,
+                            'system': rom_system,
+                            'detection_confidence': confidence,
+                            'detection_source': detection_source,
+                            'is_exact': True,
+                            'canonical_name': canonical_name,
+                            'signals': signals,
+                            'candidates': candidates_info.get('candidates') or [],
+                            'candidate_systems': candidates_info.get('candidate_systems') or [],
+                            'candidate_details': candidates_info.get('candidate_details') or [],
+                            'heuristic_policy': candidates_info.get('policy') or {},
+                            'heuristic_reason': candidates_info.get('reason') or "",
+                            'size': file_size,
+                            'crc32': None,
+                            'md5': None,
+                            'sha1': chd_sha1,
+                            'last_modified': file_stat.st_mtime,
+                            'valid': True,
+                        }
+                        if use_cache:
+                            self._save_to_cache(file_path, rom_info, file_stat=file_stat)
+                        return rom_info
+
             # Calculates checksums (used for DAT matching too)
             crc32, md5, sha1 = self._calculate_checksums(file_path)
 
@@ -607,7 +664,6 @@ class HighPerformanceScanner:
             detection_source = "unknown"
 
             # DAT/Hash-first: exact match is truth.
-            dat_index = self._get_dat_index()
             is_exact = False
             canonical_name: Optional[str] = None
             if dat_index is not None:
@@ -646,9 +702,52 @@ class HighPerformanceScanner:
             # Strict mode: only accept exact DAT matches or unique extensions.
             if not is_exact:
                 if detection_source != "extension-unique":
-                    rom_system = "Unknown"
-                    confidence = 0.0
-                    detection_source = "unknown"
+                    allow_container = ext in {"chd", "iso", "bin", "cue"}
+                    signals = list(candidates_info.get("signals") or [])
+                    candidate_details = candidates_info.get("candidate_details") or []
+                    policy = candidates_info.get("policy") or {}
+
+                    try:
+                        min_score_delta = float(policy.get("min_score_delta", 1.0))
+                    except Exception:
+                        min_score_delta = 1.0
+                    try:
+                        min_top_score = float(policy.get("min_top_score", 2.0))
+                    except Exception:
+                        min_top_score = 2.0
+
+                    has_container = any(sig.startswith("CONTAINER:") for sig in signals)
+                    has_token = any(sig.startswith("TOKEN:") for sig in signals)
+
+                    accepted = False
+                    if allow_container and has_container and has_token and candidate_details:
+                        top = candidate_details[0]
+                        runner_up = candidate_details[1] if len(candidate_details) > 1 else None
+
+                        try:
+                            top_score = float(top.get("score", 0.0))
+                        except Exception:
+                            top_score = 0.0
+                        try:
+                            runner_score = float(runner_up.get("score", 0.0)) if runner_up else 0.0
+                        except Exception:
+                            runner_score = 0.0
+
+                        delta = top_score - runner_score if runner_up else top_score
+                        conflict_groups = set(top.get("conflict_groups") or [])
+                        runner_conflict_groups = set(runner_up.get("conflict_groups") or []) if runner_up else set()
+                        shared_conflict = conflict_groups.intersection(runner_conflict_groups)
+
+                        if not shared_conflict and top_score >= min_top_score and delta >= min_score_delta:
+                            rom_system = str(top.get("platform_id") or "Unknown")
+                            confidence = max(0.0, min(0.95, top_score / 3.0))
+                            detection_source = "heuristic-container"
+                            accepted = True
+
+                    if not accepted:
+                        rom_system = "Unknown"
+                        confidence = 0.0
+                        detection_source = "unknown"
                 else:
                     policy = candidates_info.get("policy") or {}
                     candidate_details = candidates_info.get("candidate_details") or []

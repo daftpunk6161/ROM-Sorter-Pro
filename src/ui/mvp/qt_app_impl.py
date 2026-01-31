@@ -418,14 +418,20 @@ def run() -> int:
             roms = int(report.get("rom_hashes", 0) or 0)
             games = int(report.get("game_names", 0) or 0)
             platforms = report.get("platforms", {}) or {}
-            summary = f"Coverage: aktiv {active} | inaktiv {inactive} | ROMs {roms} | Games {games}"
+            summary = (
+                "Coverage:\n"
+                f"- aktiv: {active}\n"
+                f"- inaktiv: {inactive}\n"
+                f"- ROMs: {roms}\n"
+                f"- Games: {games}"
+            )
             if isinstance(platforms, dict) and platforms:
                 top = ", ".join(
-                    f"{name}:{(data or {}).get('roms', 0)}"
-                    for name, data in list(platforms.items())[:6]
+                    f"{name}: {(data or {}).get('roms', 0)}"
+                    for name, data in list(platforms.items())[:5]
                 )
                 if top:
-                    summary = f"{summary} | {top}"
+                    summary = f"{summary}\n\nTop Systeme (ROMs):\n{top}"
             return summary
 
         def _show_coverage(self) -> None:
@@ -479,6 +485,8 @@ def run() -> int:
             self.resize(1100, 700)
 
             self._worker = None
+            self._thread = None
+            self._cancel_token = None
 
             self._scan_result: Optional[ScanResult] = None
             self._sort_plan: Optional[SortPlan] = None
@@ -559,11 +567,11 @@ def run() -> int:
             root_layout = QtWidgets.QVBoxLayout(central)
             self.root_layout = root_layout
 
-            theme_names_header = self._theme_manager.get_theme_names()
+            theme_names_header = []
             if self._qt_theme_display:
-                theme_names_header = theme_names_header + list(self._qt_theme_display.keys())
-            if "Auto" not in theme_names_header:
-                theme_names_header = ["Auto"] + theme_names_header
+                theme_names_header = list(self._qt_theme_display.keys())
+            else:
+                theme_names_header = self._theme_manager.get_theme_names()
             self.theme_combo = QtWidgets.QComboBox()
             self.theme_combo.addItems(list(theme_names_header))
 
@@ -601,6 +609,7 @@ def run() -> int:
 
             content_layout = QtWidgets.QHBoxLayout()
             self.content_layout = content_layout
+            root_layout.addLayout(content_layout, 1)
 
             sidebar_ui = build_sidebar_ui(QtWidgets)
             sidebar = sidebar_ui.sidebar
@@ -802,6 +811,14 @@ def run() -> int:
             self.hash_cache_status = QtWidgets.QLabel("Hash-Cache: -")
             self.btn_hash_cache_info = QtWidgets.QPushButton("Cache-Info")
             self.btn_hash_cache_clear = QtWidgets.QPushButton("Cache leeren")
+            self.dat_status = QtWidgets.QLabel("DAT: -")
+            self.btn_add_dat = QtWidgets.QPushButton("DAT-Ordner hinzufügen")
+            self.btn_refresh_dat = QtWidgets.QPushButton("DAT-Index bauen")
+            self.btn_cancel_dat = QtWidgets.QPushButton("DAT-Abbruch")
+            self.btn_manage_dat = QtWidgets.QPushButton("DAT-Quellen…")
+            self.dat_auto_load_checkbox = QtWidgets.QCheckBox("DAT-Index automatisch bauen")
+            self.btn_clear_dat_cache = QtWidgets.QPushButton("DAT-Index löschen")
+            self.btn_open_overrides = QtWidgets.QPushButton("Overrides öffnen")
 
             external_tools_ui = build_external_tools_ui(
                 QtWidgets,
@@ -3800,9 +3817,9 @@ def run() -> int:
             try:
                 cfg = load_config()
                 gui_cfg = cfg.get("gui_settings", {}) if isinstance(cfg, dict) else {}
-                use_shell = bool(gui_cfg.get("use_shell_layout", True))
+                use_shell = bool(gui_cfg.get("use_shell_layout", False))
             except Exception:
-                use_shell = True
+                use_shell = False
             if not use_shell:
                 return
             app_instance = QtWidgets.QApplication.instance()

@@ -34,7 +34,10 @@ if exist .venv\Scripts\activate.bat (
 )
 
 REM Prüfen, ob Abhängigkeiten installiert sind
-python -c "import PyQt5" >nul 2>&1
+python -c "import PySide6" >nul 2>&1
+if %ERRORLEVEL% NEQ 0 (
+    python -c "import PyQt5" >nul 2>&1
+)
 if %ERRORLEVEL% NEQ 0 (
     echo Installiere Abhängigkeiten...
     python install_dependencies.py

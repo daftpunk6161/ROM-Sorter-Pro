@@ -25,6 +25,8 @@ PROBE_INPUT_PATH = r"C:\__romsorter_probe__\does_not_exist.wud"
 WUD2APP_VERSION_RE = re.compile(r"^wud2app v(?P<ver>\S+)", re.MULTILINE)
 WUD2APP_OPEN_FAIL_RE = re.compile(r"Failed to open (?P<path>.+)!", re.MULTILINE)
 WUDCOMPRESS_INVALID_INPUT_RE = re.compile(r"Invalid input file", re.IGNORECASE)
+CHDMAN_DATA_SHA1_RE = re.compile(r"Data SHA1:\s*(?P<sha1>[0-9a-fA-F]{40})")
+CHDMAN_SHA1_RE = re.compile(r"^SHA1:\s*(?P<sha1>[0-9a-fA-F]{40})", re.MULTILINE)
 
 LogCallback = Optional[Callable[[str], None]]
 ConfigLike = Union[Config, Dict[str, Any]]
@@ -157,6 +159,10 @@ def _get_igir_config(config: Optional[ConfigLike]) -> Tuple[str, List[str]]:
     return _get_tool_config(config, "igir")
 
 
+def _get_chdman_config(config: Optional[ConfigLike]) -> Tuple[str, List[str]]:
+    return _get_tool_config(config, "chdman")
+
+
 def _load_igir_yaml() -> Dict[str, Any]:
     path = Path(__file__).resolve().parents[1] / "tools" / "igir.yaml"
     if not path.exists():
@@ -215,6 +221,38 @@ def _prepare_command(exe_path: str, args: List[str]) -> List[str]:
     if os.name == "nt" and exe_path.lower().endswith((".cmd", ".bat")):
         return ["cmd.exe", "/c", exe_path] + list(args)
     return [exe_path] + list(args)
+
+
+def get_chd_data_sha1(file_path: str, *, config: Optional[ConfigLike] = None) -> Optional[str]:
+    """Return the CHD data SHA1 using chdman (if available)."""
+    exe_path, _args_template = _get_chdman_config(config)
+    exe_path = exe_path.strip()
+    if not exe_path:
+        exe_path = shutil.which("chdman") or ""
+    if not exe_path:
+        return None
+
+    try:
+        cmd = _prepare_command(exe_path, ["info", "-i", str(file_path)])
+        proc = subprocess.run(  # nosec B603
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=20,
+            check=False,
+        )
+        output = "\n".join([proc.stdout or "", proc.stderr or ""]).strip()
+        if not output:
+            return None
+        match = CHDMAN_DATA_SHA1_RE.search(output)
+        if match:
+            return match.group("sha1").lower()
+        match = CHDMAN_SHA1_RE.search(output)
+        if match:
+            return match.group("sha1").lower()
+        return None
+    except Exception:
+        return None
 
 
 def _stringify_command(cmd: Union[str, List[str]]) -> str:

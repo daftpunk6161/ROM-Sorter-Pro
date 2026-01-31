@@ -47,11 +47,28 @@ def install_core_requirements():
             sys.executable, "-m", "pip", "install", "--upgrade", "pip"
         ])
 
-# Install basic packages
+        # Install preferred Qt binding (fallback to PyQt5 if needed)
+        qt_installed = False
+        try:
+            subprocess.check_call([
+                sys.executable, "-m", "pip",
+                "install",
+                "PySide6>=6.5",
+            ])
+            qt_installed = True
+        except Exception:
+            qt_installed = False
+
+        if not qt_installed:
+            subprocess.check_call([
+                sys.executable, "-m", "pip",
+                "install",
+                "PyQt5==5.15.7",
+            ])
+
         subprocess.check_call([
             sys.executable, "-m", "pip",
             "install",
-            "PyQt5==5.15.7",
             "py7zr",
             "pyyaml",
             "configparser",
@@ -69,12 +86,25 @@ def verify_core_packages():
     """Verifies that all basic packages were installed."""
     failed = []
 
+    qt_ok = False
     try:
-        import PyQt5.QtCore
-        logger.info(f"PyQt5 Version: {PyQt5.QtCore.QT_VERSION_STR}")
-    except ImportError:
-        logger.error("PyQt5 konnte nicht importiert werden.")
-        failed.append("PyQt5")
+        import PySide6  # noqa: F401
+        qt_ok = True
+        logger.info("PySide6 ist verfügbar.")
+    except Exception:
+        qt_ok = False
+
+    if not qt_ok:
+        try:
+            import PyQt5.QtCore
+            qt_ok = True
+            logger.info(f"PyQt5 Version: {PyQt5.QtCore.QT_VERSION_STR}")
+        except ImportError:
+            qt_ok = False
+
+    if not qt_ok:
+        logger.error("Keine Qt-Bindings gefunden (PySide6/PyQt5).")
+        failed.append("Qt")
 
     if importlib.util.find_spec("py7zr") is not None:
         logger.info("py7zr wurde erfolgreich installiert.")
