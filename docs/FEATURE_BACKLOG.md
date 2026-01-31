@@ -34,7 +34,7 @@
 - **Komplexität:** M
 - **Risiko:** Niedrig
 - **Abhängigkeiten:** DAT-Index, Detection Pipeline
-- **MVP-Fit:** Ja (bereits implementiert, Erweiterung)
+- **MVP-Fit:** Ja (umgesetzt)
 - **Test-Idee:** Golden-Fixture mit bekannten Unknown-Gründen, prüfen ob alle Reasons korrekt angezeigt werden
 
 #### F02: Confidence-Score-Visualisierung
@@ -64,7 +64,7 @@
 - **Komplexität:** M
 - **Risiko:** Niedrig
 - **Abhängigkeiten:** Detection-Handler Refactoring
-- **MVP-Fit:** Nein (Nice-to-have)
+- **MVP-Fit:** Ja (umgesetzt)
 - **Test-Idee:** Dummy-ROM durch Pipeline, prüfen ob alle Steps geloggt werden
 
 #### F05: Quick-Override-Dialog (Inline)
@@ -94,7 +94,7 @@
 - **Komplexität:** M
 - **Risiko:** Niedrig
 - **Abhängigkeiten:** Detection-Handler
-- **MVP-Fit:** Nein
+- **MVP-Fit:** Ja (umgesetzt)
 - **Test-Idee:** Bekannte Muster eingeben, erwartete Matches prüfen
 
 #### F08: Fingerprint-Erweiterung (Magic Bytes)
@@ -104,7 +104,7 @@
 - **Komplexität:** M
 - **Risiko:** Mittel (False-Positive-Gefahr bei schlechten Signaturen)
 - **Abhängigkeiten:** Detector-Base
-- **MVP-Fit:** Ja
+- **MVP-Fit:** Ja (umgesetzt)
 - **Test-Idee:** .bin-Dateien mit verschiedenen Headers, prüfen ob korrekt erkannt
 
 #### F09: DAT-Coverage-Report
@@ -114,7 +114,7 @@
 - **Komplexität:** S
 - **Risiko:** Niedrig
 - **Abhängigkeiten:** DAT-Index
-- **MVP-Fit:** Ja
+- **MVP-Fit:** Ja (umgesetzt)
 - **Test-Idee:** Index mit 3 DATs, Report zeigt exakt 3 Systeme
 
 #### F10: Fuzzy-Name-Matching
@@ -124,7 +124,7 @@
 - **Komplexität:** M
 - **Risiko:** Mittel (Performance, False-Positive-Gefahr)
 - **Abhängigkeiten:** DAT-Index
-- **MVP-Fit:** Nein
+- **MVP-Fit:** Ja (umgesetzt)
 - **Test-Idee:** ROM mit leicht abweichendem Namen, prüfen ob Kandidat vorgeschlagen wird
 
 #### F11: Conflict-Resolver-Dialog
@@ -144,7 +144,7 @@
 - **Komplexität:** S
 - **Risiko:** Niedrig
 - **Abhängigkeiten:** Filter-System (existiert)
-- **MVP-Fit:** Ja (existiert, UI-Verbesserung)
+- **MVP-Fit:** Ja (umgesetzt)
 - **Test-Idee:** 3 ROMs (EUR/USA/JPN), nur EUR soll im Plan sein
 
 #### F13: Bad-Dump-Marker
@@ -154,7 +154,7 @@
 - **Komplexität:** S
 - **Risiko:** Niedrig
 - **Abhängigkeiten:** DAT-Parser muss [b]-Flag extrahieren
-- **MVP-Fit:** Ja
+- **MVP-Fit:** Ja (umgesetzt)
 - **Test-Idee:** ROM mit [b] im DAT, Icon/Badge muss erscheinen
 
 #### F14: Revision/Version-Comparator
@@ -164,7 +164,7 @@
 - **Komplexität:** M
 - **Risiko:** Mittel (Parsing-Edge-Cases)
 - **Abhängigkeiten:** Naming-Helpers
-- **MVP-Fit:** Ja
+- **MVP-Fit:** Ja (umgesetzt)
 - **Test-Idee:** 3 ROMs mit v1.0/v1.1/v1.2, nur v1.2 im Plan
 
 #### F15: Learning-Override-Suggestions
@@ -174,7 +174,7 @@
 - **Komplexität:** M
 - **Risiko:** Niedrig
 - **Abhängigkeiten:** F05, Pattern-Matching
-- **MVP-Fit:** Nein
+- **MVP-Fit:** Ja (umgesetzt)
 - **Test-Idee:** Override für „Game (Europe)*.zip", ähnliche Dateien müssen vorgeschlagen werden
 
 ---
@@ -198,7 +198,7 @@
 - **Komplexität:** S
 - **Risiko:** Niedrig
 - **Abhängigkeiten:** Plan-Model
-- **MVP-Fit:** Ja
+- **MVP-Fit:** Ja (umgesetzt)
 - **Test-Idee:** Export, Reimport, Daten identisch
 
 #### F18: Plan-Template-System
@@ -208,7 +208,7 @@
 - **Komplexität:** M
 - **Risiko:** Niedrig
 - **Abhängigkeiten:** Config-System
-- **MVP-Fit:** Ja (Presets existieren, Erweiterung)
+- **MVP-Fit:** Ja (umgesetzt)
 - **Test-Idee:** Template speichern, laden, Einstellungen identisch
 
 #### F19: Folder-Structure-Preview (Tree)
@@ -218,7 +218,7 @@
 - **Komplexität:** M
 - **Risiko:** Niedrig
 - **Abhängigkeiten:** Plan-Model
-- **MVP-Fit:** Ja
+- **MVP-Fit:** Ja (umgesetzt)
 - **Test-Idee:** Plan mit 3 Systemen, Baum zeigt 3 Hauptordner
 
 #### F20: Rename-Pattern-Builder
@@ -228,7 +228,7 @@
 - **Komplexität:** M
 - **Risiko:** Niedrig
 - **Abhängigkeiten:** Naming-Helpers
-- **MVP-Fit:** Ja
+- **MVP-Fit:** Ja (umgesetzt)
 - **Test-Idee:** Pattern eingeben, Preview für Beispiel-ROM prüfen
 
 #### F21: Copy-First-Staging (Safe Mode)
@@ -238,7 +238,7 @@
 - **Komplexität:** M
 - **Risiko:** Niedrig
 - **Abhängigkeiten:** Execute-Helpers
-- **MVP-Fit:** Ja (IGIR hat Copy-first, generalisieren)
+- **MVP-Fit:** Ja (umgesetzt)
 - **Test-Idee:** Execute mit Fehler in der Mitte, Staging muss aufräumbar sein
 
 #### F22: Partial-Execute (Selected Only)
@@ -248,7 +248,7 @@
 - **Komplexität:** S
 - **Risiko:** Niedrig
 - **Abhängigkeiten:** Plan-Selection-State
-- **MVP-Fit:** Ja
+- **MVP-Fit:** Ja (umgesetzt)
 - **Test-Idee:** 10 Items, 3 selektiert, nur 3 werden ausgeführt
 
 #### F23: Action-Override-per-Item
@@ -258,7 +258,7 @@
 - **Komplexität:** S
 - **Risiko:** Niedrig
 - **Abhängigkeiten:** Plan-Model
-- **MVP-Fit:** Ja
+- **MVP-Fit:** Ja (umgesetzt)
 - **Test-Idee:** 3 Items, unterschiedliche Actions, Execute prüft alle
 
 #### F24: Estimated-Time-Display
@@ -268,7 +268,7 @@
 - **Komplexität:** S
 - **Risiko:** Niedrig
 - **Abhängigkeiten:** Performance-Metrics
-- **MVP-Fit:** Nein
+- **MVP-Fit:** Ja (umgesetzt)
 - **Test-Idee:** Plan mit 10 GB, Schätzung plausibel (±30%)
 
 #### F25: Plan-History (Undo-Stack)
@@ -278,7 +278,7 @@
 - **Komplexität:** M
 - **Risiko:** Niedrig
 - **Abhängigkeiten:** Plan-State-Management
-- **MVP-Fit:** Nein
+- **MVP-Fit:** Ja (umgesetzt)
 - **Test-Idee:** Plan ändern, Undo, alter Zustand wiederhergestellt
 
 ---
@@ -302,7 +302,7 @@
 - **Komplexität:** S
 - **Risiko:** Niedrig
 - **Abhängigkeiten:** Hash-Cache
-- **MVP-Fit:** Ja
+- **MVP-Fit:** Ja (umgesetzt)
 - **Test-Idee:** Datei zwischen Scan und Execute ändern, Warnung muss erscheinen
 
 #### F28: Disk-Space-Check
@@ -322,7 +322,7 @@
 - **Komplexität:** S
 - **Risiko:** Niedrig
 - **Abhängigkeiten:** Review-Gate (existiert)
-- **MVP-Fit:** Ja
+- **MVP-Fit:** Ja (umgesetzt)
 - **Test-Idee:** Plan mit 2000 Dateien, Review-Dialog erscheint
 
 #### F30: Symlink-Detection-Warning
@@ -332,7 +332,7 @@
 - **Komplexität:** S
 - **Risiko:** Niedrig
 - **Abhängigkeiten:** Security-Helpers (existiert)
-- **MVP-Fit:** Ja
+- **MVP-Fit:** Ja (umgesetzt)
 - **Test-Idee:** Ordner mit Symlink als Quelle, Warnung erscheint
 
 #### F31: Backup-Before-Overwrite
@@ -342,7 +342,7 @@
 - **Komplexität:** S
 - **Risiko:** Niedrig
 - **Abhängigkeiten:** Backup-Controller
-- **MVP-Fit:** Ja
+- **MVP-Fit:** Ja (umgesetzt)
 - **Test-Idee:** Ziel existiert, nach Execute: Backup vorhanden
 
 ---
@@ -928,49 +928,49 @@ Alle Metriken werden **nur lokal** gespeichert (`cache/metrics.json`):
 - [x] **F40** Empty-State-Guidance – Leere Tabelle zeigt Handlungsanweisung
 
 #### P1 – Wichtig für User Experience
-- [ ] **F11** Conflict-Resolver-Dialog – Dialog bei Zielkonflikten
-- [ ] **F16** Plan-Diff-View – Vergleich alter/neuer Plan
-- [ ] **F19** Folder-Structure-Preview – Baum-Ansicht der Zielstruktur
-- [ ] **F32** Incremental-Scan – Nur geänderte Dateien scannen
-- [ ] **F37** Guided-First-Run-Wizard – Einsteiger-Assistent
-- [ ] **F47** Dark-Mode-Theme – Vollständiger Dark-Mode
+- [x] **F11** Conflict-Resolver-Dialog – Dialog bei Zielkonflikten
+- [x] **F16** Plan-Diff-View – Vergleich alter/neuer Plan
+- [x] **F19** Folder-Structure-Preview – Baum-Ansicht der Zielstruktur
+- [x] **F32** Incremental-Scan – Nur geänderte Dateien scannen
+- [x] **F37** Guided-First-Run-Wizard – Einsteiger-Assistent
+- [x] **F47** Dark-Mode-Theme – Vollständiger Dark-Mode
 
 #### P2 – Nice-to-have für Power-User
-- [ ] **F03** Hash-Cross-Check – Multi-DAT-Validierung
-- [ ] **F06** Bulk-Override-Wizard – Mehrfach-Override
-- [ ] **F22** Partial-Execute – Nur ausgewählte Zeilen ausführen
-- [ ] **F50** Console-Badges/Icons – System-Icons in Tabelle
+- [x] **F03** Hash-Cross-Check – Multi-DAT-Validierung
+- [x] **F06** Bulk-Override-Wizard – Mehrfach-Override
+- [x] **F22** Partial-Execute – Nur ausgewählte Zeilen ausführen
+- [x] **F50** Console-Badges/Icons – System-Icons in Tabelle
 
 ---
 
 ### Weitere Features (nach Kategorie)
 
 #### Detection Accuracy
-- [ ] **F01** Why-Unknown-Analyzer Enhanced
-- [ ] **F04** Heuristik-Pipeline-Visualizer
-- [ ] **F07** Detection-Rule-Tester
-- [ ] **F08** Fingerprint-Erweiterung (Magic Bytes)
-- [ ] **F09** DAT-Coverage-Report
-- [ ] **F10** Fuzzy-Name-Matching
-- [ ] **F12** Preferred-Region-Chain
-- [ ] **F13** Bad-Dump-Marker
-- [ ] **F14** Revision/Version-Comparator
-- [ ] **F15** Learning-Override-Suggestions
+- [x] **F01** Why-Unknown-Analyzer Enhanced
+- [x] **F04** Heuristik-Pipeline-Visualizer
+- [x] **F07** Detection-Rule-Tester
+- [x] **F08** Fingerprint-Erweiterung (Magic Bytes)
+- [x] **F09** DAT-Coverage-Report
+- [x] **F10** Fuzzy-Name-Matching
+- [x] **F12** Preferred-Region-Chain
+- [x] **F13** Bad-Dump-Marker
+- [x] **F14** Revision/Version-Comparator
+- [x] **F15** Learning-Override-Suggestions
 
 #### Sorting / Planning
-- [ ] **F17** Plan-Export (JSON/CSV)
-- [ ] **F18** Plan-Template-System
-- [ ] **F20** Rename-Pattern-Builder
-- [ ] **F21** Copy-First-Staging (Safe Mode)
-- [ ] **F23** Action-Override-per-Item
-- [ ] **F24** Estimated-Time-Display
-- [ ] **F25** Plan-History (Undo-Stack)
+- [x] **F17** Plan-Export (JSON/CSV)
+- [x] **F18** Plan-Template-System
+- [x] **F20** Rename-Pattern-Builder
+- [x] **F21** Copy-First-Staging (Safe Mode)
+- [x] **F23** Action-Override-per-Item
+- [x] **F24** Estimated-Time-Display
+- [x] **F25** Plan-History (Undo-Stack)
 
 #### Safety / Security
-- [ ] **F27** Pre-Execute-Checksum-Validation
-- [ ] **F29** Review-Gate-Enhancement
-- [ ] **F30** Symlink-Detection-Warning
-- [ ] **F31** Backup-Before-Overwrite
+- [x] **F27** Pre-Execute-Checksum-Validation
+- [x] **F29** Review-Gate-Enhancement
+- [x] **F30** Symlink-Detection-Warning
+- [x] **F31** Backup-Before-Overwrite
 
 #### Performance
 - [ ] **F33** Parallel-Hashing
@@ -979,20 +979,20 @@ Alle Metriken werden **nur lokal** gespeichert (`cache/metrics.json`):
 - [ ] **F36** Background-Index-Update
 
 #### UX
-- [ ] **F38** Contextual-Help-Tooltips
-- [ ] **F39** Status-Bar-Summary
-- [ ] **F41** Keyboard-Shortcuts-Overlay
-- [ ] **F42** Compact-Mode
-- [ ] **F43** Pro-Mode-Toggle
-- [ ] **F44** Recent-Paths-Dropdown
-- [ ] **F45** Action-Undo-Toast
-- [ ] **F46** Log-Search-and-Filter Enhanced
+- [x] **F38** Contextual-Help-Tooltips
+- [x] **F39** Status-Bar-Summary
+- [x] **F41** Keyboard-Shortcuts-Overlay
+- [x] **F42** Compact-Mode
+- [x] **F43** Pro-Mode-Toggle
+- [x] **F44** Recent-Paths-Dropdown
+- [x] **F45** Action-Undo-Toast
+- [x] **F46** Log-Search-and-Filter Enhanced
 
 #### Visual / Themes
-- [ ] **F48** Retro/CRT-Theme
-- [ ] **F49** Accent-Color-Picker
-- [ ] **F51** Layout-Presets
-- [ ] **F52** High-Contrast-Mode
+- [x] **F48** Retro/CRT-Theme
+- [x] **F49** Accent-Color-Picker
+- [x] **F51** Layout-Presets
+- [x] **F52** High-Contrast-Mode
 
 #### Integrations
 - [ ] **F53** EmulationStation-Gamelist-Export Enhanced

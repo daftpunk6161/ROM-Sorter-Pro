@@ -694,6 +694,9 @@ class HighPerformanceScanner:
                                 detection_source = "contradiction-candidates"
 
 # Creates the ROM information object
+            signals = list(candidates_info.get('signals') or [])
+            if detection_source == "magic-bytes":
+                signals.append("MAGIC_BYTES")
             rom_info = {
                 'name': file_name,
                 'path': file_path,
@@ -702,9 +705,12 @@ class HighPerformanceScanner:
                 'detection_source': detection_source,
                 'is_exact': bool(is_exact),
                 'canonical_name': canonical_name,
-                'signals': candidates_info.get('signals') or [],
+                'signals': signals,
                 'candidates': candidates_info.get('candidates') or [],
                 'candidate_systems': candidates_info.get('candidate_systems') or [],
+                'candidate_details': candidates_info.get('candidate_details') or [],
+                'heuristic_policy': candidates_info.get('policy') or {},
+                'heuristic_reason': candidates_info.get('reason') or "",
                 'size': file_size,
                 'crc32': crc32,
                 'md5': md5,
@@ -1363,6 +1369,11 @@ class HighPerformanceScanner:
         if len(candidates) == 1:
             return candidates[0], 1.0, 'extension-unique'
 
+        # 1.5) Magic bytes (header signatures)
+        magic_match = self._detect_magic_system(file_path)
+        if magic_match is not None:
+            return magic_match
+
         # 2) Centralized detector (handler + console detector) with strict threshold
         try:
             from ..detectors.detection_handler import detect_console
@@ -1378,6 +1389,23 @@ class HighPerformanceScanner:
             return 'Unknown', 0.0, 'ambiguous-extension'
 
         return None, 0.0, 'unknown'
+
+    def _detect_magic_system(self, file_path: str) -> Optional[Tuple[str, float, str]]:
+        try:
+            with open(file_path, "rb") as handle:
+                head = handle.read(512)
+        except Exception:
+            return None
+
+        if head.startswith(b"NES\x1a"):
+            return "NES", 0.9, "magic-bytes"
+
+        if len(head) >= 0x134:
+            logo = head[0x104:0x10f]
+            if logo == b"Nintendo":
+                return "Game Boy", 0.85, "magic-bytes"
+
+        return None
 
     def _calculate_checksums(self, file_path: str) -> Tuple[str, str, str]:
         """Calculate CRC32, MD5 and SHA1 of a file in a single pass."""

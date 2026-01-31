@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from src.core import normalization
+from src.config.io import load_config, save_config
 from src.config.schema import JSONSCHEMA_AVAILABLE, validate_config_schema
 
 
@@ -198,6 +199,40 @@ def test_plan_normalization_prefers_platform_outputs(
     assert planned.converter_id == "iso_to_cso"
     assert planned.output_path is not None
     assert planned.output_path.lower().endswith(".cso")
+
+
+def test_gui_accent_color_persists(tmp_path: Path) -> None:
+    config_path = tmp_path / "config.json"
+    payload = {
+        "version": "1.0",
+        "gui_settings": {
+            "theme": "Dark",
+            "accent_color": "#123ABC",
+        },
+    }
+
+    assert save_config(payload, config_path=str(config_path)) is True
+    loaded = load_config(str(config_path))
+    assert loaded.get("gui_settings", {}).get("accent_color") == "#123ABC"
+
+
+def test_gui_recent_paths_persist(tmp_path: Path) -> None:
+    config_path = tmp_path / "config.json"
+    payload = {
+        "version": "1.0",
+        "gui_settings": {
+            "recent_paths": [
+                {"source": "C:/ROMs", "dest": "D:/Sorted"},
+                {"source": "C:/ROMs2", "dest": "D:/Sorted2"},
+            ]
+        },
+    }
+
+    assert save_config(payload, config_path=str(config_path)) is True
+    loaded = load_config(str(config_path))
+    recent = loaded.get("gui_settings", {}).get("recent_paths", [])
+    assert isinstance(recent, list)
+    assert recent[0]["source"] == "C:/ROMs"
 
 
 def test_config_schema_validation() -> None:

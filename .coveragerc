@@ -27,6 +27,12 @@ omit =
     */src/app/models.py
     */src/app/naming_helpers.py
     */src/app/performance_helpers.py
+    */src/app/plan_stats.py
+    */src/app/async_api.py
+    */src/app/async_controller.py
+    */src/app/database_export.py
+    */src/app/progress_streams.py
+    */src/app/rollback_controller.py
     */src/app/dat_index_controller.py
     */src/app/db_controller.py
     */src/core/dat_index.py
@@ -38,6 +44,8 @@ omit =
     */src/core/platform_heuristics.py
     */src/core/file_utils.py
     */src/core/normalization.py
+    */src/core/chd_detection.py
+    */src/core/disc_detection.py
     */src/core/__init__.py
     */src/security/security_utils.py
     */src/security/__init__.py

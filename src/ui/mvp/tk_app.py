@@ -9,7 +9,7 @@ from .tk_app_impl import run
 
 import importlib
 import logging
-from typing import Iterable, Optional
+from typing import Dict, Iterable, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -94,317 +94,6 @@ from .tk_app_impl import run
         main_split.pack(fill=tk.BOTH, expand=True)
         control_frame = ttk.Frame(main_split)
         results_frame = ttk.Frame(main_split)
-        main_split.add(control_frame, weight=1)
-        main_split.add(results_frame, weight=3)
-
-        status_frame = ttk.LabelFrame(control_frame, text="Status")
-        status_frame.pack(fill=tk.X, pady=(0, 8))
-        status_frame.columnconfigure(1, weight=1)
-        ttk.Label(status_frame, text="Quelle:").grid(row=0, column=0, sticky="w")
-        ttk.Label(status_frame, textvariable=self.source_var).grid(row=0, column=1, sticky="w")
-        ttk.Label(status_frame, text="Ziel:").grid(row=1, column=0, sticky="w", pady=(4, 0))
-        ttk.Label(status_frame, textvariable=self.dest_var).grid(row=1, column=1, sticky="w", pady=(4, 0))
-
-        self.progress = ttk.Progressbar(status_frame, orient=tk.HORIZONTAL, mode="determinate")
-        self.progress.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(6, 0))
-
-        self.status_var = tk.StringVar(value="Bereit (Tk)")
-        self.status_label = ttk.Label(status_frame, textvariable=self.status_var)
-        self.status_label.grid(row=3, column=0, columnspan=2, sticky="w", pady=(4, 0))
-
-        self.summary_var = tk.StringVar(value="-")
-        self.summary_label = ttk.Label(status_frame, textvariable=self.summary_var)
-        self.summary_label.grid(row=4, column=0, columnspan=2, sticky="w")
-
-        grid = ttk.Frame(control_frame)
-        grid.pack(fill=tk.X)
-
-        ttk.Label(grid, text="Quelle:").grid(row=0, column=0, sticky="w")
-        if self._dnd_available:
-            self.source_frame = DropFrame(grid, drop_callback=self._on_drop_source)
-            self.source_entry = ttk.Entry(self.source_frame, textvariable=self.source_var)
-            self.source_entry.pack(fill=tk.X, expand=True)
-            self.source_frame.grid(row=0, column=1, sticky="ew", padx=6)
-        else:
-            self.source_entry = ttk.Entry(grid, textvariable=self.source_var)
-            self.source_entry.grid(row=0, column=1, sticky="ew", padx=6)
-        self.btn_source = ttk.Button(grid, text="Quelle wählen…", command=self._choose_source)
-        self.btn_source.grid(row=0, column=2)
-
-        ttk.Label(grid, text="Ziel:").grid(row=1, column=0, sticky="w")
-        if self._dnd_available:
-            self.dest_frame = DropFrame(grid, drop_callback=self._on_drop_dest)
-            self.dest_entry = ttk.Entry(self.dest_frame, textvariable=self.dest_var)
-            self.dest_entry.pack(fill=tk.X, expand=True)
-            self.dest_frame.grid(row=1, column=1, sticky="ew", padx=6)
-        else:
-            self.dest_entry = ttk.Entry(grid, textvariable=self.dest_var)
-            self.dest_entry.grid(row=1, column=1, sticky="ew", padx=6)
-        self.btn_dest = ttk.Button(grid, text="Ziel wählen…", command=self._choose_dest)
-        self.btn_dest.grid(row=1, column=2)
-        self.btn_open_dest = ttk.Button(grid, text="Ziel öffnen", command=self._open_dest)
-        self.btn_open_dest.grid(row=1, column=3, padx=(6, 0))
-
-        ttk.Label(grid, text="Aktion:").grid(row=3, column=0, sticky="w", pady=(6, 0))
-        self.mode_combo = ttk.Combobox(grid, textvariable=self.mode_var, values=("copy", "move"), state="readonly")
-        self.mode_combo.grid(row=3, column=1, sticky="w", pady=(6, 0))
-
-        ttk.Label(grid, text="Bei Konflikt:").grid(row=4, column=0, sticky="w", pady=(6, 0))
-        self.conflict_combo = ttk.Combobox(
-            grid,
-            textvariable=self.conflict_var,
-            values=("rename", "skip", "overwrite"),
-            state="readonly",
-        )
-        self.conflict_combo.grid(row=4, column=1, sticky="w", pady=(6, 0))
-        self.rebuild_check = ttk.Checkbutton(
-            grid,
-            text="Rebuilder-Modus (Copy-only, Konflikte überspringen)",
-            variable=self.rebuild_var,
-            command=self._on_rebuild_toggle,
-        )
-        self.rebuild_check.grid(row=4, column=2, sticky="w", pady=(6, 0), padx=(6, 0))
-
-        filters_frame = ttk.LabelFrame(control_frame, text="Filter")
-        filters_frame.pack(fill=tk.X, pady=(8, 0))
-        filters_grid = ttk.Frame(filters_frame)
-        filters_grid.pack(fill=tk.X, padx=6, pady=6)
-
-        ttk.Label(filters_grid, text="Sprachfilter:").grid(row=0, column=0, sticky="w", pady=(6, 0))
-        self.lang_filter_list = tk.Listbox(
-            filters_grid,
-            height=4,
-            exportselection=False,
-            selectmode="extended",
-        )
-        self.lang_filter_list.insert("end", "All")
-        self.lang_filter_list.grid(row=0, column=1, sticky="ew", pady=(6, 0))
-        ttk.Label(filters_grid, text="Mehrfach: Strg/Shift").grid(row=0, column=2, sticky="w", pady=(6, 0))
-
-        ttk.Label(filters_grid, text="Versionsfilter:").grid(row=1, column=0, sticky="w", pady=(6, 0))
-        self.ver_filter_combo = ttk.Combobox(
-            filters_grid,
-            textvariable=self.ver_filter_var,
-            values=("All",),
-            state="readonly",
-        )
-        self.ver_filter_combo.grid(row=1, column=1, sticky="w", pady=(6, 0))
-
-        ttk.Label(filters_grid, text="Regionsfilter:").grid(row=2, column=0, sticky="w", pady=(6, 0))
-        self.region_filter_list = tk.Listbox(
-            filters_grid,
-            height=4,
-            exportselection=False,
-            selectmode="extended",
-        )
-        self.region_filter_list.insert("end", "All")
-        self.region_filter_list.grid(row=2, column=1, sticky="ew", pady=(6, 0))
-        ttk.Label(filters_grid, text="Mehrfach: Strg/Shift").grid(row=2, column=2, sticky="w", pady=(6, 0))
-
-        ttk.Label(filters_grid, text="Erweiterungsfilter:").grid(row=3, column=0, sticky="w", pady=(6, 0))
-        self.extension_entry = ttk.Entry(filters_grid, textvariable=self.extension_filter_var)
-        self.extension_entry.grid(row=3, column=1, sticky="ew", pady=(6, 0))
-        ttk.Label(filters_grid, text="z.B. iso, chd").grid(row=3, column=2, sticky="w", pady=(6, 0))
-
-        ttk.Label(filters_grid, text="Min (MB):").grid(row=4, column=0, sticky="w", pady=(6, 0))
-        size_vcmd = (self.root.register(self._validate_size_entry), "%P")
-        self.min_size_entry = ttk.Entry(
-            filters_grid,
-            textvariable=self.min_size_var,
-            width=12,
-            validate="key",
-            validatecommand=size_vcmd,
-        )
-        self.min_size_entry.grid(row=4, column=1, sticky="w", pady=(6, 0))
-
-        ttk.Label(filters_grid, text="Max (MB):").grid(row=5, column=0, sticky="w", pady=(6, 0))
-        self.max_size_entry = ttk.Entry(
-            filters_grid,
-            textvariable=self.max_size_var,
-            width=12,
-            validate="key",
-            validatecommand=size_vcmd,
-        )
-        self.max_size_entry.grid(row=5, column=1, sticky="w", pady=(6, 0))
-
-        self.dedupe_check = ttk.Checkbutton(
-            filters_grid,
-            text="Duplikate vermeiden (Europa → USA)",
-            variable=self.dedupe_var,
-            command=self._on_filters_changed,
-        )
-        self.dedupe_check.grid(row=6, column=1, sticky="w", pady=(6, 0))
-
-        self.hide_unknown_check = ttk.Checkbutton(
-            filters_grid,
-            text="Unbekannt / Niedrige Sicherheit ausblenden",
-            variable=self.hide_unknown_var,
-            command=self._on_filters_changed,
-        )
-        self.hide_unknown_check.grid(row=7, column=1, sticky="w", pady=(6, 0))
-
-        filters_grid.columnconfigure(1, weight=1)
-
-        self.btn_clear_filters = ttk.Button(filters_grid, text="Filter zurücksetzen", command=self._clear_filters)
-        self.btn_clear_filters.grid(row=8, column=1, sticky="w", pady=(6, 0))
-
-        presets_frame = ttk.LabelFrame(control_frame, text="Presets & Auswahl")
-        presets_frame.pack(fill=tk.X, pady=(8, 0))
-        presets_frame.columnconfigure(1, weight=1)
-        ttk.Label(presets_frame, text="Preset:").grid(row=0, column=0, sticky="w")
-        self.preset_combo = ttk.Combobox(presets_frame, state="readonly", values=("-",))
-        self.preset_combo.grid(row=0, column=1, sticky="ew", padx=6)
-        self.btn_preset_apply = ttk.Button(presets_frame, text="Übernehmen", command=self._apply_selected_preset)
-        self.btn_preset_apply.grid(row=0, column=2)
-        self.preset_name_entry = ttk.Entry(presets_frame, textvariable=self.preset_name_var)
-        self.preset_name_entry.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(6, 0))
-        self.btn_preset_save = ttk.Button(presets_frame, text="Speichern", command=self._save_preset)
-        self.btn_preset_save.grid(row=1, column=2, pady=(6, 0))
-        self.btn_preset_delete = ttk.Button(presets_frame, text="Löschen", command=self._delete_selected_preset)
-        self.btn_preset_delete.grid(row=2, column=2, pady=(6, 0))
-        self.btn_execute_selected = ttk.Button(
-            presets_frame,
-            text="Auswahl ausführen",
-            command=self._start_execute_selected,
-        )
-        self.btn_execute_selected.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(6, 0))
-
-        self.lang_filter_list.bind("<<ListboxSelect>>", self._on_filter_listbox_changed)
-        self.ver_filter_combo.bind("<<ComboboxSelected>>", self._on_filters_changed)
-        self.region_filter_list.bind("<<ListboxSelect>>", self._on_filter_listbox_changed)
-        self.extension_entry.bind("<KeyRelease>", self._on_filters_changed)
-        self.min_size_entry.bind("<KeyRelease>", self._on_filters_changed)
-        self.max_size_entry.bind("<KeyRelease>", self._on_filters_changed)
-
-        grid.columnconfigure(1, weight=1)
-
-        defaults_frame = ttk.LabelFrame(sort_tab, text="Standardwerte")
-        defaults_frame.pack(fill=tk.X, pady=(0, 8))
-        defaults_frame.columnconfigure(1, weight=1)
-        ttk.Label(defaults_frame, text="Standardmodus:").grid(row=0, column=0, sticky="w")
-        self.default_mode_combo = ttk.Combobox(
-            defaults_frame,
-            values=("copy", "move"),
-            state="readonly",
-            width=12,
-        )
-        self.default_mode_combo.grid(row=0, column=1, sticky="w", padx=(6, 0))
-        self.default_mode_combo.bind("<<ComboboxSelected>>", lambda _e: self._on_default_mode_changed())
-
-        ttk.Label(defaults_frame, text="Standard-Konflikte:").grid(row=1, column=0, sticky="w", pady=(4, 0))
-        self.default_conflict_combo = ttk.Combobox(
-            defaults_frame,
-            values=("rename", "skip", "overwrite"),
-            state="readonly",
-            width=12,
-        )
-        self.default_conflict_combo.grid(row=1, column=1, sticky="w", padx=(6, 0), pady=(4, 0))
-        self.default_conflict_combo.bind("<<ComboboxSelected>>", lambda _e: self._on_default_conflict_changed())
-
-        sort_frame = ttk.LabelFrame(sort_tab, text="Sortieroptionen")
-        sort_frame.pack(fill=tk.X, pady=(8, 0))
-
-        self.console_folders_check = ttk.Checkbutton(
-            sort_frame,
-            text="Konsolenordner erstellen",
-            variable=self.console_folders_var,
-            command=self._on_sort_settings_changed,
-        )
-        self.console_folders_check.pack(side=tk.LEFT, padx=(6, 10))
-
-        self.region_subfolders_check = ttk.Checkbutton(
-            sort_frame,
-            text="Regionsordner erstellen",
-            variable=self.region_subfolders_var,
-            command=self._on_sort_settings_changed,
-        )
-        self.region_subfolders_check.pack(side=tk.LEFT, padx=(0, 10))
-
-        self.preserve_structure_check = ttk.Checkbutton(
-            sort_frame,
-            text="Quell-Unterordner beibehalten",
-            variable=self.preserve_structure_var,
-            command=self._on_sort_settings_changed,
-        )
-        self.preserve_structure_check.pack(side=tk.LEFT)
-
-        btn_row = ttk.Frame(control_frame)
-        ttk.Label(btn_row, text="Sortierung").pack(anchor="w", pady=(0, 4))
-        btn_row.pack(fill=tk.X, pady=(10, 0))
-
-        btn_row_top = ttk.Frame(btn_row)
-        btn_row_top.pack(fill=tk.X)
-        btn_row_bottom = ttk.Frame(btn_row)
-        btn_row_bottom.pack(fill=tk.X, pady=(6, 0))
-
-        self.btn_scan = ttk.Button(btn_row_top, text="Scannen", command=self._start_scan, width=22)
-        self.btn_preview = ttk.Button(btn_row_top, text="Vorschau Sortierung (Dry-run)", command=self._start_preview, width=28)
-        self.btn_execute = ttk.Button(btn_row_top, text="Sortieren ausführen (ohne Konvertierung)", command=self._start_execute, width=32)
-        self.btn_resume = ttk.Button(btn_row_bottom, text="Fortsetzen", command=self._start_resume)
-        self.btn_retry_failed = ttk.Button(btn_row_bottom, text="Fehlgeschlagene erneut", command=self._start_retry_failed)
-        self.btn_cancel = ttk.Button(btn_row_bottom, text="Abbrechen", command=self._cancel)
-
-        try:
-            self.btn_scan.configure(default="active")
-        except Exception:
-            logger.exception("Tk GUI: set default scan button failed")
-
-        _ToolTip(self.btn_scan, "Scannt den Quellordner")
-        _ToolTip(self.btn_preview, "Erstellt einen Plan ohne Änderungen")
-        _ToolTip(self.btn_execute, "Führt den Sortierplan aus")
-
-        self.btn_scan.pack(side=tk.LEFT)
-        self.btn_preview.pack(side=tk.LEFT, padx=(8, 0))
-        self.btn_execute.pack(side=tk.LEFT, padx=(8, 0))
-        ttk.Label(btn_row, text="Tipp: Vorschau ändert keine Dateien.").pack(anchor="w", pady=(6, 0))
-        conversions_intro = ttk.Label(
-            conversions_tab,
-            text="Konvertierungen nutzen konfigurierte Tools und Regeln. Nutze die Prüfung für eine Vorschau.",
-            wraplength=740,
-        )
-        conversions_intro.pack(anchor="w", pady=(0, 10))
-
-        conversions_paths = ttk.LabelFrame(conversions_tab, text="Pfade", padding=6)
-        conversions_paths.pack(fill=tk.X, pady=(0, 10))
-        conversions_paths.columnconfigure(1, weight=1)
-
-        ttk.Label(conversions_paths, text="Quelle:").grid(row=0, column=0, sticky="w")
-        self.conv_source_entry = ttk.Entry(conversions_paths, textvariable=self.source_var)
-        self.conv_source_entry.grid(row=0, column=1, sticky="ew", padx=6)
-        self.conv_source_btn = ttk.Button(conversions_paths, text="Quelle wählen…", command=self._choose_source)
-        self.conv_source_btn.grid(row=0, column=2)
-
-        ttk.Label(conversions_paths, text="Ziel:").grid(row=1, column=0, sticky="w", pady=(6, 0))
-        self.conv_dest_entry = ttk.Entry(conversions_paths, textvariable=self.dest_var)
-        self.conv_dest_entry.grid(row=1, column=1, sticky="ew", padx=6, pady=(6, 0))
-        self.conv_dest_btn = ttk.Button(conversions_paths, text="Ziel wählen…", command=self._choose_dest)
-        self.conv_dest_btn.grid(row=1, column=2, pady=(6, 0))
-        self.conv_open_dest_btn = ttk.Button(conversions_paths, text="Ziel öffnen", command=self._open_dest)
-        self.conv_open_dest_btn.grid(row=1, column=3, padx=(6, 0), pady=(6, 0))
-
-        conversions_row_top = ttk.LabelFrame(conversions_tab, text="Schnellstart")
-        conversions_row_top.pack(fill=tk.X, pady=(0, 6))
-        self.btn_execute_convert = ttk.Button(
-            conversions_row_top,
-            text="Konvertierungen ausführen",
-            command=self._start_convert_only,
-        )
-        self.btn_audit = ttk.Button(
-            conversions_row_top,
-            text="Konvertierungen prüfen",
-            command=self._start_audit,
-        )
-        self.btn_execute_convert.pack(side=tk.LEFT)
-        self.btn_audit.pack(side=tk.LEFT, padx=(8, 0))
-        _ToolTip(self.btn_execute_convert, "Sortieren inkl. Konvertierungen")
-        _ToolTip(self.btn_audit, "Prüft Konvertierungen ohne Änderungen")
-
-        conversions_row_bottom = ttk.Frame(conversions_tab)
-        conversions_row_bottom.pack(fill=tk.X)
-        self.btn_export_audit_csv = ttk.Button(
-            conversions_row_bottom,
-            text="Audit CSV exportieren",
-            command=self._export_audit_csv,
         )
         self.btn_export_audit_json = ttk.Button(
             conversions_row_bottom,
@@ -689,6 +378,15 @@ from .tk_app_impl import run
             text="Noch keine Ergebnisse. Wähle Quelle/Ziel und starte Scan oder Vorschau.",
         )
         self.results_empty_label.pack(fill=tk.X, pady=(0, 6))
+
+        structure_row = ttk.Frame(results_frame)
+        structure_row.pack(fill=tk.X, pady=(0, 6))
+        self.btn_structure_preview = ttk.Button(
+            structure_row,
+            text="Zielstruktur anzeigen",
+            command=self._show_structure_preview,
+        )
+        self.btn_structure_preview.pack(side=tk.LEFT)
 
         table_frame = ttk.Frame(results_frame)
         table_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 0))
@@ -2725,6 +2423,8 @@ from .tk_app_impl import run
         self.btn_resume.configure(state="disabled" if running else ("normal" if self._can_resume() else "disabled"))
         self.btn_retry_failed.configure(state="disabled" if running else ("normal" if self._can_retry_failed() else "disabled"))
         self.btn_cancel.configure(state="normal" if running else "disabled")
+        if hasattr(self, "btn_structure_preview"):
+            self.btn_structure_preview.configure(state="disabled" if running else ("normal" if self._sort_plan is not None else "disabled"))
         self.btn_source.configure(state=state_normal)
         self.btn_dest.configure(state=state_normal)
         self.btn_open_dest.configure(state=state_normal)
@@ -2941,6 +2641,76 @@ from .tk_app_impl import run
             self.summary_var.set("-")
 
         self._update_results_empty_state()
+        if hasattr(self, "btn_structure_preview"):
+            self.btn_structure_preview.configure(state="normal")
+
+    def _show_structure_preview(self) -> None:
+        if self._sort_plan is None:
+            messagebox.showinfo("Zielstruktur", "Kein Sortierplan vorhanden.")
+            return
+
+        plan = self._sort_plan
+        win = tk.Toplevel(self.root)
+        win.title("Zielstruktur (Preview)")
+        win.geometry("640x480")
+
+        tree = ttk.Treeview(win)
+        tree.pack(fill=tk.BOTH, expand=True)
+        tree.heading("#0", text="Zielstruktur")
+
+        root_label = str(plan.dest_path or "Ziel")
+        root = tree.insert("", "end", text=root_label, open=True)
+
+        node_cache: Dict[tuple[str, str], str] = {("", root_label): root}
+        for act in plan.actions:
+            target = str(getattr(act, "planned_target_path", "") or "")
+            if not target:
+                continue
+            try:
+                rel = Path(target).resolve().relative_to(Path(plan.dest_path).resolve())
+                parts = rel.parts
+            except Exception:
+                parts = Path(target).parts
+            parent = root
+            for idx, part in enumerate(parts):
+                if not part:
+                    continue
+                if idx == len(parts) - 1:
+                    tree.insert(parent, "end", text=part)
+                    continue
+                cache_key = (parent, part)
+                existing = node_cache.get(cache_key)
+                if existing is None:
+                    existing = tree.insert(parent, "end", text=part, open=False)
+                    node_cache[cache_key] = existing
+                parent = existing
+
+    def _maybe_prompt_conflicts(self, plan: SortPlanType) -> bool:
+        try:
+            if str(getattr(plan, "on_conflict", "")) != "skip":
+                return False
+        except Exception:
+            return False
+        conflicts = [
+            act
+            for act in getattr(plan, "actions", [])
+            if str(getattr(act, "error", "") or "").strip().lower() == "target exists (skip)"
+        ]
+        if not conflicts:
+            return False
+        choice = messagebox.askyesnocancel(
+            "Konflikte erkannt",
+            f"{len(conflicts)} Ziele existieren bereits.\n\n"
+            "Ja = Umbenennen, Nein = Überschreiben, Abbrechen = Überspringen",
+        )
+        if choice is None:
+            return False
+        if choice is True:
+            self.conflict_var.set("rename")
+        else:
+            self.conflict_var.set("overwrite")
+        self.after(0, self._start_preview_now)
+        return True
 
     def _populate_audit_table(self, report: ConversionAuditReportType) -> None:
         self._clear_table()
@@ -3460,11 +3230,30 @@ from .tk_app_impl import run
                     self._complete_job("scan")
                 elif event == "plan_done":
                     plan = cast(Any, payload)
+                    prev_plan = getattr(self, "_last_plan", None)
                     self._sort_plan = plan
                     self._populate_plan_table(plan)
                     self._set_running(False)
                     self._ui_fsm.transition(UIState.IDLE)
                     self.status_var.set("Plan ready")
+                    if self._maybe_prompt_conflicts(plan):
+                        continue
+                    if prev_plan is not None:
+                        try:
+                            from ...app.api import diff_sort_plans
+
+                            diff = diff_sort_plans(prev_plan, plan)
+                            self._append_log(
+                                f"Plan diff: +{diff['added']} -{diff['removed']} ~{diff['changed']}"
+                            )
+                            messagebox.showinfo(
+                                "Plan-Diff",
+                                "Plan-Änderungen erkannt:\n"
+                                f"Neu: {diff['added']} | Entfernt: {diff['removed']} | Geändert: {diff['changed']}",
+                            )
+                        except Exception:
+                            pass
+                    self._last_plan = plan
                     messagebox.showinfo("Vorschau bereit", f"Geplante Aktionen: {len(plan.actions)}")
                     self._complete_job("plan")
                 elif event == "exec_done":

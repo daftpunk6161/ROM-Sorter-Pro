@@ -9,6 +9,8 @@ import threading
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Iterable, Iterator, List, Optional, Tuple, Protocol
+import difflib
+import re
 try:
     from defusedxml import ElementTree as ET  # type: ignore
 except Exception:
@@ -450,6 +452,71 @@ class DatIndexSqlite:
             size_bytes=row["size_bytes"],
         )
 
+    def lookup_sha1_all(self, sha1: str) -> List[DatHashRow]:
+        with self._lock:
+            cur = self.conn.cursor()
+            cur.execute("SELECT * FROM rom_hashes WHERE sha1=?", (sha1.lower(),))
+            rows = cur.fetchall()
+        results: List[DatHashRow] = []
+        for row in rows or []:
+            results.append(
+                DatHashRow(
+                    dat_id=row["dat_id"],
+                    platform_id=row["platform_id"],
+                    rom_name=row["rom_name"],
+                    set_name=row["set_name"],
+                    crc32=row["crc32"],
+                    sha1=row["sha1"],
+                    size_bytes=row["size_bytes"],
+                )
+            )
+        return results
+
+    def fuzzy_game_matches(
+        self,
+        name: str,
+        *,
+        limit: int = 5,
+        min_score: float = 0.72,
+        search_limit: int = 500,
+    ) -> List[Dict[str, object]]:
+        raw = str(name or "").strip().lower()
+        if not raw:
+            return []
+        norm = re.sub(r"[^a-z0-9]+", " ", raw).strip()
+        if not norm:
+            return []
+        tokens = norm.split()
+        seed = tokens[0]
+        like = f"%{seed}%"
+        with self._lock:
+            cur = self.conn.cursor()
+            cur.execute(
+                "SELECT platform_id, game_name FROM game_names WHERE game_name LIKE ? LIMIT ?",
+                (like, int(search_limit)),
+            )
+            rows = cur.fetchall()
+
+        scored: List[Dict[str, object]] = []
+        for row in rows or []:
+            game_name = str(row["game_name"] or "")
+            game_norm = re.sub(r"[^a-z0-9]+", " ", game_name.lower()).strip()
+            if not game_norm:
+                continue
+            score = difflib.SequenceMatcher(None, norm, game_norm).ratio()
+            if score < min_score:
+                continue
+            scored.append(
+                {
+                    "platform_id": str(row["platform_id"] or "Unknown"),
+                    "game_name": game_name,
+                    "score": float(score),
+                }
+            )
+
+        scored.sort(key=lambda x: float(x.get("score", 0.0)), reverse=True)
+        return scored[: max(1, int(limit))]
+
     def lookup_crc_size(self, crc32: str, size_bytes: int) -> Optional[DatHashRow]:
         with self._lock:
             cur = self.conn.cursor()
@@ -466,6 +533,49 @@ class DatIndexSqlite:
             sha1=row["sha1"],
             size_bytes=row["size_bytes"],
         )
+
+    def lookup_crc_size_all(self, crc32: str, size_bytes: int) -> List[DatHashRow]:
+        with self._lock:
+            cur = self.conn.cursor()
+            cur.execute(
+                "SELECT * FROM rom_hashes WHERE crc32=? AND size_bytes=?",
+                (crc32.lower(), int(size_bytes)),
+            )
+            rows = cur.fetchall()
+        results: List[DatHashRow] = []
+        for row in rows or []:
+            results.append(
+                DatHashRow(
+                    dat_id=row["dat_id"],
+                    platform_id=row["platform_id"],
+                    rom_name=row["rom_name"],
+                    set_name=row["set_name"],
+                    crc32=row["crc32"],
+                    sha1=row["sha1"],
+                    size_bytes=row["size_bytes"],
+                )
+            )
+        return results
+
+    def get_dat_sources_by_ids(self, dat_ids: Iterable[int]) -> Dict[int, str]:
+        ids = [int(val) for val in dat_ids]
+        if not ids:
+            return {}
+        placeholders = ",".join("?" for _ in ids)
+        with self._lock:
+            cur = self.conn.cursor()
+            cur.execute(
+                f"SELECT dat_id, source_path FROM dat_files WHERE dat_id IN ({placeholders})",
+                ids,
+            )
+            rows = cur.fetchall()
+        sources: Dict[int, str] = {}
+        for row in rows or []:
+            try:
+                sources[int(row["dat_id"])] = str(row["source_path"])
+            except Exception:
+                continue
+        return sources
 
     def lookup_crc_size_when_sha1_missing(self, crc32: str, size_bytes: int) -> Optional[DatHashRow]:
         row = self.lookup_crc_size(crc32, size_bytes)

@@ -45,6 +45,9 @@
       "enabled": true,
       "manifest_path": "cache/rollback/last_move_rollback.json"
     },
+    "scan": {
+      "incremental": true
+    },
     "backup": {
       "enabled": true,
       "local_dir": "cache/backups",

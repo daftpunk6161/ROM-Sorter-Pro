@@ -93,6 +93,7 @@ def setup_database(db_path: str) -> sqlite3.Connection:
 
 def update_rom_database(db_path: str) -> bool:
     """Update the ROM database structure to latest version."""
+    conn: sqlite3.Connection | None = None
     try:
         conn = sqlite3.connect(db_path)
         conn.row_factory = sqlite3.Row
@@ -109,7 +110,6 @@ def update_rom_database(db_path: str) -> bool:
 
         if current_version >= latest_version:
             logger.info("Database already at latest version %s", latest_version)
-            conn.close()
             return True
 
         logger.info("Updating database from version %s to %s", current_version, latest_version)
@@ -143,7 +143,6 @@ def update_rom_database(db_path: str) -> bool:
         )
 
         conn.commit()
-        conn.close()
 
         logger.info("Database updated to version %s", latest_version)
         return True
@@ -151,6 +150,12 @@ def update_rom_database(db_path: str) -> bool:
     except Exception as exc:
         logger.error("Database update failed: %s", exc)
         return False
+    finally:
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
 
 
 def scan_directory(conn: sqlite3.Connection, directory: str, recursive: bool = True) -> int:

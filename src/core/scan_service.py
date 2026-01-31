@@ -6,6 +6,7 @@ import threading
 import time
 import os
 import cProfile
+import json
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional
 
@@ -75,6 +76,57 @@ def run_scan(
     last_progress_log = 0
 
     scanner = HighPerformanceScanner(cfg)
+
+    incremental_cfg = {}
+    try:
+        incremental_cfg = (cfg.get("features", {}) or {}).get("scan", {}) or {}
+    except Exception:
+        incremental_cfg = {}
+    incremental_enabled = bool(incremental_cfg.get("incremental", False))
+
+    resume_cfg = {}
+    try:
+        resume_cfg = (cfg.get("features", {}) or {}).get("progress_persistence", {}) or {}
+    except Exception:
+        resume_cfg = {}
+    resume_path = resume_cfg.get("scan_resume_path") or os.path.join("cache", "last_scan_resume.json")
+
+    if incremental_enabled and resume_path:
+        try:
+            resume_file = Path(str(resume_path))
+            if resume_file.exists():
+                payload = json.loads(resume_file.read_text(encoding="utf-8"))
+                if str(payload.get("source_path")) == str(source_sanitized):
+                    items = payload.get("items") or []
+                    seeded = 0
+                    for item in items:
+                        input_path = str(item.get("input_path") or "")
+                        if not input_path:
+                            continue
+                        path_obj = Path(input_path)
+                        if not path_obj.exists():
+                            continue
+                        raw = item.get("raw") if isinstance(item, dict) else None
+                        rom_info = dict(raw) if isinstance(raw, dict) else {}
+                        rom_info.setdefault("path", input_path)
+                        rom_info.setdefault("name", path_obj.name)
+                        rom_info.setdefault("system", item.get("detected_system") or "Unknown")
+                        rom_info.setdefault("detection_confidence", item.get("detection_confidence"))
+                        rom_info.setdefault("detection_source", item.get("detection_source"))
+                        try:
+                            stat = path_obj.stat()
+                            rom_info.setdefault("last_modified", stat.st_mtime)
+                            rom_info.setdefault("size", stat.st_size)
+                        except Exception:
+                            pass
+                        try:
+                            scanner._save_to_cache(input_path, rom_info)
+                            seeded += 1
+                        except Exception:
+                            continue
+                    _log(on_log, f"Incremental scan cache seeded: {seeded} entries")
+        except Exception as exc:
+            _log(on_log, f"Incremental scan cache seed failed: {exc}")
 
     # DAT status (best-effort). Prefer new dats config, keep legacy dat_matching gate.
     dat_cfg = {}

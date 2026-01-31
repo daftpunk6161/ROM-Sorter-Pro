@@ -12,6 +12,7 @@ class LogUI:
     log_toggle_btn: Any
     log_filter_edit: Any
     log_filter_clear_btn: Any
+    log_level_combo: Any
     log_autoscroll_checkbox: Any
     log_dock: Any
 
@@ -24,9 +25,15 @@ def build_log_ui(QtWidgets, QtCore, parent) -> LogUI:
     log_title.setStyleSheet("font-weight: 600;")
     log_toggle_btn = QtWidgets.QPushButton("Log ausblenden")
     log_toggle_btn.setMinimumWidth(140)
+    log_toggle_btn.setToolTip("Log-Bereich ein-/ausblenden")
     log_filter_edit = QtWidgets.QLineEdit()
     log_filter_edit.setPlaceholderText("Log filtern…")
+    log_filter_edit.setToolTip("Log nach Text filtern")
     log_filter_clear_btn = QtWidgets.QPushButton("Filter löschen")
+    log_filter_clear_btn.setToolTip("Log-Filter entfernen")
+    log_level_combo = QtWidgets.QComboBox()
+    log_level_combo.addItems(["Alle", "Info", "Warnung", "Fehler", "Debug"])
+    log_level_combo.setToolTip("Log-Einträge nach Severity filtern")
     log_autoscroll_checkbox = QtWidgets.QCheckBox("Auto-Scroll")
     log_autoscroll_checkbox.setChecked(True)
 
@@ -34,6 +41,7 @@ def build_log_ui(QtWidgets, QtCore, parent) -> LogUI:
     log_header.addWidget(log_title)
     log_header.addWidget(log_filter_edit)
     log_header.addWidget(log_filter_clear_btn)
+    log_header.addWidget(log_level_combo)
     log_header.addWidget(log_autoscroll_checkbox)
     log_header.addStretch(1)
     log_header.addWidget(log_toggle_btn)
@@ -52,6 +60,7 @@ def build_log_ui(QtWidgets, QtCore, parent) -> LogUI:
         log_toggle_btn=log_toggle_btn,
         log_filter_edit=log_filter_edit,
         log_filter_clear_btn=log_filter_clear_btn,
+        log_level_combo=log_level_combo,
         log_autoscroll_checkbox=log_autoscroll_checkbox,
         log_dock=log_dock,
     )

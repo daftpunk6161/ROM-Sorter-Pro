@@ -9,7 +9,7 @@ import shutil
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 from ..security.security_utils import validate_file_operation
 
@@ -90,6 +90,62 @@ def backup_json(payload: Dict[str, Any], *, prefix: str, cfg: Optional[dict], lo
         if log_cb is not None:
             log_cb(f"Backup failed: {exc}")
         logger.warning("Backup write failed: %s", exc)
+        return None
+
+    if targets.onedrive_dir is not None:
+        try:
+            _ensure_dir(targets.onedrive_dir)
+            onedrive_path = targets.onedrive_dir / filename
+            shutil.copy2(local_path, onedrive_path)
+            if log_cb is not None:
+                log_cb(f"OneDrive backup saved: {onedrive_path}")
+        except Exception as exc:
+            if log_cb is not None:
+                log_cb(f"OneDrive backup failed: {exc}")
+            logger.warning("OneDrive backup failed: %s", exc)
+
+    return local_path
+
+
+def backup_file(
+    file_path: Union[str, Path],
+    *,
+    prefix: str,
+    cfg: Optional[dict],
+    log_cb=None,
+) -> Optional[Path]:
+    file_path_obj = Path(file_path)
+    try:
+        validate_file_operation(file_path_obj, base_dir=None, allow_read=True, allow_write=True)
+    except Exception as exc:
+        if log_cb is not None:
+            log_cb(f"Backup failed: {exc}")
+        logger.warning("Backup validation failed for %s: %s", file_path_obj, exc)
+        return None
+
+    if not file_path_obj.exists() or not file_path_obj.is_file():
+        if log_cb is not None:
+            log_cb(f"Backup skipped (missing file): {file_path_obj}")
+        return None
+    if file_path_obj.is_symlink():
+        if log_cb is not None:
+            log_cb(f"Backup skipped (symlink): {file_path_obj}")
+        return None
+
+    targets = resolve_backup_targets(cfg)
+    _ensure_dir(targets.local_dir)
+
+    filename = f"{prefix}_{_timestamp()}_{file_path_obj.name}"
+    local_path = targets.local_dir / filename
+
+    try:
+        shutil.copy2(file_path_obj, local_path)
+        if log_cb is not None:
+            log_cb(f"Backup saved: {local_path}")
+    except Exception as exc:
+        if log_cb is not None:
+            log_cb(f"Backup failed: {exc}")
+        logger.warning("Backup copy failed: %s", exc)
         return None
 
     if targets.onedrive_dir is not None:

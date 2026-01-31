@@ -10,9 +10,11 @@ class ResultsTabsUI:
     results_stack: Any
     details_stack: Any
     filter_sidebar: Any
+    structure_tree: Any
     tab_index_results: int
     tab_index_details: int
     tab_index_filters: int
+    tab_index_structure: int
 
 
 def build_results_tabs_ui(
@@ -42,12 +44,21 @@ def build_results_tabs_ui(
     filters_page_layout.addStretch(1)
     tab_index_filters = results_tabs.addTab(filters_page, "Filter")
 
+    structure_page = QtWidgets.QWidget()
+    structure_layout = QtWidgets.QVBoxLayout(structure_page)
+    structure_tree = QtWidgets.QTreeWidget()
+    structure_tree.setHeaderHidden(True)
+    structure_layout.addWidget(structure_tree, 1)
+    tab_index_structure = results_tabs.addTab(structure_page, "Struktur")
+
     return ResultsTabsUI(
         results_tabs=results_tabs,
         results_stack=results_stack,
         details_stack=details_stack,
         filter_sidebar=filters_group,
+        structure_tree=structure_tree,
         tab_index_results=tab_index_results,
         tab_index_details=tab_index_details,
         tab_index_filters=tab_index_filters,
+        tab_index_structure=tab_index_structure,
     )

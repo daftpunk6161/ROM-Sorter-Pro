@@ -11,16 +11,25 @@ class TkLogBuffer:
         root,
         log_text,
         get_filter_text: Callable[[], str],
+        get_level_filter: Callable[[], str],
         *,
         max_lines: int = 5000,
     ) -> None:
         self._root = root
         self._log_text = log_text
         self._get_filter_text = get_filter_text
+        self._get_level_filter = get_level_filter
         self._max_lines = max_lines
         self._buffer: List[str] = []
         self._history: List[str] = []
         self._flush_scheduled = False
+
+    def _line_matches_level(self, line: str) -> bool:
+        level = (self._get_level_filter() or "").strip().upper()
+        if not level or level == "ALL":
+            return True
+        marker = f" - {level} - "
+        return marker in line
 
     def append(self, text: str) -> None:
         if not text:
@@ -43,8 +52,12 @@ class TkLogBuffer:
             if len(self._history) > self._max_lines:
                 self._history = self._history[-self._max_lines :]
         filter_text = (self._get_filter_text() or "").strip().lower()
-        if filter_text:
-            lines = [line for line in lines if filter_text in line.lower()]
+        if filter_text or (self._get_level_filter() or "").strip():
+            lines = [
+                line
+                for line in lines
+                if self._line_matches_level(line) and filter_text in line.lower()
+            ]
         payload = "\n".join(lines) + ("\n" if lines else "")
         if payload:
             self._log_text.insert("end", payload)
@@ -63,9 +76,13 @@ class TkLogBuffer:
             return
         if not self._history:
             return
-        if not filter_text:
+        if not filter_text and not (self._get_level_filter() or "").strip():
             self._log_text.insert("end", "\n".join(self._history) + "\n")
             return
-        filtered = [line for line in self._history if filter_text in line.lower()]
+        filtered = [
+            line
+            for line in self._history
+            if self._line_matches_level(line) and filter_text in line.lower()
+        ]
         if filtered:
             self._log_text.insert("end", "\n".join(filtered) + "\n")

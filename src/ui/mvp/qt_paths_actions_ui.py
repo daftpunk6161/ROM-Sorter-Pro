@@ -15,6 +15,8 @@ class PathsActionsUI:
     actions_layout: Any
     source_edit: Any
     dest_edit: Any
+    recent_source_combo: Any
+    recent_dest_combo: Any
     btn_source: Any
     btn_dest: Any
     btn_open_dest: Any
@@ -28,6 +30,9 @@ class PathsActionsUI:
     actions_advanced_group: Any
     default_mode_combo: Any
     default_conflict_combo: Any
+    rename_template_edit: Any
+    btn_rename_builder: Any
+    copy_first_checkbox: Any
 
 
 def build_paths_actions_ui(
@@ -54,11 +59,19 @@ def build_paths_actions_ui(
     source_edit.setPlaceholderText(translate("choose_source"))
     dest_edit.setPlaceholderText(translate("choose_dest"))
 
+    recent_source_combo = QtWidgets.QComboBox()
+    recent_dest_combo = QtWidgets.QComboBox()
+    recent_source_combo.setToolTip("Zuletzt verwendete Quellpfade")
+    recent_dest_combo.setToolTip("Zuletzt verwendete Zielpfade")
+
     btn_source = QtWidgets.QPushButton(translate("choose_source"))
     btn_dest = QtWidgets.QPushButton(translate("choose_dest"))
     btn_source.setMinimumWidth(150)
     btn_dest.setMinimumWidth(150)
     btn_open_dest = QtWidgets.QPushButton(translate("open_dest"))
+    btn_source.setToolTip("Quellordner auswählen")
+    btn_dest.setToolTip("Zielordner auswählen")
+    btn_open_dest.setToolTip("Zielordner im Explorer öffnen")
 
     paths_layout.addWidget(QtWidgets.QLabel(f"{translate('source')}:") , 0, 0)
     paths_layout.addWidget(source_edit, 0, 1)
@@ -69,18 +82,29 @@ def build_paths_actions_ui(
     paths_layout.addWidget(btn_dest, 1, 2)
     paths_layout.addWidget(btn_open_dest, 1, 3)
 
+    paths_layout.addWidget(QtWidgets.QLabel("Zuletzt Quelle:"), 2, 0)
+    paths_layout.addWidget(recent_source_combo, 2, 1, 1, 2)
+    paths_layout.addWidget(QtWidgets.QLabel("Zuletzt Ziel:"), 3, 0)
+    paths_layout.addWidget(recent_dest_combo, 3, 1, 1, 2)
+
     paths_layout.setColumnStretch(1, 1)
 
     mode_combo = QtWidgets.QComboBox()
     mode_combo.addItems(["copy", "move"])
+    mode_combo.setToolTip("Sortiermodus wählen (copy/move)")
 
     conflict_combo = QtWidgets.QComboBox()
     conflict_combo.addItems(["rename", "skip", "overwrite"])
+    conflict_combo.setToolTip("Verhalten bei Konflikten")
 
     rebuild_checkbox = QtWidgets.QCheckBox("Rebuilder-Modus (Copy-only, Konflikte überspringen)")
     chk_console_folders = QtWidgets.QCheckBox("Konsolenordner erstellen")
     chk_region_subfolders = QtWidgets.QCheckBox("Regionsordner erstellen")
     chk_preserve_structure = QtWidgets.QCheckBox("Quell-Unterordner beibehalten")
+    rebuild_checkbox.setToolTip("Sortierung im Rebuilder-Modus (Copy-only)")
+    chk_console_folders.setToolTip("Pro Konsole einen Unterordner anlegen")
+    chk_region_subfolders.setToolTip("Pro Region einen Unterordner anlegen")
+    chk_preserve_structure.setToolTip("Unterordner-Struktur aus Quelle beibehalten")
 
     default_mode_combo = QtWidgets.QComboBox()
     default_mode_combo.addItems(["copy", "move"])
@@ -109,6 +133,16 @@ def build_paths_actions_ui(
     actions_advanced_layout.addWidget(default_mode_combo, 0, 1)
     actions_advanced_layout.addWidget(QtWidgets.QLabel("Standard-Konflikte:"), 1, 0)
     actions_advanced_layout.addWidget(default_conflict_combo, 1, 1)
+    rename_template_edit = QtWidgets.QLineEdit()
+    rename_template_edit.setPlaceholderText("{system}/{name}{ext_dot}")
+    rename_template_edit.setToolTip("Rename-Template, z.B. {system}/{name}{ext_dot}")
+    btn_rename_builder = QtWidgets.QPushButton("Pattern Builder…")
+    copy_first_checkbox = QtWidgets.QCheckBox("Copy-first Staging (Move) ")
+    copy_first_checkbox.setToolTip("Move: zuerst kopieren, dann atomar verschieben")
+    actions_advanced_layout.addWidget(QtWidgets.QLabel("Rename-Pattern:"), 2, 0)
+    actions_advanced_layout.addWidget(rename_template_edit, 2, 1)
+    actions_advanced_layout.addWidget(btn_rename_builder, 2, 2)
+    actions_advanced_layout.addWidget(copy_first_checkbox, 3, 1)
     actions_advanced_layout.setColumnStretch(1, 1)
     actions_advanced_group.setVisible(False)
     actions_layout.addWidget(actions_advanced_group, 7, 0, 1, 2)
@@ -123,6 +157,8 @@ def build_paths_actions_ui(
         actions_layout=actions_layout,
         source_edit=source_edit,
         dest_edit=dest_edit,
+        recent_source_combo=recent_source_combo,
+        recent_dest_combo=recent_dest_combo,
         btn_source=btn_source,
         btn_dest=btn_dest,
         btn_open_dest=btn_open_dest,
@@ -136,4 +172,7 @@ def build_paths_actions_ui(
         actions_advanced_group=actions_advanced_group,
         default_mode_combo=default_mode_combo,
         default_conflict_combo=default_conflict_combo,
+        rename_template_edit=rename_template_edit,
+        btn_rename_builder=btn_rename_builder,
+        copy_first_checkbox=copy_first_checkbox,
     )

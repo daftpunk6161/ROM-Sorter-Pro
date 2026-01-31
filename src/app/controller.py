@@ -19,6 +19,7 @@ import os
 import re
 import time
 import shutil
+import uuid
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
@@ -32,6 +33,7 @@ from ..core.normalization import (
     normalize_input as _normalize_input,
     plan_normalization as _plan_normalization,
 )
+from ..core.file_utils import calculate_file_hash
 from ..core.scan_service import run_scan as _core_run_scan
 from ..detectors.dat_identifier import identify_by_hash
 from ..exceptions import FileOperationError, ScannerError
@@ -41,6 +43,7 @@ from ..security.security_utils import (
     sanitize_path,
     validate_file_operation,
 )
+from ..utils.backup_utils import backup_file
 from ..utils.external_tools import build_external_command, run_wud2app, run_wudcompress
 
 logger = logging.getLogger(__name__)
@@ -67,6 +70,7 @@ from .identification_overrides import (
     _apply_identification_override,
     _load_identification_overrides,
     add_identification_override as _add_identification_override,
+    add_identification_overrides_bulk as _add_identification_overrides_bulk,
 )
 from .library_report import build_library_report
 from .models import (
@@ -271,6 +275,71 @@ def add_identification_override(
     return ok, message, str(path)
 
 
+def add_identification_overrides_bulk(
+    input_paths: List[str],
+    platform_id: str,
+    *,
+    config: Optional[Config | Dict[str, Any]] = None,
+    name: str = "manual-override",
+    confidence: float = 1.0,
+) -> Tuple[bool, str, str]:
+    cfg = _load_cfg(config)
+    ok, message, path = _add_identification_overrides_bulk(
+        cfg,
+        input_paths=input_paths,
+        platform_id=platform_id,
+        name=name,
+        confidence=confidence,
+    )
+    return ok, message, str(path)
+
+
+def suggest_identification_overrides(
+    input_path: str,
+    scan_items: List[ScanItem],
+    *,
+    limit: int = 8,
+) -> List[str]:
+    target = str(input_path or "").strip()
+    if not target:
+        return []
+    target_norm = normalize_title_for_dedupe(target)
+    if not target_norm:
+        return []
+
+    suggestions: List[str] = []
+    for item in scan_items:
+        candidate = str(item.input_path or "").strip()
+        if not candidate or candidate == target:
+            continue
+        if normalize_title_for_dedupe(candidate) == target_norm:
+            suggestions.append(candidate)
+    return suggestions[: max(0, int(limit))]
+
+
+def get_symlink_warnings(
+    source_path: Optional[str],
+    dest_path: Optional[str],
+) -> List[str]:
+    warnings: List[str] = []
+    for label, raw_path in ("Quelle", source_path), ("Ziel", dest_path):
+        path_val = str(raw_path or "").strip()
+        if not path_val:
+            continue
+        path = Path(path_val)
+        try:
+            if path.exists() and path.is_symlink():
+                warnings.append(f"{label} ist ein Symlink: {path}")
+        except Exception:
+            pass
+        try:
+            if has_symlink_parent(path):
+                warnings.append(f"{label} enthält Symlink-Pfad: {path}")
+        except Exception:
+            pass
+    return warnings
+
+
 def identify(
     scan_items: List[ScanItem],
     config: Optional[Config | Dict[str, Any]] = None,
@@ -332,17 +401,49 @@ def identify(
                     )
                 )
             else:
-                results.append(
-                    IdentificationResult(
-                        platform_id="Unknown",
-                        confidence=0.0,
-                        is_exact=False,
-                        signals=["NO_DAT_MATCH"],
-                        candidates=[],
-                        reason="no-dat-match",
-                        input_kind="RawRom",
+                fuzzy_candidates = []
+                try:
+                    fuzzy_candidates = dat_index.fuzzy_game_matches(Path(input_path).stem)
+                except Exception:
+                    fuzzy_candidates = []
+                if fuzzy_candidates:
+                    platforms = [str(entry.get("platform_id") or "Unknown") for entry in fuzzy_candidates]
+                    counts = {p: platforms.count(p) for p in set(platforms) if p}
+                    primary = max(counts, key=counts.get) if counts else "Unknown"
+                    top_score = float(fuzzy_candidates[0].get("score", 0.0) or 0.0)
+                    second_score = float(fuzzy_candidates[1].get("score", 0.0) or 0.0) if len(fuzzy_candidates) > 1 else 0.0
+                    signals = ["FUZZY_NAME_MATCH"]
+                    platform_id = primary
+                    confidence = max(0.2, min(0.8, top_score))
+                    reason = "fuzzy-name"
+                    if len(set(platforms)) > 1 and (top_score - second_score) < 0.05:
+                        platform_id = "Unknown"
+                        confidence = 0.0
+                        signals.append("AMBIGUOUS")
+                        reason = "fuzzy-ambiguous"
+                    results.append(
+                        IdentificationResult(
+                            platform_id=platform_id,
+                            confidence=confidence,
+                            is_exact=False,
+                            signals=signals,
+                            candidates=sorted(set(platforms)),
+                            reason=reason,
+                            input_kind="RawRom",
+                        )
                     )
-                )
+                else:
+                    results.append(
+                        IdentificationResult(
+                            platform_id="Unknown",
+                            confidence=0.0,
+                            is_exact=False,
+                            signals=["NO_DAT_MATCH"],
+                            candidates=[],
+                            reason="no-dat-match",
+                            input_kind="RawRom",
+                        )
+                    )
         elif dat_index and not input_exists:
             results.append(
                 IdentificationResult(
@@ -499,16 +600,36 @@ def plan_sort(
                     action=mode,
                     status="error",
                     error="Missing input path",
+                    source_size=None,
+                    source_mtime=None,
+                    source_sha1=None,
                 )
             )
             continue
+
+        raw_meta = item.raw or {}
+        source_size = raw_meta.get("size") or raw_meta.get("size_bytes")
+        source_mtime = raw_meta.get("last_modified") or raw_meta.get("mtime")
+        source_sha1 = raw_meta.get("sha1")
+        try:
+            source_size = int(source_size) if source_size is not None else None
+        except Exception:
+            source_size = None
+        try:
+            source_mtime = float(source_mtime) if source_mtime is not None else None
+        except Exception:
+            source_mtime = None
+        try:
+            source_sha1 = str(source_sha1).lower().strip() if source_sha1 else None
+        except Exception:
+            source_sha1 = None
 
         try:
             src = Path(item.input_path).resolve()
             validate_file_operation(src, base_dir=None, allow_read=True, allow_write=True)
 
             if _is_confident_detection(item, min_confidence):
-                safe_system = _safe_system_name(item.detected_system)
+                safe_system = _safe_system_name(item.detected_system or "Unknown")
             else:
                 if not create_unknown_folder and not quarantine_unknown:
                     actions.append(
@@ -519,6 +640,9 @@ def plan_sort(
                             action=mode,
                             status="skipped",
                             error="Unknown or low-confidence detection",
+                            source_size=source_size,
+                            source_mtime=source_mtime,
+                            source_sha1=source_sha1,
                         )
                     )
                     continue
@@ -571,6 +695,9 @@ def plan_sort(
                                 action="convert",
                                 status="skipped",
                                 error="Conversion tool not available",
+                                source_size=source_size,
+                                source_mtime=source_mtime,
+                                source_sha1=source_sha1,
                             )
                         )
                         continue
@@ -590,6 +717,9 @@ def plan_sort(
                         action=mode,
                         status="error",
                         error=resolve_error,
+                        source_size=source_size,
+                        source_mtime=source_mtime,
+                        source_sha1=source_sha1,
                     )
                 )
                 continue
@@ -602,6 +732,9 @@ def plan_sort(
                         action=mode,
                         status="skipped",
                         error="Target exists (skip)",
+                        source_size=source_size,
+                        source_mtime=source_mtime,
+                        source_sha1=source_sha1,
                     )
                 )
                 continue
@@ -644,6 +777,9 @@ def plan_sort(
                     conversion_args=conversion_args,
                     conversion_rule=conversion_rule_name,
                     conversion_output_extension=conversion_output_extension,
+                    source_size=source_size,
+                    source_mtime=source_mtime,
+                    source_sha1=source_sha1,
                 )
             )
 
@@ -656,6 +792,9 @@ def plan_sort(
                     action=mode,
                     status="error",
                     error=str(exc),
+                    source_size=source_size,
+                    source_mtime=source_mtime,
+                    source_sha1=source_sha1,
                 )
             )
 
@@ -685,6 +824,36 @@ def plan_rebuild(
     )
 
 
+def diff_sort_plans(previous: SortPlan, current: SortPlan) -> Dict[str, Any]:
+    prev_map = {str(action.input_path): action for action in previous.actions}
+    curr_map = {str(action.input_path): action for action in current.actions}
+
+    added = [path for path in curr_map.keys() if path not in prev_map]
+    removed = [path for path in prev_map.keys() if path not in curr_map]
+
+    changed: List[str] = []
+    for path, curr_action in curr_map.items():
+        prev_action = prev_map.get(path)
+        if prev_action is None:
+            continue
+        if (
+            str(prev_action.action) != str(curr_action.action)
+            or str(prev_action.planned_target_path or "") != str(curr_action.planned_target_path or "")
+            or str(prev_action.status) != str(curr_action.status)
+        ):
+            changed.append(path)
+
+    return {
+        "added": len(added),
+        "removed": len(removed),
+        "changed": len(changed),
+        "total_current": len(curr_map),
+        "sample_added": added[:5],
+        "sample_removed": removed[:5],
+        "sample_changed": changed[:5],
+    }
+
+
 def execute_sort(
     sort_plan: SortPlan,
     progress_cb: Optional[ProgressCallback] = None,
@@ -705,8 +874,10 @@ def execute_sort(
     buffer_size = _resolve_copy_buffer_size(cfg)
     batch_progress = _progress_batch_enabled(cfg)
     conversion_timeout_sec: Optional[float] = 300.0
+    sorting_cfg = _get_dict(cfg, "features", "sorting")
+    copy_first_staging = bool(sorting_cfg.get("copy_first_staging", False))
+    copy_first_dir = sorting_cfg.get("copy_first_staging_dir")
     try:
-        sorting_cfg = _get_dict(cfg, "features", "sorting")
         timeout_value = sorting_cfg.get("conversion_timeout_sec")
         if timeout_value is not None:
             conversion_timeout_sec = float(timeout_value)
@@ -751,9 +922,12 @@ def execute_sort(
             if action.status.startswith("skipped") or action.planned_target_path is None:
                 continue
             needs_space = False
-            if action.action == "convert" or sort_plan.mode == "copy":
+            action_mode = str(sort_plan.mode)
+            if str(action.action).lower() in ("copy", "move"):
+                action_mode = str(action.action).lower()
+            if action.action == "convert" or action_mode == "copy":
                 needs_space = True
-            elif sort_plan.mode == "move":
+            elif action_mode == "move":
                 try:
                     src_drive = Path(action.input_path).resolve().drive
                     dst_drive = Path(action.planned_target_path).resolve().drive
@@ -811,6 +985,11 @@ def execute_sort(
     if rollback_enabled and rollback_path_value is None:
         rollback_path_value = os.path.join("cache", "rollback", "last_move_rollback.json")
 
+    backup_cfg = _get_dict(cfg, "features", "backup")
+    backup_enabled = bool(backup_cfg.get("enabled"))
+    backup_before_overwrite = bool(backup_cfg.get("before_overwrite", True))
+    cfg_payload = cfg.config_data if isinstance(cfg, Config) else cfg
+
     for step, (row_index, action) in enumerate(actions_to_run, start=1):
         if cancel_token is not None and cancel_token.is_cancelled():
             cancelled = True
@@ -819,6 +998,19 @@ def execute_sort(
             if log_cb is not None:
                 log_cb("Cancellation requested. Stopping sort…")
             break
+
+        if str(action.action).lower() == "skip":
+            skipped += 1
+            processed += 1
+            if action_status_cb is not None:
+                action_status_cb(row_index, "skipped")
+            if progress_cb is not None:
+                if not batch_progress or step == total or step % progress_every == 0:
+                    now = time.time()
+                    if (now - last_progress_ts) >= 0.05 or step == total:
+                        last_progress_ts = now
+                        progress_cb(step, total)
+            continue
 
         if action.status.startswith("skipped") or action.planned_target_path is None:
             skipped += 1
@@ -834,6 +1026,9 @@ def execute_sort(
             continue
 
         try:
+            action_mode = str(sort_plan.mode)
+            if str(action.action).lower() in ("copy", "move"):
+                action_mode = str(action.action).lower()
             src_raw = Path(action.input_path)
             if src_raw.is_symlink():
                 raise InvalidPathError(f"Symlink source not allowed: {src_raw}")
@@ -850,6 +1045,55 @@ def execute_sort(
             validate_file_operation(src, base_dir=None, allow_read=True, allow_write=True)
             validate_file_operation(dst, base_dir=dest_root, allow_read=True, allow_write=True)
 
+            if not dry_run and (action.source_size is not None or action.source_mtime is not None or action.source_sha1):
+                checksum_error: Optional[str] = None
+                try:
+                    src_stat = src.stat()
+                except Exception as exc:
+                    checksum_error = f"checksum validation failed (stat): {exc}"
+                if checksum_error is None and action.source_size is not None:
+                    current_size = int(src_stat.st_size)
+                    expected_size = int(action.source_size)
+                    if current_size != expected_size:
+                        checksum_error = (
+                            f"checksum validation failed (size mismatch: expected {expected_size}, got {current_size})"
+                        )
+                if checksum_error is None and action.source_mtime is not None:
+                    try:
+                        expected_mtime = float(action.source_mtime)
+                        current_mtime = float(src_stat.st_mtime)
+                    except Exception:
+                        expected_mtime = None
+                        current_mtime = None
+                    if expected_mtime is not None and current_mtime is not None:
+                        if abs(current_mtime - expected_mtime) > 1.0:
+                            checksum_error = (
+                                "checksum validation failed (mtime mismatch: "
+                                f"expected {expected_mtime:.3f}, got {current_mtime:.3f})"
+                            )
+                if checksum_error is None and action.source_sha1:
+                    current_sha1 = calculate_file_hash(src, algorithm="sha1")
+                    if current_sha1 is None:
+                        checksum_error = "checksum validation failed (sha1 compute failed)"
+                    else:
+                        expected_sha1 = str(action.source_sha1).lower()
+                        if current_sha1.lower() != expected_sha1:
+                            checksum_error = (
+                                "checksum validation failed (sha1 mismatch: "
+                                f"expected {expected_sha1}, got {current_sha1})"
+                            )
+
+                if checksum_error is not None:
+                    processed += 1
+                    skipped += 1
+                    msg = f"Error sorting {action.input_path}: {checksum_error}"
+                    errors.append(msg)
+                    if action_status_cb is not None:
+                        action_status_cb(row_index, "error: checksum mismatch")
+                    if log_cb is not None:
+                        log_cb(msg)
+                    continue
+
             # Track rename heuristically: planned target name differs from source name.
             if dst.name != src.name:
                 renamed += 1
@@ -861,7 +1105,7 @@ def execute_sort(
             )
 
             if action_status_cb is not None:
-                action_status_cb(row_index, "converting…" if is_conversion else f"{sort_plan.mode}ing…")
+                action_status_cb(row_index, "converting…" if is_conversion else f"{action_mode}ing…")
 
             if is_conversion and dry_run:
                 if action_status_cb is not None:
@@ -869,7 +1113,7 @@ def execute_sort(
 
                 processed += 1
 
-                if sort_plan.mode == "copy":
+                if action_mode == "copy":
                     copied += 1
                 else:
                     moved += 1
@@ -884,6 +1128,20 @@ def execute_sort(
                     allow_replace = sort_plan.on_conflict == "overwrite"
 
                     if allow_replace and dst.exists():
+                        if backup_enabled and backup_before_overwrite:
+                            backup_path = backup_file(dst, prefix="overwrite", cfg=cfg_payload, log_cb=log_cb)
+                            if backup_path is None:
+                                processed += 1
+                                skipped += 1
+                                msg = (
+                                    f"Error sorting {action.input_path}: backup before overwrite failed for {dst}"
+                                )
+                                errors.append(msg)
+                                if action_status_cb is not None:
+                                    action_status_cb(row_index, "error: backup failed")
+                                if log_cb is not None:
+                                    log_cb(msg)
+                                continue
                         overwritten += 1
                         try:
                             dst.unlink()
@@ -949,13 +1207,13 @@ def execute_sort(
                             f"Conversion reported success but output missing: {dst}"
                         )
 
-                    if sort_plan.mode == "move":
+                    if action_mode == "move":
                         try:
                             src.unlink()
                         except Exception:
                             os.remove(str(src))
 
-                if sort_plan.mode == "copy":
+                if action_mode == "copy":
                     copied += 1
                 else:
                     moved += 1
@@ -977,13 +1235,27 @@ def execute_sort(
 
                     # Overwrite policy: remove existing file first.
                     if allow_replace and dst.exists():
+                        if backup_enabled and backup_before_overwrite:
+                            backup_path = backup_file(dst, prefix="overwrite", cfg=cfg_payload, log_cb=log_cb)
+                            if backup_path is None:
+                                processed += 1
+                                skipped += 1
+                                msg = (
+                                    f"Error sorting {action.input_path}: backup before overwrite failed for {dst}"
+                                )
+                                errors.append(msg)
+                                if action_status_cb is not None:
+                                    action_status_cb(row_index, "error: backup failed")
+                                if log_cb is not None:
+                                    log_cb(msg)
+                                continue
                         overwritten += 1
                         try:
                             dst.unlink()
                         except Exception:
                             os.remove(str(dst))
 
-                    if sort_plan.mode == "copy":
+                    if action_mode == "copy":
                         ok = atomic_copy_with_cancel(
                             src,
                             dst,
@@ -1001,40 +1273,95 @@ def execute_sort(
                                 log_cb("Cancelled during copy; cleaned up partial file.")
                             break
                     else:
-                        # Prefer fast rename when possible; fallback to cancellable copy+delete.
-                        try:
-                            if cancel_token is not None and cancel_token.is_cancelled():
+                        if copy_first_staging:
+                            staging_dir = Path(copy_first_dir) if copy_first_dir else (dest_root / "_staging")
+                            try:
+                                staging_dir.mkdir(parents=True, exist_ok=True)
+                            except Exception:
+                                staging_dir = dest_root
+                            temp_name = f"{src.stem}-{uuid.uuid4().hex}{src.suffix}"
+                            temp_path = staging_dir / temp_name
+                            ok = atomic_copy_with_cancel(
+                                src,
+                                temp_path,
+                                allow_replace=False,
+                                cancel_token=cancel_token,
+                                buffer_size=buffer_size,
+                            )
+                            if not ok:
                                 cancelled = True
                                 cancel_start_row = row_index
                                 remaining_rows = [row for row, _action in actions_to_run[step:]]
                                 if action_status_cb is not None:
                                     action_status_cb(row_index, "cancelled")
+                                if log_cb is not None:
+                                    log_cb("Cancelled during copy-first staging.")
                                 break
-
-                            if dst.exists() and not allow_replace:
-                                raise FileExistsError(str(dst))
-
-                            os.replace(str(src), str(dst))
-
-                        except OSError as move_exc:
-                            winerr = getattr(move_exc, "winerror", None)
-                            if move_exc.errno in (errno.EXDEV,) or winerr in (17,):
-                                ok = atomic_copy_with_cancel(
-                                    src,
-                                    dst,
-                                    allow_replace=allow_replace,
-                                    cancel_token=cancel_token,
-                                    buffer_size=buffer_size,
-                                )
-                                if not ok:
+                            if allow_replace and dst.exists():
+                                if backup_enabled and backup_before_overwrite:
+                                    backup_path = backup_file(dst, prefix="overwrite", cfg=cfg_payload, log_cb=log_cb)
+                                    if backup_path is None:
+                                        processed += 1
+                                        skipped += 1
+                                        msg = (
+                                            f"Error sorting {action.input_path}: backup before overwrite failed for {dst}"
+                                        )
+                                        errors.append(msg)
+                                        if action_status_cb is not None:
+                                            action_status_cb(row_index, "error: backup failed")
+                                        if log_cb is not None:
+                                            log_cb(msg)
+                                        try:
+                                            if temp_path.exists():
+                                                temp_path.unlink()
+                                        except Exception:
+                                            pass
+                                        continue
+                                overwritten += 1
+                                try:
+                                    dst.unlink()
+                                except Exception:
+                                    os.remove(str(dst))
+                            os.replace(str(temp_path), str(dst))
+                            try:
+                                src.unlink()
+                            except Exception:
+                                os.remove(str(src))
+                        else:
+                            # Prefer fast rename when possible; fallback to cancellable copy+delete.
+                            try:
+                                if cancel_token is not None and cancel_token.is_cancelled():
                                     cancelled = True
                                     cancel_start_row = row_index
                                     remaining_rows = [row for row, _action in actions_to_run[step:]]
                                     if action_status_cb is not None:
                                         action_status_cb(row_index, "cancelled")
-                                    if log_cb is not None:
-                                        log_cb("Cancelled during move; cleaned up partial file.")
                                     break
+
+                                if dst.exists() and not allow_replace:
+                                    raise FileExistsError(str(dst))
+
+                                os.replace(str(src), str(dst))
+
+                            except OSError as move_exc:
+                                winerr = getattr(move_exc, "winerror", None)
+                                if move_exc.errno in (errno.EXDEV,) or winerr in (17,):
+                                    ok = atomic_copy_with_cancel(
+                                        src,
+                                        dst,
+                                        allow_replace=allow_replace,
+                                        cancel_token=cancel_token,
+                                        buffer_size=buffer_size,
+                                    )
+                                    if not ok:
+                                        cancelled = True
+                                        cancel_start_row = row_index
+                                        remaining_rows = [row for row, _action in actions_to_run[step:]]
+                                        if action_status_cb is not None:
+                                            action_status_cb(row_index, "cancelled")
+                                        if log_cb is not None:
+                                            log_cb("Cancelled during move; cleaned up partial file.")
+                                        break
 
                                 try:
                                     src.unlink()
@@ -1043,7 +1370,7 @@ def execute_sort(
                             else:
                                 raise
 
-                if sort_plan.mode == "copy":
+                if action_mode == "copy":
                     copied += 1
                     if action_status_cb is not None:
                         action_status_cb(row_index, "copied")
@@ -1059,8 +1386,8 @@ def execute_sort(
                 processed += 1
 
                 if log_cb is not None:
-                    verb = "Would copy" if dry_run and sort_plan.mode == "copy" else "Copy"
-                    if sort_plan.mode == "move":
+                    verb = "Would copy" if dry_run and action_mode == "copy" else "Copy"
+                    if action_mode == "move":
                         verb = "Would move" if dry_run else "Move"
                     log_cb(f"{verb}: {src.name} -> {dst}")
 

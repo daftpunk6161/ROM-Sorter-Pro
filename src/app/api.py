@@ -6,7 +6,8 @@ Centralizes stable imports to keep UI decoupled from controller internals.
 from __future__ import annotations
 
 from ..core.normalization import NormalizationItem, NormalizationPlan, NormalizationReport, NormalizationResultItem
-from .controller import add_identification_override, analyze_dat_sources, build_dat_index, build_library_report
+from .controller import add_identification_override, add_identification_overrides_bulk, analyze_dat_sources, build_dat_index, build_library_report, get_symlink_warnings
+from .controller import diff_sort_plans
 from .controller import filter_scan_items
 from .controller import get_dat_sources, infer_languages_and_version_from_name, infer_region_from_name
 from .controller import load_sort_resume_state, save_dat_sources
@@ -43,6 +44,7 @@ from .models import (
 )
 from ..utils.result import Err, Ok, Result, is_err, is_ok, unwrap, unwrap_or
 from .scan_controller import identify, run_scan
+from .controller import suggest_identification_overrides
 from .sort_controller import execute_sort, plan_rebuild, plan_sort
 
 __all__ = [
@@ -66,6 +68,10 @@ __all__ = [
     "SortMode",
     "audit_conversion_candidates",
     "add_identification_override",
+    "add_identification_overrides_bulk",
+    "suggest_identification_overrides",
+    "get_symlink_warnings",
+    "diff_sort_plans",
     "analyze_dat_sources",
     "build_dat_index",
     "build_library_report",

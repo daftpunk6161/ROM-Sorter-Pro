@@ -76,6 +76,9 @@ class SortAction:
     conversion_args: Optional[List[str]] = None
     conversion_rule: Optional[str] = None
     conversion_output_extension: Optional[str] = None
+    source_size: Optional[int] = None
+    source_mtime: Optional[float] = None
+    source_sha1: Optional[str] = None
 
 
 @dataclass(frozen=True)

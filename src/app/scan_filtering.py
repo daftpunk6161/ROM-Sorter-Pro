@@ -9,7 +9,12 @@ import logging
 
 from ..config import Config, load_config
 from .models import ScanItem
-from .naming_helpers import infer_languages_and_version_from_name, infer_region_from_name, normalize_title_for_dedupe
+from .naming_helpers import (
+    infer_languages_and_version_from_name,
+    infer_region_from_name,
+    normalize_title_for_dedupe,
+    version_score,
+)
 
 logger = logging.getLogger(__name__)
 DEFAULT_REGION_PRIORITY: Tuple[str, ...] = (
@@ -66,12 +71,19 @@ def select_preferred_variants(
             best = min(best, lang_index.get(str(lang), len(language_priority)))
         return best
 
-    def variant_score(it: ScanItem) -> Tuple[int, int, int, int, str]:
+    def variant_score(it: ScanItem) -> Tuple[int, int, int, float, int, str]:
         langs = tuple(getattr(it, "languages", ()) or ())
+        version_val = getattr(it, "version", None)
+        if not version_val:
+            try:
+                _, version_val = infer_languages_and_version_from_name(Path(it.input_path).name)
+            except Exception:
+                version_val = None
         return (
             region_rank(getattr(it, "region", None)),
             0 if langs else 1,
             best_language_rank(langs),
+            -version_score(version_val),
             -len(langs),
             str(it.input_path or ""),
         )
@@ -110,6 +122,41 @@ def filter_scan_items(
     config: Optional[Config] = None,
 ) -> List[ScanItem]:
     """Filter scan items by language/version/region and optionally dedupe by preferred region."""
+
+    cfg = _load_cfg(config)
+    try:
+        prioritization = cfg.get("prioritization", {}) or {}
+        region_priorities = prioritization.get("region_priorities", {}) or {}
+        language_priorities = prioritization.get("language_priorities", {}) or {}
+        region_order = prioritization.get("region_order", []) or []
+        language_order = prioritization.get("language_order", []) or []
+    except Exception:
+        region_priorities = {}
+        language_priorities = {}
+        region_order = []
+        language_order = []
+
+    def _build_priority(default: Tuple[str, ...], order_list: Sequence[str], priority_map: Dict[str, Any]) -> Tuple[str, ...]:
+        ordered: List[str] = []
+        for entry in order_list:
+            value = str(entry).strip()
+            if value and value not in ordered:
+                ordered.append(value)
+        if isinstance(priority_map, dict):
+            ranked = sorted(
+                ((str(k), int(v)) for k, v in priority_map.items()),
+                key=lambda x: x[1],
+            )
+            for key, _ in ranked:
+                if key and key not in ordered:
+                    ordered.append(key)
+        for entry in default:
+            if entry not in ordered:
+                ordered.append(entry)
+        return tuple(ordered)
+
+    region_priority = _build_priority(region_priority, region_order, region_priorities)
+    language_priority = _build_priority(language_priority, language_order, language_priorities)
 
     def _normalize_filter_values(value: Union[str, Sequence[str]]) -> Set[str]:
         if value is None:

@@ -9,6 +9,8 @@ from typing import Any, Dict
 @dataclass(frozen=True)
 class SettingsInputs:
     theme_combo: Any
+    accent_preview: Any
+    accent_button: Any
     review_gate_checkbox: Any
     external_tools_checkbox: Any
     btn_open_overrides: Any
@@ -31,6 +33,9 @@ class SettingsUI:
     log_visible_checkbox: Any
     remember_window_checkbox: Any
     drag_drop_checkbox: Any
+    compact_mode_checkbox: Any
+    pro_mode_checkbox: Any
+    btn_show_shortcuts: Any
 
 
 def build_settings_ui(QtWidgets, QtCore, settings_layout, layouts: Dict[str, Any], inputs: SettingsInputs) -> SettingsUI:
@@ -48,6 +53,13 @@ def build_settings_ui(QtWidgets, QtCore, settings_layout, layouts: Dict[str, Any
     general_layout.addWidget(QtWidgets.QLabel("Theme:"), 0, 0)
     general_layout.addWidget(inputs.theme_combo, 0, 1)
 
+    general_layout.addWidget(QtWidgets.QLabel("Accent:"), 1, 0)
+    accent_row = QtWidgets.QHBoxLayout()
+    accent_row.addWidget(inputs.accent_preview)
+    accent_row.addWidget(inputs.accent_button)
+    accent_row.addStretch(1)
+    general_layout.addLayout(accent_row, 1, 1)
+
     layout_combo = None
     if layouts:
         layout_combo = QtWidgets.QComboBox()
@@ -60,17 +72,26 @@ def build_settings_ui(QtWidgets, QtCore, settings_layout, layouts: Dict[str, Any
             layout_key = "sidebar_cmd"
         idx_layout = layout_combo.findData(layout_key)
         layout_combo.setCurrentIndex(idx_layout if idx_layout >= 0 else 0)
-        general_layout.addWidget(QtWidgets.QLabel("Layout:"), 1, 0)
-        general_layout.addWidget(layout_combo, 1, 1)
+        general_layout.addWidget(QtWidgets.QLabel("Layout:"), 2, 0)
+        general_layout.addWidget(layout_combo, 2, 1)
     general_layout.setColumnStretch(1, 1)
 
     log_visible_checkbox = QtWidgets.QCheckBox("Log standardmäßig anzeigen")
     remember_window_checkbox = QtWidgets.QCheckBox("Fenstergröße merken")
     drag_drop_checkbox = QtWidgets.QCheckBox("Drag & Drop aktivieren")
-    log_row = 2 if layout_combo is not None else 1
+    compact_mode_checkbox = QtWidgets.QCheckBox("Compact Mode")
+    compact_mode_checkbox.setToolTip("Reduziert Abstände für kompakte Darstellung")
+    pro_mode_checkbox = QtWidgets.QCheckBox("Pro Mode")
+    pro_mode_checkbox.setToolTip("Zeigt erweiterte Optionen an")
+    btn_show_shortcuts = QtWidgets.QPushButton("Shortcuts anzeigen")
+    btn_show_shortcuts.setToolTip("Tastenkürzel-Übersicht öffnen")
+    log_row = 3 if layout_combo is not None else 2
     general_layout.addWidget(log_visible_checkbox, log_row, 1)
     general_layout.addWidget(remember_window_checkbox, log_row + 1, 1)
     general_layout.addWidget(drag_drop_checkbox, log_row + 2, 1)
+    general_layout.addWidget(compact_mode_checkbox, log_row + 3, 1)
+    general_layout.addWidget(pro_mode_checkbox, log_row + 4, 1)
+    general_layout.addWidget(btn_show_shortcuts, log_row + 5, 1)
 
     settings_layout.addWidget(general_group)
 
@@ -123,4 +144,7 @@ def build_settings_ui(QtWidgets, QtCore, settings_layout, layouts: Dict[str, Any
         log_visible_checkbox=log_visible_checkbox,
         remember_window_checkbox=remember_window_checkbox,
         drag_drop_checkbox=drag_drop_checkbox,
+        compact_mode_checkbox=compact_mode_checkbox,
+        pro_mode_checkbox=pro_mode_checkbox,
+        btn_show_shortcuts=btn_show_shortcuts,
     )

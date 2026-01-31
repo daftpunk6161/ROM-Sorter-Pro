@@ -20,6 +20,10 @@ class SortingConfigModel(BaseModel):  # type: ignore[misc]
     create_console_folders: Optional[bool] = True
     region_based_sorting: Optional[bool] = False
     preserve_folder_structure: Optional[bool] = False
+    rename_template: Optional[str] = None
+    copy_first_staging: Optional[bool] = False
+    copy_first_staging_dir: Optional[str] = None
+    estimated_throughput_mb_s: Optional[float] = None
 
 
 class AppConfigModel(BaseModel):  # type: ignore[misc]

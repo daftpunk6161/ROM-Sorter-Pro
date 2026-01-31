@@ -63,6 +63,49 @@ def test_execute_sort_move_deletes_source(tmp_path):
     assert (dest / "NES" / "game.rom").exists()
 
 
+def test_execute_sort_checksum_validation_skips_modified_file(tmp_path):
+    from src.app.controller import SortAction, SortPlan, execute_sort
+    from src.core.file_utils import calculate_file_hash
+
+    source = tmp_path / "source"
+    dest = tmp_path / "dest"
+    source.mkdir()
+    dest.mkdir()
+
+    rom = source / "game.rom"
+    rom.write_text("original")
+
+    stat = rom.stat()
+    expected_sha1 = calculate_file_hash(rom, algorithm="sha1")
+
+    plan = SortPlan(
+        dest_path=str(dest),
+        mode="copy",
+        on_conflict="rename",
+        actions=[
+            SortAction(
+                input_path=str(rom),
+                detected_system="NES",
+                planned_target_path=str(dest / "NES" / "game.rom"),
+                action="copy",
+                status="planned",
+                source_size=int(stat.st_size),
+                source_mtime=float(stat.st_mtime),
+                source_sha1=expected_sha1,
+            )
+        ],
+    )
+
+    rom.write_text("changed")
+
+    report = execute_sort(plan, dry_run=False)
+
+    assert report.skipped == 1
+    assert report.errors
+    assert any("checksum validation failed" in msg for msg in report.errors)
+    assert not (dest / "NES" / "game.rom").exists()
+
+
 def test_execute_sort_conversion_requires_output(tmp_path):
     from src.app.controller import SortAction, SortPlan, execute_sort
 

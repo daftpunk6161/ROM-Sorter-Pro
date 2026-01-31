@@ -151,3 +151,57 @@ def test_plan_sort_low_confidence_skips_when_disabled(tmp_path):
     assert len(plan.actions) == 1
     assert plan.actions[0].planned_target_path is None
     assert plan.actions[0].status.startswith("skipped")
+
+
+def test_diff_sort_plans_counts_changes(tmp_path):
+    from src.app.controller import diff_sort_plans
+    from src.app.models import SortAction, SortPlan
+
+    plan_a = SortPlan(
+        dest_path=str(tmp_path / "dest"),
+        mode="copy",
+        on_conflict="rename",
+        actions=[
+            SortAction(
+                input_path=str(tmp_path / "a.rom"),
+                detected_system="NES",
+                planned_target_path=str(tmp_path / "dest" / "a.rom"),
+                action="copy",
+                status="planned",
+            ),
+            SortAction(
+                input_path=str(tmp_path / "b.rom"),
+                detected_system="NES",
+                planned_target_path=str(tmp_path / "dest" / "b.rom"),
+                action="copy",
+                status="planned",
+            ),
+        ],
+    )
+
+    plan_b = SortPlan(
+        dest_path=str(tmp_path / "dest"),
+        mode="copy",
+        on_conflict="rename",
+        actions=[
+            SortAction(
+                input_path=str(tmp_path / "a.rom"),
+                detected_system="NES",
+                planned_target_path=str(tmp_path / "dest" / "a-renamed.rom"),
+                action="copy",
+                status="planned",
+            ),
+            SortAction(
+                input_path=str(tmp_path / "c.rom"),
+                detected_system="NES",
+                planned_target_path=str(tmp_path / "dest" / "c.rom"),
+                action="copy",
+                status="planned",
+            ),
+        ],
+    )
+
+    diff = diff_sort_plans(plan_a, plan_b)
+    assert diff["added"] == 1
+    assert diff["removed"] == 1
+    assert diff["changed"] == 1

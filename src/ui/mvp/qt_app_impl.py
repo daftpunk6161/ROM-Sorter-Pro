@@ -12,7 +12,7 @@ import traceback
 import threading
 import json
 from pathlib import Path
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any, Dict, Iterable, List, Optional, Tuple, cast
 
 logger = logging.getLogger(__name__)
@@ -69,10 +69,14 @@ def run() -> int:
         SortReport,
         SortMode,
         add_identification_override,
+        add_identification_overrides_bulk,
+        suggest_identification_overrides,
         audit_conversion_candidates,
         analyze_dat_sources,
         build_dat_index,
         build_library_report,
+        diff_sort_plans,
+        get_symlink_warnings,
         load_rollback_manifest,
         apply_rollback,
         execute_sort,
@@ -86,11 +90,13 @@ def run() -> int:
         run_scan,
         save_dat_sources,
     )
+    from ...app.plan_stats import compute_plan_stats
+    from ...app.sorting_helpers import _apply_rename_template
     from ...config.io import load_config as _load_config, save_config as _save_config
     from ...config.config_service import ConfigService
     from ...core.dat_index_sqlite import DatIndexSqlite
     from ...database.db_paths import get_rom_db_path
-    from ...ui.theme_manager import ThemeManager
+    from ...ui.theme_manager import ColorScheme, Theme, ThemeManager, ThemeType
     from .qt_optional_assets import load_optional_qt_assets
 
     optional_assets = load_optional_qt_assets(logger)
@@ -126,6 +132,9 @@ def run() -> int:
     from .model_utils import (
         format_candidates,
         format_confidence,
+        format_heuristics,
+        format_reason,
+        format_system_badge,
         format_signals,
         rom_display_name,
     )
@@ -446,12 +455,13 @@ def run() -> int:
             self.setWindowTitle(f"ROM Sorter Pro v{load_version()} - MVP GUI")
             self.resize(1100, 700)
 
-            self._cancel_token = CancelToken()
-            self._thread = None
             self._worker = None
 
             self._scan_result: Optional[ScanResult] = None
             self._sort_plan: Optional[SortPlan] = None
+            self._last_plan: Optional[SortPlan] = None
+            self._plan_history: List[SortPlan] = []
+            self._plan_history_index: int = -1
             self._audit_report: Optional[ConversionAuditReport] = None
             self._export_thread: Optional[Any] = None
             self._export_worker: Optional[Any] = None
@@ -465,6 +475,7 @@ def run() -> int:
             self._igir_selected_template: Optional[str] = None
             self._failed_action_indices: set[int] = set()
             self._resume_path = str((Path(__file__).resolve().parents[3] / "cache" / "last_sort_resume.json").resolve())
+            self._plan_stats: Dict[str, int] = {"total_actions": 0, "total_bytes": 0}
 
             try:
                 theme_cfg = load_config()
@@ -488,6 +499,7 @@ def run() -> int:
             self._base_central: Optional[Any] = None
             self._shell_stack: Optional[Any] = None
             self._syncing_paths = False
+            self._syncing_recent_paths = False
             self._syncing_theme = False
             self._log_visible = True
             self._log_autoscroll = True
@@ -521,12 +533,15 @@ def run() -> int:
             self.menu_export_audit_json = menu_actions.export_audit_json
 
             root_layout = QtWidgets.QVBoxLayout(central)
+            self.root_layout = root_layout
 
             theme_names_header = self._theme_manager.get_theme_names()
             if self._qt_theme_display:
                 theme_names_header = theme_names_header + list(self._qt_theme_display.keys())
             if "Auto" not in theme_names_header:
                 theme_names_header = ["Auto"] + theme_names_header
+            self.theme_combo = QtWidgets.QComboBox()
+            self.theme_combo.addItems(list(theme_names_header))
 
             self._app_version = load_version()
             header_ui = build_header_ui(
@@ -550,6 +565,7 @@ def run() -> int:
             self.pill_queue = header_ui.pill_queue
             self.pill_dat = header_ui.pill_dat
             self.pill_safety = header_ui.pill_safety
+            self.status_summary_label = header_ui.summary_label
             self.status_bar = header_ui.status_bar
             self.header_progress_label = header_ui.header_progress_label
             self.header_progress = header_ui.header_progress
@@ -560,9 +576,11 @@ def run() -> int:
             self.progress_header.setVisible(False)
 
             content_layout = QtWidgets.QHBoxLayout()
+            self.content_layout = content_layout
 
             sidebar_ui = build_sidebar_ui(QtWidgets)
             sidebar = sidebar_ui.sidebar
+            self.sidebar_widget = sidebar
             self.btn_nav_dashboard = sidebar_ui.btn_nav_dashboard
             self.btn_nav_sort = sidebar_ui.btn_nav_sort
             self.btn_nav_conversions = sidebar_ui.btn_nav_conversions
@@ -660,9 +678,11 @@ def run() -> int:
             results_stack = results_tabs_ui.results_stack
             details_stack = results_tabs_ui.details_stack
             self.filter_sidebar = results_tabs_ui.filter_sidebar
+            self.structure_tree = results_tabs_ui.structure_tree
             self._results_tab_index_results = results_tabs_ui.tab_index_results
             self._results_tab_index_details = results_tabs_ui.tab_index_details
             self._results_tab_index_filters = results_tabs_ui.tab_index_filters
+            self._results_tab_index_structure = results_tabs_ui.tab_index_structure
             status_ui = build_status_ui(QtWidgets, binding)
             main_status_group = status_ui.main_status_group
             self.main_source_label = status_ui.main_source_label
@@ -679,6 +699,8 @@ def run() -> int:
             self.btn_preset_save = presets_ui.btn_preset_save
             self.btn_preset_delete = presets_ui.btn_preset_delete
             self.btn_execute_selected = presets_ui.btn_execute_selected
+            self.btn_plan_undo = presets_ui.btn_plan_undo
+            self.btn_plan_redo = presets_ui.btn_plan_redo
             self.queue_mode_checkbox = presets_ui.queue_mode_checkbox
             self.queue_priority_combo = presets_ui.queue_priority_combo
             self.queue_pause_btn = presets_ui.queue_pause_btn
@@ -698,6 +720,8 @@ def run() -> int:
 
             self.source_edit = paths_actions_ui.source_edit
             self.dest_edit = paths_actions_ui.dest_edit
+            self.recent_source_combo = paths_actions_ui.recent_source_combo
+            self.recent_dest_combo = paths_actions_ui.recent_dest_combo
             self.btn_source = paths_actions_ui.btn_source
             self.btn_dest = paths_actions_ui.btn_dest
             self.btn_open_dest = paths_actions_ui.btn_open_dest
@@ -727,8 +751,13 @@ def run() -> int:
             self.chk_console_folders = paths_actions_ui.chk_console_folders
             self.chk_region_subfolders = paths_actions_ui.chk_region_subfolders
             self.chk_preserve_structure = paths_actions_ui.chk_preserve_structure
+            self.actions_advanced_toggle = paths_actions_ui.actions_advanced_toggle
+            self.actions_advanced_group = paths_actions_ui.actions_advanced_group
             self.default_mode_combo = paths_actions_ui.default_mode_combo
             self.default_conflict_combo = paths_actions_ui.default_conflict_combo
+            self.rename_template_edit = paths_actions_ui.rename_template_edit
+            self.btn_rename_builder = paths_actions_ui.btn_rename_builder
+            self.copy_first_checkbox = paths_actions_ui.copy_first_checkbox
             self.actions_advanced_toggle = paths_actions_ui.actions_advanced_toggle
             self.actions_advanced_group = paths_actions_ui.actions_advanced_group
 
@@ -768,8 +797,23 @@ def run() -> int:
             self.btn_output = external_tools_ui.btn_output
             self.btn_temp = external_tools_ui.btn_temp
 
+            self.rule_tester_group = QtWidgets.QGroupBox("Detection-Rule-Tester")
+            rule_layout = QtWidgets.QHBoxLayout(self.rule_tester_group)
+            self.rule_tester_input = QtWidgets.QLineEdit()
+            self.rule_tester_input.setPlaceholderText("Dateiname oder Pfad…")
+            self.btn_rule_tester = QtWidgets.QPushButton("Testen")
+            rule_layout.addWidget(self.rule_tester_input)
+            rule_layout.addWidget(self.btn_rule_tester)
+            tools_layout.addWidget(self.rule_tester_group)
+            self.accent_preview = QtWidgets.QLabel("-")
+            self.accent_preview.setMinimumWidth(90)
+            self.accent_preview.setStyleSheet("padding: 2px 6px; border: 1px solid #888;")
+            self.btn_pick_accent = QtWidgets.QPushButton("Farbe wählen")
+            self.btn_pick_accent.clicked.connect(self._pick_accent_color)
+
             self.source_edit.textChanged.connect(self._on_source_text_changed)
             self.dest_edit.textChanged.connect(self._on_dest_text_changed)
+            self.btn_rule_tester.clicked.connect(self._open_rule_tester)
             if hasattr(self, "dashboard_source_edit"):
                 self.dashboard_source_edit.textChanged.connect(self._on_source_text_changed)
             if hasattr(self, "dashboard_dest_edit"):
@@ -782,6 +826,8 @@ def run() -> int:
                 LAYOUTS,
                 SettingsInputs(
                     theme_combo=self.theme_combo,
+                    accent_preview=self.accent_preview,
+                    accent_button=self.btn_pick_accent,
                     review_gate_checkbox=self.review_gate_checkbox,
                     external_tools_checkbox=self.external_tools_checkbox,
                     btn_open_overrides=self.btn_open_overrides,
@@ -802,6 +848,9 @@ def run() -> int:
             self.log_visible_checkbox = settings_ui.log_visible_checkbox
             self.remember_window_checkbox = settings_ui.remember_window_checkbox
             self.drag_drop_checkbox = settings_ui.drag_drop_checkbox
+            self.compact_mode_checkbox = settings_ui.compact_mode_checkbox
+            self.pro_mode_checkbox = settings_ui.pro_mode_checkbox
+            self.btn_show_shortcuts = settings_ui.btn_show_shortcuts
 
             if show_external_tools:
                 self.output_edit = external_tools_ui.output_edit
@@ -915,6 +964,7 @@ def run() -> int:
             self.log_toggle_btn = log_ui.log_toggle_btn
             self.log_filter_edit = log_ui.log_filter_edit
             self.log_filter_clear_btn = log_ui.log_filter_clear_btn
+            self.log_level_combo = log_ui.log_level_combo
             self.log_autoscroll_checkbox = log_ui.log_autoscroll_checkbox
             self.log_dock = log_ui.log_dock
             self.addDockWidget(QtCore.Qt.DockWidgetArea.BottomDockWidgetArea, self.log_dock)
@@ -944,6 +994,7 @@ def run() -> int:
 
             self.log_filter_edit.textChanged.connect(self._apply_log_filter)
             self.log_filter_clear_btn.clicked.connect(lambda: self.log_filter_edit.setText(""))
+            self.log_level_combo.currentTextChanged.connect(lambda _value: self._apply_log_filter())
             self.log_autoscroll_checkbox.stateChanged.connect(self._on_log_autoscroll_changed)
             self.queue_pause_btn.clicked.connect(self._pause_jobs)
             self.queue_resume_btn.clicked.connect(self._resume_jobs)
@@ -1033,6 +1084,10 @@ def run() -> int:
                 self.scan_shortcut.activated.connect(self._start_scan)
                 self.preview_shortcut.activated.connect(self._start_preview)
                 self.execute_shortcut_alt.activated.connect(self._start_execute)
+            shortcut_cls = getattr(QtGui, "QShortcut", None) or getattr(QtWidgets, "QShortcut", None)
+            if shortcut_cls is not None:
+                self.shortcuts_help_shortcut = shortcut_cls(QtGui.QKeySequence("F1"), self)
+                self.shortcuts_help_shortcut.activated.connect(self._show_shortcuts_dialog)
             self.hide_unknown_checkbox.stateChanged.connect(lambda _v: self._on_filters_changed())
             self.ext_filter_edit.textChanged.connect(self._on_filters_changed)
             self.min_size_edit.textChanged.connect(self._on_filters_changed)
@@ -1052,10 +1107,15 @@ def run() -> int:
             self.log_visible_checkbox.stateChanged.connect(self._on_log_visible_changed)
             self.remember_window_checkbox.stateChanged.connect(self._on_remember_window_changed)
             self.drag_drop_checkbox.stateChanged.connect(self._on_drag_drop_changed)
+            self.compact_mode_checkbox.stateChanged.connect(self._on_compact_mode_changed)
+            self.pro_mode_checkbox.stateChanged.connect(self._on_pro_mode_changed)
+            self.btn_show_shortcuts.clicked.connect(self._show_shortcuts_dialog)
             self.btn_preset_apply.clicked.connect(self._apply_selected_preset)
             self.btn_preset_save.clicked.connect(self._save_preset)
             self.btn_preset_delete.clicked.connect(self._delete_selected_preset)
             self.btn_execute_selected.clicked.connect(self._start_execute_selected)
+            self.btn_plan_undo.clicked.connect(self._undo_plan)
+            self.btn_plan_redo.clicked.connect(self._redo_plan)
             self.btn_library_report.clicked.connect(self._show_library_report)
             self.btn_library_report_save.clicked.connect(self._save_library_report)
             self.btn_fav_add.clicked.connect(self._add_current_paths_to_favorites)
@@ -1067,7 +1127,12 @@ def run() -> int:
             self.chk_console_folders.stateChanged.connect(self._on_sort_settings_changed)
             self.chk_region_subfolders.stateChanged.connect(self._on_sort_settings_changed)
             self.chk_preserve_structure.stateChanged.connect(self._on_sort_settings_changed)
+            self.copy_first_checkbox.stateChanged.connect(self._on_sort_settings_changed)
+            self.rename_template_edit.editingFinished.connect(self._on_rename_template_changed)
+            self.btn_rename_builder.clicked.connect(self._open_rename_pattern_builder)
             self.rebuild_checkbox.stateChanged.connect(self._on_rebuild_toggle)
+            self.recent_source_combo.currentIndexChanged.connect(self._on_recent_source_selected)
+            self.recent_dest_combo.currentIndexChanged.connect(self._on_recent_dest_selected)
             self.btn_nav_dashboard.clicked.connect(lambda: self.tabs.setCurrentIndex(int(self._tab_index_dashboard)))
             self.btn_nav_sort.clicked.connect(lambda: self.tabs.setCurrentIndex(int(self._tab_index_sort)))
             self.btn_nav_conversions.clicked.connect(lambda: self.tabs.setCurrentIndex(int(self._tab_index_conversions)))
@@ -1086,9 +1151,11 @@ def run() -> int:
             self._load_log_visibility()
             self._load_general_settings_from_config()
             self._load_favorites_from_config()
+            self._refresh_recent_paths_label()
             self._set_external_tools_enabled(False)
             self._update_safety_pill()
             self._load_presets_from_config()
+            self._sync_plan_history_buttons()
             self._dashboard_timer = QtCore.QTimer(self)
             self._dashboard_timer.setInterval(600)
             self._dashboard_timer.timeout.connect(self._refresh_dashboard)
@@ -1098,6 +1165,7 @@ def run() -> int:
             self._refresh_dashboard()
             if show_external_tools:
                 self._probe_tools_async()
+            QtCore.QTimer.singleShot(200, self._maybe_show_first_run_wizard)
             self._init_shell_layout()
 
         def _load_dat_config(self) -> dict:
@@ -1577,6 +1645,9 @@ def run() -> int:
                 self.chk_console_folders.setChecked(console_enabled and create_console)
                 self.chk_region_subfolders.setChecked(bool(sorting_cfg.get("region_based_sorting", False)))
                 self.chk_preserve_structure.setChecked(bool(sorting_cfg.get("preserve_folder_structure", False)))
+                self.copy_first_checkbox.setChecked(bool(sorting_cfg.get("copy_first_staging", False)))
+                template = str(sorting_cfg.get("rename_template") or "")
+                self.rename_template_edit.setText(template)
             except Exception:
                 return
 
@@ -1592,11 +1663,86 @@ def run() -> int:
                 sorting_cfg["create_console_folders"] = console_checked
                 sorting_cfg["region_based_sorting"] = bool(self.chk_region_subfolders.isChecked())
                 sorting_cfg["preserve_folder_structure"] = bool(self.chk_preserve_structure.isChecked())
+                sorting_cfg["copy_first_staging"] = bool(self.copy_first_checkbox.isChecked())
                 features_cfg["sorting"] = sorting_cfg
                 cfg["features"] = features_cfg
                 save_config(cfg)
             except Exception:
                 return
+
+        def _on_rename_template_changed(self) -> None:
+            try:
+                template = str(self.rename_template_edit.text() or "").strip()
+                cfg = load_config()
+                if not isinstance(cfg, dict):
+                    cfg = {}
+                features_cfg = cfg.get("features", {}) or {}
+                sorting_cfg = features_cfg.get("sorting", {}) or {}
+                sorting_cfg["rename_template"] = template
+                features_cfg["sorting"] = sorting_cfg
+                cfg["features"] = features_cfg
+                save_config(cfg)
+            except Exception:
+                return
+
+        def _open_rename_pattern_builder(self) -> None:
+            dialog = QtWidgets.QDialog(self)
+            dialog.setWindowTitle("Rename-Pattern-Builder")
+            dialog.setLayout(QtWidgets.QVBoxLayout())
+            hint = QtWidgets.QLabel("Verfügbare Tokens: {system} {name} {ext} {ext_dot} {region} {version} {languages}")
+            hint.setWordWrap(True)
+            dialog.layout().addWidget(hint)
+            template_edit = QtWidgets.QLineEdit(self.rename_template_edit.text())
+            dialog.layout().addWidget(template_edit)
+            preview_label = QtWidgets.QLabel("Vorschau: -")
+            preview_label.setWordWrap(True)
+            dialog.layout().addWidget(preview_label)
+
+            def _get_sample() -> tuple[str, object, str]:
+                try:
+                    rows = self._get_selected_source_rows()
+                    if rows:
+                        row = rows[0]
+                        if 0 <= row < len(self._table_items):
+                            item = self._table_items[row]
+                            return str(item.input_path or ""), item, str(item.detected_system or "Unknown")
+                except Exception:
+                    pass
+                from types import SimpleNamespace
+                sample_item = SimpleNamespace(
+                    region="USA",
+                    version="v1.0",
+                    languages=("EN",),
+                    raw={},
+                    detected_system="Sample",
+                )
+                return "C:/ROMs/Sample Game (USA).zip", sample_item, "Sample"
+
+            def _update_preview() -> None:
+                src_path, item, system = _get_sample()
+                try:
+                    rendered = _apply_rename_template(str(template_edit.text() or ""), item, Path(src_path), system)
+                    preview_label.setText(f"Vorschau: {rendered}")
+                except Exception as exc:
+                    preview_label.setText(f"Vorschau: Fehler ({exc})")
+
+            template_edit.textChanged.connect(lambda _v: _update_preview())
+            _update_preview()
+
+            btn_row = QtWidgets.QHBoxLayout()
+            btn_row.addStretch(1)
+            btn_cancel = QtWidgets.QPushButton("Abbrechen")
+            btn_ok = QtWidgets.QPushButton("Übernehmen")
+            btn_row.addWidget(btn_cancel)
+            btn_row.addWidget(btn_ok)
+            dialog.layout().addLayout(btn_row)
+
+            btn_cancel.clicked.connect(dialog.reject)
+            btn_ok.clicked.connect(dialog.accept)
+
+            if dialog.exec() == QtWidgets.QDialog.DialogCode.Accepted:
+                self.rename_template_edit.setText(str(template_edit.text() or "").strip())
+                self._on_rename_template_changed()
 
         def _on_dat_auto_load_changed(self, _value: int) -> None:
             try:
@@ -1765,13 +1911,18 @@ def run() -> int:
                 if not isinstance(cfg, dict):
                     return
                 gui_cfg = cfg.get("gui_settings", {}) or {}
+                accent_value = gui_cfg.get("accent_color")
                 theme_value = gui_cfg.get("theme")
                 if not theme_value:
                     theme_value = (cfg.get("ui", {}) or {}).get("theme")
                 if not theme_value:
+                    if accent_value:
+                        self._apply_accent_color(str(accent_value), save_config=False)
                     return
                 theme_name = self._resolve_theme_name(str(theme_value))
                 if not theme_name:
+                    if accent_value:
+                        self._apply_accent_color(str(accent_value), save_config=False)
                     return
                 if str(theme_value).strip().lower() in ("auto", "system"):
                     idx = self.theme_combo.findText("Auto")
@@ -1783,6 +1934,8 @@ def run() -> int:
                     if idx >= 0:
                         self.theme_combo.setCurrentIndex(idx)
                     self._apply_theme(self._theme_manager.get_theme(theme_name))
+                if accent_value:
+                    self._apply_accent_color(str(accent_value), save_config=False)
                 self._sync_theme_combos()
             except Exception:
                 return
@@ -1847,6 +2000,41 @@ def run() -> int:
                     f"Öffnen fehlgeschlagen:\n{exc}",
                 )
 
+        def _open_rule_tester(self) -> None:
+            try:
+                value = str(self.rule_tester_input.text() or "").strip()
+            except Exception:
+                value = ""
+            if not value:
+                show_info(QtWidgets, self, "Detection-Rule-Tester", "Bitte Dateiname/Pfad eingeben.")
+                return
+            try:
+                from ..core.platform_heuristics import evaluate_platform_candidates
+                result = evaluate_platform_candidates(value)
+            except Exception as exc:
+                show_warning(QtWidgets, self, "Detection-Rule-Tester", f"Fehler: {exc}")
+                return
+            candidates = ", ".join(result.get("candidates") or []) or "-"
+            signals = ", ".join(result.get("signals") or []) or "-"
+            details = result.get("candidate_details") or []
+            detail_lines = []
+            for entry in details[:5]:
+                if not isinstance(entry, dict):
+                    continue
+                platform_id = str(entry.get("platform_id") or "-")
+                try:
+                    score = float(entry.get("score") or 0.0)
+                except Exception:
+                    score = 0.0
+                detail_lines.append(f"{platform_id} (score {score:.2f})")
+            detail_text = "\n".join(detail_lines) if detail_lines else "-"
+            msg = (
+                f"Kandidaten: {candidates}\n"
+                f"Signale: {signals}\n"
+                f"Details:\n{detail_text}"
+            )
+            show_info(QtWidgets, self, "Detection-Rule-Tester", msg)
+
         def _apply_theme(self, theme) -> None:
             try:
                 sheet = theme.generate_qt_stylesheet()
@@ -1855,8 +2043,113 @@ def run() -> int:
                     app.setStyleSheet(sheet)
                 else:
                     self.setStyleSheet(sheet)
+                try:
+                    accent = getattr(getattr(theme, "colors", None), "accent", None)
+                    self._update_accent_preview(str(accent or ""))
+                except Exception:
+                    pass
             except Exception:
                 return
+
+        def _ensure_theme_in_combos(self, name: str) -> None:
+            for combo in (self.theme_combo, self.header_theme_combo):
+                if combo is None:
+                    continue
+                try:
+                    if combo.findText(name) < 0:
+                        combo.addItem(name)
+                except Exception:
+                    continue
+
+        def _update_accent_preview(self, color: str) -> None:
+            if not getattr(self, "accent_preview", None):
+                return
+            value = str(color or "").strip()
+            if not value:
+                self.accent_preview.setText("-")
+                self.accent_preview.setStyleSheet("padding: 2px 6px; border: 1px solid #888;")
+                return
+
+            self.accent_preview.setText(value)
+            try:
+                raw = value.lstrip("#")
+                r = int(raw[0:2], 16)
+                g = int(raw[2:4], 16)
+                b = int(raw[4:6], 16)
+                bright = (r * 299 + g * 587 + b * 114) / 1000
+                text_color = "#000000" if bright > 140 else "#FFFFFF"
+            except Exception:
+                text_color = "#000000"
+            self.accent_preview.setStyleSheet(
+                f"padding: 2px 6px; border: 1px solid #888; background: {value}; color: {text_color};"
+            )
+
+        def _apply_accent_color(self, color: str, *, save_config: bool = True) -> None:
+            hex_color = str(color or "").strip()
+            if not hex_color:
+                return
+            current = self._theme_manager.get_theme()
+            colors = current.colors
+            custom_name = "Accent Custom"
+            try:
+                existing = self._theme_manager.get_theme(custom_name)
+                if existing.type == ThemeType.CUSTOM:
+                    self._theme_manager.remove_theme(custom_name)
+            except Exception:
+                pass
+
+            new_colors = ColorScheme(
+                primary=colors.primary,
+                secondary=colors.secondary,
+                background=colors.background,
+                text=colors.text,
+                accent=hex_color,
+                error=colors.error,
+                warning=colors.warning,
+                success=colors.success,
+                border=colors.border,
+            )
+            new_theme = Theme(
+                name=custom_name,
+                type=ThemeType.CUSTOM,
+                colors=new_colors,
+                font_family=current.font_family,
+                font_size=current.font_size,
+                border_radius=current.border_radius,
+                spacing=current.spacing,
+                use_system_defaults=current.use_system_defaults,
+            )
+            if self._theme_manager.add_theme(new_theme):
+                self._theme_manager.set_current_theme(custom_name)
+                self._ensure_theme_in_combos(custom_name)
+                self._apply_theme(new_theme)
+                if self.theme_combo is not None:
+                    self.theme_combo.setCurrentText(custom_name)
+            if save_config:
+                try:
+                    cfg = load_config() or {}
+                    if not isinstance(cfg, dict):
+                        cfg = {}
+                    gui_cfg = cfg.get("gui_settings", {}) or {}
+                    gui_cfg["accent_color"] = hex_color
+                    cfg["gui_settings"] = gui_cfg
+                    self._save_config_async(cfg)
+                except Exception:
+                    pass
+
+        def _pick_accent_color(self) -> None:
+            try:
+                current = self._theme_manager.get_theme()
+                current_color = getattr(current.colors, "accent", "")
+            except Exception:
+                current_color = ""
+            try:
+                color = QtWidgets.QColorDialog.getColor(QtGui.QColor(current_color), self, "Accent-Farbe wählen")
+            except Exception:
+                color = None
+            if not color or not color.isValid():
+                return
+            self._apply_accent_color(color.name())
 
         def _apply_qt_palette_theme(self, key: str) -> bool:
             if self._qt_theme_manager is None:
@@ -2008,6 +2301,8 @@ def run() -> int:
                 self.log_visible_checkbox.setChecked(bool(gui_cfg.get("log_visible", False)))
                 self.remember_window_checkbox.setChecked(bool(gui_cfg.get("remember_window_size", True)))
                 self.drag_drop_checkbox.setChecked(bool(gui_cfg.get("drag_drop_enabled", True)))
+                self.compact_mode_checkbox.setChecked(bool(gui_cfg.get("compact_mode", False)))
+                self.pro_mode_checkbox.setChecked(bool(gui_cfg.get("pro_mode", False)))
 
                 default_mode = str(gui_cfg.get("default_sort_mode") or "copy")
                 default_conflict = str(gui_cfg.get("default_conflict_policy") or "rename")
@@ -2016,8 +2311,89 @@ def run() -> int:
                 if self.default_conflict_combo.findText(default_conflict) >= 0:
                     self.default_conflict_combo.setCurrentText(default_conflict)
                 self._apply_default_sort_settings(default_mode, default_conflict)
+                self._apply_compact_mode(self.compact_mode_checkbox.isChecked())
+                self._apply_pro_mode(self.pro_mode_checkbox.isChecked())
             except Exception:
                 return
+
+        def _maybe_show_first_run_wizard(self) -> None:
+            try:
+                cfg = load_config()
+            except Exception:
+                cfg = {}
+            gui_cfg = cfg.get("gui_settings", {}) if isinstance(cfg, dict) else {}
+            if gui_cfg.get("first_run_complete"):
+                return
+
+            wizard = QtWidgets.QWizard(self)
+            wizard.setWindowTitle("Erststart-Assistent")
+            wizard.setOption(QtWidgets.QWizard.WizardOption.NoBackButtonOnStartPage, True)
+
+            page1 = QtWidgets.QWizardPage()
+            page1.setTitle("Willkommen")
+            page1_layout = QtWidgets.QVBoxLayout(page1)
+            page1_layout.addWidget(QtWidgets.QLabel("Willkommen bei ROM-Sorter-Pro."))
+            page1_layout.addWidget(QtWidgets.QLabel("Dieser Assistent hilft beim ersten Setup."))
+
+            page2 = QtWidgets.QWizardPage()
+            page2.setTitle("Quelle & Ziel")
+            page2_layout = QtWidgets.QGridLayout(page2)
+            source_edit = QtWidgets.QLineEdit()
+            dest_edit = QtWidgets.QLineEdit()
+            btn_source = QtWidgets.QPushButton("Quelle wählen…")
+            btn_dest = QtWidgets.QPushButton("Ziel wählen…")
+            page2_layout.addWidget(QtWidgets.QLabel("Quelle:"), 0, 0)
+            page2_layout.addWidget(source_edit, 0, 1)
+            page2_layout.addWidget(btn_source, 0, 2)
+            page2_layout.addWidget(QtWidgets.QLabel("Ziel:"), 1, 0)
+            page2_layout.addWidget(dest_edit, 1, 1)
+            page2_layout.addWidget(btn_dest, 1, 2)
+            page2_layout.setColumnStretch(1, 1)
+
+            def choose_source() -> None:
+                directory = get_existing_directory(QtWidgets, self, "Quellordner wählen")
+                if directory:
+                    source_edit.setText(directory)
+
+            def choose_dest() -> None:
+                directory = get_existing_directory(QtWidgets, self, "Zielordner wählen")
+                if directory:
+                    dest_edit.setText(directory)
+
+            btn_source.clicked.connect(choose_source)
+            btn_dest.clicked.connect(choose_dest)
+
+            page3 = QtWidgets.QWizardPage()
+            page3.setTitle("DAT-Quellen")
+            page3_layout = QtWidgets.QVBoxLayout(page3)
+            page3_layout.addWidget(
+                QtWidgets.QLabel("Optional: DAT-Quellen hinzufügen für bessere Erkennung.")
+            )
+            btn_dat = QtWidgets.QPushButton("DAT-Quellen öffnen")
+            btn_dat.clicked.connect(self._open_dat_sources_dialog)
+            page3_layout.addWidget(btn_dat)
+            page3_layout.addStretch(1)
+
+            wizard.addPage(page1)
+            wizard.addPage(page2)
+            wizard.addPage(page3)
+
+            def on_finish() -> None:
+                if source_edit.text().strip():
+                    self._set_source_text(source_edit.text().strip())
+                if dest_edit.text().strip():
+                    self._set_dest_text(dest_edit.text().strip())
+                if isinstance(cfg, dict):
+                    gui_cfg = cfg.get("gui_settings", {}) or {}
+                    gui_cfg["first_run_complete"] = True
+                    cfg["gui_settings"] = gui_cfg
+                    try:
+                        save_config(cfg)
+                    except Exception:
+                        pass
+
+            wizard.finished.connect(on_finish)
+            wizard.open()
 
         def _update_gui_setting(self, key: str, value: object) -> None:
             try:
@@ -2028,6 +2404,92 @@ def run() -> int:
                 gui_cfg[key] = value
                 cfg["gui_settings"] = gui_cfg
                 self._save_config_async(cfg)
+            except Exception:
+                return
+
+        def _apply_compact_mode(self, enabled: bool) -> None:
+            try:
+                compact = bool(enabled)
+                if hasattr(self, "sidebar_widget"):
+                    self.sidebar_widget.setVisible(not compact)
+                if hasattr(self, "root_layout"):
+                    self.root_layout.setContentsMargins(
+                        4 if compact else 10,
+                        4 if compact else 10,
+                        4 if compact else 10,
+                        4 if compact else 10,
+                    )
+                    self.root_layout.setSpacing(4 if compact else 8)
+                if hasattr(self, "content_layout"):
+                    self.content_layout.setSpacing(4 if compact else 8)
+                if hasattr(self, "details_group"):
+                    self.details_group.setVisible(not compact)
+            except Exception:
+                return
+
+        def _apply_pro_mode(self, enabled: bool) -> None:
+            try:
+                pro = bool(enabled)
+                for widget in (
+                    self.review_gate_checkbox,
+                    self.external_tools_checkbox,
+                    self.btn_open_overrides,
+                    self.tools_group,
+                    self.tools_status_hint,
+                    getattr(self, "actions_advanced_toggle", None),
+                    getattr(self, "actions_advanced_group", None),
+                ):
+                    if widget is None:
+                        continue
+                    widget.setVisible(pro)
+            except Exception:
+                return
+
+        def _on_compact_mode_changed(self, _value: int) -> None:
+            enabled = bool(self.compact_mode_checkbox.isChecked())
+            self._update_gui_setting("compact_mode", enabled)
+            self._apply_compact_mode(enabled)
+
+        def _on_pro_mode_changed(self, _value: int) -> None:
+            enabled = bool(self.pro_mode_checkbox.isChecked())
+            self._update_gui_setting("pro_mode", enabled)
+            self._apply_pro_mode(enabled)
+
+        def _show_shortcuts_dialog(self) -> None:
+            shortcuts = [
+                ("Ctrl+S", "Scan starten"),
+                ("Ctrl+P", "Preview Sort"),
+                ("Ctrl+E", "Execute Sort"),
+                ("Ctrl+Enter", "Quick Execute/Preview"),
+                ("Ctrl+K", "Command Palette"),
+                ("F1", "Shortcuts anzeigen"),
+            ]
+            dialog = QtWidgets.QDialog(self)
+            dialog.setWindowTitle("Tastenkürzel")
+            dialog.setLayout(QtWidgets.QVBoxLayout())
+            table = QtWidgets.QTableWidget(len(shortcuts), 2)
+            table.setHorizontalHeaderLabels(["Shortcut", "Aktion"])
+            table.verticalHeader().setVisible(False)
+            table.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
+            table.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.NoSelection)
+            for row, (key, desc) in enumerate(shortcuts):
+                table.setItem(row, 0, QtWidgets.QTableWidgetItem(key))
+                table.setItem(row, 1, QtWidgets.QTableWidgetItem(desc))
+            table.resizeColumnsToContents()
+            dialog.layout().addWidget(table)
+            btn_close = QtWidgets.QPushButton("Schließen")
+            btn_close.clicked.connect(dialog.accept)
+            dialog.layout().addWidget(btn_close)
+            dialog.resize(420, 260)
+            dialog.exec()
+
+        def _show_undo_toast(self) -> None:
+            try:
+                if self.status_bar is not None:
+                    self.status_bar.showMessage("Rollback verfügbar (Move rückgängig machen)", 10000)
+                if getattr(self, "btn_rollback", None) is not None:
+                    self.btn_rollback.setStyleSheet("font-weight: 700;")
+                    QtCore.QTimer.singleShot(10000, lambda: self.btn_rollback.setStyleSheet(""))
             except Exception:
                 return
 
@@ -2216,14 +2678,8 @@ def run() -> int:
                 self._last_view = "scan"
 
         def _format_reason(self, item: ScanItem) -> str:
-            raw = item.raw or {}
-            reason = raw.get("reason") or raw.get("policy") or ""
-            if not reason:
-                reason = str(item.detection_source or "")
             min_conf = self._get_min_confidence()
-            if str(item.detection_source) == "policy-low-confidence":
-                reason = f"low-confidence (<{min_conf:.2f})"
-            return str(reason or "")
+            return format_reason(item, min_confidence=min_conf)
 
         def _format_normalization_hint(self, input_path: str, platform_id: str) -> str:
             if not input_path:
@@ -2255,6 +2711,7 @@ def run() -> int:
             confidence = self._format_confidence(item.detection_confidence)
             exact = "ja" if getattr(item, "is_exact", False) else "nein"
             normalization_hint = self._format_normalization_hint(item.input_path, item.detected_system)
+            heuristics = format_heuristics(item)
             msg = (
                 f"System: {item.detected_system}\n"
                 f"Reason: {reason}\n"
@@ -2265,6 +2722,8 @@ def run() -> int:
                 f"Kandidaten: {candidates}\n"
                 f"Normalisierung: {normalization_hint}"
             )
+            if heuristics and heuristics != "-":
+                msg = f"{msg}\nHeuristik:\n{heuristics}"
             show_info(QtWidgets, self, "Why Unknown", msg)
 
         def _clear_filters(self) -> None:
@@ -2397,6 +2856,65 @@ def run() -> int:
                 self._presets.pop(name, None)
                 self._save_presets_to_config()
                 self._refresh_presets_combo()
+
+        def _set_active_plan(self, plan: SortPlan, *, record_history: bool = True) -> None:
+            self._sort_plan = plan
+            if record_history:
+                self._push_plan_history(plan)
+            self._populate_plan_table(plan)
+
+        def _push_plan_history(self, plan: SortPlan) -> None:
+            if self._plan_history_index < len(self._plan_history) - 1:
+                self._plan_history = self._plan_history[: self._plan_history_index + 1]
+            self._plan_history.append(plan)
+            if len(self._plan_history) > 5:
+                self._plan_history = self._plan_history[-5:]
+            self._plan_history_index = len(self._plan_history) - 1
+            self._sync_plan_history_buttons()
+
+        def _sync_plan_history_buttons(self) -> None:
+            try:
+                self.btn_plan_undo.setEnabled(self._plan_history_index > 0)
+                self.btn_plan_redo.setEnabled(self._plan_history_index < len(self._plan_history) - 1)
+            except Exception:
+                return
+
+        def _undo_plan(self) -> None:
+            if self._plan_history_index <= 0:
+                return
+            self._plan_history_index -= 1
+            plan = self._plan_history[self._plan_history_index]
+            self._set_active_plan(plan, record_history=False)
+            self._sync_plan_history_buttons()
+
+        def _redo_plan(self) -> None:
+            if self._plan_history_index >= len(self._plan_history) - 1:
+                return
+            self._plan_history_index += 1
+            plan = self._plan_history[self._plan_history_index]
+            self._set_active_plan(plan, record_history=False)
+            self._sync_plan_history_buttons()
+
+        def _override_action_for_rows(self, rows: List[int], action_value: str) -> None:
+            if self._sort_plan is None or self._last_view != "plan":
+                show_info(QtWidgets, self, "Aktion", "Bitte zuerst einen Plan erzeugen.")
+                return
+            normalized = str(action_value).strip().lower()
+            if normalized not in ("copy", "move", "skip", "convert"):
+                return
+            new_actions: List[SortAction] = []
+            for idx, action in enumerate(self._sort_plan.actions):
+                if idx in rows:
+                    new_actions.append(replace(action, action=normalized))
+                else:
+                    new_actions.append(action)
+            new_plan = SortPlan(
+                dest_path=self._sort_plan.dest_path,
+                mode=self._sort_plan.mode,
+                on_conflict=self._sort_plan.on_conflict,
+                actions=new_actions,
+            )
+            self._set_active_plan(new_plan, record_history=True)
 
         def _get_selected_plan_indices(self) -> List[int]:
             try:
@@ -2812,6 +3330,15 @@ def run() -> int:
 
         def _apply_log_filter(self) -> None:
             text = str(self.log_filter_edit.text() or "").strip().lower()
+            level = str(self.log_level_combo.currentText() or "").strip().lower()
+            level_map = {
+                "alle": "ALL",
+                "info": "INFO",
+                "warnung": "WARNING",
+                "fehler": "ERROR",
+                "debug": "DEBUG",
+            }
+            self._log_helper.set_level_filter(level_map.get(level, ""))
             self._log_helper.apply_filter(text)
 
         def _on_log_autoscroll_changed(self, _value: int) -> None:
@@ -2899,6 +3426,20 @@ def run() -> int:
             action_reveal_target = menu.addAction("Zielordner zeigen")
             menu.addSeparator()
             action_override = menu.addAction("System überschreiben…")
+            action_override_bulk = None
+            selected_rows = self._get_selected_source_rows()
+            if len(selected_rows) > 1:
+                action_override_bulk = menu.addAction("Mehrfach überschreiben…")
+            action_override_copy = None
+            action_override_move = None
+            action_override_skip = None
+            action_override_reset = None
+            if self._sort_plan is not None and self._last_view == "plan":
+                menu.addSeparator()
+                action_override_copy = menu.addAction("Aktion → Copy")
+                action_override_move = menu.addAction("Aktion → Move")
+                action_override_skip = menu.addAction("Aktion → Skip")
+                action_override_reset = menu.addAction("Aktion → Standard (Plan)")
             chosen = menu.exec(self.table.viewport().mapToGlobal(pos))
             if chosen == action_copy_path:
                 QtWidgets.QApplication.clipboard().setText(row_data.input_path or "")
@@ -2912,6 +3453,17 @@ def run() -> int:
                     self._open_path_in_explorer(str(Path(target).parent))
             elif chosen == action_override:
                 self._prompt_override_for_row(row)
+            elif action_override_bulk is not None and chosen == action_override_bulk:
+                self._prompt_bulk_override_for_rows(selected_rows)
+            elif action_override_copy is not None and chosen == action_override_copy:
+                self._override_action_for_rows(selected_rows, "copy")
+            elif action_override_move is not None and chosen == action_override_move:
+                self._override_action_for_rows(selected_rows, "move")
+            elif action_override_skip is not None and chosen == action_override_skip:
+                self._override_action_for_rows(selected_rows, "skip")
+            elif action_override_reset is not None and chosen == action_override_reset:
+                default_action = str(self._sort_plan.mode) if self._sort_plan is not None else "copy"
+                self._override_action_for_rows(selected_rows, default_action)
 
         def _prompt_override_for_row(self, row: int) -> None:
             if row < 0 or row >= len(self._table_items):
@@ -2970,11 +3522,106 @@ def run() -> int:
                 )
                 return
             self._append_log(f"Override gespeichert: {platform_id} → {input_path}")
+            suggestions: List[str] = []
+            if self._scan_result is not None:
+                suggestions = suggest_identification_overrides(input_path, self._scan_result.items)
+            if suggestions:
+                question = (
+                    f"{len(suggestions)} ähnliche Dateien gefunden.\n"
+                    "Sollen diese ebenfalls überschrieben werden?"
+                )
+                if ask_question(QtWidgets, self, "Override-Vorschläge", question, default_no=True):
+                    ok_bulk, message_bulk, path_bulk = add_identification_overrides_bulk(
+                        suggestions,
+                        platform_id,
+                        config=cfg,
+                        name="suggested-ui",
+                        confidence=1.0,
+                    )
+                    if ok_bulk:
+                        self._append_log(f"Bulk-Override gespeichert ({len(suggestions)}): {path_bulk}")
+                    else:
+                        show_warning(
+                            QtWidgets,
+                            self,
+                            "Override",
+                            f"Bulk-Override fehlgeschlagen:\n{message_bulk}",
+                        )
             show_info(
                 QtWidgets,
                 self,
                 "Override gespeichert",
                 f"Override gespeichert in:\n{path}\n\nBitte Scan erneut starten, damit er greift.",
+            )
+
+        def _prompt_bulk_override_for_rows(self, rows: List[int]) -> None:
+            valid_rows = [row for row in rows if 0 <= row < len(self._table_items)]
+            if not valid_rows:
+                show_warning(QtWidgets, self, "Override", "Keine gültigen Zeilen ausgewählt.")
+                return
+            input_paths: List[str] = []
+            options: List[str] = []
+            for idx, row in enumerate(valid_rows):
+                item = self._table_items[row]
+                input_path = str(getattr(item, "input_path", "") or "")
+                if input_path:
+                    input_paths.append(input_path)
+                if idx == 0:
+                    current = str(getattr(item, "detected_system", "") or "")
+                    if current and current != "Unknown" and current not in options:
+                        options.append(current)
+                    raw = getattr(item, "raw", None) or {}
+                    candidates = raw.get("candidates") or []
+                    if isinstance(candidates, list):
+                        for entry in candidates:
+                            entry_val = str(entry or "").strip()
+                            if entry_val and entry_val not in options:
+                                options.append(entry_val)
+
+            if not input_paths:
+                show_warning(QtWidgets, self, "Override", "Keine gültigen Pfade gefunden.")
+                return
+            if not options:
+                options = ["SNES", "NES", "PSX", "N64", "Genesis"]
+
+            value, ok = QtWidgets.QInputDialog.getItem(
+                self,
+                "Mehrfach-Override",
+                "Plattform-ID für alle ausgewählten ROMs:",
+                options,
+                0,
+                True,
+            )
+            if not ok:
+                return
+            platform_id = str(value or "").strip()
+            if not platform_id:
+                show_warning(QtWidgets, self, "Override", "Plattform-ID darf nicht leer sein.")
+                return
+            cfg = load_config()
+            ok, message, path = add_identification_overrides_bulk(
+                input_paths,
+                platform_id,
+                config=cfg,
+                name="manual-ui-bulk",
+                confidence=1.0,
+            )
+            if not ok:
+                show_warning(
+                    QtWidgets,
+                    self,
+                    "Override",
+                    f"Override konnte nicht gespeichert werden:\n{message}",
+                )
+                return
+            self._append_log(
+                f"Bulk-Override gespeichert: {platform_id} für {len(input_paths)} ROMs"
+            )
+            show_info(
+                QtWidgets,
+                self,
+                "Override gespeichert",
+                f"Override für {len(input_paths)} ROMs gespeichert.\n\nDatei: {path}",
             )
 
         def _open_path_in_explorer(self, path: Optional[str]) -> None:
@@ -3215,12 +3862,26 @@ def run() -> int:
         def _confirm_execute_if_warnings(self) -> bool:
             if not self.review_gate_checkbox.isChecked():
                 return True
-            if not self._has_warnings:
+            total_actions = int(self._plan_stats.get("total_actions", 0) or 0)
+            total_bytes = int(self._plan_stats.get("total_bytes", 0) or 0)
+            over_count = total_actions >= 1000
+            over_size = total_bytes >= 10 * 1024 * 1024 * 1024
+            if not self._has_warnings and not over_count and not over_size:
                 return True
+            details = []
+            if self._has_warnings:
+                details.append("Warnungen/Unsicherheiten")
+            if over_count:
+                details.append(f">=1000 Dateien ({total_actions})")
+            if over_size:
+                details.append(
+                    f">=10 GB ({round(total_bytes / (1024 ** 3), 2)} GB)"
+                )
+            reason = ", ".join(details) if details else "Review erforderlich"
             result = QtWidgets.QMessageBox.warning(
                 self,
                 "Review Gate",
-                "Es gibt Warnungen oder unsichere Einträge im Plan. Trotzdem ausführen?",
+                "Review erforderlich: " + reason + "\n\nTrotzdem ausführen?",
                 QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No,
                 QtWidgets.QMessageBox.StandardButton.No,
             )
@@ -3422,6 +4083,9 @@ def run() -> int:
         def _format_candidates(self, item: object) -> str:
             return format_candidates(item)
 
+        def _format_system_badge(self, system: Optional[str]) -> str:
+            return format_system_badge(system)
+
         def _choose_source(self) -> None:
             directory = QtWidgets.QFileDialog.getExistingDirectory(self, "Select source folder")
             if directory:
@@ -3561,6 +4225,7 @@ def run() -> int:
             recent.insert(0, {"source": source, "dest": dest})
             recent = recent[:5]
             self._save_recent_paths(recent)
+            self._refresh_recent_paths_dropdowns()
 
         def _refresh_recent_paths_label(self) -> None:
             if not hasattr(self, "recent_paths_label"):
@@ -3568,9 +4233,59 @@ def run() -> int:
             recent = self._load_recent_paths()
             if not recent:
                 self.recent_paths_label.setText("Noch keine Pfade gespeichert.")
+                self._refresh_recent_paths_dropdowns()
                 return
             lines = [f"📁 {item['source']} → 📁 {item['dest']}" for item in recent]
             self.recent_paths_label.setText("\n".join(lines))
+            self._refresh_recent_paths_dropdowns()
+
+        def _refresh_recent_paths_dropdowns(self) -> None:
+            if not hasattr(self, "recent_source_combo"):
+                return
+            recent = self._load_recent_paths()
+            self._syncing_recent_paths = True
+            try:
+                self.recent_source_combo.blockSignals(True)
+                self.recent_dest_combo.blockSignals(True)
+                self.recent_source_combo.clear()
+                self.recent_dest_combo.clear()
+                self.recent_source_combo.addItem("Zuletzt…", "")
+                self.recent_dest_combo.addItem("Zuletzt…", "")
+                for entry in recent:
+                    src = str(entry.get("source") or "").strip()
+                    dst = str(entry.get("dest") or "").strip()
+                    if src:
+                        self.recent_source_combo.addItem(src, src)
+                    if dst:
+                        self.recent_dest_combo.addItem(dst, dst)
+                self.recent_source_combo.setCurrentIndex(0)
+                self.recent_dest_combo.setCurrentIndex(0)
+            except Exception:
+                pass
+            finally:
+                self.recent_source_combo.blockSignals(False)
+                self.recent_dest_combo.blockSignals(False)
+                self._syncing_recent_paths = False
+
+        def _on_recent_source_selected(self, _index: int) -> None:
+            if getattr(self, "_syncing_recent_paths", False):
+                return
+            try:
+                value = str(self.recent_source_combo.currentData() or "").strip()
+                if value:
+                    self._set_source_text(value)
+            except Exception:
+                return
+
+        def _on_recent_dest_selected(self, _index: int) -> None:
+            if getattr(self, "_syncing_recent_paths", False):
+                return
+            try:
+                value = str(self.recent_dest_combo.currentData() or "").strip()
+                if value:
+                    self._set_dest_text(value)
+            except Exception:
+                return
 
         def _load_favorites_from_config(self) -> None:
             try:
@@ -3793,6 +4508,11 @@ def run() -> int:
                     self.sidebar_summary_label.setText(self.summary_label.text() if self.summary_label else "-")
                 except Exception:
                     pass
+            if hasattr(self, "status_summary_label"):
+                try:
+                    self.status_summary_label.setText(self.summary_label.text() if self.summary_label else "-")
+                except Exception:
+                    pass
             self._update_header_pills()
 
         def _safe_set_label(self, label_attr: str, text: str, style: str | None = None) -> bool:
@@ -3922,6 +4642,22 @@ def run() -> int:
             if values is None:
                 return
 
+            warnings = get_symlink_warnings(
+                values.get("source"),
+                values.get("dest") if op in ("plan", "execute") else None,
+            )
+            if warnings:
+                message = "Symlink-Warnung:\n" + "\n".join(warnings) + "\n\nTrotzdem fortfahren?"
+                result = QtWidgets.QMessageBox.warning(
+                    self,
+                    "Symlink-Warnung",
+                    message,
+                    QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No,
+                    QtWidgets.QMessageBox.StandardButton.No,
+                )
+                if result != QtWidgets.QMessageBox.StandardButton.Yes:
+                    return
+
             self._current_op = op
 
             try:
@@ -3947,6 +4683,11 @@ def run() -> int:
                 self._sort_plan = None
                 self._has_warnings = False
                 self.results_model.clear()
+                if hasattr(self, "structure_tree") and self.structure_tree is not None:
+                    try:
+                        self.structure_tree.clear()
+                    except Exception:
+                        pass
                 self._update_results_empty_state()
                 self.log_view.clear()
 
@@ -4270,7 +5011,7 @@ def run() -> int:
                         action="scan",
                         input_path=str(item.input_path or ""),
                         name=self._rom_display_name(item.input_path),
-                        detected_system=str(item.detected_system or ""),
+                        detected_system=self._format_system_badge(str(item.detected_system or "")),
                         security=self._format_confidence(item.detection_confidence),
                         signals=self._format_signals(item),
                         candidates=self._format_candidates(item),
@@ -4329,7 +5070,7 @@ def run() -> int:
                         action=str(act.action),
                         input_path=str(act.input_path or ""),
                         name=self._rom_display_name(act.input_path),
-                        detected_system=str(act.detected_system or ""),
+                        detected_system=self._format_system_badge(str(act.detected_system or "")),
                         security="",
                         signals="",
                         candidates="",
@@ -4350,13 +5091,18 @@ def run() -> int:
                 pass
 
             try:
+                try:
+                    self._plan_stats = compute_plan_stats(plan)
+                except Exception:
+                    self._plan_stats = {"total_actions": 0, "total_bytes": 0}
                 planned = sum(1 for act in plan.actions if str(act.status).startswith("planned"))
                 skipped = sum(1 for act in plan.actions if str(act.status).startswith("skipped"))
                 errors = sum(1 for act in plan.actions if str(act.status).startswith("error"))
                 converts = sum(1 for act in plan.actions if str(act.action) == "convert")
                 renames = sum(1 for act in plan.actions if "rename" in str(act.status))
+                eta = self._format_eta_from_plan(plan)
                 self.summary_label.setText(
-                    f"{planned} geplant | {converts} konvertieren | {renames} umbenennen | {skipped} übersprungen | {errors} Fehler"
+                    f"{planned} geplant | {converts} konvertieren | {renames} umbenennen | {skipped} übersprungen | {errors} Fehler | ETA {eta}"
                 )
             except Exception:
                 self.summary_label.setText("-")
@@ -4365,6 +5111,113 @@ def run() -> int:
             self._update_safety_pill()
 
             self._update_results_empty_state()
+            self._populate_structure_tree(plan)
+        def _format_eta_from_plan(self, plan: SortPlan) -> str:
+            try:
+                total_bytes = int(self._plan_stats.get("total_bytes", 0))
+            except Exception:
+                total_bytes = 0
+            if total_bytes <= 0:
+                return "-"
+            try:
+                cfg = load_config()
+                sorting_cfg = (cfg.get("features", {}) or {}).get("sorting", {}) if isinstance(cfg, dict) else {}
+                throughput = float(sorting_cfg.get("estimated_throughput_mb_s", 120.0) or 120.0)
+            except Exception:
+                throughput = 120.0
+            if throughput <= 0:
+                throughput = 120.0
+            seconds = total_bytes / (throughput * 1024 * 1024)
+            if seconds < 1:
+                return "<1s"
+            minutes = int(seconds // 60)
+            rem = int(seconds % 60)
+            if minutes >= 60:
+                hours = int(minutes // 60)
+                minutes = int(minutes % 60)
+                return f"{hours}h {minutes}m"
+            return f"{minutes}m {rem}s"
+
+        def _populate_structure_tree(self, plan: SortPlan) -> None:
+            if not hasattr(self, "structure_tree") or self.structure_tree is None:
+                return
+            tree = self.structure_tree
+            try:
+                tree.clear()
+            except Exception:
+                return
+
+            root_path = str(plan.dest_path or "Ziel")
+            root_item = QtWidgets.QTreeWidgetItem([root_path])
+            tree.addTopLevelItem(root_item)
+
+            node_cache: Dict[tuple[int, str], Any] = {}
+            root_key = (id(root_item), root_path)
+            node_cache[root_key] = root_item
+
+            for act in plan.actions:
+                target = str(act.planned_target_path or "")
+                if not target:
+                    continue
+                try:
+                    rel = Path(target).resolve().relative_to(Path(plan.dest_path).resolve())
+                    parts = rel.parts
+                except Exception:
+                    parts = Path(target).parts
+                parent_item = root_item
+                for idx, part in enumerate(parts):
+                    if not part:
+                        continue
+                    if idx == len(parts) - 1:
+                        QtWidgets.QTreeWidgetItem(parent_item, [part])
+                        continue
+                    cache_key = (id(parent_item), part)
+                    child = node_cache.get(cache_key)
+                    if child is None:
+                        child = QtWidgets.QTreeWidgetItem(parent_item, [part])
+                        node_cache[cache_key] = child
+                    parent_item = child
+
+            try:
+                tree.expandToDepth(2)
+            except Exception:
+                pass
+
+        def _maybe_prompt_conflicts(self, plan: SortPlan) -> bool:
+            try:
+                if str(plan.on_conflict) != "skip":
+                    return False
+            except Exception:
+                return False
+            conflicts = [
+                act
+                for act in plan.actions
+                if (act.error or "").strip().lower() == "target exists (skip)"
+            ]
+            if not conflicts:
+                return False
+
+            dialog = QtWidgets.QMessageBox(self)
+            dialog.setWindowTitle("Konflikte erkannt")
+            dialog.setText(
+                f"{len(conflicts)} Ziele existieren bereits. Wie soll verfahren werden?"
+            )
+            btn_rename = dialog.addButton("Umbenennen (rename)", QtWidgets.QMessageBox.AcceptRole)
+            btn_overwrite = dialog.addButton("Überschreiben (overwrite)", QtWidgets.QMessageBox.DestructiveRole)
+            btn_keep = dialog.addButton("Überspringen (skip)", QtWidgets.QMessageBox.RejectRole)
+            dialog.setDefaultButton(btn_rename)
+            dialog.exec()
+            chosen = dialog.clickedButton()
+            if chosen == btn_keep:
+                return False
+            if chosen == btn_rename:
+                self.conflict_combo.setCurrentText("rename")
+            elif chosen == btn_overwrite:
+                self.conflict_combo.setCurrentText("overwrite")
+            else:
+                return False
+            QtCore.QTimer.singleShot(0, lambda: self._start_operation("plan"))
+            return True
 
         def _populate_audit_table(self, report: ConversionAuditReport) -> None:
             rows: List[Any] = []
@@ -4647,10 +5500,28 @@ def run() -> int:
             if op == "plan":
                 if not isinstance(payload, SortPlan):
                     raise RuntimeError("Plan worker returned unexpected payload")
-                self._sort_plan = payload
+                prev_plan = self._last_plan
                 self.status_label.setText("Plan bereit")
-                self._populate_plan_table(payload)
+                self._set_active_plan(payload, record_history=True)
                 self._last_view = "plan"
+                if self._maybe_prompt_conflicts(payload):
+                    return
+                if prev_plan is not None:
+                    try:
+                        diff = diff_sort_plans(prev_plan, payload)
+                        self._append_log(
+                            "Plan diff: "
+                            f"+{diff['added']} -{diff['removed']} ~{diff['changed']}"
+                        )
+                        QtWidgets.QMessageBox.information(
+                            self,
+                            "Plan-Diff",
+                            "Plan-Änderungen erkannt:\n"
+                            f"Neu: {diff['added']} | Entfernt: {diff['removed']} | Geändert: {diff['changed']}",
+                        )
+                    except Exception:
+                        pass
+                self._last_plan = payload
                 QtWidgets.QMessageBox.information(self, "Vorschau bereit", f"Geplante Aktionen: {len(payload.actions)}")
                 self._complete_job("plan")
                 return
@@ -4666,6 +5537,8 @@ def run() -> int:
                     "Fertig",
                     f"Fertig. Kopiert: {payload.copied}, Verschoben: {payload.moved}\nFehler: {len(payload.errors)}\n\nSiehe Log für Details.",
                 )
+                if payload.mode == "move" and not payload.cancelled:
+                    self._show_undo_toast()
                 self._complete_job("execute")
                 return
 

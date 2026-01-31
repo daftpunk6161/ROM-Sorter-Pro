@@ -83,6 +83,24 @@
       "type": "object",
       "properties": {
         "theme": {"type": "string"},
+        "accent_color": {
+          "type": "string",
+          "pattern": "^#?[0-9a-fA-F]{6}$"
+        },
+        "compact_mode": {"type": "boolean"},
+        "pro_mode": {"type": "boolean"},
+        "recent_paths": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "source": {"type": "string"},
+              "dest": {"type": "string"}
+            },
+            "required": ["source", "dest"],
+            "additionalProperties": false
+          }
+        },
         "auto_scan": {"type": "boolean"},
         "show_preview": {"type": "boolean"},
         "real_time_stats": {"type": "boolean"},
@@ -194,6 +212,9 @@
             "quarantine_unknown": {"type": "boolean"},
             "quarantine_folder_name": {"type": "string"},
             "rename_template": {"type": "string"},
+            "copy_first_staging": {"type": "boolean"},
+            "copy_first_staging_dir": {"type": "string"},
+            "estimated_throughput_mb_s": {"type": "number", "minimum": 1.0},
             "confidence_threshold": {"type": "number", "minimum": 0.0, "maximum": 1.0},
             "conversion": {
               "type": "object",
@@ -255,11 +276,19 @@
           },
           "additionalProperties": false
         },
+        "scan": {
+          "type": "object",
+          "properties": {
+            "incremental": {"type": "boolean"}
+          },
+          "additionalProperties": false
+        },
         "backup": {
           "type": "object",
           "properties": {
             "enabled": {"type": "boolean"},
             "local_dir": {"type": "string"},
+            "before_overwrite": {"type": "boolean"},
             "onedrive_enabled": {"type": "boolean"},
             "onedrive_dir": {"type": ["string", "null"]}
           },
@@ -417,6 +446,24 @@
           "description": "Deprecated: use top-level gui_settings instead.",
           "properties": {
             "theme": {"type": "string"},
+            "accent_color": {
+              "type": "string",
+              "pattern": "^#?[0-9a-fA-F]{6}$"
+            },
+            "compact_mode": {"type": "boolean"},
+            "pro_mode": {"type": "boolean"},
+            "recent_paths": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "source": {"type": "string"},
+                  "dest": {"type": "string"}
+                },
+                "required": ["source", "dest"],
+                "additionalProperties": false
+              }
+            },
             "auto_scan": {"type": "boolean"},
             "show_preview": {"type": "boolean"},
             "real_time_stats": {"type": "boolean"},

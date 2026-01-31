@@ -52,3 +52,54 @@ def test_execute_sort_overwrite_policy(tmp_path):
 
     assert report.cancelled is False
     assert existing.read_text() == "new"
+
+
+def test_execute_sort_backup_before_overwrite(tmp_path, monkeypatch):
+    from src.app import controller
+    from src.config import Config
+
+    source = tmp_path / "source"
+    dest = tmp_path / "dest"
+    source.mkdir()
+    dest.mkdir()
+
+    backup_dir = tmp_path / "backups"
+
+    cfg = Config(
+        {
+            "features": {
+                "backup": {
+                    "enabled": True,
+                    "before_overwrite": True,
+                    "local_dir": str(backup_dir),
+                    "onedrive_enabled": False,
+                    "onedrive_dir": None,
+                }
+            }
+        }
+    )
+
+    monkeypatch.setattr(controller, "_load_cfg", lambda _cfg=None: cfg)
+
+    rom = source / "game.rom"
+    rom.write_text("new")
+
+    existing = dest / "NES" / "game.rom"
+    existing.parent.mkdir(parents=True, exist_ok=True)
+    existing.write_text("old")
+
+    scan = controller.ScanResult(
+        source_path=str(source),
+        items=[controller.ScanItem(input_path=str(rom), detected_system="NES")],
+        stats={},
+        cancelled=False,
+    )
+
+    plan = controller.plan_sort(scan, str(dest), mode="copy", on_conflict="overwrite")
+    report = controller.execute_sort(plan, dry_run=False)
+
+    assert report.errors == []
+    assert existing.read_text() == "new"
+    backups = list(backup_dir.glob("overwrite_*_game.rom"))
+    assert backups
+    assert backups[0].read_text() == "old"

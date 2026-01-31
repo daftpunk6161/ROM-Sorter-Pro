@@ -40,7 +40,17 @@ class QtLogBuffer:
         self._buffer: List[str] = []
         self._history: List[str] = []
         self._filter_text = ""
+        self._level_filter = ""
         self._autoscroll = True
+
+    def set_level_filter(self, level: str) -> None:
+        self._level_filter = (level or "").strip().upper()
+
+    def _line_matches_level(self, line: str) -> bool:
+        if not self._level_filter or self._level_filter == "ALL":
+            return True
+        marker = f" - {self._level_filter} - "
+        return marker in line
 
     def set_autoscroll(self, enabled: bool) -> None:
         self._autoscroll = bool(enabled)
@@ -67,13 +77,17 @@ class QtLogBuffer:
         except Exception:
             bar = None
             at_bottom = True
-        if not self._filter_text:
+        if not self._filter_text and not self._level_filter:
             if lines:
                 self._log_view.appendPlainText("\n".join(lines))
             if bar is not None and (self._autoscroll or at_bottom):
                 bar.setValue(bar.maximum())
             return
-        filtered = [line for line in lines if self._filter_text in line.lower()]
+        filtered = [
+            line
+            for line in lines
+            if self._line_matches_level(line) and self._filter_text in line.lower()
+        ]
         if filtered:
             self._log_view.appendPlainText("\n".join(filtered))
             if bar is not None and (self._autoscroll or at_bottom):
@@ -87,9 +101,13 @@ class QtLogBuffer:
             return
         if not self._history:
             return
-        if not self._filter_text:
+        if not self._filter_text and not self._level_filter:
             self._log_view.appendPlainText("\n".join(self._history))
             return
-        filtered = [line for line in self._history if self._filter_text in line.lower()]
+        filtered = [
+            line
+            for line in self._history
+            if self._line_matches_level(line) and self._filter_text in line.lower()
+        ]
         if filtered:
             self._log_view.appendPlainText("\n".join(filtered))

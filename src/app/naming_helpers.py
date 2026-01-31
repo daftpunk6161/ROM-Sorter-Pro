@@ -87,5 +87,42 @@ def normalize_title_for_dedupe(name: str) -> str:
     stem = Path(filename).stem
     value = re.sub(r"\([^\)]*\)", "", stem)
     value = re.sub(r"\[[^\]]*\]", "", value)
+    value = _VERSION_RE.sub("", value)
     value = re.sub(r"\s+", " ", value).strip()
     return value
+
+
+def version_score(version: Optional[str]) -> float:
+    if not version:
+        return 0.0
+    raw = str(version).strip().lower()
+    if not raw:
+        return 0.0
+
+    if raw.startswith("rev"):
+        tail = raw.replace("rev", "").strip()
+        if tail.isdigit():
+            return 50.0 + float(tail)
+        if tail and tail[0].isalpha():
+            return 50.0 + (ord(tail[0]) - ord("a") + 1) / 10.0
+
+    if raw.startswith("v"):
+        tail = raw[1:]
+        parts = [p for p in re.split(r"[^0-9]+", tail) if p]
+        score = 100.0
+        for idx, part in enumerate(parts[:3]):
+            try:
+                value = int(part)
+            except Exception:
+                value = 0
+            score += value / (10 ** idx)
+        return score
+
+    if "final" in raw:
+        return 90.0
+    if "beta" in raw:
+        return 10.0
+    if "alpha" in raw or "proto" in raw or "prototype" in raw:
+        return 5.0
+
+    return 1.0

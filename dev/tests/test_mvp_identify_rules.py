@@ -28,6 +28,7 @@ def _create_index(tmp_path: Path) -> Path:
 def _insert_hash_row(
     index_path: Path,
     *,
+    dat_id: int = 1,
     platform_id: str,
     sha1: str | None,
     crc32: str | None,
@@ -38,7 +39,7 @@ def _insert_hash_row(
         cur = conn.cursor()
         cur.execute(
             "INSERT INTO rom_hashes (dat_id, platform_id, rom_name, set_name, crc32, sha1, size_bytes) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (1, platform_id, "Test ROM", "Test Set", (crc32 or "").lower(), sha1, size_bytes),
+            (dat_id, platform_id, "Test ROM", "Test Set", (crc32 or "").lower(), sha1, size_bytes),
         )
         conn.commit()
     finally:
@@ -119,6 +120,44 @@ def test_identify_crc_size_fallback(tmp_path):
     assert "DAT_MATCH_CRC_SIZE" in results[0].signals
 
 
+def test_identify_returns_cross_check_on_crc_size(tmp_path: Path) -> None:
+    rom = tmp_path / "game.rom"
+    rom.write_text("data", encoding="utf-8")
+
+    crc32 = calculate_crc32(str(rom))
+    size_bytes = os.stat(rom).st_size
+
+    index_path = _create_index(tmp_path)
+    _insert_hash_row(
+        index_path,
+        dat_id=1,
+        platform_id="NES",
+        sha1=None,
+        crc32=crc32,
+        size_bytes=size_bytes,
+    )
+    _insert_hash_row(
+        index_path,
+        dat_id=2,
+        platform_id="SNES",
+        sha1=None,
+        crc32=crc32,
+        size_bytes=size_bytes,
+    )
+
+    items = [ScanItem(input_path=str(rom), detected_system="Unknown")]
+    config = {"dats": {"index_path": str(index_path)}}
+
+    results = identify(items, config=config)
+
+    assert results
+    assert "DAT_MATCH_CRC_SIZE" in results[0].signals
+    assert "DAT_CROSS_CHECK" in results[0].signals
+    assert results[0].reason == "crc32-size-cross-check"
+    assert "NES" in results[0].candidates
+    assert "SNES" in results[0].candidates
+
+
 def test_identify_override_rule(tmp_path):
     rom = tmp_path / "override-game.rom"
     rom.write_text("data", encoding="utf-8")
@@ -173,3 +212,25 @@ def test_add_identification_override_writes_file(tmp_path: Path) -> None:
     assert isinstance(data, list)
     assert data[0]["platform_id"] == "SNES"
     assert data[0]["paths"] == ["C:/ROMs/Test/game.rom"]
+
+
+def test_add_identification_overrides_bulk_writes_file(tmp_path: Path) -> None:
+    from src.app.controller import add_identification_overrides_bulk
+
+    override_path = tmp_path / "identify_overrides.json"
+    config = {"identification_overrides": {"path": str(override_path), "enabled": True}}
+
+    ok, message, path = add_identification_overrides_bulk(
+        input_paths=["C:/ROMs/Test/game1.rom", "C:/ROMs/Test/game2.rom"],
+        platform_id="SNES",
+        config=config,
+    )
+
+    assert ok is True
+    assert message == "ok"
+    assert Path(path).exists()
+
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    assert isinstance(data, list)
+    assert data[0]["platform_id"] == "SNES"
+    assert sorted(data[0]["paths"]) == ["C:/ROMs/Test/game1.rom", "C:/ROMs/Test/game2.rom"]

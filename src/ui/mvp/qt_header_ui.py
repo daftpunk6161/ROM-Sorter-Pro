@@ -23,6 +23,7 @@ class HeaderUI:
     pill_queue: Any
     pill_dat: Any
     pill_safety: Any
+    summary_label: Any
     status_bar: Any
 
 
@@ -69,6 +70,8 @@ def build_header_ui(
     pill_queue = QtWidgets.QLabel("Queue: 0")
     pill_dat = QtWidgets.QLabel("DAT: -")
     pill_safety = QtWidgets.QLabel("Safe")
+    summary_label = QtWidgets.QLabel("-")
+    summary_label.setToolTip("Kurzfassung der aktuellen Ergebnisse")
     for pill in (pill_status, pill_queue, pill_dat, pill_safety):
         pill.setStyleSheet("padding: 2px 8px; border-radius: 10px; background: #e8e8e8;")
 
@@ -97,6 +100,7 @@ def build_header_ui(
     status_bar.addWidget(pill_dat)
     status_bar.addWidget(pill_queue)
     status_bar.addWidget(pill_safety)
+    status_bar.addWidget(summary_label)
     status_bar.addPermanentWidget(header_log_btn)
     status_bar.addPermanentWidget(header_cmd_btn)
 
@@ -118,5 +122,6 @@ def build_header_ui(
         pill_queue=pill_queue,
         pill_dat=pill_dat,
         pill_safety=pill_safety,
+        summary_label=summary_label,
         status_bar=status_bar,
     )

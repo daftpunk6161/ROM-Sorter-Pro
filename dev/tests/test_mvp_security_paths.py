@@ -167,6 +167,21 @@ def test_plan_sort_rejects_destination_file(tmp_path):
     with pytest.raises(ValueError):
         plan_sort(scan, str(dest_file), mode="copy", on_conflict="rename")
 
+def test_get_symlink_warnings_detects_source(tmp_path: Path):
+    from src.app.controller import get_symlink_warnings
+
+    source = tmp_path / "source.txt"
+    source.write_text("data", encoding="utf-8")
+    link = tmp_path / "link.txt"
+    try:
+        os.symlink(source, link)
+    except (OSError, NotImplementedError):
+        pytest.skip("Symlinks not supported in this environment")
+
+    warnings = get_symlink_warnings(str(link), None)
+    assert warnings
+    assert "Symlink" in warnings[0]
+
 
 def test_execute_external_tools_rejects_symlink_input(tmp_path):
     from src.app.controller import SortAction, SortPlan, execute_external_tools

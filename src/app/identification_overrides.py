@@ -132,6 +132,84 @@ def add_identification_override(
             return False, f"Override-Datei konnte nicht geschrieben werden: {exc}", path
 
 
+def add_identification_overrides_bulk(
+    cfg: Config,
+    *,
+    input_paths: List[str],
+    platform_id: str,
+    name: str = "manual-override",
+    confidence: float = 1.0,
+) -> Tuple[bool, str, Path]:
+    paths = [str(path or "").strip() for path in input_paths or []]
+    paths = [path for path in paths if path]
+    platform_val = str(platform_id or "").strip()
+    if not paths:
+        return False, "input_paths fehlen", Path()
+    if not platform_val:
+        return False, "platform_id fehlt", Path()
+
+    path = resolve_identification_overrides_path(cfg)
+    data: Dict[str, Any] | List[Dict[str, Any]] | None = None
+    if path.exists():
+        try:
+            raw = path.read_text(encoding="utf-8")
+            data = _parse_override_file(path, raw)
+        except Exception:
+            data = None
+
+    rules: List[Dict[str, Any]] = []
+    container: Dict[str, Any] | None = None
+    if isinstance(data, list):
+        rules = [rule for rule in data if isinstance(rule, dict)]
+    elif isinstance(data, dict):
+        container = dict(data)
+        existing_rules = container.get("rules") or []
+        if isinstance(existing_rules, list):
+            rules = [rule for rule in existing_rules if isinstance(rule, dict)]
+
+    new_rule = {
+        "paths": sorted(set(paths)),
+        "platform_id": platform_val,
+        "name": str(name or "manual-override"),
+        "confidence": float(confidence),
+    }
+    rules.append(new_rule)
+
+    if container is not None:
+        container["rules"] = rules
+        payload: Dict[str, Any] | List[Dict[str, Any]] = container
+    else:
+        payload = rules
+
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+    except Exception as exc:
+        return False, f"Override-Ordner nicht verfügbar: {exc}", path
+
+    suffix = path.suffix.lower()
+    if suffix == ".json":
+        try:
+            path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+        except Exception as exc:
+            return False, f"Override-Datei konnte nicht geschrieben werden: {exc}", path
+        return True, "ok", path
+
+    try:
+        import yaml  # type: ignore
+
+        path.write_text(
+            yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
+            encoding="utf-8",
+        )
+        return True, "ok", path
+    except Exception:
+        try:
+            path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+            return True, "ok", path
+        except Exception as exc:
+            return False, f"Override-Datei konnte nicht geschrieben werden: {exc}", path
+
+
 def _load_identification_overrides(cfg: Config) -> List[Dict[str, Any]]:
     override_cfg = cfg.get("identification_overrides", {})
     if isinstance(override_cfg, str):

@@ -16,6 +16,8 @@ class PresetsUI:
     btn_preset_save: Any
     btn_preset_delete: Any
     btn_execute_selected: Any
+    btn_plan_undo: Any
+    btn_plan_redo: Any
     queue_mode_checkbox: Any
     queue_priority_combo: Any
     queue_pause_btn: Any
@@ -38,6 +40,8 @@ def build_presets_queue_ui(QtWidgets) -> PresetsUI:
     btn_preset_save = QtWidgets.QPushButton("Speichern")
     btn_preset_delete = QtWidgets.QPushButton("Löschen")
     btn_execute_selected = QtWidgets.QPushButton("Auswahl ausführen")
+    btn_plan_undo = QtWidgets.QPushButton("Plan Undo")
+    btn_plan_redo = QtWidgets.QPushButton("Plan Redo")
 
     presets_layout.addWidget(QtWidgets.QLabel("Preset:"), 0, 0)
     presets_layout.addWidget(preset_combo, 0, 1)
@@ -46,6 +50,8 @@ def build_presets_queue_ui(QtWidgets) -> PresetsUI:
     presets_layout.addWidget(btn_preset_save, 1, 2)
     presets_layout.addWidget(btn_preset_delete, 2, 2)
     presets_layout.addWidget(btn_execute_selected, 2, 0, 1, 2)
+    presets_layout.addWidget(btn_plan_undo, 3, 0)
+    presets_layout.addWidget(btn_plan_redo, 3, 1)
     presets_layout.setColumnStretch(1, 1)
 
     queue_group = QtWidgets.QGroupBox("Jobs")
@@ -80,6 +86,8 @@ def build_presets_queue_ui(QtWidgets) -> PresetsUI:
         btn_preset_save=btn_preset_save,
         btn_preset_delete=btn_preset_delete,
         btn_execute_selected=btn_execute_selected,
+        btn_plan_undo=btn_plan_undo,
+        btn_plan_redo=btn_plan_redo,
         queue_mode_checkbox=queue_mode_checkbox,
         queue_priority_combo=queue_priority_combo,
         queue_pause_btn=queue_pause_btn,

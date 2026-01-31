@@ -968,6 +968,40 @@ class ThemeManager:
             border_radius=12
         )
 
+        high_contrast_theme = Theme(
+            name="High Contrast",
+            type=ThemeType.LIGHT,
+            colors=ColorScheme(
+                primary="#000000",
+                secondary="#000000",
+                background="#FFFFFF",
+                text="#000000",
+                accent="#0000FF",
+                error="#CC0000",
+                warning="#CC7A00",
+                success="#007A00",
+                border="#000000",
+            ),
+            border_radius=0,
+        )
+
+        high_contrast_dark_theme = Theme(
+            name="High Contrast Dark",
+            type=ThemeType.DARK,
+            colors=ColorScheme(
+                primary="#FFFFFF",
+                secondary="#FFFFFF",
+                background="#000000",
+                text="#FFFFFF",
+                accent="#00FFFF",
+                error="#FF4D4D",
+                warning="#FFD24D",
+                success="#4DFF88",
+                border="#FFFFFF",
+            ),
+            border_radius=0,
+        )
+
         # Add the Standarddthemes
         self.themes["Light"] = light_theme
         self.themes["Dark"] = dark_theme
@@ -982,6 +1016,8 @@ class ThemeManager:
         self.themes["Clean Slate"] = clean_slate_theme
         self.themes["Midnight Pro"] = midnight_pro_theme
         self.themes["Retro Console"] = retro_console_theme
+        self.themes["High Contrast"] = high_contrast_theme
+        self.themes["High Contrast Dark"] = high_contrast_dark_theme
 
         # Set the standard.
         if self._detect_system_theme() == ThemeType.DARK:
@@ -1078,6 +1114,11 @@ class ThemeManager:
             'Neo Dark',
             'Nord Frost',
             'Solar Light',
+            'Clean Slate',
+            'Midnight Pro',
+            'Retro Console',
+            'High Contrast',
+            'High Contrast Dark',
         ]:
             logger.warning(f"Standardtheme '{theme_name}' kann nicht entfernt werden")
             return False
