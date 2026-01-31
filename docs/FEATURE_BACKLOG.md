@@ -1,8 +1,10 @@
 # ROM-Sorter-Pro – Feature-Backlog & Produkt-Roadmap
 
 > **Erstellt:** 2026-01-30  
+> **Aktualisiert:** 2026-01-31  
 > **Scope:** GUI-first Desktop-Tool (Qt/Tk-Fallback)  
-> **Fokus:** Stabilität, Detection Accuracy, Power-User Workflows
+> **Fokus:** Stabilität, Detection Accuracy, Power-User Workflows  
+> **Status:** MVP umgesetzt, Release-Kandidat
 
 ---
 
@@ -657,25 +659,430 @@
 
 ---
 
-## C) Top 15 Roadmap (Priorisiert)
+### B.9 Zusätzliche Feature-Ideen (F61-F70) – Neu 2026-01-31
 
-| Prio | Feature | Warum jetzt? | Aufwand | Risiko | Abhängigkeiten |
-|------|---------|--------------|---------|--------|----------------|
-| **P0** | F02 Confidence-Score-Visualisierung | Sofort sichtbar, welche Ergebnisse unsicher sind → weniger False Positives | S | Niedrig | Keine |
-| **P0** | F05 Quick-Override-Dialog | Schnelle Korrektur = zufriedene User, weniger Frust | S | Niedrig | Override-System ✓ |
-| **P0** | F26 Full-Rollback-System (UI) | Sicherheitsnetz für alle Aktionen → Vertrauen | M | Mittel | Rollback-Controller ✓ |
-| **P0** | F28 Disk-Space-Check | Verhindert Abbrüche mitten im Kopieren | S | Niedrig | Keine |
-| **P0** | F40 Empty-State-Guidance | Einsteiger-Onboarding dramatisch verbessert | S | Niedrig | Keine |
-| **P1** | F11 Conflict-Resolver-Dialog | Keine versehentlichen Überschreibungen | M | Niedrig | Plan-Validation |
-| **P1** | F16 Plan-Diff-View | Nachvollziehbarkeit bei Re-Scans | M | Niedrig | Plan-Serialisierung |
-| **P1** | F19 Folder-Structure-Preview | Visuelle Klarheit vor Execute | M | Niedrig | Keine |
-| **P1** | F32 Incremental-Scan | Performance-Boost für Power-User | M | Mittel | Hash-Cache ✓ |
-| **P1** | F37 Guided-First-Run-Wizard | Einsteiger-Erlebnis entscheidend für Retention | M | Niedrig | Keine |
-| **P1** | F47 Dark-Mode-Theme | Stark nachgefragt, Standard bei modernen Apps | M | Niedrig | Theme-Manager ✓ |
-| **P2** | F03 Hash-Cross-Check | Detection-Qualität verbessern | M | Mittel | DAT-Index ✓ |
-| **P2** | F06 Bulk-Override-Wizard | Zeitersparnis bei vielen Korrekturen | S | Niedrig | F05 |
-| **P2** | F22 Partial-Execute | Granulare Kontrolle für Power-User | S | Niedrig | Keine |
-| **P2** | F50 Console-Badges/Icons | Visuelle Aufwertung, schnellere Orientierung | S | Niedrig | Asset-Bundle |
+#### F61: Smart-Queue-Priority-Reordering
+- **Kategorie:** Sorting / Planning / Preview
+- **Kurzbeschreibung:** Drag-and-Drop Neuordnung der Sortier-Queue mit Auto-Priorität (kleine Dateien zuerst, Fehler ans Ende)
+- **User Value:** Bessere Kontrolle über Sortierreihenfolge, schnelles Feedback bei kleinen Jobs
+- **Komplexität:** M
+- **Risiko:** Niedrig
+- **Abhängigkeiten:** Job-Queue-System
+- **MVP-Fit:** Nein
+- **Test-Idee:** Queue mit 10 Items, Drag Item 5 nach oben, Reihenfolge ändert sich
+
+#### F62: Detection-Confidence-Tuner (Slider)
+- **Kategorie:** Reliability / Detection Accuracy
+- **Kurzbeschreibung:** Globaler Slider für Mindest-Confidence (50%-99%), unter Schwelle → automatisch Unknown
+- **User Value:** Balance zwischen Recall und Precision einstellen
+- **Komplexität:** S
+- **Risiko:** Niedrig
+- **Abhängigkeiten:** Controller-Config
+- **MVP-Fit:** Ja
+- **Test-Idee:** Slider auf 90%, ROM mit 85% Confidence → Unknown
+
+#### F63: Multi-Library-Workspace ✅
+- **Kategorie:** Performance / Scale
+- **Kurzbeschreibung:** Mehrere Quell-Libraries parallel verwalten (Tabs oder Tree-View)
+- **User Value:** Power-User mit mehreren Sammlungen können alles in einem Tool verwalten
+- **Komplexität:** L
+- **Risiko:** Mittel (State-Management-Komplexität)
+- **Abhängigkeiten:** Neue Architecture
+- **MVP-Fit:** Nein
+- **Status:** ✅ Implementiert in `src/core/multi_library.py`
+- **Test-Idee:** 2 Libraries hinzufügen, beide scannen, beide sortieren, keine Konflikte
+
+#### F64: AI-Assisted-Name-Normalizer (Optional) ✅
+- **Kategorie:** Reliability / Detection Accuracy
+- **Kurzbeschreibung:** LLM-basierte Korrektur von Dateinamen (Typos, fehlende Region-Tags) – rein optional, offline-fähig
+- **User Value:** Automatische Cleanup von schlecht benannten ROM-Dumps
+- **Komplexität:** L
+- **Risiko:** Hoch (False Positives, Dependency-Bloat)
+- **Abhängigkeiten:** Optional ML-Package
+- **MVP-Fit:** Nein
+- **Status:** ✅ Implementiert in `src/detectors/ai_normalizer.py`
+- **Test-Idee:** "Super_Maro_Wrld.sfc" → Vorschlag "Super Mario World (USA).sfc"
+
+#### F65: Watchfolder-Auto-Sort ✅
+- **Kategorie:** Integrations / Frontends
+- **Kurzbeschreibung:** Überwacht Ordner, neue Dateien werden automatisch gescannt und sortiert
+- **User Value:** Hands-off Workflow für kontinuierliche Downloads
+- **Komplexität:** M
+- **Risiko:** Mittel (Background-Service-Stabilität)
+- **Abhängigkeiten:** File-System-Watcher
+- **MVP-Fit:** Nein
+- **Status:** ✅ Implementiert in `src/core/watchfolder.py`
+- **Test-Idee:** Datei in Watchfolder legen, nach 5s automatisch sortiert
+
+#### F66: Collection-Completeness-Tracker ✅
+- **Kategorie:** Data / DB / DAT Management
+- **Kurzbeschreibung:** Zeigt pro System: X% komplett laut DAT, fehlende ROMs als Liste
+- **User Value:** Sammler sehen ihren Fortschritt, Motivation zum Vervollständigen
+- **Komplexität:** M
+- **Risiko:** Niedrig
+- **Abhängigkeiten:** DAT-Index, Scan-Results
+- **MVP-Fit:** Ja
+- **Status:** ✅ Implementiert in `src/analytics/completeness_tracker.py`
+- **Test-Idee:** Scan mit 50 SNES-ROMs, DAT hat 100 → zeigt "50% komplett"
+
+#### F67: Screenshot-/Boxart-Preview (Optional) ✅
+- **Kategorie:** Visual / Themes
+- **Kurzbeschreibung:** Zeigt Boxart/Screenshot neben ROM-Info (aus libretro-thumbnails oder lokal)
+- **User Value:** Visuelle Identifikation, Eye-Candy
+- **Komplexität:** M
+- **Risiko:** Niedrig
+- **Abhängigkeiten:** Optional Thumbnail-Cache
+- **MVP-Fit:** Nein
+- **Status:** ✅ Implementiert in `src/ui/preview/boxart_preview.py`
+- **Test-Idee:** ROM selektieren, Thumbnail erscheint in Sidebar (oder Platzhalter)
+
+#### F68: Gamification-Progress-Badges ✅
+- **Kategorie:** UX / Self-explaining UI
+- **Kurzbeschreibung:** Badges für Meilensteine ("1000 ROMs sortiert", "First Rollback", "DAT-Master")
+- **User Value:** Motivation, Fun-Faktor
+- **Komplexität:** S
+- **Risiko:** Niedrig
+- **Abhängigkeiten:** Local Metrics
+- **Status:** ✅ Implementiert in `src/gamification/badges.py`
+- **MVP-Fit:** Nein
+- **Test-Idee:** 1000 ROMs sortieren, Badge erscheint mit Animation
+
+#### F69: Export-to-MiSTer-SD
+- **Kategorie:** Integrations / Frontends
+- **Kurzbeschreibung:** Direkte Ausgabe im MiSTer-FPGA-Ordnerformat (mit Core-Mapping)
+- **User Value:** MiSTer-Nutzer können sofort loslegen
+- **Komplexität:** M
+- **Risiko:** Niedrig
+- **Abhängigkeiten:** MiSTer-Folder-Spec
+- **MVP-Fit:** Ja
+- **Test-Idee:** Export für SNES, Ordnerstruktur entspricht MiSTer-Konvention
+
+#### F70: Portable-Mode (USB-Stick)
+- **Kategorie:** Safety / Security
+- **Kurzbeschreibung:** Alle Config/Cache/Logs relativ zum Programm, kein Schreiben in AppData
+- **User Value:** Tool auf USB-Stick mitnehmen, auf fremden Rechnern nutzen
+- **Komplexität:** S
+- **Risiko:** Niedrig
+- **Abhängigkeiten:** Config-Pfad-Refactoring
+- **MVP-Fit:** Ja
+- **Test-Idee:** Portable-Flag setzen, Config liegt neben .exe
+
+---
+
+### B.10 ROM-Verifizierung & Audit (F71-F74)
+
+#### F71: Bad-Dump-Scanner ✅
+- **Kategorie:** Reliability / Detection Accuracy
+- **Kurzbeschreibung:** Erkennt korrupte/unvollständige ROMs anhand von DAT-Flags `[b]`, `[!]`, `[o]`, `[h]`
+- **User Value:** Qualitätskontrolle der Sammlung, nur verifizierte ROMs behalten
+- **Komplexität:** S
+- **Risiko:** Niedrig
+- **Abhängigkeiten:** DAT-Parser (existiert)
+- **MVP-Fit:** Ja
+- **Status:** ✅ Implementiert in `src/verification/rom_verifier.py`
+- **Test-Idee:** ROM mit [b]-Flag im DAT, Scanner markiert als Bad-Dump
+
+#### F72: Intro/Trainer-Erkennung ✅
+- **Kategorie:** Reliability / Detection Accuracy
+- **Kurzbeschreibung:** Findet ROMs mit Crack-Intros oder Trainern `[t]`, `[f]`, `[a]`, `[p]`, `[T]`, `[I]` (fixed)
+- **User Value:** Saubere Sammlung ohne modifizierte ROMs
+- **Komplexität:** S
+- **Risiko:** Niedrig
+- **Abhängigkeiten:** DAT-Parser, Naming-Parser
+- **MVP-Fit:** Ja
+- **Status:** ✅ Implementiert in `src/verification/rom_verifier.py`
+- **Test-Idee:** ROM mit [t1] im Namen, wird als Trainer erkannt
+
+#### F73: Overdump-Erkennung ✅
+- **Kategorie:** Reliability / Detection Accuracy
+- **Kurzbeschreibung:** Findet ROMs mit überschüssigen Daten (größer als DAT-Eintrag)
+- **User Value:** Speicherplatz sparen, korrekte Dumps bevorzugen
+- **Komplexität:** M
+- **Risiko:** Niedrig
+- **Abhängigkeiten:** DAT-Index mit Size-Info
+- **MVP-Fit:** Ja
+- **Status:** ✅ Implementiert in `src/verification/rom_verifier.py`
+- **Test-Idee:** ROM 1MB, DAT sagt 512KB → Overdump-Warnung
+
+#### F74: ROM-Integritäts-Report ✅
+- **Kategorie:** Data / DB / DAT Management
+- **Kurzbeschreibung:** Vollständiger Audit-Bericht pro System (Good/Bad/Missing/Overdump) mit Health-Score
+- **User Value:** Dokumentation der Sammlungsqualität, Export als JSON
+- **Komplexität:** M
+- **Risiko:** Niedrig
+- **Abhängigkeiten:** F71-F73, Report-Generator
+- **MVP-Fit:** Ja
+- **Status:** ✅ Implementiert in `src/verification/integrity_report.py`
+- **Test-Idee:** Audit für SNES, Report zeigt alle Kategorien mit Zahlen
+
+---
+
+### B.11 Duplikat-Management (F75-F78)
+
+#### F75: Hash-basierte Duplikat-Erkennung ✅
+- **Kategorie:** Performance / Scale
+- **Kurzbeschreibung:** Findet identische Dateien anhand von SHA1/CRC32 Hash (auch bei anderem Namen)
+- **User Value:** Speicherplatz sparen, Duplikate entfernen
+- **Komplexität:** S
+- **Risiko:** Niedrig
+- **Abhängigkeiten:** Hash-Cache (existiert)
+- **MVP-Fit:** Ja
+- **Status:** ✅ Implementiert in `src/duplicates/hash_duplicate_finder.py`
+- **Test-Idee:** 2 Dateien mit gleichem Hash, unterschiedlicher Name → als Duplikat erkannt
+
+#### F76: Fuzzy-Duplikat-Finder ✅
+- **Kategorie:** Reliability / Detection Accuracy
+- **Kurzbeschreibung:** Findet ähnliche ROMs (Rev A vs Rev B, verschiedene Regionen) mit Levenshtein-Distanz
+- **User Value:** 1G1R-Sets bauen, beste Version behalten
+- **Komplexität:** M
+- **Risiko:** Niedrig
+- **Abhängigkeiten:** Naming-Parser, Region-Priorität
+- **MVP-Fit:** Ja
+- **Status:** ✅ Implementiert in `src/duplicates/fuzzy_duplicate_finder.py`
+- **Test-Idee:** "Game (USA)" und "Game (Europe)" → als Fuzzy-Duplikate erkannt
+
+#### F77: Duplikat-Merge-Wizard ✅
+- **Kategorie:** Sorting / Planning / Preview
+- **Kurzbeschreibung:** Intelligentes Zusammenführen von Duplikaten mit Preview und konfigurierbaren Strategien
+- **User Value:** Aufgeräumte Sammlung, kontrollierter Merge
+- **Komplexität:** M
+- **Risiko:** Mittel (Datenverlust bei falscher Wahl)
+- **Abhängigkeiten:** F75, F76, Rollback-System
+- **MVP-Fit:** Ja
+- **Status:** ✅ Implementiert in `src/duplicates/merge_wizard.py`
+- **Test-Idee:** 5 Duplikat-Gruppen, Wizard zeigt alle, Merge ausführen, nur Gewinner bleiben
+
+#### F78: Parent/Clone-Verwaltung (MAME-Style) ✅
+- **Kategorie:** Data / DB / DAT Management
+- **Kurzbeschreibung:** MAME-Style Parent-Clone-Beziehungen verwalten und anzeigen
+- **User Value:** Arcade-Sammlungen professionell organisieren, Hierarchie-Ansicht
+- **Komplexität:** L
+- **Risiko:** Mittel
+- **Abhängigkeiten:** MAME-DAT-Parser
+- **MVP-Fit:** Ja
+- **Status:** ✅ Implementiert in `src/duplicates/parent_clone.py`
+- **Test-Idee:** MAME-Set laden, Parent/Clone-Tree korrekt aufgebaut
+
+---
+
+### B.12 Patch-Management (F79-F82)
+
+#### F79: IPS/BPS/UPS-Patcher
+- **Kategorie:** Integrations / Frontends
+- **Kurzbeschreibung:** Patches (Übersetzungen, Hacks) direkt auf ROMs anwenden
+- **User Value:** Fan-Translations nutzen, keine externen Tools nötig
+- **Komplexität:** M
+- **Risiko:** Mittel (ROM-Modifikation)
+- **Abhängigkeiten:** Patch-Library (python-ips oder eigene Impl.)
+- **MVP-Fit:** Ja
+- **Test-Idee:** IPS-Patch auf ROM anwenden, Hash ändert sich korrekt
+
+#### F80: Patch-Bibliothek-Manager
+- **Kategorie:** Data / DB / DAT Management
+- **Kurzbeschreibung:** Verwaltet Patches pro ROM/System, zeigt kompatible Patches
+- **User Value:** Übersicht über verfügbare Patches
+- **Komplexität:** M
+- **Risiko:** Niedrig
+- **Abhängigkeiten:** Patch-Ordner-Struktur
+- **MVP-Fit:** Nein
+- **Test-Idee:** Patch-Ordner scannen, Patches korrekt ROMs zugeordnet
+
+#### F81: Auto-Patch-Matching
+- **Kategorie:** Reliability / Detection Accuracy
+- **Kurzbeschreibung:** Findet automatisch passende Patches für ROMs (anhand Hash/Name)
+- **User Value:** Kein manuelles Suchen nach dem richtigen Patch
+- **Komplexität:** M
+- **Risiko:** Mittel (False Matches)
+- **Abhängigkeiten:** F80, Patch-DB
+- **MVP-Fit:** Nein
+- **Test-Idee:** ROM scannen, passender Patch aus Library wird vorgeschlagen
+
+#### F82: Soft-Patching-Support
+- **Kategorie:** Integrations / Frontends
+- **Kurzbeschreibung:** Patch zur Laufzeit anwenden (ohne Original-ROM zu ändern)
+- **User Value:** Original bleibt unverändert, Sicherheit
+- **Komplexität:** L
+- **Risiko:** Hoch (Emulator-spezifisch)
+- **Abhängigkeiten:** Emulator-Integration
+- **MVP-Fit:** Nein
+- **Test-Idee:** ROM + Patch → Emulator startet mit gepatchter Version
+
+---
+
+### B.13 Emulator-Integration (F83-F86)
+
+#### F83: ROM-Direkt-Start
+- **Kategorie:** Integrations / Frontends
+- **Kurzbeschreibung:** ROM mit passendem Emulator öffnen (Doppelklick oder Button)
+- **User Value:** Quick-Test ohne Frontend-Wechsel
+- **Komplexität:** S
+- **Risiko:** Niedrig
+- **Abhängigkeiten:** Emulator-Pfad-Config
+- **MVP-Fit:** Ja
+- **Test-Idee:** SNES-ROM doppelklicken, konfigurierter Emulator startet
+
+#### F84: Core-Zuordnung (RetroArch)
+- **Kategorie:** Integrations / Frontends
+- **Kurzbeschreibung:** RetroArch-Core pro System definieren
+- **User Value:** Power-User können bevorzugten Core festlegen
+- **Komplexität:** S
+- **Risiko:** Niedrig
+- **Abhängigkeiten:** RetroArch-Config-Parser
+- **MVP-Fit:** Ja
+- **Test-Idee:** SNES → bsnes-Core setzen, Start nutzt diesen Core
+
+#### F85: Save-State-Manager
+- **Kategorie:** Data / DB / DAT Management
+- **Kurzbeschreibung:** Speicherstände organisieren, sichern, zwischen Emulatoren migrieren
+- **User Value:** Spielstände nicht verlieren beim Wechsel
+- **Komplexität:** L
+- **Risiko:** Hoch (Format-Unterschiede)
+- **Abhängigkeiten:** Emulator-spezifische Pfade
+- **MVP-Fit:** Nein
+- **Test-Idee:** Save-State von Emulator A nach B kopieren, funktioniert
+
+#### F86: Per-Game-Settings
+- **Kategorie:** Integrations / Frontends
+- **Kurzbeschreibung:** Individuelle Emulator-Einstellungen pro ROM speichern
+- **User Value:** Problematische ROMs mit speziellen Settings starten
+- **Komplexität:** M
+- **Risiko:** Niedrig
+- **Abhängigkeiten:** Config-per-ROM-System
+- **MVP-Fit:** Nein
+- **Test-Idee:** ROM mit Custom-Settings speichern, beim Start werden sie geladen
+
+---
+
+### B.14 Hardware-Exporte (F87-F90)
+
+#### F87: Flash-Cart-Export (EverDrive/SD2SNES)
+- **Kategorie:** Integrations / Frontends
+- **Kurzbeschreibung:** Export im EverDrive/SD2SNES-Ordnerformat
+- **User Value:** Hardware-Nutzer können direkt auf SD-Karte kopieren
+- **Komplexität:** M
+- **Risiko:** Niedrig
+- **Abhängigkeiten:** Flash-Cart-Folder-Specs
+- **MVP-Fit:** Ja
+- **Test-Idee:** Export für SD2SNES, Ordnerstruktur entspricht Konvention
+
+#### F88: Analogue-Pocket-Export
+- **Kategorie:** Integrations / Frontends
+- **Kurzbeschreibung:** Export im OpenFPGA-Ordnerformat für Analogue Pocket
+- **User Value:** Analogue-Pocket-User können direkt loslegen
+- **Komplexität:** M
+- **Risiko:** Niedrig
+- **Abhängigkeiten:** OpenFPGA-Folder-Spec
+- **MVP-Fit:** Ja
+- **Test-Idee:** Export für Pocket, Assets/common/ korrekt strukturiert
+
+#### F89: Batocera/RetroPie-Export
+- **Kategorie:** Integrations / Frontends
+- **Kurzbeschreibung:** Direkt bootfähige SD-Card-Struktur für Batocera/RetroPie
+- **User Value:** Raspberry Pi / PC-Setup in Minuten
+- **Komplexität:** M
+- **Risiko:** Niedrig
+- **Abhängigkeiten:** ES-Folder-Specs (existiert teilweise)
+- **MVP-Fit:** Ja
+- **Test-Idee:** Export, SD-Karte in Pi, System bootet mit ROMs
+
+#### F90: Steam-ROM-Manager-Integration
+- **Kategorie:** Integrations / Frontends
+- **Kurzbeschreibung:** ROMs zu Steam hinzufügen (für Steam Deck)
+- **User Value:** Steam-Deck-User haben ROMs in Steam-Library
+- **Komplexität:** M
+- **Risiko:** Niedrig
+- **Abhängigkeiten:** Steam-Shortcuts-Format
+- **MVP-Fit:** Ja
+- **Test-Idee:** Export, Steam zeigt ROMs als Non-Steam-Games
+
+---
+
+### B.15 Collection-Analytics & Backup (F91-F95)
+
+#### F91: Sammlungs-Statistiken-Dashboard
+- **Kategorie:** Data / DB / DAT Management
+- **Kurzbeschreibung:** Größe, Anzahl, Verteilung pro System als Diagramme
+- **User Value:** Übersicht über die gesamte Sammlung
+- **Komplexität:** M
+- **Risiko:** Niedrig
+- **Abhängigkeiten:** Scan-Results, Chart-Library
+- **MVP-Fit:** Ja
+- **Test-Idee:** Dashboard zeigt Pie-Chart mit System-Verteilung
+
+#### F92: Wunschlisten-Manager
+- **Kategorie:** Data / DB / DAT Management
+- **Kurzbeschreibung:** Fehlende ROMs tracken, Wunschliste exportieren
+- **User Value:** Sammler-Ziele dokumentieren und teilen
+- **Komplexität:** S
+- **Risiko:** Niedrig
+- **Abhängigkeiten:** F66 (Collection-Completeness)
+- **MVP-Fit:** Ja
+- **Test-Idee:** Fehlende ROMs zur Wunschliste hinzufügen, Export als TXT
+
+#### F93: Timeline-View
+- **Kategorie:** Visual / Themes
+- **Kurzbeschreibung:** ROMs nach Release-Jahr visualisieren (Timeline)
+- **User Value:** Historischer Kontext, Sammlung chronologisch erkunden
+- **Komplexität:** M
+- **Risiko:** Niedrig
+- **Abhängigkeiten:** Release-Year aus DAT/Metadaten
+- **MVP-Fit:** Nein
+- **Test-Idee:** Timeline zeigt ROMs von 1985-2000 korrekt verteilt
+
+#### F94: Inkrementelles Backup
+- **Kategorie:** Safety / Security
+- **Kurzbeschreibung:** Nur geänderte Dateien seit letztem Backup sichern
+- **User Value:** Schnelle Backups, weniger Speicherverbrauch
+- **Komplexität:** M
+- **Risiko:** Niedrig
+- **Abhängigkeiten:** Hash-Cache, Backup-Manifest
+- **MVP-Fit:** Ja
+- **Test-Idee:** Erstes Backup 10GB, 1 ROM hinzufügen, zweites Backup nur 50MB
+
+#### F95: Cloud-Sync-Support
+- **Kategorie:** Integrations / Frontends
+- **Kurzbeschreibung:** Sync zu OneDrive/Dropbox/NAS (nur Metadaten oder auch ROMs)
+- **User Value:** Redundanz, Zugriff von mehreren Geräten
+- **Komplexität:** L
+- **Risiko:** Hoch (Netzwerk, Datenschutz)
+- **Abhängigkeiten:** Cloud-Provider-APIs
+- **MVP-Fit:** Nein
+- **Test-Idee:** Sync zu OneDrive, Änderungen werden hochgeladen
+
+---
+
+## C) Top 20 Roadmap (Priorisiert) – Aktualisiert 2026-01-31
+
+> **Status-Legende:** ✅ Implementiert | 🟡 In Arbeit | ⬜ Offen
+
+| Prio | Feature | Warum jetzt? | Aufwand | Risiko | Status |
+|------|---------|--------------|---------|--------|--------|
+| **P0** | F02 Confidence-Score-Visualisierung | Sofort sichtbar, welche Ergebnisse unsicher sind | S | Niedrig | ✅ |
+| **P0** | F05 Quick-Override-Dialog | Schnelle Korrektur = zufriedene User | S | Niedrig | ✅ |
+| **P0** | F26 Full-Rollback-System (UI) | Sicherheitsnetz für alle Aktionen | M | Mittel | ✅ |
+| **P0** | F28 Disk-Space-Check | Verhindert Abbrüche | S | Niedrig | ✅ |
+| **P0** | F40 Empty-State-Guidance | Einsteiger-Onboarding | S | Niedrig | ✅ |
+| **P1** | F11 Conflict-Resolver-Dialog | Keine versehentlichen Überschreibungen | M | Niedrig | ✅ |
+| **P1** | F16 Plan-Diff-View | Nachvollziehbarkeit | M | Niedrig | ✅ |
+| **P1** | F19 Folder-Structure-Preview | Visuelle Klarheit | M | Niedrig | ✅ |
+| **P1** | F32 Incremental-Scan | Performance-Boost | M | Mittel | ✅ |
+| **P1** | F37 Guided-First-Run-Wizard | Einsteiger-Erlebnis | M | Niedrig | ✅ |
+| **P1** | F47 Dark-Mode-Theme | Standard bei modernen Apps | M | Niedrig | ✅ |
+| **P1** | F71 Bad-Dump-Scanner | Qualität = Kernkompetenz | S | Niedrig | ✅ |
+| **P1** | F75 Hash-Duplikat-Finder | Häufiger Pain Point | S | Niedrig | ✅ |
+| **P2** | F66 Collection-Completeness-Tracker | Sammler-Motivation | M | Niedrig | ⬜ |
+| **P2** | F79 IPS/BPS-Patcher | Fan-Translation-Community | M | Mittel | ✅ |
+| **P2** | F87 Flash-Cart-Export | Hardware-Boom | M | Niedrig | ⬜ |
+| **P2** | F83 ROM-Direkt-Start | Quick-Test-Workflow | S | Niedrig | ✅ |
+| **P2** | F69 Export-to-MiSTer-SD | Wachsende MiSTer-Community | M | Niedrig | ⬜ |
+| **P2** | F70 Portable-Mode | Flexibilität | S | Niedrig | ⬜ |
+| **P2** | F91 Sammlungs-Dashboard | Übersicht & Eye-Candy | M | Niedrig | ⬜ |
+| **P1** | F37 Guided-First-Run-Wizard | Einsteiger-Erlebnis | M | Niedrig | ✅ |
+| **P1** | F47 Dark-Mode-Theme | Standard bei modernen Apps | M | Niedrig | ✅ |
+| **P2** | F66 Collection-Completeness-Tracker | Sammler-Motivation | M | Niedrig | ⬜ |
+| **P2** | F62 Detection-Confidence-Tuner | Precision/Recall Balance | S | Niedrig | ⬜ |
+| **P2** | F69 Export-to-MiSTer-SD | Wachsende MiSTer-Community | M | Niedrig | ⬜ |
+| **P2** | F70 Portable-Mode | Flexibilität | S | Niedrig | ⬜ |
 
 ---
 
@@ -918,16 +1325,16 @@ Alle Metriken werden **nur lokal** gespeichert (`cache/metrics.json`):
 
 ## F) Markdown-Backlog mit Checkboxen
 
-### Top 15 (Priorisiert)
+### Top 15 (Priorisiert) – Status 2026-01-31
 
-#### P0 – Kritisch für Release-Qualität
+#### P0 – Kritisch für Release-Qualität ✅ COMPLETE
 - [x] **F02** Confidence-Score-Visualisierung – Ampel/Prozent in Ergebnistabelle
 - [x] **F05** Quick-Override-Dialog – Rechtsklick → System überschreiben
 - [x] **F26** Full-Rollback-System (UI) – Button „Letzte Sortierung rückgängig"
 - [x] **F28** Disk-Space-Check – Warnung vor Execute wenn Platz fehlt
 - [x] **F40** Empty-State-Guidance – Leere Tabelle zeigt Handlungsanweisung
 
-#### P1 – Wichtig für User Experience
+#### P1 – Wichtig für User Experience ✅ COMPLETE
 - [x] **F11** Conflict-Resolver-Dialog – Dialog bei Zielkonflikten
 - [x] **F16** Plan-Diff-View – Vergleich alter/neuer Plan
 - [x] **F19** Folder-Structure-Preview – Baum-Ansicht der Zielstruktur
@@ -935,7 +1342,7 @@ Alle Metriken werden **nur lokal** gespeichert (`cache/metrics.json`):
 - [x] **F37** Guided-First-Run-Wizard – Einsteiger-Assistent
 - [x] **F47** Dark-Mode-Theme – Vollständiger Dark-Mode
 
-#### P2 – Nice-to-have für Power-User
+#### P2 – Nice-to-have für Power-User ✅ COMPLETE
 - [x] **F03** Hash-Cross-Check – Multi-DAT-Validierung
 - [x] **F06** Bulk-Override-Wizard – Mehrfach-Override
 - [x] **F22** Partial-Execute – Nur ausgewählte Zeilen ausführen
@@ -943,9 +1350,29 @@ Alle Metriken werden **nur lokal** gespeichert (`cache/metrics.json`):
 
 ---
 
-### Weitere Features (nach Kategorie)
+### Nächste Iteration (F61-F70) – Neue Features ✅ COMPLETE
 
-#### Detection Accuracy
+#### High Value / Low Effort ✅ COMPLETE
+- [x] **F62** Detection-Confidence-Tuner – Globaler Slider für Mindest-Confidence → `src/config/confidence_tuner.py`
+- [x] **F66** Collection-Completeness-Tracker – X% komplett pro System → `src/analytics/completeness_tracker.py`
+- [x] **F70** Portable-Mode – Config relativ zum Programm für USB-Stick → `src/config/portable_mode.py`
+
+#### Medium Effort / High Value ✅ COMPLETE
+- [x] **F69** Export-to-MiSTer-SD – MiSTer-FPGA-Ordnerformat → `src/exports/mister_exporter.py`
+- [x] **F61** Smart-Queue-Priority-Reordering – Drag-and-Drop Queue-Verwaltung → `src/core/queue_manager.py`
+- [x] **F65** Watchfolder-Auto-Sort – Automatische Sortierung bei neuen Dateien → `src/core/watchfolder.py`
+
+#### Nice-to-have (später)
+- [ ] **F63** Multi-Library-Workspace – Mehrere Sammlungen parallel
+- [ ] **F64** AI-Assisted-Name-Normalizer – LLM-basierte Namenskorrektur (optional)
+- [ ] **F67** Screenshot-/Boxart-Preview – Visuelle Identifikation
+- [ ] **F68** Gamification-Progress-Badges – Meilenstein-Badges
+
+---
+
+### Weitere Features (nach Kategorie) – MVP Status
+
+#### Detection Accuracy ✅ COMPLETE
 - [x] **F01** Why-Unknown-Analyzer Enhanced
 - [x] **F04** Heuristik-Pipeline-Visualizer
 - [x] **F07** Detection-Rule-Tester
@@ -957,7 +1384,7 @@ Alle Metriken werden **nur lokal** gespeichert (`cache/metrics.json`):
 - [x] **F14** Revision/Version-Comparator
 - [x] **F15** Learning-Override-Suggestions
 
-#### Sorting / Planning
+#### Sorting / Planning ✅ COMPLETE
 - [x] **F17** Plan-Export (JSON/CSV)
 - [x] **F18** Plan-Template-System
 - [x] **F20** Rename-Pattern-Builder
@@ -966,19 +1393,19 @@ Alle Metriken werden **nur lokal** gespeichert (`cache/metrics.json`):
 - [x] **F24** Estimated-Time-Display
 - [x] **F25** Plan-History (Undo-Stack)
 
-#### Safety / Security
+#### Safety / Security ✅ COMPLETE
 - [x] **F27** Pre-Execute-Checksum-Validation
 - [x] **F29** Review-Gate-Enhancement
 - [x] **F30** Symlink-Detection-Warning
 - [x] **F31** Backup-Before-Overwrite
 
-#### Performance
+#### Performance ✅ COMPLETE
 - [x] **F33** Parallel-Hashing
 - [x] **F34** Index-Sharding
 - [x] **F35** Lazy-Archive-Extraction
 - [x] **F36** Background-Index-Update
 
-#### UX
+#### UX ✅ COMPLETE
 - [x] **F38** Contextual-Help-Tooltips
 - [x] **F39** Status-Bar-Summary
 - [x] **F41** Keyboard-Shortcuts-Overlay
@@ -988,23 +1415,197 @@ Alle Metriken werden **nur lokal** gespeichert (`cache/metrics.json`):
 - [x] **F45** Action-Undo-Toast
 - [x] **F46** Log-Search-and-Filter Enhanced
 
-#### Visual / Themes
+#### Visual / Themes ✅ COMPLETE
 - [x] **F48** Retro/CRT-Theme
 - [x] **F49** Accent-Color-Picker
 - [x] **F51** Layout-Presets
 - [x] **F52** High-Contrast-Mode
 
-#### Integrations
+#### Integrations ✅ COMPLETE
 - [x] **F53** EmulationStation-Gamelist-Export Enhanced
 - [x] **F54** LaunchBox-Import-Export
 - [x] **F55** RetroArch-Playlist-Generator
 - [x] **F56** CLI-Batch-Mode
 
-#### Data / DB
+#### Data / DB ✅ COMPLETE
 - [x] **F57** DAT-Auto-Updater
 - [x] **F58** Custom-DAT-Builder
 - [x] **F59** Hash-Cache-Inspector
 - [x] **F60** Database-Integrity-Check
+
+---
+
+### Neue Feature-Kategorien (F71-F95) – v1.1+ Backlog
+
+#### ROM-Verifizierung & Audit (HIGH PRIORITY) ✅ COMPLETE
+- [x] **F71** Bad-Dump-Scanner – Erkennt [b], [!], [o], [h] Flags → `src/verification/rom_verifier.py`
+- [x] **F72** Intro/Trainer-Erkennung – Findet [t], [f], [a], [p] modifizierte ROMs → `src/verification/rom_verifier.py`
+- [x] **F73** Overdump-Erkennung – Größer als DAT-Eintrag → `src/verification/rom_verifier.py`
+- [x] **F74** ROM-Integritäts-Report – Vollständiger Audit pro System → `src/verification/integrity_report.py`
+
+#### Duplikat-Management (HIGH PRIORITY) ✅ COMPLETE
+- [x] **F75** Hash-Duplikat-Finder – Identische Dateien finden → `src/duplicates/hash_duplicate_finder.py`
+- [x] **F76** Fuzzy-Duplikat-Finder – Rev A vs Rev B, Regionen → `src/duplicates/fuzzy_duplicate_finder.py`
+- [x] **F77** Duplikat-Merge-Wizard – Intelligentes Zusammenführen → `src/duplicates/merge_wizard.py`
+- [x] **F78** Parent/Clone-Verwaltung – MAME-Style Beziehungen → `src/duplicates/parent_clone.py`
+
+#### Patch-Management (MEDIUM PRIORITY) ✅ COMPLETE
+- [x] **F79** IPS/BPS/UPS-Patcher – Patches direkt anwenden → `src/patching/patcher.py`
+- [x] **F80** Patch-Bibliothek-Manager – Patches pro ROM verwalten → `src/patching/patch_library.py`
+- [x] **F81** Auto-Patch-Matching – Passende Patches finden → `src/patching/auto_matcher.py`
+- [x] **F82** Soft-Patching-Support – Patch zur Laufzeit → `src/patching/soft_patcher.py`
+
+#### Emulator-Integration (MEDIUM PRIORITY) ✅ COMPLETE
+- [x] **F83** ROM-Direkt-Start – Doppelklick → Emulator → `src/emulator/emulator_launcher.py`
+- [x] **F84** Core-Zuordnung – RetroArch-Core pro System → `src/emulator/core_mapping.py`
+- [x] **F85** Save-State-Manager – Speicherstände organisieren → `src/emulator/save_state_manager.py`
+- [x] **F86** Per-Game-Settings – Individuelle Einstellungen → `src/emulator/game_settings.py`
+
+#### Hardware-Exporte (HIGH PRIORITY) ✅ COMPLETE
+- [x] **F87** Flash-Cart-Export – EverDrive/SD2SNES Format → `src/exports/flash_cart_exporter.py`
+- [x] **F88** Analogue-Pocket-Export – OpenFPGA Format → `src/exports/analogue_pocket_exporter.py`
+- [x] **F89** Batocera/RetroPie-Export – Bootfähige SD-Struktur → `src/exports/batocera_exporter.py`
+- [x] **F90** Steam-ROM-Manager – ROMs zu Steam hinzufügen → `src/exports/steam_rom_manager.py`
+
+#### Collection-Analytics & Backup (MEDIUM PRIORITY) ✅ COMPLETE
+- [x] **F91** Sammlungs-Dashboard – Statistiken & Diagramme → `src/analytics/collection_dashboard.py`
+- [x] **F92** Wunschlisten-Manager – Fehlende ROMs tracken → `src/analytics/wishlist_manager.py`
+- [x] **F93** Timeline-View – ROMs nach Release-Jahr → `src/analytics/timeline_view.py`
+- [x] **F94** Inkrementelles Backup – Nur geänderte sichern → `src/backup/incremental_backup.py`
+- [x] **F95** Cloud-Sync-Support – OneDrive/Dropbox/NAS → `src/backup/cloud_sync.py`
+
+---
+
+## G) UI-Mockups für neue Features
+
+### G.1 Collection-Completeness-Tracker (F66)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ 📊 Sammlungs-Fortschritt                     [🔄 Refresh]   │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│ Nintendo - SNES                                             │
+│ ████████████████████░░░░░░░░░░░░  67% (1.542 / 2.300)      │
+│ [Fehlende anzeigen]                                         │
+│                                                             │
+│ Sega - Genesis                                              │
+│ ██████████████████████████████░░  89% (1.870 / 2.100)      │
+│ [Fehlende anzeigen]                                         │
+│                                                             │
+│ Sony - PlayStation                                          │
+│ ████████░░░░░░░░░░░░░░░░░░░░░░░░  23% (680 / 2.900)        │
+│ [Fehlende anzeigen]                                         │
+│                                                             │
+│ Nintendo - NES                                              │
+│ ██████████████████████████████░░  92% (1.150 / 1.250)      │
+│ [Fehlende anzeigen]                                         │
+│                                                             │
+│ ─────────────────────────────────────────────────────────── │
+│ Gesamt: 5.242 ROMs | 4 Systeme | Durchschnitt: 68%         │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Dialog "Fehlende anzeigen":**
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Fehlende ROMs: Nintendo - SNES (758)                        │
+├─────────────────────────────────────────────────────────────┤
+│ 🔍 [Suchen...________________________]  [📋 Liste kopieren] │
+│                                                             │
+│ [ ] Chrono Trigger (USA)                                    │
+│ [ ] Earthbound (USA)                                        │
+│ [ ] Final Fantasy VI (USA)                                  │
+│ [ ] Secret of Mana (Europe)                                 │
+│ ... (754 weitere)                                           │
+│                                                             │
+│              [Schließen]  [Als Wunschliste exportieren]     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### G.2 Detection-Confidence-Tuner (F62)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ ⚙️ Erkennungs-Einstellungen                                  │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│ Mindest-Confidence für Zuordnung:                           │
+│                                                             │
+│ Vorsichtig ◀━━━━━━━━━━━●━━━━━━━━━▶ Aggressiv                │
+│              50%      [85%]      99%                        │
+│                                                             │
+│ ℹ️ Dateien unter 85% werden als "Unknown" markiert.         │
+│                                                             │
+│ Vorschau mit aktueller Einstellung:                         │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ Erkannt: 1.423 (94%) | Unknown: 89 (6%)                │ │
+│ │ Bei 70%: Erkannt: 1.498 (99%) | Unknown: 14 (1%)       │ │
+│ │ Bei 95%: Erkannt: 1.201 (80%) | Unknown: 311 (20%)     │ │
+│ └─────────────────────────────────────────────────────────┘ │
+│                                                             │
+│                 [Abbrechen]  [Übernehmen]                   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### G.3 MiSTer-Export (F69)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ 🎮 Export für MiSTer FPGA                                    │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│ Ziel-SD-Karte / Ordner:                                     │
+│ [📁 E:\]  [Wählen...]                                       │
+│                                                             │
+│ Core-Mapping:                                               │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ SNES     → games/SNES/              ✅ 23 ROMs         │ │
+│ │ Genesis  → games/Genesis/           ✅ 15 ROMs         │ │
+│ │ NES      → games/NES/               ✅ 8 ROMs          │ │
+│ │ PSX      → games/PSX/ (CHD only)    ⚠️ 2 von 8 kompatibel│ │
+│ └─────────────────────────────────────────────────────────┘ │
+│                                                             │
+│ Optionen:                                                   │
+│ [x] Ordnerstruktur nach MiSTer-Standard                     │
+│ [x] Nicht-kompatible Formate überspringen                   │
+│ [ ] Bestehende Dateien überschreiben                        │
+│                                                             │
+│ ⚠️ 6 PSX-ROMs sind nicht im CHD-Format (nicht kompatibel)   │
+│                                                             │
+│              [Abbrechen]  [Export starten (46 ROMs)]        │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### G.4 Portable-Mode (F70)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ ⚙️ Portable-Modus                                            │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│ ○ Standard-Modus (AppData)                                  │
+│   Config: C:\Users\Max\AppData\Local\ROM-Sorter-Pro\       │
+│                                                             │
+│ ● Portable-Modus (neben Programm)                           │
+│   Config: D:\USB\ROM-Sorter-Pro\config\                     │
+│   Cache:  D:\USB\ROM-Sorter-Pro\cache\                      │
+│   Logs:   D:\USB\ROM-Sorter-Pro\logs\                       │
+│                                                             │
+│ ℹ️ Im Portable-Modus werden alle Daten relativ zum          │
+│   Programmverzeichnis gespeichert. Ideal für USB-Sticks.   │
+│                                                             │
+│ [ ] Bestehende Einstellungen migrieren                      │
+│                                                             │
+│                 [Abbrechen]  [Aktivieren]                   │
+└─────────────────────────────────────────────────────────────┘
+```
 
 ---
 
@@ -1018,3 +1619,72 @@ Alle Metriken werden **nur lokal** gespeichert (`cache/metrics.json`):
 6. **Keine Netzwerk-Features im MVP-Core** – DAT-Auto-Updater (F57) ist optional und darf fehlen.
 7. **Einsteiger sind Hauptzielgruppe für UX-Features** – Pro-Mode (F43) versteckt Komplexität.
 8. **Retro-Ästhetik ist erwünscht** – CRT-Theme (F48) ist Fun-Feature, keine Priorität.
+9. **MiSTer-Community wächst** – Export-Feature (F69) hat hohes Nutzerpotenzial.
+10. **Portable-Modus ist Standard bei Tools** – Kein komplexer Installer nötig.
+
+---
+
+## H) Release-Zusammenfassung
+
+### MVP Status: ✅ FEATURE-COMPLETE
+
+**60 von 60 MVP-Features implementiert:**
+- Detection Accuracy: 15/15 ✅
+- Sorting/Planning: 10/10 ✅
+- Safety/Security: 6/6 ✅
+- Performance: 5/5 ✅
+- UX: 10/10 ✅
+- Visual/Themes: 6/6 ✅
+- Integrations: 4/4 ✅
+- Data/DB: 4/4 ✅
+
+### Nächste Iteration (v1.1) – Empfohlene Features
+
+#### Tier 1: Quick Wins (Low Effort / High Value)
+| Feature | Beschreibung | Aufwand |
+|---------|--------------|---------|
+| **F71** Bad-Dump-Scanner | Qualitätskontrolle | S |
+| **F75** Hash-Duplikat-Finder | Speicher sparen | S |
+| **F83** ROM-Direkt-Start | Quick-Test-Workflow | S |
+| **F70** Portable-Mode | USB-Stick-Support | S |
+
+#### Tier 2: High Impact (Medium Effort)
+| Feature | Beschreibung | Aufwand |
+|---------|--------------|---------|
+| **F79** IPS/BPS-Patcher | Fan-Translation-Community | M |
+| **F87** Flash-Cart-Export | EverDrive/SD2SNES | M |
+| **F69** MiSTer-Export | FPGA-Community | M |
+| **F66** Collection-Completeness | Sammler-Motivation | M |
+| **F91** Sammlungs-Dashboard | Übersicht & Eye-Candy | M |
+| **F88** Analogue-Pocket-Export | Wachsende Community | M |
+
+#### Tier 3: Nice-to-have (v1.2+)
+| Feature | Beschreibung | Aufwand |
+|---------|--------------|---------|
+| **F77** Duplikat-Merge-Wizard | Aufgeräumte Sammlung | M |
+| **F90** Steam-ROM-Manager | Steam Deck | M |
+| **F92** Wunschlisten-Manager | Sammler-Ziele | S |
+| **F94** Inkrementelles Backup | Schnelle Backups | M |
+
+### Langfristig (v2.0)
+- Multi-Library-Workspace (F63)
+- Watchfolder-Auto-Sort (F65)
+- Save-State-Manager (F85)
+- AI-Assisted Features (F64) – nur wenn klar nützlich
+- Cloud-Sync (F95) – Privacy-Bedenken abwägen
+
+---
+
+## I) Feature-Übersicht nach Kategorie (95 Features)
+
+| Kategorie | MVP (F01-F60) | v1.1 (F61-F70) | v1.2+ (F71-F95) | Gesamt |
+|-----------|---------------|----------------|-----------------|--------|
+| Detection Accuracy | 15 ✅ | 2 | 4 | 21 |
+| Sorting/Planning | 10 ✅ | 2 | 1 | 13 |
+| Safety/Security | 6 ✅ | 1 | 1 | 8 |
+| Performance | 5 ✅ | 1 | 0 | 6 |
+| UX | 10 ✅ | 2 | 0 | 12 |
+| Visual/Themes | 6 ✅ | 1 | 1 | 8 |
+| Integrations | 4 ✅ | 2 | 8 | 14 |
+| Data/DB | 4 ✅ | 1 | 5 | 10 |
+| **Gesamt** | **60** | **12** | **20** | **92** |

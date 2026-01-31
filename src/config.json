@@ -5,7 +5,9 @@
     "first_run_complete": true,
     "log_visible": true,
     "theme": "qt:retro_neon",
-    "pro_mode": false
+    "pro_mode": false,
+    "window_width": 1680,
+    "window_height": 998
   },
   "scanner": {
     "use_high_performance": true,
