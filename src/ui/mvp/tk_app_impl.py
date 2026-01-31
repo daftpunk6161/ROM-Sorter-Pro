@@ -93,8 +93,13 @@ def run() -> int:
         SortReport,
         SortMode,
         add_identification_overrides_bulk,
+        ai_normalize_name,
         diff_sort_plans,
         filter_scan_items,
+        build_collection_dashboard_summary,
+        ensure_active_library,
+        get_badge_status,
+        get_media_preview,
         get_symlink_warnings,
         plan_sort,
         run_scan,
@@ -102,6 +107,8 @@ def run() -> int:
         normalize_input,
         infer_languages_and_version_from_name,
         infer_region_from_name,
+        update_badges_after_execute,
+        update_badges_after_scan,
     )
     from ...app.plan_stats import compute_plan_stats
     from .model_utils import format_system_badge
@@ -211,6 +218,7 @@ def run() -> int:
             self._sort_plan: Optional[SortPlan] = None
             self._last_plan: Optional[SortPlan] = None
             self._plan_stats: Dict[str, int] = {"total_actions": 0, "total_bytes": 0}
+            self._last_sort_report: Optional[SortReport] = None
             self._plan_history: List[SortPlan] = []
             self._plan_history_index: int = -1
             self._ui_fsm = UIStateMachine()
@@ -218,6 +226,7 @@ def run() -> int:
             self._log_filter_text = ""
             self._log_level = "ALL"
             self._syncing_paths = False
+            self._feature_media_dirs: List[str] = []
 
             self._table_items: List[ScanItem] = []
 
@@ -339,9 +348,59 @@ def run() -> int:
             pro_cb.pack(side=tk.LEFT, padx=(8, 0))
             btn_shortcuts.pack(side=tk.LEFT, padx=(8, 0))
 
+            feature_frame = ttk.LabelFrame(main, text="Feature Hub", padding=8)
+            feature_frame.pack(fill=tk.X, pady=(0, 8))
+            self.feature_analytics_var = tk.StringVar(value="Analytics: -")
+            self.feature_badges_var = tk.StringVar(value="Badges: -")
+            self.feature_normalize_var = tk.StringVar(value="AI-Normalizer: -")
+            self.feature_media_var = tk.StringVar(value="Media-Preview: -")
+            self.feature_library_var = tk.StringVar(value="Multi-Library: -")
+
+            row_analytics = ttk.Frame(feature_frame)
+            row_analytics.pack(fill=tk.X, pady=(0, 4))
+            ttk.Label(row_analytics, textvariable=self.feature_analytics_var).pack(side=tk.LEFT)
+            self.btn_feature_refresh = ttk.Button(
+                row_analytics, text="Analytics aktualisieren", command=self._refresh_feature_analytics
+            )
+            self.btn_feature_refresh.pack(side=tk.RIGHT)
+
+            row_badges = ttk.Frame(feature_frame)
+            row_badges.pack(fill=tk.X, pady=(0, 4))
+            ttk.Label(row_badges, textvariable=self.feature_badges_var).pack(side=tk.LEFT)
+            self.btn_feature_badges = ttk.Button(
+                row_badges, text="Badges anzeigen", command=self._show_feature_badges
+            )
+            self.btn_feature_badges.pack(side=tk.RIGHT)
+
+            row_normalize = ttk.Frame(feature_frame)
+            row_normalize.pack(fill=tk.X, pady=(0, 4))
+            ttk.Label(row_normalize, textvariable=self.feature_normalize_var).pack(side=tk.LEFT)
+            self.btn_feature_normalize = ttk.Button(
+                row_normalize, text="AI-Normalizer", command=self._normalize_feature_name
+            )
+            self.btn_feature_normalize.pack(side=tk.RIGHT)
+
+            row_media = ttk.Frame(feature_frame)
+            row_media.pack(fill=tk.X, pady=(0, 4))
+            ttk.Label(row_media, textvariable=self.feature_media_var).pack(side=tk.LEFT)
+            self.btn_feature_media = ttk.Button(
+                row_media, text="Media-Preview", command=self._preview_feature_media
+            )
+            self.btn_feature_media.pack(side=tk.RIGHT)
+
+            row_library = ttk.Frame(feature_frame)
+            row_library.pack(fill=tk.X)
+            ttk.Label(row_library, textvariable=self.feature_library_var).pack(side=tk.LEFT)
+            self.btn_feature_library = ttk.Button(
+                row_library, text="Library sync", command=self._sync_feature_library
+            )
+            self.btn_feature_library.pack(side=tk.RIGHT)
+
             self._apply_tooltips(tk, ttk)
             self._load_general_settings_from_config()
             self._load_sorting_settings_from_config()
+            self._load_feature_media_dirs_from_config()
+            self._refresh_feature_badge_status()
             self._refresh_recent_paths_dropdowns()
 
         def _choose_source(self) -> None:
@@ -457,6 +516,149 @@ def run() -> int:
             _Tooltip(tk, ttk, self.recent_dest_combo, "Zuletzt verwendete Ziele")
             _Tooltip(tk, ttk, self.log_filter_entry, "Log nach Text filtern")
             _Tooltip(tk, ttk, self.log_level_combo, "Log nach Severity filtern")
+
+        def _load_feature_media_dirs_from_config(self) -> None:
+            try:
+                cfg = load_config()
+                if not isinstance(cfg, dict):
+                    return
+                gui_cfg = cfg.get("gui_settings", {}) or {}
+                media_dirs = gui_cfg.get("media_dirs", []) or []
+                if isinstance(media_dirs, list):
+                    self._feature_media_dirs = [str(p) for p in media_dirs if str(p).strip()]
+            except Exception:
+                self._feature_media_dirs = []
+
+        def _save_feature_media_dirs_to_config(self) -> None:
+            try:
+                cfg = load_config()
+                if not isinstance(cfg, dict):
+                    cfg = {}
+                gui_cfg = cfg.get("gui_settings", {}) or {}
+                gui_cfg["media_dirs"] = list(self._feature_media_dirs)
+                cfg["gui_settings"] = gui_cfg
+                save_config(cfg)
+            except Exception:
+                return
+
+        def _format_feature_analytics(self, summary: Dict[str, Any]) -> str:
+            total = int(summary.get("total_roms", 0) or 0)
+            systems = int(summary.get("total_systems", 0) or 0)
+            verified = int(summary.get("verified_roms", 0) or 0)
+            unknown = int(summary.get("unknown_roms", 0) or 0)
+            rate = float(summary.get("verification_rate", 0.0) or 0.0)
+            return f"ROMs: {total} | Systeme: {systems} | Verifiziert: {verified} | Unbekannt: {unknown} | Rate: {rate:.1f}%"
+
+        def _refresh_feature_analytics(self) -> None:
+            summary = build_collection_dashboard_summary(self._scan_result)
+            if not summary:
+                self.feature_analytics_var.set("Analytics: -")
+                messagebox.showinfo("Analytics", "Kein Scan vorhanden.")
+                return
+            self.feature_analytics_var.set(self._format_feature_analytics(summary))
+
+        def _refresh_feature_badge_status(self) -> None:
+            status = get_badge_status()
+            stats = status.get("stats", {}) or {}
+            total = int(stats.get("total_badges", 0) or 0)
+            unlocked = int(stats.get("unlocked_badges", 0) or 0)
+            percent = float(stats.get("unlock_percent", 0.0) or 0.0)
+            self.feature_badges_var.set(f"Badges: {unlocked}/{total} ({percent:.1f}%)")
+
+        def _show_feature_badges(self) -> None:
+            status = get_badge_status()
+            badges = status.get("badges", []) or []
+            unlocked = [b for b in badges if b.get("unlocked")]
+            if unlocked:
+                items = "\n".join(f"{b.get('icon', '🏆')} {b.get('name')}" for b in unlocked[:10])
+                more = "" if len(unlocked) <= 10 else f"\n… (+{len(unlocked) - 10} weitere)"
+                message = f"Freigeschaltet ({len(unlocked)}):\n{items}{more}"
+            else:
+                message = "Noch keine Badges freigeschaltet."
+            self._refresh_feature_badge_status()
+            messagebox.showinfo("Badges", message)
+
+        def _get_selected_item(self) -> Optional[Any]:
+            try:
+                selection = self.tree.selection()
+                if not selection:
+                    return None
+                index = int(self.tree.index(selection[0]))
+                if index < 0:
+                    return None
+            except Exception:
+                return None
+            if index < len(self._table_items):
+                return self._table_items[index]
+            return None
+
+        def _normalize_feature_name(self) -> None:
+            item = self._get_selected_item()
+            if item is None:
+                messagebox.showinfo("AI-Normalizer", "Bitte zuerst eine Zeile auswählen.")
+                return
+            raw_name = ""
+            try:
+                raw_name = Path(str(item.input_path or "")).stem
+            except Exception:
+                raw_name = ""
+            if not raw_name:
+                messagebox.showinfo("AI-Normalizer", "Kein gültiger Name gefunden.")
+                return
+            result = ai_normalize_name(raw_name)
+            normalized = str(result.get("normalized") or raw_name)
+            confidence = float(result.get("confidence", 0.0) or 0.0)
+            self.feature_normalize_var.set(f"AI-Normalizer: {normalized}")
+            messagebox.showinfo(
+                "AI-Normalizer",
+                f"Original: {raw_name}\nNormalisiert: {normalized}\nConfidence: {confidence:.2f}",
+            )
+
+        def _preview_feature_media(self) -> None:
+            item = self._get_selected_item()
+            if item is None:
+                messagebox.showinfo("Media-Preview", "Bitte zuerst eine Zeile auswählen.")
+                return
+            path = str(item.input_path or "").strip()
+            if not path:
+                messagebox.showinfo("Media-Preview", "Kein Eingabepfad verfügbar.")
+                return
+            if not self._feature_media_dirs:
+                chosen = filedialog.askdirectory()
+                if not chosen:
+                    return
+                self._feature_media_dirs = [str(chosen)]
+                self._save_feature_media_dirs_to_config()
+            preview = get_media_preview(
+                path,
+                str(getattr(item, "detected_system", "")),
+                media_dirs=list(self._feature_media_dirs),
+                cache_dir=str(Path(__file__).resolve().parents[3] / "cache"),
+            )
+            if not preview.get("ok"):
+                messagebox.showwarning("Media-Preview", str(preview.get("error") or "Fehler"))
+                return
+            boxart = preview.get("boxart")
+            screenshot = preview.get("screenshot")
+            status = "Boxart gefunden" if boxart else "Kein Boxart"
+            if screenshot:
+                status = f"{status} | Screenshot gefunden"
+            self.feature_media_var.set(f"Media-Preview: {status}")
+            if not (boxart or screenshot):
+                messagebox.showinfo("Media-Preview", "Keine lokalen Medien gefunden.")
+
+        def _sync_feature_library(self) -> None:
+            source = str(self.source_var.get() or "").strip()
+            if not source:
+                messagebox.showinfo("Multi-Library", "Bitte zuerst eine Quelle wählen.")
+                return
+            result = ensure_active_library(source)
+            if not result.get("ok"):
+                messagebox.showwarning("Multi-Library", str(result.get("error") or "Fehler"))
+                return
+            text = f"Aktiv: {result.get('active_name')} | Libraries: {result.get('total_libraries')}"
+            self.feature_library_var.set(f"Multi-Library: {text}")
+            messagebox.showinfo("Multi-Library", text)
             _Tooltip(tk, ttk, self.rename_template_entry, "Rename-Template für Zielnamen")
             _Tooltip(tk, ttk, self.btn_rename_builder, "Rename-Pattern-Builder öffnen")
             _Tooltip(tk, ttk, self.btn_plan_undo, "Plan zurücksetzen (Undo)")
@@ -764,6 +966,14 @@ def run() -> int:
                         messagebox.showinfo("Abgebrochen", "Scan abgebrochen.")
                     else:
                         messagebox.showinfo("Scan abgeschlossen", f"ROMs gefunden: {len(payload.items)}")
+                    badge_update = update_badges_after_scan(self._scan_result)
+                    self._refresh_feature_badge_status()
+                    if badge_update.get("new_unlocks"):
+                        messagebox.showinfo(
+                            "Badges freigeschaltet",
+                            "Neu: " + ", ".join(badge_update.get("new_unlocks") or []),
+                        )
+                    self._refresh_feature_analytics()
                     return
 
                 if op == "plan":
@@ -794,6 +1004,7 @@ def run() -> int:
                 if op == "execute":
                     if not isinstance(payload, SortReport):
                         raise RuntimeError("Execute worker returned unexpected payload")
+                    self._last_sort_report = payload
                     self.status_var.set("Abgebrochen" if payload.cancelled else "Fertig")
                     try:
                         self.summary_var.set(
@@ -805,6 +1016,13 @@ def run() -> int:
                         "Fertig",
                         f"Fertig. Kopiert: {payload.copied}, Verschoben: {payload.moved}\nFehler: {len(payload.errors)}",
                     )
+                    badge_update = update_badges_after_execute(payload)
+                    self._refresh_feature_badge_status()
+                    if badge_update.get("new_unlocks"):
+                        messagebox.showinfo(
+                            "Badges freigeschaltet",
+                            "Neu: " + ", ".join(badge_update.get("new_unlocks") or []),
+                        )
                     if payload.mode == "move" and not payload.cancelled:
                         self.status_var.set("Rollback verfügbar (CLI)")
                     return
@@ -1134,6 +1352,7 @@ def run() -> int:
 
         def _populate_plan_table(self, plan: SortPlan) -> None:
             self._clear_table()
+            self._table_items = list(plan.actions)
             for act in plan.actions:
                 self.tree.insert(
                     "",

@@ -70,12 +70,17 @@ def run() -> int:
         SortMode,
         add_identification_override,
         add_identification_overrides_bulk,
+        ai_normalize_name,
         suggest_identification_overrides,
         audit_conversion_candidates,
         analyze_dat_sources,
+        build_collection_dashboard_summary,
         build_dat_index,
         build_library_report,
         diff_sort_plans,
+        ensure_active_library,
+        get_badge_status,
+        get_media_preview,
         get_symlink_warnings,
         load_rollback_manifest,
         apply_rollback,
@@ -89,6 +94,8 @@ def run() -> int:
         plan_sort,
         run_scan,
         save_dat_sources,
+        update_badges_after_execute,
+        update_badges_after_scan,
     )
     from ...app.plan_stats import compute_plan_stats
     from ...app.sorting_helpers import _apply_rename_template
@@ -507,6 +514,8 @@ def run() -> int:
             self._failed_action_indices: set[int] = set()
             self._resume_path = str((Path(__file__).resolve().parents[3] / "cache" / "last_sort_resume.json").resolve())
             self._plan_stats: Dict[str, int] = {"total_actions": 0, "total_bytes": 0}
+            self._last_sort_report: Optional[SortReport] = None
+            self._feature_media_dirs: List[str] = []
 
             try:
                 theme_cfg = load_config()
@@ -958,6 +967,11 @@ def run() -> int:
 
             self.btn_library_report = QtWidgets.QPushButton("Report aktualisieren")
             self.btn_library_report_save = QtWidgets.QPushButton("Report speichern…")
+            self.btn_feature_refresh = QtWidgets.QPushButton("Analytics aktualisieren")
+            self.btn_feature_badges = QtWidgets.QPushButton("Badges anzeigen")
+            self.btn_feature_media = QtWidgets.QPushButton("Media-Preview")
+            self.btn_feature_normalize = QtWidgets.QPushButton("AI-Normalizer")
+            self.btn_feature_library = QtWidgets.QPushButton("Library sync")
             reports_ui = build_reports_ui(
                 QtWidgets,
                 reports_layout,
@@ -973,11 +987,21 @@ def run() -> int:
                     btn_export_frontend_es=self.btn_export_frontend_es,
                     btn_export_frontend_launchbox=self.btn_export_frontend_launchbox,
                     btn_export_frontend_retroarch=self.btn_export_frontend_retroarch,
+                    btn_feature_refresh=self.btn_feature_refresh,
+                    btn_feature_badges=self.btn_feature_badges,
+                    btn_feature_media=self.btn_feature_media,
+                    btn_feature_normalize=self.btn_feature_normalize,
+                    btn_feature_library=self.btn_feature_library,
                 ),
             )
             self.library_report_summary = reports_ui.library_report_summary
             self.library_top_systems = reports_ui.library_top_systems
             self.library_top_regions = reports_ui.library_top_regions
+            self.feature_analytics_label = reports_ui.feature_analytics_label
+            self.feature_badges_label = reports_ui.feature_badges_label
+            self.feature_media_label = reports_ui.feature_media_label
+            self.feature_normalize_label = reports_ui.feature_normalize_label
+            self.feature_library_label = reports_ui.feature_library_label
 
             results_ui = build_results_ui(QtWidgets, QtCore, details_stack, results_stack)
             self.results_empty_label = results_ui.results_empty_label
@@ -1172,6 +1196,11 @@ def run() -> int:
             self.btn_plan_redo.clicked.connect(self._redo_plan)
             self.btn_library_report.clicked.connect(self._show_library_report)
             self.btn_library_report_save.clicked.connect(self._save_library_report)
+            self.btn_feature_refresh.clicked.connect(self._refresh_feature_analytics)
+            self.btn_feature_badges.clicked.connect(self._show_feature_badges)
+            self.btn_feature_media.clicked.connect(self._preview_feature_media)
+            self.btn_feature_normalize.clicked.connect(self._normalize_feature_name)
+            self.btn_feature_library.clicked.connect(self._sync_feature_library)
             self.btn_fav_add.clicked.connect(self._add_current_paths_to_favorites)
             self.btn_fav_apply.clicked.connect(self._apply_selected_favorite)
             self.btn_fav_remove.clicked.connect(self._remove_selected_favorite)
@@ -1204,12 +1233,14 @@ def run() -> int:
             self._load_window_size()
             self._load_log_visibility()
             self._load_general_settings_from_config()
+            self._load_feature_media_dirs_from_config()
             self._load_favorites_from_config()
             self._refresh_recent_paths_label()
             self._set_external_tools_enabled(False)
             self._update_safety_pill()
             self._load_presets_from_config()
             self._sync_plan_history_buttons()
+            self._refresh_feature_badge_status()
             self._dashboard_timer = QtCore.QTimer(self)
             self._dashboard_timer.setInterval(600)
             self._dashboard_timer.timeout.connect(self._refresh_dashboard)
@@ -3132,6 +3163,166 @@ def run() -> int:
                 write_json(report, filename)
             except Exception as exc:
                 QtWidgets.QMessageBox.warning(self, "Bibliothek-Report", f"Speichern fehlgeschlagen:\n{exc}")
+
+        def _load_feature_media_dirs_from_config(self) -> None:
+            try:
+                cfg = load_config()
+                if not isinstance(cfg, dict):
+                    return
+                gui_cfg = cfg.get("gui_settings", {}) or {}
+                media_dirs = gui_cfg.get("media_dirs", []) or []
+                if isinstance(media_dirs, list):
+                    self._feature_media_dirs = [str(p) for p in media_dirs if str(p).strip()]
+            except Exception:
+                self._feature_media_dirs = []
+
+        def _save_feature_media_dirs_to_config(self) -> None:
+            try:
+                cfg = load_config()
+                if not isinstance(cfg, dict):
+                    cfg = {}
+                gui_cfg = cfg.get("gui_settings", {}) or {}
+                gui_cfg["media_dirs"] = list(self._feature_media_dirs)
+                cfg["gui_settings"] = gui_cfg
+                save_config(cfg)
+            except Exception:
+                return
+
+        def _get_selected_row_data(self) -> Optional[Any]:
+            try:
+                view_index = self.table.currentIndex()
+                if not view_index.isValid():
+                    return None
+                source_index = self.results_proxy.mapToSource(view_index)
+                row = source_index.row()
+            except Exception:
+                return None
+            return self.results_model.get_row(row)
+
+        def _format_feature_analytics(self, summary: Dict[str, Any]) -> str:
+            total = int(summary.get("total_roms", 0) or 0)
+            systems = int(summary.get("total_systems", 0) or 0)
+            verified = int(summary.get("verified_roms", 0) or 0)
+            unknown = int(summary.get("unknown_roms", 0) or 0)
+            rate = float(summary.get("verification_rate", 0.0) or 0.0)
+            return f"ROMs: {total} | Systeme: {systems} | Verifiziert: {verified} | Unbekannt: {unknown} | Rate: {rate:.1f}%"
+
+        def _refresh_feature_analytics(self) -> None:
+            summary = build_collection_dashboard_summary(self._scan_result)
+            if not summary:
+                self.feature_analytics_label.setText("Analytics: -")
+                show_info(QtWidgets, self, "Analytics", "Kein Scan vorhanden.")
+                return
+            self.feature_analytics_label.setText(self._format_feature_analytics(summary))
+
+        def _refresh_feature_badge_status(self) -> None:
+            status = get_badge_status()
+            stats = status.get("stats", {}) or {}
+            total = int(stats.get("total_badges", 0) or 0)
+            unlocked = int(stats.get("unlocked_badges", 0) or 0)
+            percent = float(stats.get("unlock_percent", 0.0) or 0.0)
+            self.feature_badges_label.setText(
+                f"Freigeschaltet: {unlocked}/{total} ({percent:.1f}%)"
+            )
+
+        def _show_feature_badges(self) -> None:
+            status = get_badge_status()
+            badges = status.get("badges", []) or []
+            unlocked = [b for b in badges if b.get("unlocked")]
+            if not badges:
+                show_info(QtWidgets, self, "Badges", "Noch keine Badges verfügbar.")
+                return
+            if unlocked:
+                items = "\n".join(f"{b.get('icon', '🏆')} {b.get('name')}" for b in unlocked[:10])
+                more = "" if len(unlocked) <= 10 else f"\n… (+{len(unlocked) - 10} weitere)"
+                message = f"Freigeschaltet ({len(unlocked)}):\n{items}{more}"
+            else:
+                message = "Noch keine Badges freigeschaltet."
+            self._refresh_feature_badge_status()
+            QtWidgets.QMessageBox.information(self, "Badges", message)
+
+        def _normalize_feature_name(self) -> None:
+            row = self._get_selected_row_data()
+            if row is None:
+                show_info(QtWidgets, self, "AI-Normalizer", "Bitte zuerst eine Zeile auswählen.")
+                return
+            raw_name = str(row.name or "").strip()
+            if not raw_name:
+                try:
+                    raw_name = Path(str(row.input_path or "")).stem
+                except Exception:
+                    raw_name = ""
+            if not raw_name:
+                show_info(QtWidgets, self, "AI-Normalizer", "Kein gültiger Name gefunden.")
+                return
+            result = ai_normalize_name(raw_name)
+            normalized = str(result.get("normalized") or raw_name)
+            confidence = float(result.get("confidence", 0.0) or 0.0)
+            corrections = result.get("corrections", []) or []
+            extracted = result.get("extracted", {}) or {}
+            self.feature_normalize_label.setText(normalized)
+            text = (
+                f"Original: {raw_name}\n"
+                f"Normalisiert: {normalized}\n"
+                f"Confidence: {confidence:.2f}\n\n"
+                f"Korrekturen: {', '.join(corrections) if corrections else '-'}\n"
+                f"Info: {extracted if extracted else '-'}"
+            )
+            QtWidgets.QMessageBox.information(self, "AI-Normalizer", text)
+
+        def _preview_feature_media(self) -> None:
+            row = self._get_selected_row_data()
+            if row is None:
+                show_info(QtWidgets, self, "Media-Preview", "Bitte zuerst eine Zeile auswählen.")
+                return
+            path = str(row.input_path or "").strip()
+            if not path:
+                show_info(QtWidgets, self, "Media-Preview", "Kein Eingabepfad verfügbar.")
+                return
+            if not self._feature_media_dirs:
+                chosen = QtWidgets.QFileDialog.getExistingDirectory(
+                    self, "Media-Ordner auswählen", str(Path(path).parent)
+                )
+                if not chosen:
+                    return
+                self._feature_media_dirs = [str(chosen)]
+                self._save_feature_media_dirs_to_config()
+            preview = get_media_preview(
+                path,
+                str(row.detected_system or ""),
+                media_dirs=list(self._feature_media_dirs),
+                cache_dir=str(Path(__file__).resolve().parents[3] / "cache"),
+            )
+            if not preview.get("ok"):
+                show_warning(QtWidgets, self, "Media-Preview", str(preview.get("error") or "Fehler"))
+                return
+            boxart = preview.get("boxart")
+            screenshot = preview.get("screenshot")
+            status = "Boxart gefunden" if boxart else "Kein Boxart"
+            if screenshot:
+                status = f"{status} | Screenshot gefunden"
+            self.feature_media_label.setText(status)
+            if boxart or screenshot:
+                target = boxart or screenshot
+                QtGui.QDesktopServices.openUrl(QtCore.QUrl.fromLocalFile(str(target)))
+            else:
+                show_info(QtWidgets, self, "Media-Preview", "Keine lokalen Medien gefunden.")
+
+        def _sync_feature_library(self) -> None:
+            source = str(self.source_edit.text() or "").strip()
+            if not source:
+                show_info(QtWidgets, self, "Multi-Library", "Bitte zuerst eine Quelle wählen.")
+                return
+            result = ensure_active_library(source)
+            if not result.get("ok"):
+                show_warning(QtWidgets, self, "Multi-Library", str(result.get("error") or "Fehler"))
+                return
+            text = (
+                f"Aktiv: {result.get('active_name')} | "
+                f"Libraries: {result.get('total_libraries')}"
+            )
+            self.feature_library_label.setText(text)
+            QtWidgets.QMessageBox.information(self, "Multi-Library", text)
 
         def _get_selected_filter_values(self, widget: object) -> List[str]:
             widget_list = cast(Any, widget)
@@ -5609,6 +5800,15 @@ def run() -> int:
                     QtWidgets.QMessageBox.information(self, "Abgebrochen", "Scan abgebrochen.")
                 else:
                     QtWidgets.QMessageBox.information(self, "Scan abgeschlossen", f"ROMs gefunden: {len(payload.items)}")
+                badge_update = update_badges_after_scan(self._scan_result)
+                self._refresh_feature_badge_status()
+                if badge_update.get("new_unlocks"):
+                    QtWidgets.QMessageBox.information(
+                        self,
+                        "Badges freigeschaltet",
+                        "Neu: " + ", ".join(badge_update.get("new_unlocks") or []),
+                    )
+                self._refresh_feature_analytics()
                 self._complete_job("scan")
                 return
 
@@ -5644,6 +5844,7 @@ def run() -> int:
             if op == "execute":
                 if not isinstance(payload, SortReport):
                     raise RuntimeError("Execute worker returned unexpected payload")
+                self._last_sort_report = payload
                 self.status_label.setText("Abgebrochen" if payload.cancelled else "Fertig")
                 self._append_summary_row(payload)
                 self._update_results_empty_state()
@@ -5652,6 +5853,14 @@ def run() -> int:
                     "Fertig",
                     f"Fertig. Kopiert: {payload.copied}, Verschoben: {payload.moved}\nFehler: {len(payload.errors)}\n\nSiehe Log für Details.",
                 )
+                badge_update = update_badges_after_execute(payload)
+                self._refresh_feature_badge_status()
+                if badge_update.get("new_unlocks"):
+                    QtWidgets.QMessageBox.information(
+                        self,
+                        "Badges freigeschaltet",
+                        "Neu: " + ", ".join(badge_update.get("new_unlocks") or []),
+                    )
                 if payload.mode == "move" and not payload.cancelled:
                     self._show_undo_toast()
                 self._complete_job("execute")

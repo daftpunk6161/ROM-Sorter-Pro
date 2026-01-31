@@ -19,6 +19,11 @@ class ReportsInputs:
     btn_export_frontend_es: Any
     btn_export_frontend_launchbox: Any
     btn_export_frontend_retroarch: Any
+    btn_feature_refresh: Any
+    btn_feature_badges: Any
+    btn_feature_media: Any
+    btn_feature_normalize: Any
+    btn_feature_library: Any
 
 
 @dataclass(frozen=True)
@@ -26,6 +31,11 @@ class ReportsUI:
     library_report_summary: Any
     library_top_systems: Any
     library_top_regions: Any
+    feature_analytics_label: Any
+    feature_badges_label: Any
+    feature_media_label: Any
+    feature_normalize_label: Any
+    feature_library_label: Any
 
 
 def build_reports_ui(QtWidgets, reports_layout, inputs: ReportsInputs) -> ReportsUI:
@@ -83,10 +93,57 @@ def build_reports_ui(QtWidgets, reports_layout, inputs: ReportsInputs) -> Report
     frontend_layout.addWidget(inputs.btn_export_frontend_retroarch)
     frontend_layout.addStretch(1)
     reports_layout.addWidget(frontend_group)
+
+    feature_group = QtWidgets.QGroupBox("Feature Hub")
+    feature_layout = QtWidgets.QGridLayout(feature_group)
+    feature_layout.setHorizontalSpacing(8)
+    feature_layout.setVerticalSpacing(6)
+
+    feature_analytics_label = QtWidgets.QLabel("Analytics: -")
+    feature_badges_label = QtWidgets.QLabel("Badges: -")
+    feature_media_label = QtWidgets.QLabel("Media-Preview: -")
+    feature_normalize_label = QtWidgets.QLabel("AI-Normalizer: -")
+    feature_library_label = QtWidgets.QLabel("Multi-Library: -")
+    for label in (
+        feature_analytics_label,
+        feature_badges_label,
+        feature_media_label,
+        feature_normalize_label,
+        feature_library_label,
+    ):
+        label.setWordWrap(True)
+
+    feature_layout.addWidget(QtWidgets.QLabel("Analytics"), 0, 0)
+    feature_layout.addWidget(feature_analytics_label, 0, 1)
+    feature_layout.addWidget(inputs.btn_feature_refresh, 0, 2)
+
+    feature_layout.addWidget(QtWidgets.QLabel("Badges"), 1, 0)
+    feature_layout.addWidget(feature_badges_label, 1, 1)
+    feature_layout.addWidget(inputs.btn_feature_badges, 1, 2)
+
+    feature_layout.addWidget(QtWidgets.QLabel("AI-Normalizer"), 2, 0)
+    feature_layout.addWidget(feature_normalize_label, 2, 1)
+    feature_layout.addWidget(inputs.btn_feature_normalize, 2, 2)
+
+    feature_layout.addWidget(QtWidgets.QLabel("Media-Preview"), 3, 0)
+    feature_layout.addWidget(feature_media_label, 3, 1)
+    feature_layout.addWidget(inputs.btn_feature_media, 3, 2)
+
+    feature_layout.addWidget(QtWidgets.QLabel("Multi-Library"), 4, 0)
+    feature_layout.addWidget(feature_library_label, 4, 1)
+    feature_layout.addWidget(inputs.btn_feature_library, 4, 2)
+
+    feature_layout.setColumnStretch(1, 1)
+    reports_layout.addWidget(feature_group)
     reports_layout.addStretch(1)
 
     return ReportsUI(
         library_report_summary=library_report_summary,
         library_top_systems=library_top_systems,
         library_top_regions=library_top_regions,
+        feature_analytics_label=feature_analytics_label,
+        feature_badges_label=feature_badges_label,
+        feature_media_label=feature_media_label,
+        feature_normalize_label=feature_normalize_label,
+        feature_library_label=feature_library_label,
     )

@@ -11,6 +11,15 @@ from .controller import diff_sort_plans
 from .controller import filter_scan_items
 from .controller import get_dat_sources, infer_languages_and_version_from_name, infer_region_from_name
 from .controller import load_sort_resume_state, save_dat_sources
+from .feature_hub import (
+    ai_normalize_name,
+    build_collection_dashboard_summary,
+    ensure_active_library,
+    get_badge_status,
+    get_media_preview,
+    update_badges_after_execute,
+    update_badges_after_scan,
+)
 from .database_export import export_scan_to_database
 from .frontend_imports import LaunchBoxImportReport, import_launchbox_csv_to_overrides
 from ..core.file_utils import clear_hash_cache, get_hash_cache_stats
@@ -113,6 +122,13 @@ __all__ = [
     "import_launchbox_csv_to_overrides",
     "get_hash_cache_stats",
     "clear_hash_cache",
+    "ai_normalize_name",
+    "build_collection_dashboard_summary",
+    "ensure_active_library",
+    "get_badge_status",
+    "get_media_preview",
+    "update_badges_after_execute",
+    "update_badges_after_scan",
     "DatUpdateReport",
     "update_dat_sources",
     "DatBuildReport",

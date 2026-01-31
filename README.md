@@ -33,6 +33,18 @@ pip install -r requirements-gui.txt
 
 Details: [docs/MVP_DOCS.md](docs/MVP_DOCS.md)
 
+## ✨ Feature‑Hub (v1.1+ integriert)
+
+Im GUI findest du eine **Feature‑Hub**‑Sektion (Qt: Reports‑Tab, Tk: Feature‑Hub‑Box):
+
+- **Multi‑Library Sync** (aktive Library aus Quelle)
+- **AI‑Normalizing** (Name‑Normalisierung für ausgewählte ROMs)
+- **Media‑Preview** (lokales Boxart/Screenshot‑Lookup)
+- **Badges** (Progress/Erfolge)
+- **Analytics Snapshot** (Bestand/Verifizierung/Top Systeme)
+
+Hinweis: Media‑Preview nutzt lokale Medienordner (einmal wählen, wird in config.json gespeichert).
+
 ## 🧩 Legacy/Optional UI-Assets
 
 - Der Ordner [src/ui/qt/](src/ui/qt/) enthält optionale Qt-Assets (Layouts/Themes/Shell).
@@ -72,6 +84,7 @@ Empfohlene MVP‑Tests:
 - `dev/tests/test_mvp_igir_gates.py`
 - `dev/tests/test_mvp_identify_rules.py`
 - `dev/tests/test_mvp_dat_index.py`
+- `dev/tests/test_mvp_feature_modules.py`
 
 ## 📄 Lizenz
 

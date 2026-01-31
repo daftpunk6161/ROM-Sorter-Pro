@@ -109,6 +109,33 @@ Optional:
 
 ---
 
+## 7.0 Feature‑Hub (v1.1+)
+
+Im GUI gibt es eine **Feature‑Hub**‑Sektion (Qt: Reports‑Tab, Tk: Feature‑Hub‑Box).
+
+### 7.0.1 Analytics Snapshot
+- Zeigt Gesamtanzahl, Systeme, Verifiziert/Unbekannt
+- Button: **Analytics aktualisieren**
+
+### 7.0.2 Badges
+- Fortschritt/Erfolge basierend auf Scan/Execute
+- Button: **Badges anzeigen**
+
+### 7.0.3 AI‑Normalizer
+- Normalisiert den Namen der aktuell ausgewählten ROM
+- Button: **AI‑Normalizer**
+
+### 7.0.4 Media‑Preview (lokal)
+- Sucht Boxart/Screenshot in lokalen Medienordnern
+- Beim ersten Aufruf Ordner wählen (wird in `config.json` gespeichert)
+- Button: **Media‑Preview**
+
+### 7.0.5 Multi‑Library
+- Erstellt/aktiviert Library anhand des aktuellen Quellen‑Ordners
+- Button: **Library sync**
+
+---
+
 ## 7.1 Backup (Lokal + OneDrive)
 - Nach erfolgreichem **Execute** wird ein Report-Backup gespeichert.
 - Standardpfad: `cache/backups`
