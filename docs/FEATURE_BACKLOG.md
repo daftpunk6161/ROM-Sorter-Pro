@@ -1383,11 +1383,11 @@ Alle Metriken werden **nur lokal** gespeichert (`cache/metrics.json`):
 - [x] **F61** Smart-Queue-Priority-Reordering – Drag-and-Drop Queue-Verwaltung → `src/core/queue_manager.py`
 - [x] **F65** Watchfolder-Auto-Sort – Automatische Sortierung bei neuen Dateien → `src/core/watchfolder.py`
 
-#### Nice-to-have (später)
-- [ ] **F63** Multi-Library-Workspace – Mehrere Sammlungen parallel
-- [ ] **F64** AI-Assisted-Name-Normalizer – LLM-basierte Namenskorrektur (optional)
-- [ ] **F67** Screenshot-/Boxart-Preview – Visuelle Identifikation
-- [ ] **F68** Gamification-Progress-Badges – Meilenstein-Badges
+#### Nice-to-have ✅ COMPLETE
+- [x] **F63** Multi-Library-Workspace – Mehrere Sammlungen parallel → `src/core/multi_library.py`
+- [x] **F64** AI-Assisted-Name-Normalizer – LLM-basierte Namenskorrektur (optional) → `src/detectors/ai_normalizer.py`
+- [x] **F67** Screenshot-/Boxart-Preview – Visuelle Identifikation → `src/ui/preview/boxart_preview.py`
+- [x] **F68** Gamification-Progress-Badges – Meilenstein-Badges → `src/gamification/badges.py`
 
 ---
 
